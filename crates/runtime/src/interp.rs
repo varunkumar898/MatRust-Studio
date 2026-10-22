@@ -12,11 +12,24 @@ use crate::rng::Rng;
 /// Persistent execution session: one environment plus graphics state.
 /// The desktop worker owns exactly one `Session`; the CLI may create
 /// sessions per invocation. Never create a new environment per command.
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Clone)]
 pub struct Session {
     pub env: Env,
     pub graphics: crate::graphics::GraphicsState,
     pub rng: Rng,
+    /// User-defined functions registered during session execution.
+    pub function_table: HashMap<String, Stmt>,
+}
+
+impl Default for Session {
+    fn default() -> Self {
+        Self {
+            env: Env::default(),
+            graphics: crate::graphics::GraphicsState::default(),
+            rng: Rng::default(),
+            function_table: HashMap::new(),
+        }
+    }
 }
 
 impl Session {
@@ -88,15 +101,24 @@ pub struct StmtResult {
 }
 
 /// Variable environment. MATLAB variable names are case-sensitive.
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Clone)]
 pub struct Env {
     vars: HashMap<String, Value>,
+    /// User-defined functions registered in this environment/session.
+    pub function_table: HashMap<String, Stmt>,
+}
+
+impl Default for Env {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl Env {
     pub fn new() -> Self {
         Self {
             vars: HashMap::new(),
+            function_table: HashMap::new(),
         }
     }
 
@@ -556,10 +578,74 @@ fn exec_statement(
                 flow: Flow::Normal,
             })
         }
-        Stmt::FunctionDef { .. } => {
-            // Function definitions are parsed but not yet executable.
-            Ok(StmtResult::default())
+        Stmt::FunctionDef { outputs, name, name_span, params, body, span } => {
+            env.function_table.insert(
+                name.clone(),
+                Stmt::FunctionDef {
+                    outputs: outputs.clone(),
+                    name: name.clone(),
+                    name_span: name_span.clone(),
+                    params: params.clone(),
+                    body: body.clone(),
+                    span: span.clone(),
+                },
+            );
+            Ok(StmtResult { outputs: Vec::new(), flow: Flow::Normal })
         }
+    }
+}
+
+/// Execute a user-defined function in an isolated local environment.
+/// Stage 3 partial: evaluates arguments, binds named parameters, executes
+/// the body via exec_statement, and returns the first declared output if set.
+/// Multi-output full assignment is not yet integrated; this implementation
+/// returns a single value for each declared function (first only when multiple).
+fn exec_user_function(
+    parent_env: &Env,
+    func: Stmt,
+    args: &[Expr],
+    span: Span,
+    io: &mut ExecIo<'_>,
+) -> Result<Value, Diagnostic> {
+    if let Stmt::FunctionDef { outputs, params, body, .. } = func {
+        let mut local_env = Env::new();
+        // Bind parameters by evaluating arguments against caller environment.
+        for (i, (param_name, _)) in params.iter().enumerate() {
+            let value = if i < args.len() {
+                eval_expr_pub(parent_env, &args[i], io)?
+            } else {
+                Value::Matrix(DenseMatrix::scalar(0.0))
+            };
+            local_env.set(param_name.clone(), value);
+        }
+        // Inject nargin / nargout for basic test coverage.
+        local_env.set("nargin".to_string(), Value::Matrix(DenseMatrix::scalar(args.len() as f64)));
+        local_env.set("nargout".to_string(), Value::Matrix(DenseMatrix::scalar(outputs.len().max(1) as f64)));
+        // Execute body statements.
+        let mut collected = Vec::new();
+        for stmt in body {
+            let res = exec_statement(&mut local_env, stmt.clone(), io, 0)?;
+            if res.flow == Flow::Return {
+                collected = res.outputs;
+                break;
+            }
+            collected = res.outputs;
+        }
+        if outputs.is_empty() {
+            return Ok(Value::Matrix(DenseMatrix::scalar(0.0)));
+        }
+        // Return the first declared output if present.
+        let out_name = outputs[0].0.clone();
+        if let Some(val) = local_env.get(&out_name) {
+            return Ok(val.clone());
+        } else {
+            return Err(Diagnostic::error(
+                format!("Output argument '{}' not assigned.", out_name),
+                Some(span),
+            ));
+        }
+    } else {
+        Err(Diagnostic::error("User-defined function definition expected.", Some(span)))
     }
 }
 
@@ -1015,6 +1101,9 @@ fn call_or_index(
                 }
             }
         }
+    } else if let Some(func_stmt) = env.function_table.get(name).cloned() {
+        // User-defined function call (Stage 3 partial: single-output scalar basic).
+        exec_user_function(env, func_stmt, args, span, io)
     } else {
         crate::builtins::call_builtin(name, args, env, span, io)
     }

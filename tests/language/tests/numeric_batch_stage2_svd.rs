@@ -55,9 +55,15 @@ fn stage2_svd_reconstruction_2x2() {
         }
         d
     };
-    let vt_data: Vec<f64> = (0..res.v.cols)
-        .flat_map(|j| (0..res.v.rows).map(move |i| res.v.data[i * res.v.cols + j]))
-        .collect();
+    let vt_data: Vec<f64> = {
+        let mut d = vec![0.0; res.v.cols * res.v.rows];
+        for j in 0..res.v.cols {
+            for i in 0..res.v.rows {
+                d[j * res.v.rows + i] = res.v.data[i * res.v.cols + j];
+            }
+        }
+        d
+    };
     let vt = DenseMatrix { rows: res.v.cols, cols: res.v.rows, data: vt_data };
     let us = DenseMatrix { rows: res.u.rows, cols: res.s.cols, data: us_d };
     let us_vt = naive_mul(&us, &vt);

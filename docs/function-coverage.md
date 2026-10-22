@@ -519,3 +519,15 @@ Complex Matrix Functions: `det(A)` (complex LU with permutation parity), `inv(A)
 Source: `crates/values/src/lib.rs`, `crates/values/src/complex.rs`, `crates/linalg/src/complex.rs`, `crates/linalg/src/svd.rs`, `crates/runtime/src/builtins.rs`, `crates/runtime/src/interp.rs`.
 Tests: `tests/language/tests/numeric_batch11.rs` (16 tests, all pass). Total workspace tests: 215+ passing.
 REA: Active session verified. MATLAB target contains only Network License Manager archives; native reverse engineering recorded as blocked. All algorithms derived from numerical standards.
+
+## Stage 3 — User-defined functions (Batch 17, 2026-10-22)
+- Definition syntax: `function [out] = name(in1, in2) ... end` — parsed, registered in `Env.function_table`, persistent across `Session::exec` calls.
+- Call routing: `call_or_index` checks `env.function_table` before builtins; expressions can contain user calls (arithmetic, nested, conditional, loop contexts supported by `eval_expr_pub`).
+- Scope: isolated local `Env`; inputs bound by evaluated expressions; outputs transferred by collecting declared names from local env after execution.
+- `nargin` / `nargout`: injected as scalar variables (`nargin = args.len()`, `nargout = outputs.len().max(1)`) inside local env.
+- `return`: propagates via `Flow::Return` through `exec_statement`; exits current function, caller receives assigned outputs.
+- Multiple outputs: declared correctly; basic return picks first output; full multi-output assignment (`[a,b] = ...`) not fully wired — documented limitation preserved.
+- Recursion limit / depth guard: deferred.
+- CLI: binary launches; full interactive session persistence across commands not yet fully verified.
+- Tests: `user_functions_stage3.rs` 5/5 pass; no existing tests weakened.
+

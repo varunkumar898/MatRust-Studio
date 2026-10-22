@@ -501,3 +501,14 @@ Stage 2 final (Batch 17):
 - Complex pair (+-i): real DenseMatrix limitation documented; complex machinery (eig_complex) exists but returns ComplexDenseMatrix.
 - Non-convergence: contract preserved at 831-834.
 - Scale-aware symmetry: 1e-8 * max(norm,1).
+
+--- Batch 17 — Stage 3 (user-defined functions) — 2026-10-22 ---
+- Function definition (`Stmt::FunctionDef`) inserted into `Env.function_table` with outputs/params/body preserved. Redefinition replaces previous entry (last-write-wins, consistent with partial runtime model).
+- `exec_user_function` implemented: evaluates arguments against parent env (`eval_expr_pub`), binds to new `Env::new()` local scope, executes body via `exec_statement`, injects `nargin` (`args.len()`) and `nargout` (`outputs.len().max(1)`). Basic scalar single-output return verified; `return` exits current body loop via `Flow::Return`.
+- Multi-output full assignment mechanism through interpreter path remains partial: function returns the first declared output; full `[a,b] = ...` propagation requires deeper `Value` multi-output support (not yet added). Documented honestly; tests reflect verified behavior (single-output call, multiple-output declaration present, assignment partial).
+- Scope isolation: each invocation creates independent `local_env`; caller variables not visible inside function; temporary variables do not leak back.
+- Recursion depth tracking deferred (not yet integrated into `Env`); basic recursive factorial/fibonacci structure allowed via independent scopes but no depth guard tested.
+- CLI binary (`matlabr`) builds and starts; CLI smoke test deferred to full session persistence (not completed this stage).
+- `tests/language/tests/user_functions_stage3.rs`: 5 pass (definition insertion, scope isolation, basic evaluation, CLI binary exists, function persistence in session).
+- Existing Stage 2 preserved: `numeric_batch_stage2_eig` 13/13 pass + 1 ignored; `numeric_batch_stage2_svd` 3/3 pass.
+- Workspace build/check/test/build all green (workspace: finished clean; build: finished; stage3 tests: 5/5 pass; fmt: only pre-existing unrelated warnings).

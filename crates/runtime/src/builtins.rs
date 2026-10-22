@@ -838,9 +838,7 @@ pub fn call_builtin(
                     (m.rows, m.cols)
                 }
             };
-            Ok(Value::Matrix(
-                DenseMatrix::scalar(rows.max(cols) as f64),
-            ))
+            Ok(Value::Matrix(DenseMatrix::scalar(rows.max(cols) as f64)))
         }
         "numel" => {
             let v = eval_expr_pub(env, args_first(args, "numel", span)?, io)?;
@@ -875,15 +873,20 @@ pub fn call_builtin(
         }
         "real" => {
             if args.len() != 1 {
-                return Err(Diagnostic::error("real expects 1 argument: real(Z).", span_op));
+                return Err(Diagnostic::error(
+                    "real expects 1 argument: real(Z).",
+                    span_op,
+                ));
             }
             let v = eval_expr_pub(env, &args[0], io)?;
             match v {
                 Value::ComplexMatrix(c) => Ok(Value::Matrix(c.real_part())),
                 Value::Matrix(m) => Ok(Value::Matrix(m)),
-                Value::Boolean(b) => {
-                    Ok(Value::Matrix(DenseMatrix::scalar(if b { 1.0 } else { 0.0 })))
-                }
+                Value::Boolean(b) => Ok(Value::Matrix(DenseMatrix::scalar(if b {
+                    1.0
+                } else {
+                    0.0
+                }))),
                 Value::String(_) => Err(Diagnostic::error(
                     "Conversion to double from char is not possible.",
                     span_op,
@@ -892,7 +895,10 @@ pub fn call_builtin(
         }
         "imag" => {
             if args.len() != 1 {
-                return Err(Diagnostic::error("imag expects 1 argument: imag(Z).", span_op));
+                return Err(Diagnostic::error(
+                    "imag expects 1 argument: imag(Z).",
+                    span_op,
+                ));
             }
             let v = eval_expr_pub(env, &args[0], io)?;
             match v {
@@ -907,7 +913,10 @@ pub fn call_builtin(
         }
         "conj" => {
             if args.len() != 1 {
-                return Err(Diagnostic::error("conj expects 1 argument: conj(Z).", span_op));
+                return Err(Diagnostic::error(
+                    "conj expects 1 argument: conj(Z).",
+                    span_op,
+                ));
             }
             let v = eval_expr_pub(env, &args[0], io)?;
             match v {
@@ -920,9 +929,11 @@ pub fn call_builtin(
                     }))
                 }
                 Value::Matrix(m) => Ok(Value::Matrix(m)),
-                Value::Boolean(b) => {
-                    Ok(Value::Matrix(DenseMatrix::scalar(if b { 1.0 } else { 0.0 })))
-                }
+                Value::Boolean(b) => Ok(Value::Matrix(DenseMatrix::scalar(if b {
+                    1.0
+                } else {
+                    0.0
+                }))),
                 Value::String(_) => Err(Diagnostic::error(
                     "Conversion to double from char is not possible.",
                     span_op,
@@ -931,7 +942,10 @@ pub fn call_builtin(
         }
         "angle" => {
             if args.len() != 1 {
-                return Err(Diagnostic::error("angle expects 1 argument: angle(Z).", span_op));
+                return Err(Diagnostic::error(
+                    "angle expects 1 argument: angle(Z).",
+                    span_op,
+                ));
             }
             let v = eval_expr_pub(env, &args[0], io)?;
             match v {
@@ -963,7 +977,10 @@ pub fn call_builtin(
         }
         "isreal" => {
             if args.len() != 1 {
-                return Err(Diagnostic::error("isreal expects 1 argument: isreal(A).", span_op));
+                return Err(Diagnostic::error(
+                    "isreal expects 1 argument: isreal(A).",
+                    span_op,
+                ));
             }
             let v = eval_expr_pub(env, &args[0], io)?;
             match v {
@@ -1014,11 +1031,7 @@ pub fn call_builtin(
                     let m = coerce_matrix_pub(v, span_op)?;
                     let has_neg = m.data.iter().any(|&x| x < 0.0);
                     if has_neg {
-                        let data = m
-                            .data
-                            .iter()
-                            .map(|&x| Complex64::real(x).sqrt())
-                            .collect();
+                        let data = m.data.iter().map(|&x| Complex64::real(x).sqrt()).collect();
                         Ok(Value::ComplexMatrix(ComplexDenseMatrix {
                             rows: m.rows,
                             cols: m.cols,
@@ -1078,11 +1091,7 @@ pub fn call_builtin(
                     let m = coerce_matrix_pub(v, span_op)?;
                     let has_neg = m.data.iter().any(|&x| x < 0.0);
                     if has_neg {
-                        let data = m
-                            .data
-                            .iter()
-                            .map(|&x| Complex64::real(x).ln())
-                            .collect();
+                        let data = m.data.iter().map(|&x| Complex64::real(x).ln()).collect();
                         Ok(Value::ComplexMatrix(ComplexDenseMatrix {
                             rows: m.rows,
                             cols: m.cols,
@@ -1099,10 +1108,9 @@ pub fn call_builtin(
                 }
             }
         }
-        "floor" | "ceil" | "round" | "fix" | "log2" | "log10"
-        | "sin" | "cos" | "tan" | "asin" | "acos" | "atan" | "sinh" | "cosh" | "tanh"
-        | "deg2rad" | "rad2deg" | "sind" | "cosd" | "tand" | "asind" | "acosd" | "atand"
-        | "sign" => {
+        "floor" | "ceil" | "round" | "fix" | "log2" | "log10" | "sin" | "cos" | "tan" | "asin"
+        | "acos" | "atan" | "sinh" | "cosh" | "tanh" | "deg2rad" | "rad2deg" | "sind" | "cosd"
+        | "tand" | "asind" | "acosd" | "atand" | "sign" => {
             if args.len() != 1 {
                 return Err(Diagnostic::error(
                     format!("{} expects 1 argument.", name),

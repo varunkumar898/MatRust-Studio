@@ -1,6 +1,6 @@
+use crate::CompareOp;
 use matlab_diagnostics::{Diagnostic, Span};
 use matlab_values::{Complex64, ComplexDenseMatrix, DenseMatrix, Value};
-use crate::CompareOp;
 
 /// Complex matrix addition `A + B` with scalar broadcasting.
 pub fn add(
@@ -35,7 +35,12 @@ pub fn add(
             span,
         ));
     }
-    let data = a.data.iter().zip(b.data.iter()).map(|(&x, &y)| x + y).collect();
+    let data = a
+        .data
+        .iter()
+        .zip(b.data.iter())
+        .map(|(&x, &y)| x + y)
+        .collect();
     Ok(ComplexDenseMatrix {
         rows: a.rows,
         cols: a.cols,
@@ -76,7 +81,12 @@ pub fn sub(
             span,
         ));
     }
-    let data = a.data.iter().zip(b.data.iter()).map(|(&x, &y)| x - y).collect();
+    let data = a
+        .data
+        .iter()
+        .zip(b.data.iter())
+        .map(|(&x, &y)| x - y)
+        .collect();
     Ok(ComplexDenseMatrix {
         rows: a.rows,
         cols: a.cols,
@@ -117,7 +127,12 @@ pub fn elementwise_mul(
             span,
         ));
     }
-    let data = a.data.iter().zip(b.data.iter()).map(|(&x, &y)| x * y).collect();
+    let data = a
+        .data
+        .iter()
+        .zip(b.data.iter())
+        .map(|(&x, &y)| x * y)
+        .collect();
     Ok(ComplexDenseMatrix {
         rows: a.rows,
         cols: a.cols,
@@ -158,7 +173,12 @@ pub fn elementwise_div(
             span,
         ));
     }
-    let data = a.data.iter().zip(b.data.iter()).map(|(&x, &y)| x / y).collect();
+    let data = a
+        .data
+        .iter()
+        .zip(b.data.iter())
+        .map(|(&x, &y)| x / y)
+        .collect();
     Ok(ComplexDenseMatrix {
         rows: a.rows,
         cols: a.cols,
@@ -199,7 +219,12 @@ pub fn elementwise_pow(
             span,
         ));
     }
-    let data = a.data.iter().zip(b.data.iter()).map(|(&x, &y)| x.powc(y)).collect();
+    let data = a
+        .data
+        .iter()
+        .zip(b.data.iter())
+        .map(|(&x, &y)| x.powc(y))
+        .collect();
     Ok(ComplexDenseMatrix {
         rows: a.rows,
         cols: a.cols,
@@ -319,7 +344,11 @@ pub fn compare(
             CompareOp::Gt => x.re > y.re,
             CompareOp::Ge => x.re >= y.re,
         };
-        if cond { 1.0 } else { 0.0 }
+        if cond {
+            1.0
+        } else {
+            0.0
+        }
     };
 
     if a.is_scalar() {
@@ -347,7 +376,12 @@ pub fn compare(
             span,
         ));
     }
-    let data = a.data.iter().zip(b.data.iter()).map(|(&x, &y)| select(x, y)).collect();
+    let data = a
+        .data
+        .iter()
+        .zip(b.data.iter())
+        .map(|(&x, &y)| select(x, y))
+        .collect();
     Ok(DenseMatrix {
         rows: a.rows,
         cols: a.cols,
@@ -361,9 +395,7 @@ pub fn compare(
 
 pub fn add_values(l: &Value, r: &Value, span: Option<Span>) -> Result<Value, Diagnostic> {
     match (l, r) {
-        (Value::Matrix(lm), Value::Matrix(rm)) => {
-            Ok(Value::Matrix(crate::add(lm, rm, span)?))
-        }
+        (Value::Matrix(lm), Value::Matrix(rm)) => Ok(Value::Matrix(crate::add(lm, rm, span)?)),
         _ => {
             let lc = l.to_complex_matrix().ok_or_else(|| {
                 Diagnostic::error("Operands must be numeric matrices or scalars.", span)
@@ -378,9 +410,7 @@ pub fn add_values(l: &Value, r: &Value, span: Option<Span>) -> Result<Value, Dia
 
 pub fn sub_values(l: &Value, r: &Value, span: Option<Span>) -> Result<Value, Diagnostic> {
     match (l, r) {
-        (Value::Matrix(lm), Value::Matrix(rm)) => {
-            Ok(Value::Matrix(crate::sub(lm, rm, span)?))
-        }
+        (Value::Matrix(lm), Value::Matrix(rm)) => Ok(Value::Matrix(crate::sub(lm, rm, span)?)),
         _ => {
             let lc = l.to_complex_matrix().ok_or_else(|| {
                 Diagnostic::error("Operands must be numeric matrices or scalars.", span)
@@ -395,9 +425,7 @@ pub fn sub_values(l: &Value, r: &Value, span: Option<Span>) -> Result<Value, Dia
 
 pub fn mul_values(l: &Value, r: &Value, span: Option<Span>) -> Result<Value, Diagnostic> {
     match (l, r) {
-        (Value::Matrix(lm), Value::Matrix(rm)) => {
-            Ok(Value::Matrix(crate::matmul(lm, rm, span)?))
-        }
+        (Value::Matrix(lm), Value::Matrix(rm)) => Ok(Value::Matrix(crate::matmul(lm, rm, span)?)),
         _ => {
             let lc = l.to_complex_matrix().ok_or_else(|| {
                 Diagnostic::error("Operands must be numeric matrices or scalars.", span)
@@ -448,9 +476,11 @@ pub fn dotpow_values(l: &Value, r: &Value, span: Option<Span>) -> Result<Value, 
     match (l, r) {
         (Value::Matrix(lm), Value::Matrix(rm)) => {
             // If base has negative elements and exponent is non-integer, promote to complex!
-            let has_complex_branch = lm.data.iter().zip(rm.data.iter()).any(|(&x, &p)| {
-                x < 0.0 && p.fract() != 0.0
-            });
+            let has_complex_branch = lm
+                .data
+                .iter()
+                .zip(rm.data.iter())
+                .any(|(&x, &p)| x < 0.0 && p.fract() != 0.0);
             if has_complex_branch {
                 let lc = ComplexDenseMatrix::from_real(lm);
                 let rc = ComplexDenseMatrix::from_real(rm);
@@ -478,9 +508,7 @@ pub fn compare_values(
     span: Option<Span>,
 ) -> Result<DenseMatrix, Diagnostic> {
     match (l, r) {
-        (Value::Matrix(lm), Value::Matrix(rm)) => {
-            crate::compare(op, lm, rm, span)
-        }
+        (Value::Matrix(lm), Value::Matrix(rm)) => crate::compare(op, lm, rm, span),
         _ => {
             let lc = l.to_complex_matrix().ok_or_else(|| {
                 Diagnostic::error("Operands must be numeric matrices or scalars.", span)

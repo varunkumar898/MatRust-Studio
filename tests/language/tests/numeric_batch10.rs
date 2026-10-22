@@ -28,16 +28,32 @@ fn approx_eq_complex(a: &[Complex64], b: &[Complex64], tol: f64) -> bool {
 }
 
 fn env_complex(res: &matlab_runtime::RunResult, name: &str) -> ComplexDenseMatrix {
-    let val = res.env.get(name).unwrap_or_else(|| panic!("variable '{}' missing", name));
+    let val = res
+        .env
+        .get(name)
+        .unwrap_or_else(|| panic!("variable '{}' missing", name));
     val.as_complex_matrix()
-        .unwrap_or_else(|| panic!("variable '{}' is not a complex matrix, value is {:?}", name, val))
+        .unwrap_or_else(|| {
+            panic!(
+                "variable '{}' is not a complex matrix, value is {:?}",
+                name, val
+            )
+        })
         .clone()
 }
 
 fn env_mat(res: &matlab_runtime::RunResult, name: &str) -> DenseMatrix {
-    let val = res.env.get(name).unwrap_or_else(|| panic!("variable '{}' missing", name));
+    let val = res
+        .env
+        .get(name)
+        .unwrap_or_else(|| panic!("variable '{}' missing", name));
     val.as_matrix()
-        .unwrap_or_else(|| panic!("variable '{}' is not a real matrix, value is {:?}", name, val))
+        .unwrap_or_else(|| {
+            panic!(
+                "variable '{}' is not a real matrix, value is {:?}",
+                name, val
+            )
+        })
         .clone()
 }
 

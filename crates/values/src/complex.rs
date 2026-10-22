@@ -1,7 +1,7 @@
+use crate::matrix::DenseMatrix;
 use matlab_diagnostics::{Diagnostic, Span};
 use std::fmt;
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
-use crate::matrix::DenseMatrix;
 
 /// Double-precision complex number `re + im*i`.
 #[repr(C)]
@@ -331,7 +331,11 @@ impl ComplexDenseMatrix {
     ) -> Result<Self, Diagnostic> {
         if re.is_scalar() && !im.is_scalar() {
             let s_re = re.data[0];
-            let data = im.data.iter().map(|&im_val| Complex64::new(s_re, im_val)).collect();
+            let data = im
+                .data
+                .iter()
+                .map(|&im_val| Complex64::new(s_re, im_val))
+                .collect();
             return Ok(Self {
                 rows: im.rows,
                 cols: im.cols,
@@ -340,7 +344,11 @@ impl ComplexDenseMatrix {
         }
         if !re.is_scalar() && im.is_scalar() {
             let s_im = im.data[0];
-            let data = re.data.iter().map(|&re_val| Complex64::new(re_val, s_im)).collect();
+            let data = re
+                .data
+                .iter()
+                .map(|&re_val| Complex64::new(re_val, s_im))
+                .collect();
             return Ok(Self {
                 rows: re.rows,
                 cols: re.cols,
@@ -437,7 +445,12 @@ impl ComplexDenseMatrix {
     }
 
     /// 1-based 2D indexing: get element at (row, col)
-    pub fn get_2d(&self, r1: usize, c1: usize, span: Option<Span>) -> Result<Complex64, Diagnostic> {
+    pub fn get_2d(
+        &self,
+        r1: usize,
+        c1: usize,
+        span: Option<Span>,
+    ) -> Result<Complex64, Diagnostic> {
         if r1 == 0 || r1 > self.rows || c1 == 0 || c1 > self.cols {
             return Err(Diagnostic::error(
                 format!(

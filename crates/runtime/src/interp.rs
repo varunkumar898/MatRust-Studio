@@ -1450,9 +1450,9 @@ fn apply_binary(
                         base.powc(exp),
                     )));
                 }
-                let lc_mat = l.to_complex_matrix().ok_or_else(|| {
-                    Diagnostic::error("Invalid operand for power.", span)
-                })?;
+                let lc_mat = l
+                    .to_complex_matrix()
+                    .ok_or_else(|| Diagnostic::error("Invalid operand for power.", span))?;
                 let p = r.as_matrix().and_then(|m| m.as_scalar()).ok_or_else(|| {
                     Diagnostic::error("Exponent must be a scalar for matrix power.", span)
                 })?;
@@ -1470,9 +1470,7 @@ fn apply_binary(
                 }
                 let p_int = p as usize;
                 if p_int == 0 {
-                    return Ok(Value::ComplexMatrix(ComplexDenseMatrix::eye(
-                        lc_mat.rows,
-                    )));
+                    return Ok(Value::ComplexMatrix(ComplexDenseMatrix::eye(lc_mat.rows)));
                 }
                 let mut res = lc_mat.clone();
                 for _ in 1..p_int {

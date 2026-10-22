@@ -167,8 +167,12 @@ pub fn ndims(
     if args.len() != 1 {
         return Err(Diagnostic::error("ndims expects 1 argument.", Some(span)));
     }
-    let _ = matrix_arg(&args[0], env, io, span, "ndims")?;
-    Ok(Value::Matrix(DenseMatrix::scalar(2.0)))
+    let v = eval_expr_pub(env, &args[0], io)?;
+    match v {
+        Value::Matrix(_) | Value::ComplexMatrix(_) | Value::Boolean(_) | Value::String(_) => {
+            Ok(Value::Matrix(DenseMatrix::scalar(2.0)))
+        }
+    }
 }
 
 /// `isempty(A)` — 1 when `A` has no elements, 0 otherwise.
@@ -181,8 +185,13 @@ pub fn isempty(
     if args.len() != 1 {
         return Err(Diagnostic::error("isempty expects 1 argument.", Some(span)));
     }
-    let a = matrix_arg(&args[0], env, io, span, "isempty")?;
-    let empty = a.rows == 0 || a.cols == 0 || a.data.is_empty();
+    let v = eval_expr_pub(env, &args[0], io)?;
+    let empty = match &v {
+        Value::Matrix(m) => m.rows == 0 || m.cols == 0 || m.data.is_empty(),
+        Value::ComplexMatrix(c) => c.rows == 0 || c.cols == 0 || c.data.is_empty(),
+        Value::String(s) => s.is_empty(),
+        Value::Boolean(_) => false,
+    };
     Ok(Value::Matrix(DenseMatrix::scalar(if empty {
         1.0
     } else {

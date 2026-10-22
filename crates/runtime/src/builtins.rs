@@ -562,17 +562,7 @@ pub fn call_builtin(
                 return Err(Diagnostic::error("disp expects 1 argument.", span_op));
             }
             let v = eval_expr_pub(env, &args[0], io)?;
-            let s = match &v {
-                Value::Matrix(m) => m.format_matlab(),
-                Value::String(s) => s.clone(),
-                Value::Boolean(b) => {
-                    if *b {
-                        "1".to_string()
-                    } else {
-                        "0".to_string()
-                    }
-                }
-            };
+            let s = format_value(&v);
             io.stdout.push(s);
             Ok(Value::Matrix(DenseMatrix::empty()))
         }
@@ -813,9 +803,16 @@ pub fn call_builtin(
                 ));
             }
             let v = eval_expr_pub(env, &args[0], io)?;
-            let m = coerce_matrix_pub(v, span_op)?;
+            let (rows, cols) = match &v {
+                Value::Matrix(m) => (m.rows, m.cols),
+                Value::ComplexMatrix(c) => (c.rows, c.cols),
+                _ => {
+                    let m = coerce_matrix_pub(v, span_op)?;
+                    (m.rows, m.cols)
+                }
+            };
             if args.len() == 1 {
-                let d = DenseMatrix::from_rows(vec![vec![m.rows as f64, m.cols as f64]], span_op)?;
+                let d = DenseMatrix::from_rows(vec![vec![rows as f64, cols as f64]], span_op)?;
                 Ok(Value::Matrix(d))
             } else if args.len() == 2 {
                 let k = scalar_expr(&args[1], env, io, span, "size")?;
@@ -825,7 +822,7 @@ pub fn call_builtin(
                         span_op,
                     ));
                 }
-                let d = if k == 1.0 { m.rows } else { m.cols };
+                let d = if k == 1.0 { rows } else { cols };
                 Ok(Value::Matrix(DenseMatrix::scalar(d as f64)))
             } else {
                 Err(Diagnostic::error("size expects 1 or 2 arguments.", span_op))
@@ -833,17 +830,276 @@ pub fn call_builtin(
         }
         "length" => {
             let v = eval_expr_pub(env, args_first(args, "length", span)?, io)?;
-            let m = coerce_matrix_pub(v, span_op)?;
+            let (rows, cols) = match &v {
+                Value::Matrix(m) => (m.rows, m.cols),
+                Value::ComplexMatrix(c) => (c.rows, c.cols),
+                _ => {
+                    let m = coerce_matrix_pub(v, span_op)?;
+                    (m.rows, m.cols)
+                }
+            };
             Ok(Value::Matrix(
-                DenseMatrix::scalar(m.rows.max(m.cols) as f64),
+                DenseMatrix::scalar(rows.max(cols) as f64),
             ))
         }
         "numel" => {
             let v = eval_expr_pub(env, args_first(args, "numel", span)?, io)?;
-            let m = coerce_matrix_pub(v, span_op)?;
-            Ok(Value::Matrix(DenseMatrix::scalar((m.rows * m.cols) as f64)))
+            let (rows, cols) = match &v {
+                Value::Matrix(m) => (m.rows, m.cols),
+                Value::ComplexMatrix(c) => (c.rows, c.cols),
+                _ => {
+                    let m = coerce_matrix_pub(v, span_op)?;
+                    (m.rows, m.cols)
+                }
+            };
+            Ok(Value::Matrix(DenseMatrix::scalar((rows * cols) as f64)))
         }
-        "abs" | "sqrt" | "floor" | "ceil" | "round" | "fix" | "exp" | "log" | "log2" | "log10"
+        "complex" => {
+            if args.is_empty() || args.len() > 2 {
+                return Err(Diagnostic::error(
+                    "complex expects 1 or 2 arguments: complex(re) or complex(re, im).",
+                    span_op,
+                ));
+            }
+            let re_v = eval_expr_pub(env, &args[0], io)?;
+            let re_m = coerce_matrix_pub(re_v, span_op)?;
+            if args.len() == 1 {
+                Ok(Value::ComplexMatrix(ComplexDenseMatrix::from_real(&re_m)))
+            } else {
+                let im_v = eval_expr_pub(env, &args[1], io)?;
+                let im_m = coerce_matrix_pub(im_v, span_op)?;
+                Ok(Value::ComplexMatrix(ComplexDenseMatrix::from_parts(
+                    &re_m, &im_m, span_op,
+                )?))
+            }
+        }
+        "real" => {
+            if args.len() != 1 {
+                return Err(Diagnostic::error("real expects 1 argument: real(Z).", span_op));
+            }
+            let v = eval_expr_pub(env, &args[0], io)?;
+            match v {
+                Value::ComplexMatrix(c) => Ok(Value::Matrix(c.real_part())),
+                Value::Matrix(m) => Ok(Value::Matrix(m)),
+                Value::Boolean(b) => {
+                    Ok(Value::Matrix(DenseMatrix::scalar(if b { 1.0 } else { 0.0 })))
+                }
+                Value::String(_) => Err(Diagnostic::error(
+                    "Conversion to double from char is not possible.",
+                    span_op,
+                )),
+            }
+        }
+        "imag" => {
+            if args.len() != 1 {
+                return Err(Diagnostic::error("imag expects 1 argument: imag(Z).", span_op));
+            }
+            let v = eval_expr_pub(env, &args[0], io)?;
+            match v {
+                Value::ComplexMatrix(c) => Ok(Value::Matrix(c.imag_part())),
+                Value::Matrix(m) => Ok(Value::Matrix(DenseMatrix::zeros(m.rows, m.cols))),
+                Value::Boolean(_) => Ok(Value::Matrix(DenseMatrix::scalar(0.0))),
+                Value::String(_) => Err(Diagnostic::error(
+                    "Conversion to double from char is not possible.",
+                    span_op,
+                )),
+            }
+        }
+        "conj" => {
+            if args.len() != 1 {
+                return Err(Diagnostic::error("conj expects 1 argument: conj(Z).", span_op));
+            }
+            let v = eval_expr_pub(env, &args[0], io)?;
+            match v {
+                Value::ComplexMatrix(c) => {
+                    let data = c.data.iter().map(|z| z.conj()).collect();
+                    Ok(Value::ComplexMatrix(ComplexDenseMatrix {
+                        rows: c.rows,
+                        cols: c.cols,
+                        data,
+                    }))
+                }
+                Value::Matrix(m) => Ok(Value::Matrix(m)),
+                Value::Boolean(b) => {
+                    Ok(Value::Matrix(DenseMatrix::scalar(if b { 1.0 } else { 0.0 })))
+                }
+                Value::String(_) => Err(Diagnostic::error(
+                    "Conversion to double from char is not possible.",
+                    span_op,
+                )),
+            }
+        }
+        "angle" => {
+            if args.len() != 1 {
+                return Err(Diagnostic::error("angle expects 1 argument: angle(Z).", span_op));
+            }
+            let v = eval_expr_pub(env, &args[0], io)?;
+            match v {
+                Value::ComplexMatrix(c) => {
+                    let data = c.data.iter().map(|z| z.arg()).collect();
+                    Ok(Value::Matrix(DenseMatrix {
+                        rows: c.rows,
+                        cols: c.cols,
+                        data,
+                    }))
+                }
+                Value::Matrix(m) => {
+                    let data = m.data.iter().map(|&x| Complex64::real(x).arg()).collect();
+                    Ok(Value::Matrix(DenseMatrix {
+                        rows: m.rows,
+                        cols: m.cols,
+                        data,
+                    }))
+                }
+                Value::Boolean(b) => {
+                    let x = if b { 1.0 } else { 0.0 };
+                    Ok(Value::Matrix(DenseMatrix::scalar(Complex64::real(x).arg())))
+                }
+                Value::String(_) => Err(Diagnostic::error(
+                    "Conversion to double from char is not possible.",
+                    span_op,
+                )),
+            }
+        }
+        "isreal" => {
+            if args.len() != 1 {
+                return Err(Diagnostic::error("isreal expects 1 argument: isreal(A).", span_op));
+            }
+            let v = eval_expr_pub(env, &args[0], io)?;
+            match v {
+                Value::ComplexMatrix(c) => Ok(Value::Boolean(c.is_all_real())),
+                _ => Ok(Value::Boolean(true)),
+            }
+        }
+        "abs" => {
+            if args.len() != 1 {
+                return Err(Diagnostic::error("abs expects 1 argument.", span_op));
+            }
+            let v = eval_expr_pub(env, &args[0], io)?;
+            match v {
+                Value::ComplexMatrix(c) => {
+                    let data = c.data.iter().map(|z| z.abs()).collect();
+                    Ok(Value::Matrix(DenseMatrix {
+                        rows: c.rows,
+                        cols: c.cols,
+                        data,
+                    }))
+                }
+                _ => {
+                    let m = coerce_matrix_pub(v, span_op)?;
+                    let data = m.data.into_iter().map(f64::abs).collect();
+                    Ok(Value::Matrix(DenseMatrix {
+                        rows: m.rows,
+                        cols: m.cols,
+                        data,
+                    }))
+                }
+            }
+        }
+        "sqrt" => {
+            if args.len() != 1 {
+                return Err(Diagnostic::error("sqrt expects 1 argument.", span_op));
+            }
+            let v = eval_expr_pub(env, &args[0], io)?;
+            match v {
+                Value::ComplexMatrix(c) => {
+                    let data = c.data.iter().map(|z| z.sqrt()).collect();
+                    Ok(Value::ComplexMatrix(ComplexDenseMatrix {
+                        rows: c.rows,
+                        cols: c.cols,
+                        data,
+                    }))
+                }
+                _ => {
+                    let m = coerce_matrix_pub(v, span_op)?;
+                    let has_neg = m.data.iter().any(|&x| x < 0.0);
+                    if has_neg {
+                        let data = m
+                            .data
+                            .iter()
+                            .map(|&x| Complex64::real(x).sqrt())
+                            .collect();
+                        Ok(Value::ComplexMatrix(ComplexDenseMatrix {
+                            rows: m.rows,
+                            cols: m.cols,
+                            data,
+                        }))
+                    } else {
+                        let data = m.data.into_iter().map(f64::sqrt).collect();
+                        Ok(Value::Matrix(DenseMatrix {
+                            rows: m.rows,
+                            cols: m.cols,
+                            data,
+                        }))
+                    }
+                }
+            }
+        }
+        "exp" => {
+            if args.len() != 1 {
+                return Err(Diagnostic::error("exp expects 1 argument.", span_op));
+            }
+            let v = eval_expr_pub(env, &args[0], io)?;
+            match v {
+                Value::ComplexMatrix(c) => {
+                    let data = c.data.iter().map(|z| z.exp()).collect();
+                    Ok(Value::ComplexMatrix(ComplexDenseMatrix {
+                        rows: c.rows,
+                        cols: c.cols,
+                        data,
+                    }))
+                }
+                _ => {
+                    let m = coerce_matrix_pub(v, span_op)?;
+                    let data = m.data.into_iter().map(f64::exp).collect();
+                    Ok(Value::Matrix(DenseMatrix {
+                        rows: m.rows,
+                        cols: m.cols,
+                        data,
+                    }))
+                }
+            }
+        }
+        "log" => {
+            if args.len() != 1 {
+                return Err(Diagnostic::error("log expects 1 argument.", span_op));
+            }
+            let v = eval_expr_pub(env, &args[0], io)?;
+            match v {
+                Value::ComplexMatrix(c) => {
+                    let data = c.data.iter().map(|z| z.ln()).collect();
+                    Ok(Value::ComplexMatrix(ComplexDenseMatrix {
+                        rows: c.rows,
+                        cols: c.cols,
+                        data,
+                    }))
+                }
+                _ => {
+                    let m = coerce_matrix_pub(v, span_op)?;
+                    let has_neg = m.data.iter().any(|&x| x < 0.0);
+                    if has_neg {
+                        let data = m
+                            .data
+                            .iter()
+                            .map(|&x| Complex64::real(x).ln())
+                            .collect();
+                        Ok(Value::ComplexMatrix(ComplexDenseMatrix {
+                            rows: m.rows,
+                            cols: m.cols,
+                            data,
+                        }))
+                    } else {
+                        let data = m.data.into_iter().map(f64::ln).collect();
+                        Ok(Value::Matrix(DenseMatrix {
+                            rows: m.rows,
+                            cols: m.cols,
+                            data,
+                        }))
+                    }
+                }
+            }
+        }
+        "floor" | "ceil" | "round" | "fix" | "log2" | "log10"
         | "sin" | "cos" | "tan" | "asin" | "acos" | "atan" | "sinh" | "cosh" | "tanh"
         | "deg2rad" | "rad2deg" | "sind" | "cosd" | "tand" | "asind" | "acosd" | "atand"
         | "sign" => {
@@ -856,14 +1112,10 @@ pub fn call_builtin(
             let v = eval_expr_pub(env, &args[0], io)?;
             let m = coerce_matrix_pub(v, span_op)?;
             let f: fn(f64) -> f64 = match name {
-                "abs" => f64::abs,
-                "sqrt" => f64::sqrt,
                 "floor" => f64::floor,
                 "ceil" => f64::ceil,
                 "round" => |x| x.round(),
                 "fix" => |x| x.trunc(),
-                "exp" => f64::exp,
-                "log" => f64::ln,
                 "log2" => f64::log2,
                 "log10" => f64::log10,
                 "sin" => f64::sin,
@@ -1711,6 +1963,17 @@ pub fn call_builtin(
                 return Err(Diagnostic::error("Inf takes no arguments.", span_op));
             }
             Ok(Value::Matrix(DenseMatrix::scalar(f64::INFINITY)))
+        }
+        "i" | "j" => {
+            if !args.is_empty() {
+                return Err(Diagnostic::error(
+                    format!("{} takes no arguments.", name),
+                    span_op,
+                ));
+            }
+            Ok(Value::ComplexMatrix(ComplexDenseMatrix::scalar(
+                Complex64::new(0.0, 1.0),
+            )))
         }
         // ---- Graphics -------------------------------------------------
         "figure" => graphics_figure(args, env, io, span),

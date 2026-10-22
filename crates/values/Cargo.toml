@@ -1,0 +1,9 @@
+[package]
+name = "matlab_values"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+matlab_diagnostics = { path = "../diagnostics" }
+thiserror.workspace = true

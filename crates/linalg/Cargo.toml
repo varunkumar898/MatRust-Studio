@@ -1,0 +1,10 @@
+[package]
+name = "matlab_linalg"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+matlab_diagnostics = { path = "../diagnostics" }
+matlab_values = { path = "../values" }
+thiserror.workspace = true

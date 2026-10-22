@@ -1,0 +1,22 @@
+[workspace]
+members = [
+    "crates/diagnostics",
+    "crates/syntax",
+    "crates/values",
+    "crates/linalg",
+    "crates/runtime",
+    "apps/cli",
+    "tests/language",
+    "tests/matrices",
+    "tests/compatibility",
+]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+authors = ["Cherry <cherry@local>"]
+license = "MIT OR Apache-2.0"
+
+[workspace.dependencies]
+thiserror = "1.0"

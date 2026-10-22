@@ -78,10 +78,10 @@ date above; Section 14 records batch updates.
 
 | Name | Status | Implementation | Dependencies | Tests | Limitations | Next action |
 |---|---|---|---|---|---|---|
-| `abs`, `sign` | implemented | runtime::builtins | — | compatibility:scalar_math_functions, language:numeric_batch7:sign_* | `abs` IEEE-754; `sign` returns -1, 0, 1, or NaN | — |
-| `sqrt`, `nthroot(x,n)` | implemented | runtime::builtins | — | compatibility:scalar_math_functions, language:numeric_batch7:nthroot_* | real-only roots; odd roots of negative numbers supported; even roots of negative numbers error | complex roots after complex type |
-| `exp`, `log`, `log2`, `log10` | implemented | runtime::builtins | — | compatibility:scalar_math_functions | real-valued IEEE-754 semantics | complex log after complex type |
-| `power(a,b)` / `.^` | implemented | linalg::elementwise_pow | — | matrices:elementwise_power_and_division | f64 powf semantics | complex power after complex type |
+| `abs`, `sign` | implemented | runtime::builtins | — | compatibility:scalar_math_functions, language:numeric_batch7:sign_*, language:numeric_batch10:test_component_extraction_* | `abs` supports real and complex (via hypot); `sign` returns -1, 0, 1, or NaN | — |
+| `sqrt`, `nthroot(x,n)` | implemented | runtime::builtins | — | compatibility:scalar_math_functions, language:numeric_batch7:nthroot_*, language:numeric_batch10:test_sqrt_negative_* | `sqrt` supports real and complex, promotes $x < 0$ to pure imaginary; `nthroot` supports odd roots of negative numbers | — |
+| `exp`, `log`, `log2`, `log10` | implemented | runtime::builtins | — | compatibility:scalar_math_functions, language:numeric_batch10:test_euler_identity, test_log_negative_* | `exp` and `log` support complex numbers; `log` promotes $x < 0$ to complex; `log2`/`log10` real-valued | complex log2/log10 |
+| `power(a,b)` / `.^` | implemented | linalg::elementwise_pow | — | matrices:elementwise_power_and_division, language:numeric_batch10:test_power_negative_* | supports real, complex, and mixed operands; promotes negative base with fractional power to complex | — |
 | `sin`, `cos`, `tan` | implemented | runtime::builtins | — | language:numeric_batch7 | unary map | — |
 | `sind`, `cosd`, `tand` | implemented | runtime::builtins | — | language:numeric_batch7:exact_degree_trig | exact zeros for multiples of 90/180 | — |
 | `asin`, `acos`, `atan`, `atan2(y,x)` | implemented | runtime::builtins | — | language:numeric_batch7:atan2_* | real domain; atan2 supports scalar expansion | complex inverse trig after complex type |
@@ -94,7 +94,7 @@ date above; Section 14 records batch updates.
 | `gcd`, `lcm` | implemented | runtime::builtins | — | language:numeric_batch7 | Euclid algorithm; supports scalar expansion | — |
 | `factorial(n)`, `nchoosek(n,k)` | implemented | runtime::builtins | — | language:numeric_batch7:factorial_*, nchoosek_* | float accumulation; nchoosek symmetry min(k,n-k); overflow to Inf at 171 | — |
 | `primes(n)`, `isprime(n)`, `factor(n)` | implemented | runtime::builtins | — | language:numeric_batch7:primes_*, factor_* | sieve for primes; trial division for factor; factor(1)==[1]; product reconstructs input | large integer precision limited to flintmax |
-| `real`, `imag`, `conj`, `angle` | planned | — | — | — | needs complex type | architectural design completed in docs/architecture/complex-numbers.md |
+| `complex`, `real`, `imag`, `conj`, `angle`, `isreal` | implemented | runtime::builtins | — | language:numeric_batch10:test_complex_constructor_*, test_component_extraction_*, test_isreal_* | full scalar and array support; scalar broadcasting for `complex(re, im)`; angle returns radians; isreal checks imaginary parts | — |
 | `bitand`, `bitor`, `bitxor`, `bitshift` | implemented | runtime::builtins | — | language:numeric_batch7:bitwise_*, bitshift_* | safe shift logic (no panic on shift>=64 or <=-64); 3-arg bitshift width mask | integer type cast |
 | `dec2bin`, `bin2dec`, `dec2hex`, `hex2dec` | implemented | runtime::builtins | — | language:numeric_batch7:dec2bin_*, bin2dec_*, dec2hex_*, hex2dec_* | 32-bit two's complement for negatives (padded with 1/F); scalar and vector inputs; floor semantics; multi-line string round-trips to column vectors | precision limited to flintmax |
 

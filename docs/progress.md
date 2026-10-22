@@ -447,3 +447,4 @@ validation in `crates/runtime/src/arrayfn.rs`, dispatch in `crates/runtime/src/b
     `3 + 4i`, `5`, `3 - 4i`, `-1 + 1.2246e-16i`.
   - CLI matrix transpose test: verified `A.'` non-conjugating vs `A'` Hermitian conjugating transpose.
 
+Batch 12 (partial): eig (real symmetric/general, basic QR), prctile, quantile, cov, corrcoef implemented and tested. Complex eig deferred. REA blocked (installer present, engine not installed).

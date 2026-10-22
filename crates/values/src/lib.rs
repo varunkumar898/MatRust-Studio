@@ -58,12 +58,34 @@ impl Value {
         }
     }
 
-    /// Promote to `ComplexDenseMatrix` if real, or clone if already complex.
+    /// Promote to `ComplexDenseMatrix` if real/boolean, or clone if already complex.
     pub fn to_complex_matrix(&self) -> Option<ComplexDenseMatrix> {
         match self {
             Value::Matrix(m) => Some(ComplexDenseMatrix::from_real(m)),
             Value::ComplexMatrix(c) => Some(c.clone()),
+            Value::Boolean(b) => Some(ComplexDenseMatrix::scalar(Complex64::real(
+                if *b { 1.0 } else { 0.0 },
+            ))),
             _ => None,
+        }
+    }
+
+    /// Construct a Value from a ComplexDenseMatrix, simplifying to a real Value::Matrix
+    /// if and only if all imaginary components are exactly 0.0 (exact cancellation).
+    pub fn from_complex_or_simplified(c: ComplexDenseMatrix) -> Self {
+        if c.is_all_real() {
+            Value::Matrix(c.to_real_matrix())
+        } else {
+            Value::ComplexMatrix(c)
+        }
+    }
+
+    /// If self is a ComplexMatrix whose imaginary parts are all exactly zero,
+    /// demote it to a real Matrix. Otherwise return self.
+    pub fn simplify_if_real(self) -> Self {
+        match self {
+            Value::ComplexMatrix(c) => Self::from_complex_or_simplified(c),
+            other => other,
         }
     }
 

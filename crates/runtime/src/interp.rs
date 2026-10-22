@@ -1420,35 +1420,15 @@ fn apply_binary(
             BinaryOp::DotMul => la::dotmul_values(l, r, span),
             BinaryOp::DotDiv => la::dotdiv_values(l, r, span),
             BinaryOp::DotLDiv => la::dotdiv_values(r, l, span),
-            BinaryOp::Div => {
-                if let Some(rc) = r.to_complex_matrix() {
-                    if rc.is_scalar() {
-                        return la::dotdiv_values(l, r, span);
-                    }
-                }
-                Err(Diagnostic::error(
-                    "Complex matrix division (solve) is not yet supported for non-scalar matrices.",
-                    span,
-                ))
-            }
-            BinaryOp::LDiv => {
-                if let Some(lc) = l.to_complex_matrix() {
-                    if lc.is_scalar() {
-                        return la::dotdiv_values(r, l, span);
-                    }
-                }
-                Err(Diagnostic::error(
-                    "Complex matrix left-division (solve) is not yet supported for non-scalar matrices.",
-                    span,
-                ))
-            }
+            BinaryOp::Div => la::mrdivide_values(l, r, span),
+            BinaryOp::LDiv => la::mldivide_values(l, r, span),
             BinaryOp::Pow => {
                 let lc = l.to_complex_matrix().and_then(|m| m.as_scalar());
                 let rc = r.to_complex_matrix().and_then(|m| m.as_scalar());
                 if let (Some(base), Some(exp)) = (lc, rc) {
-                    return Ok(Value::ComplexMatrix(ComplexDenseMatrix::scalar(
-                        base.powc(exp),
-                    )));
+                    return Ok(Value::from_complex_or_simplified(
+                        ComplexDenseMatrix::scalar(base.powc(exp)),
+                    ));
                 }
                 let lc_mat = l
                     .to_complex_matrix()
@@ -1476,7 +1456,7 @@ fn apply_binary(
                 for _ in 1..p_int {
                     res = la::complex::matmul(&res, &lc_mat, span)?;
                 }
-                Ok(Value::ComplexMatrix(res))
+                Ok(Value::from_complex_or_simplified(res))
             }
             BinaryOp::DotPow => la::dotpow_values(l, r, span),
             BinaryOp::Eq => Ok(Value::Matrix(la::compare_values(

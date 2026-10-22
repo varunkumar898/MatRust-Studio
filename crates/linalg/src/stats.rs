@@ -475,3 +475,113 @@ pub fn max_elementwise(
         }
     })
 }
+
+// ---------------------------------------------------------------------------
+// Prctile / Quantile (Batch 12)
+// ---------------------------------------------------------------------------
+
+pub fn quantile_slice(sorted: &[f64], p: f64) -> f64 {
+    if sorted.is_empty() {
+        return f64::NAN;
+    }
+    if sorted.len() == 1 {
+        return sorted[0];
+    }
+    if p < 0.0 || p > 1.0 {
+        return f64::NAN;
+    }
+    quantile(sorted, p)
+}
+
+pub fn prctile(a: &DenseMatrix, pct: f64, dim: Option<usize>) -> DenseMatrix {
+    let d = resolve_dim(a, dim);
+    if a.data.is_empty() {
+        return DenseMatrix::scalar(f64::NAN);
+    }
+    if d == 1 {
+        let mut res = Vec::with_capacity(a.cols);
+        for c in 0..a.cols {
+            let mut col = Vec::with_capacity(a.rows);
+            for r in 0..a.rows {
+                col.push(a.data[r * a.cols + c]);
+            }
+            col.sort_by(|x, y| x.partial_cmp(y).unwrap_or(std::cmp::Ordering::Equal));
+            res.push(quantile_slice(&col, pct / 100.0));
+        }
+        DenseMatrix { rows: 1, cols: a.cols, data: res }
+    } else if d == 2 {
+        let mut res = Vec::with_capacity(a.rows);
+        for r in 0..a.rows {
+            let mut row = a.data[r * a.cols..(r + 1) * a.cols].to_vec();
+            row.sort_by(|x, y| x.partial_cmp(y).unwrap_or(std::cmp::Ordering::Equal));
+            res.push(quantile_slice(&row, pct / 100.0));
+        }
+        DenseMatrix { rows: a.rows, cols: 1, data: res }
+    } else {
+        let mut all = a.data.clone();
+        all.sort_by(|x, y| x.partial_cmp(y).unwrap_or(std::cmp::Ordering::Equal));
+        DenseMatrix { rows: 1, cols: 1, data: vec![quantile_slice(&all, pct / 100.0)] }
+    }
+}
+
+pub fn quantile_matrix(a: &DenseMatrix, p: f64, dim: Option<usize>) -> DenseMatrix {
+    prctile(a, p * 100.0, dim)
+}
+
+pub fn cov_matrix(a: &DenseMatrix, w: usize, _b: Option<&DenseMatrix>) -> DenseMatrix {
+    let n = a.rows;
+    let p = a.cols;
+    if n == 0 || p == 0 {
+        return DenseMatrix::empty();
+    }
+    let mut centered = a.data.clone();
+    for c in 0..p {
+        let mut sum = 0.0;
+        for r in 0..n {
+            sum += a.data[r * p + c];
+        }
+        let mean = sum / (n as f64);
+        for r in 0..n {
+            centered[r * p + c] -= mean;
+        }
+    }
+    let denom = if w == 0 {
+        if n <= 1 { 1.0 } else { (n - 1) as f64 }
+    } else {
+        n as f64
+    };
+    let mut c_data = vec![0.0; p * p];
+    for i in 0..p {
+        for j in 0..p {
+            let mut s = 0.0;
+            for r in 0..n {
+                s += centered[r * p + i] * centered[r * p + j];
+            }
+            c_data[i * p + j] = s / denom;
+        }
+    }
+    DenseMatrix { rows: p, cols: p, data: c_data }
+}
+
+pub fn corrcoef_matrix(a: &DenseMatrix) -> DenseMatrix {
+    let n = a.rows;
+    let p = a.cols;
+    if n == 0 || p == 0 {
+        return DenseMatrix::empty();
+    }
+    let c = cov_matrix(a, 0, None);
+    let mut r_data = vec![0.0; p * p];
+    for i in 0..p {
+        for j in 0..p {
+            let cov_ij = c.data[i * p + j];
+            let var_i = c.data[i * p + i];
+            let var_j = c.data[j * p + j];
+            if var_i > 1e-15 && var_j > 1e-15 {
+                r_data[i * p + j] = cov_ij / (var_i.sqrt() * var_j.sqrt());
+            } else {
+                r_data[i * p + j] = if i == j { 1.0 } else { f64::NAN };
+            }
+        }
+    }
+    DenseMatrix { rows: p, cols: p, data: r_data }
+}

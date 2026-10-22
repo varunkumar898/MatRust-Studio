@@ -234,7 +234,7 @@ impl Div for Complex64 {
     fn div(self, rhs: Self) -> Self::Output {
         if rhs.re.abs() >= rhs.im.abs() {
             if rhs.re == 0.0 {
-                return Self::new(f64::NAN, f64::NAN);
+                return Self::new(self.re / 0.0, self.im / 0.0);
             }
             let ratio = rhs.im / rhs.re;
             let denom = rhs.re + rhs.im * ratio;

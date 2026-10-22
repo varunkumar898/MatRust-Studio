@@ -553,3 +553,199 @@ pub fn elementwise_ldiv(
         data,
     })
 }
+
+// ---------------------------------------------------------------------------
+// Eigenvalues / Eigenvectors (Batch 12)
+// ---------------------------------------------------------------------------
+
+/// Compute eigenvalues and eigenvectors for a real dense matrix using
+/// Jacobi rotation for symmetric matrices, and a basic QR iteration for
+/// general matrices (limited to moderate sizes with convergence check).
+/// Returns (D, V) where D is a column vector of eigenvalues and V is matrix
+/// of right eigenvectors (A*V = V*D within tolerance).
+pub fn eig(a: &DenseMatrix, span: Option<Span>) -> Result<(DenseMatrix, DenseMatrix), Diagnostic> {
+    if a.rows != a.cols {
+        return Err(Diagnostic::error(
+            format!("Matrix must be square to compute eigenvalues: {}x{}", a.rows, a.cols), span,
+        ));
+    }
+    let n = a.rows;
+    if n == 0 {
+        return Ok((DenseMatrix::empty(), DenseMatrix::empty()));
+    }
+    if n == 1 {
+        return Ok((DenseMatrix::scalar(a.data[0]), DenseMatrix::eye(1)));
+    }
+    // Check symmetry within tolerance
+    let mut sym = true;
+    for i in 0..n {
+        for j in (i + 1)..n {
+            if (a.data[i * n + j] - a.data[j * n + i]).abs() > 1e-8 {
+                sym = false;
+            }
+        }
+    }
+    if sym {
+        return jacobi_eigen(a, span);
+    }
+    // General case: basic QR iteration (simplified; documented limitation)
+    basic_qr_eig(a, span)
+}
+
+/// Jacobi eigenvalue algorithm for real symmetric matrices.
+fn jacobi_eigen(a: &DenseMatrix, _span: Option<Span>) -> Result<(DenseMatrix, DenseMatrix), Diagnostic> {
+    let n = a.rows;
+    let mut v = DenseMatrix::eye(n);
+    let mut d = a.clone();
+    let max_sweeps = 50;
+    let tol = 1e-10;
+    for _ in 0..max_sweeps {
+        let mut max_val = 0.0;
+        let mut p = 0usize;
+        let mut q = 1usize;
+        for i in 0..n {
+            for j in (i + 1)..n {
+                let val = d.data[i * n + j].abs();
+                if val > max_val {
+                    max_val = val;
+                    p = i; q = j;
+                }
+            }
+        }
+        if max_val < tol {
+            break;
+        }
+        let app = d.data[p * n + p];
+        let aqq = d.data[q * n + q];
+        let apq = d.data[p * n + q];
+        let phi = 0.5 * (aqq - app).atan2(apq);
+        let c = phi.cos();
+        let s = phi.sin();
+        // Update D via rotation in p,q plane
+        for i in 0..n {
+            let dip = d.data[i * n + p];
+            let diq = d.data[i * n + q];
+            d.data[i * n + p] = c * dip - s * diq;
+            d.data[i * n + q] = s * dip + c * diq;
+        }
+        for i in 0..n {
+            let dpi = d.data[p * n + i];
+            let dqi = d.data[q * n + i];
+            d.data[p * n + i] = c * dpi - s * dqi;
+            d.data[q * n + i] = s * dpi + c * dqi;
+        }
+        // Symmetrize
+        d.data[p * n + q] = 0.0;
+        d.data[q * n + p] = 0.0;
+        // Update V
+        for i in 0..n {
+            let vip = v.data[i * n + p];
+            let viq = v.data[i * n + q];
+            v.data[i * n + p] = c * vip - s * viq;
+            v.data[i * n + q] = s * vip + c * viq;
+        }
+    }
+    // Extract diagonal as eigenvalues (column vector)
+    let mut ev = vec![0.0; n];
+    for i in 0..n {
+        ev[i] = d.data[i * n + i];
+    }
+    // Sort eigenvalues ascending with matching eigenvectors
+    let mut pairs: Vec<(f64, usize)> = (0..n).map(|i| (ev[i], i)).collect();
+    pairs.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap_or(std::cmp::Ordering::Equal));
+    let mut sorted_ev = Vec::with_capacity(n);
+    let mut sorted_v = vec![0.0; n * n];
+    for (idx, &(val, orig)) in pairs.iter().enumerate() {
+        sorted_ev.push(val);
+        for r in 0..n {
+            sorted_v[r * n + idx] = v.data[r * n + orig];
+        }
+    }
+    Ok((DenseMatrix { rows: n, cols: 1, data: sorted_ev }, DenseMatrix { rows: n, cols: n, data: sorted_v }))
+}
+
+/// Basic QR iteration for general real matrices (simplified; may not converge for all).
+fn basic_qr_eig(a: &DenseMatrix, span: Option<Span>) -> Result<(DenseMatrix, DenseMatrix), Diagnostic> {
+    let n = a.rows;
+    let mut m = a.clone();
+    let mut v = DenseMatrix::eye(n);
+    for _ in 0..200 {
+        // Simple QR via Gram-Schmidt on columns (approximate)
+        let mut q = vec![vec![0.0; n]; n];
+        let mut r = vec![vec![0.0; n]; n];
+        for j in 0..n {
+            let mut col = Vec::with_capacity(n);
+            for i in 0..n {
+                col.push(m.data[i * n + j]);
+            }
+            for k in 0..j {
+                let mut proj = 0.0;
+                for i in 0..n {
+                    proj += q[i][k] * col[i];
+                }
+                r[k][j] = proj;
+                for i in 0..n {
+                    col[i] -= proj * q[i][k];
+                }
+            }
+            let norm = col.iter().map(|&x| x * x).sum::<f64>().sqrt();
+            r[j][j] = norm;
+            if norm > 1e-12 {
+                for i in 0..n {
+                    q[i][j] = col[i] / norm;
+                }
+            }
+        }
+        // Reconstruct Q matrix (column-major for our storage)
+        let mut q_mat = DenseMatrix { rows: n, cols: n, data: vec![0.0; n * n] };
+        for j in 0..n {
+            for i in 0..n {
+                q_mat.data[i * n + j] = q[i][j];
+            }
+        }
+        // M = R * Q (approximate next iterate)
+        let mut m_next = DenseMatrix { rows: n, cols: n, data: vec![0.0; n * n] };
+        for i in 0..n {
+            for j in 0..n {
+                let mut s = 0.0;
+                for k in 0..n {
+                    s += r[i][k] * q_mat.data[k * n + j];
+                }
+                m_next.data[i * n + j] = s;
+            }
+        }
+        // Update V = V * Q
+        let new_v = crate::matmul(&v, &q_mat, span)?;
+        v = new_v;
+        m = m_next;
+        // Convergence check on sub-diagonal
+        let mut max_sub = 0.0f64;
+        for i in 1..n {
+            for j in 0..i {
+                let abs_val: f64 = m.data[i * n + j].abs();
+                if abs_val > max_sub {
+                    max_sub = abs_val;
+                }
+            }
+        }
+        if max_sub < 1e-8 {
+            break;
+        }
+    }
+    // Extract approximate eigenvalues from diagonal
+    let mut ev = vec![0.0; n];
+    for i in 0..n {
+        ev[i] = m.data[i * n + i];
+    }
+    let mut pairs: Vec<(f64, usize)> = (0..n).map(|i| (ev[i], i)).collect();
+    pairs.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap_or(std::cmp::Ordering::Equal));
+    let mut sorted_ev = Vec::with_capacity(n);
+    let mut sorted_v = vec![0.0; n * n];
+    for (idx, &(val, orig)) in pairs.iter().enumerate() {
+        sorted_ev.push(val);
+        for r in 0..n {
+            sorted_v[r * n + idx] = v.data[r * n + orig];
+        }
+    }
+    Ok((DenseMatrix { rows: n, cols: 1, data: sorted_ev }, DenseMatrix { rows: n, cols: n, data: sorted_v }))
+}

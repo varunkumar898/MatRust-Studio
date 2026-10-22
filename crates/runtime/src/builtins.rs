@@ -143,13 +143,31 @@ pub fn call_builtin_multi(
                     Some(span),
                 ));
             }
-            let a = crate::arrayfn::matrix_arg(&args[0], env, io, span, "lu")?;
-            if nargout == 2 {
-                let (l, u) = la::lu_two_output(&a, Some(span))?;
-                Ok(vec![Value::Matrix(l), Value::Matrix(u)])
-            } else {
-                let (l, u, p) = la::lu_three_output(&a, Some(span))?;
-                Ok(vec![Value::Matrix(l), Value::Matrix(u), Value::Matrix(p)])
+            let v = eval_expr_pub(env, &args[0], io)?;
+            match v {
+                Value::ComplexMatrix(c) => {
+                    if nargout == 2 {
+                        let (l, u) = la::complex::lu_two_output(&c, Some(span))?;
+                        Ok(vec![Value::ComplexMatrix(l), Value::ComplexMatrix(u)])
+                    } else {
+                        let (l, u, p) = la::complex::lu_three_output(&c, Some(span))?;
+                        Ok(vec![
+                            Value::ComplexMatrix(l),
+                            Value::ComplexMatrix(u),
+                            Value::Matrix(p),
+                        ])
+                    }
+                }
+                _ => {
+                    let a = coerce_matrix_pub(v, Some(span))?;
+                    if nargout == 2 {
+                        let (l, u) = la::lu_two_output(&a, Some(span))?;
+                        Ok(vec![Value::Matrix(l), Value::Matrix(u)])
+                    } else {
+                        let (l, u, p) = la::lu_three_output(&a, Some(span))?;
+                        Ok(vec![Value::Matrix(l), Value::Matrix(u), Value::Matrix(p)])
+                    }
+                }
             }
         }
         "svd" if nargout > 1 => {
@@ -159,9 +177,22 @@ pub fn call_builtin_multi(
                     Some(span),
                 ));
             }
-            let a = crate::arrayfn::matrix_arg(&args[0], env, io, span, "svd")?;
-            let (u, s, v) = la::svd_full(&a, Some(span))?;
-            Ok(vec![Value::Matrix(u), Value::Matrix(s), Value::Matrix(v)])
+            let v = eval_expr_pub(env, &args[0], io)?;
+            match v {
+                Value::ComplexMatrix(c) => {
+                    let (u, s, v_mat) = la::complex_svd_full(&c, Some(span))?;
+                    Ok(vec![
+                        Value::ComplexMatrix(u),
+                        Value::Matrix(s),
+                        Value::ComplexMatrix(v_mat),
+                    ])
+                }
+                _ => {
+                    let a = coerce_matrix_pub(v, Some(span))?;
+                    let (u, s, v_mat) = la::svd_full(&a, Some(span))?;
+                    Ok(vec![Value::Matrix(u), Value::Matrix(s), Value::Matrix(v_mat)])
+                }
+            }
         }
         _ => {
             let val = call_builtin(name, args, env, span, io)?;
@@ -589,9 +620,18 @@ pub fn call_builtin(
             if args.len() != 1 {
                 return Err(Diagnostic::error("lu expects 1 argument: lu(A).", span_op));
             }
-            let a = crate::arrayfn::matrix_arg(&args[0], env, io, span, "lu")?;
-            let y = la::lu_factor(&a, span_op)?;
-            Ok(Value::Matrix(y))
+            let v = eval_expr_pub(env, &args[0], io)?;
+            match v {
+                Value::ComplexMatrix(c) => {
+                    let y = la::complex::lu_factor(&c, span_op)?;
+                    Ok(Value::ComplexMatrix(y))
+                }
+                _ => {
+                    let a = coerce_matrix_pub(v, span_op)?;
+                    let y = la::lu_factor(&a, span_op)?;
+                    Ok(Value::Matrix(y))
+                }
+            }
         }
         "det" => {
             if args.len() != 1 {
@@ -600,9 +640,22 @@ pub fn call_builtin(
                     span_op,
                 ));
             }
-            let a = crate::arrayfn::matrix_arg(&args[0], env, io, span, "det")?;
-            let d = la::det(&a, span_op)?;
-            Ok(Value::Matrix(DenseMatrix::scalar(d)))
+            let v = eval_expr_pub(env, &args[0], io)?;
+            match v {
+                Value::ComplexMatrix(c) => {
+                    let d = la::complex::det(&c, span_op)?;
+                    if d.is_real() {
+                        Ok(Value::Matrix(DenseMatrix::scalar(d.re)))
+                    } else {
+                        Ok(Value::ComplexMatrix(ComplexDenseMatrix::scalar(d)))
+                    }
+                }
+                _ => {
+                    let a = coerce_matrix_pub(v, span_op)?;
+                    let d = la::det(&a, span_op)?;
+                    Ok(Value::Matrix(DenseMatrix::scalar(d)))
+                }
+            }
         }
         "inv" => {
             if args.len() != 1 {
@@ -611,9 +664,18 @@ pub fn call_builtin(
                     span_op,
                 ));
             }
-            let a = crate::arrayfn::matrix_arg(&args[0], env, io, span, "inv")?;
-            let inv_m = la::inv(&a, span_op)?;
-            Ok(Value::Matrix(inv_m))
+            let v = eval_expr_pub(env, &args[0], io)?;
+            match v {
+                Value::ComplexMatrix(c) => {
+                    let inv_m = la::complex::inv(&c, span_op)?;
+                    Ok(Value::from_complex_or_simplified(inv_m))
+                }
+                _ => {
+                    let a = coerce_matrix_pub(v, span_op)?;
+                    let inv_m = la::inv(&a, span_op)?;
+                    Ok(Value::Matrix(inv_m))
+                }
+            }
         }
         "trace" => {
             if args.len() != 1 {
@@ -622,9 +684,22 @@ pub fn call_builtin(
                     span_op,
                 ));
             }
-            let a = crate::arrayfn::matrix_arg(&args[0], env, io, span, "trace")?;
-            let tr = la::trace(&a, span_op)?;
-            Ok(Value::Matrix(DenseMatrix::scalar(tr)))
+            let v = eval_expr_pub(env, &args[0], io)?;
+            match v {
+                Value::ComplexMatrix(c) => {
+                    let tr = la::complex::trace(&c, span_op)?;
+                    if tr.is_real() {
+                        Ok(Value::Matrix(DenseMatrix::scalar(tr.re)))
+                    } else {
+                        Ok(Value::ComplexMatrix(ComplexDenseMatrix::scalar(tr)))
+                    }
+                }
+                _ => {
+                    let a = coerce_matrix_pub(v, span_op)?;
+                    let tr = la::trace(&a, span_op)?;
+                    Ok(Value::Matrix(DenseMatrix::scalar(tr)))
+                }
+            }
         }
         "svd" => {
             if args.len() != 1 {
@@ -633,9 +708,18 @@ pub fn call_builtin(
                     span_op,
                 ));
             }
-            let a = crate::arrayfn::matrix_arg(&args[0], env, io, span, "svd")?;
-            let s = la::svd_values(&a, span_op)?;
-            Ok(Value::Matrix(s))
+            let v = eval_expr_pub(env, &args[0], io)?;
+            match v {
+                Value::ComplexMatrix(c) => {
+                    let s = la::complex_svd_values(&c, span_op)?;
+                    Ok(Value::Matrix(s))
+                }
+                _ => {
+                    let a = coerce_matrix_pub(v, span_op)?;
+                    let s = la::svd_values(&a, span_op)?;
+                    Ok(Value::Matrix(s))
+                }
+            }
         }
         "rank" => {
             if args.is_empty() || args.len() > 2 {
@@ -644,13 +728,19 @@ pub fn call_builtin(
                     span_op,
                 ));
             }
-            let a = crate::arrayfn::matrix_arg(&args[0], env, io, span, "rank")?;
+            let v = eval_expr_pub(env, &args[0], io)?;
             let tol = if args.len() == 2 {
                 Some(scalar_arg(&args[1..2], env, io, span, "rank")?)
             } else {
                 None
             };
-            let r = la::rank(&a, tol, span_op)?;
+            let r = match v {
+                Value::ComplexMatrix(c) => la::complex_rank(&c, tol, span_op)?,
+                _ => {
+                    let a = coerce_matrix_pub(v, span_op)?;
+                    la::rank(&a, tol, span_op)?
+                }
+            };
             Ok(Value::Matrix(DenseMatrix::scalar(r as f64)))
         }
         "pinv" => {
@@ -660,14 +750,84 @@ pub fn call_builtin(
                     span_op,
                 ));
             }
-            let a = crate::arrayfn::matrix_arg(&args[0], env, io, span, "pinv")?;
+            let v = eval_expr_pub(env, &args[0], io)?;
             let tol = if args.len() == 2 {
                 Some(scalar_arg(&args[1..2], env, io, span, "pinv")?)
             } else {
                 None
             };
-            let p = la::pinv(&a, tol, span_op)?;
-            Ok(Value::Matrix(p))
+            match v {
+                Value::ComplexMatrix(c) => {
+                    let p = la::complex_pinv(&c, tol, span_op)?;
+                    Ok(Value::from_complex_or_simplified(p))
+                }
+                _ => {
+                    let a = coerce_matrix_pub(v, span_op)?;
+                    let p = la::pinv(&a, tol, span_op)?;
+                    Ok(Value::Matrix(p))
+                }
+            }
+        }
+        "eig" => {
+            if args.len() != 1 {
+                return Err(Diagnostic::error("eig expects 1 argument: eig(A).", span_op));
+            }
+            let v = eval_expr_pub(env, &args[0], io)?;
+            match v {
+                Value::ComplexMatrix(_) => {
+                    return Err(Diagnostic::error("Complex eig not yet implemented in runtime.", span_op));
+                }
+                _ => {
+                    let a = coerce_matrix_pub(v, span_op)?;
+                    let (d, _) = la::decomposition::eig(&a, span_op)?;
+                    Ok(Value::Matrix(d))
+                }
+            }
+        }
+        "prctile" => {
+            if args.is_empty() || args.len() > 3 {
+                return Err(Diagnostic::error("prctile expects 2 or 3 arguments.", span_op));
+            }
+            let v = eval_expr_pub(env, &args[0], io)?;
+            let pct = scalar_arg(&args[1..2], env, io, span, "prctile")?;
+            let d = if args.len() > 2 {
+                Some(scalar_arg(&args[2..3], env, io, span, "prctile")? as usize)
+            } else { None };
+            let a = coerce_matrix_pub(v, span_op)?;
+            let res = la::stats::prctile(&a, pct, d);
+            Ok(Value::Matrix(res))
+        }
+        "quantile" => {
+            if args.is_empty() || args.len() > 3 {
+                return Err(Diagnostic::error("quantile expects 2 or 3 arguments.", span_op));
+            }
+            let v = eval_expr_pub(env, &args[0], io)?;
+            let p = scalar_arg(&args[1..2], env, io, span, "quantile")?;
+            let d = if args.len() > 2 {
+                Some(scalar_arg(&args[2..3], env, io, span, "quantile")? as usize)
+            } else { None };
+            let a = coerce_matrix_pub(v, span_op)?;
+            let res = la::stats::quantile_matrix(&a, p, d);
+            Ok(Value::Matrix(res))
+        }
+        "cov" => {
+            if args.is_empty() || args.len() > 2 {
+                return Err(Diagnostic::error("cov expects 1 or 2 arguments.", span_op));
+            }
+            let v = eval_expr_pub(env, &args[0], io)?;
+            let a = coerce_matrix_pub(v, span_op)?;
+            let w = if args.len() > 1 { scalar_arg(&args[1..2], env, io, span, "cov")? as usize } else { 0 };
+            let res = la::stats::cov_matrix(&a, w, None);
+            Ok(Value::Matrix(res))
+        }
+        "corrcoef" => {
+            if args.is_empty() || args.len() > 2 {
+                return Err(Diagnostic::error("corrcoef expects 1 or 2 arguments.", span_op));
+            }
+            let v = eval_expr_pub(env, &args[0], io)?;
+            let a = coerce_matrix_pub(v, span_op)?;
+            let res = la::stats::corrcoef_matrix(&a);
+            Ok(Value::Matrix(res))
         }
         "norm" => {
             if args.is_empty() || args.len() > 2 {
@@ -676,13 +836,19 @@ pub fn call_builtin(
                     span_op,
                 ));
             }
-            let a = crate::arrayfn::matrix_arg(&args[0], env, io, span, "norm")?;
+            let v = eval_expr_pub(env, &args[0], io)?;
             let norm_type = if args.len() == 1 {
                 la::NormType::Two
             } else {
                 parse_norm_arg(&args[1], env, io, span)?
             };
-            let res = la::norm(&a, &norm_type, span_op)?;
+            let res = match v {
+                Value::ComplexMatrix(c) => la::complex_norm(&c, &norm_type, span_op)?,
+                _ => {
+                    let a = coerce_matrix_pub(v, span_op)?;
+                    la::norm(&a, &norm_type, span_op)?
+                }
+            };
             Ok(Value::Matrix(DenseMatrix::scalar(res)))
         }
         "mldivide" => {
@@ -692,10 +858,9 @@ pub fn call_builtin(
                     span_op,
                 ));
             }
-            let a = crate::arrayfn::matrix_arg(&args[0], env, io, span, "mldivide")?;
-            let b = crate::arrayfn::matrix_arg(&args[1], env, io, span, "mldivide")?;
-            let res = la::mldivide(&a, &b, span_op)?;
-            Ok(Value::Matrix(res))
+            let a = eval_expr_pub(env, &args[0], io)?;
+            let b = eval_expr_pub(env, &args[1], io)?;
+            la::mldivide_values(&a, &b, span_op)
         }
         "mrdivide" => {
             if args.len() != 2 {
@@ -704,10 +869,9 @@ pub fn call_builtin(
                     span_op,
                 ));
             }
-            let a = crate::arrayfn::matrix_arg(&args[0], env, io, span, "mrdivide")?;
-            let b = crate::arrayfn::matrix_arg(&args[1], env, io, span, "mrdivide")?;
-            let res = la::mrdivide(&a, &b, span_op)?;
-            Ok(Value::Matrix(res))
+            let a = eval_expr_pub(env, &args[0], io)?;
+            let b = eval_expr_pub(env, &args[1], io)?;
+            la::mrdivide_values(&a, &b, span_op)
         }
         "ldivide" => {
             if args.len() != 2 {
@@ -716,10 +880,9 @@ pub fn call_builtin(
                     span_op,
                 ));
             }
-            let a = crate::arrayfn::matrix_arg(&args[0], env, io, span, "ldivide")?;
-            let b = crate::arrayfn::matrix_arg(&args[1], env, io, span, "ldivide")?;
-            let res = la::elementwise_ldiv(&a, &b, span_op)?;
-            Ok(Value::Matrix(res))
+            let a = eval_expr_pub(env, &args[0], io)?;
+            let b = eval_expr_pub(env, &args[1], io)?;
+            la::dotdiv_values(&b, &a, span_op)
         }
         "rdivide" => {
             if args.len() != 2 {
@@ -728,10 +891,9 @@ pub fn call_builtin(
                     span_op,
                 ));
             }
-            let a = crate::arrayfn::matrix_arg(&args[0], env, io, span, "rdivide")?;
-            let b = crate::arrayfn::matrix_arg(&args[1], env, io, span, "rdivide")?;
-            let res = la::elementwise_div(&a, &b, span_op)?;
-            Ok(Value::Matrix(res))
+            let a = eval_expr_pub(env, &args[0], io)?;
+            let b = eval_expr_pub(env, &args[1], io)?;
+            la::dotdiv_values(&a, &b, span_op)
         }
         "linspace" => crate::arrayfn::linspace(args, env, io, span),
         "diag" => crate::arrayfn::diag(args, env, io, span),
@@ -860,10 +1022,20 @@ pub fn call_builtin(
                 ));
             }
             let re_v = eval_expr_pub(env, &args[0], io)?;
-            let re_m = coerce_matrix_pub(re_v, span_op)?;
             if args.len() == 1 {
-                Ok(Value::ComplexMatrix(ComplexDenseMatrix::from_real(&re_m)))
+                match re_v {
+                    Value::ComplexMatrix(c) => Ok(Value::ComplexMatrix(c)),
+                    Value::Matrix(m) => Ok(Value::ComplexMatrix(ComplexDenseMatrix::from_real(&m))),
+                    Value::Boolean(b) => Ok(Value::ComplexMatrix(ComplexDenseMatrix::scalar(
+                        Complex64::real(if b { 1.0 } else { 0.0 }),
+                    ))),
+                    Value::String(_) => Err(Diagnostic::error(
+                        "Conversion to double from char is not possible.",
+                        span_op,
+                    )),
+                }
             } else {
+                let re_m = coerce_matrix_pub(re_v, span_op)?;
                 let im_v = eval_expr_pub(env, &args[1], io)?;
                 let im_m = coerce_matrix_pub(im_v, span_op)?;
                 Ok(Value::ComplexMatrix(ComplexDenseMatrix::from_parts(
@@ -984,7 +1156,7 @@ pub fn call_builtin(
             }
             let v = eval_expr_pub(env, &args[0], io)?;
             match v {
-                Value::ComplexMatrix(c) => Ok(Value::Boolean(c.is_all_real())),
+                Value::ComplexMatrix(_) => Ok(Value::Boolean(false)),
                 _ => Ok(Value::Boolean(true)),
             }
         }

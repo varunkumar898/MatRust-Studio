@@ -403,7 +403,7 @@ pub fn add_values(l: &Value, r: &Value, span: Option<Span>) -> Result<Value, Dia
             let rc = r.to_complex_matrix().ok_or_else(|| {
                 Diagnostic::error("Operands must be numeric matrices or scalars.", span)
             })?;
-            Ok(Value::ComplexMatrix(add(&lc, &rc, span)?))
+            Ok(Value::from_complex_or_simplified(add(&lc, &rc, span)?))
         }
     }
 }
@@ -418,7 +418,7 @@ pub fn sub_values(l: &Value, r: &Value, span: Option<Span>) -> Result<Value, Dia
             let rc = r.to_complex_matrix().ok_or_else(|| {
                 Diagnostic::error("Operands must be numeric matrices or scalars.", span)
             })?;
-            Ok(Value::ComplexMatrix(sub(&lc, &rc, span)?))
+            Ok(Value::from_complex_or_simplified(sub(&lc, &rc, span)?))
         }
     }
 }
@@ -433,7 +433,7 @@ pub fn mul_values(l: &Value, r: &Value, span: Option<Span>) -> Result<Value, Dia
             let rc = r.to_complex_matrix().ok_or_else(|| {
                 Diagnostic::error("Operands must be numeric matrices or scalars.", span)
             })?;
-            Ok(Value::ComplexMatrix(matmul(&lc, &rc, span)?))
+            Ok(Value::from_complex_or_simplified(matmul(&lc, &rc, span)?))
         }
     }
 }
@@ -450,7 +450,9 @@ pub fn dotmul_values(l: &Value, r: &Value, span: Option<Span>) -> Result<Value, 
             let rc = r.to_complex_matrix().ok_or_else(|| {
                 Diagnostic::error("Operands must be numeric matrices or scalars.", span)
             })?;
-            Ok(Value::ComplexMatrix(elementwise_mul(&lc, &rc, span)?))
+            Ok(Value::from_complex_or_simplified(elementwise_mul(
+                &lc, &rc, span,
+            )?))
         }
     }
 }
@@ -467,7 +469,9 @@ pub fn dotdiv_values(l: &Value, r: &Value, span: Option<Span>) -> Result<Value, 
             let rc = r.to_complex_matrix().ok_or_else(|| {
                 Diagnostic::error("Operands must be numeric matrices or scalars.", span)
             })?;
-            Ok(Value::ComplexMatrix(elementwise_div(&lc, &rc, span)?))
+            Ok(Value::from_complex_or_simplified(elementwise_div(
+                &lc, &rc, span,
+            )?))
         }
     }
 }
@@ -484,7 +488,9 @@ pub fn dotpow_values(l: &Value, r: &Value, span: Option<Span>) -> Result<Value, 
             if has_complex_branch {
                 let lc = ComplexDenseMatrix::from_real(lm);
                 let rc = ComplexDenseMatrix::from_real(rm);
-                Ok(Value::ComplexMatrix(elementwise_pow(&lc, &rc, span)?))
+                Ok(Value::from_complex_or_simplified(elementwise_pow(
+                    &lc, &rc, span,
+                )?))
             } else {
                 Ok(Value::Matrix(crate::elementwise_pow(lm, rm, span)?))
             }
@@ -496,7 +502,9 @@ pub fn dotpow_values(l: &Value, r: &Value, span: Option<Span>) -> Result<Value, 
             let rc = r.to_complex_matrix().ok_or_else(|| {
                 Diagnostic::error("Operands must be numeric matrices or scalars.", span)
             })?;
-            Ok(Value::ComplexMatrix(elementwise_pow(&lc, &rc, span)?))
+            Ok(Value::from_complex_or_simplified(elementwise_pow(
+                &lc, &rc, span,
+            )?))
         }
     }
 }
@@ -517,6 +525,551 @@ pub fn compare_values(
                 Diagnostic::error("Operands must be numeric matrices or scalars.", span)
             })?;
             compare(op, &lc, &rc, span)
+        }
+    }
+}
+
+// ----------------------------------------------------------------------------
+// Complex Linear Algebra: LU, Determinant, Trace, Inverse, Linear Solvers
+// ----------------------------------------------------------------------------
+
+/// Result of complex LU factorization with partial pivoting: P * A = L * U.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ComplexLuDecomp {
+    /// Unit lower triangular matrix (or permuted lower triangular in 2-output form).
+    pub l: ComplexDenseMatrix,
+    /// Upper triangular matrix.
+    pub u: ComplexDenseMatrix,
+    /// Permutation matrix P such that P * A = L * U.
+    pub p: DenseMatrix,
+    /// Permutation vector: row i of P*A corresponds to row `p_vec[i]` of A.
+    pub p_vec: Vec<usize>,
+    /// Number of row swaps performed during pivoting (used for determinant sign).
+    pub num_swaps: usize,
+}
+
+/// Compute complex LU factorization with partial row pivoting for matrix A (m x n).
+/// Produces P * A = L * U, where L is unit lower triangular and U is upper triangular.
+pub fn pivoted_lu(
+    a: &ComplexDenseMatrix,
+    _span: Option<Span>,
+) -> Result<ComplexLuDecomp, Diagnostic> {
+    let m = a.rows;
+    let n = a.cols;
+    if m == 0 || n == 0 {
+        return Ok(ComplexLuDecomp {
+            l: ComplexDenseMatrix::empty(),
+            u: ComplexDenseMatrix::empty(),
+            p: DenseMatrix::empty(),
+            p_vec: Vec::new(),
+            num_swaps: 0,
+        });
+    }
+
+    let k_max = m.min(n);
+    let mut u_data = a.data.clone();
+    let mut p_vec: Vec<usize> = (0..m).collect();
+    let mut l_data = vec![Complex64::zero(); m * k_max];
+    for i in 0..k_max {
+        l_data[i * k_max + i] = Complex64::one();
+    }
+    let mut num_swaps = 0;
+
+    for k in 0..k_max {
+        // Find pivot: row r >= k with maximum modulus in column k of U
+        let mut max_val = u_data[k * n + k].abs();
+        let mut pivot_row = k;
+        for r in (k + 1)..m {
+            let val = u_data[r * n + k].abs();
+            if val > max_val {
+                max_val = val;
+                pivot_row = r;
+            }
+        }
+
+        if pivot_row != k {
+            for j in 0..n {
+                u_data.swap(k * n + j, pivot_row * n + j);
+            }
+            p_vec.swap(k, pivot_row);
+            for j in 0..k {
+                l_data.swap(k * k_max + j, pivot_row * k_max + j);
+            }
+            num_swaps += 1;
+        }
+
+        let pivot = u_data[k * n + k];
+        if pivot.abs() > 1e-15 {
+            for i in (k + 1)..m {
+                let factor = u_data[i * n + k] / pivot;
+                l_data[i * k_max + k] = factor;
+                u_data[i * n + k] = Complex64::zero();
+                for j in (k + 1)..n {
+                    let term = factor * u_data[k * n + j];
+                    u_data[i * n + j] -= term;
+                }
+            }
+        }
+    }
+
+    let mut p_data = vec![0.0; m * m];
+    for (i, &orig_row) in p_vec.iter().enumerate() {
+        p_data[i * m + orig_row] = 1.0;
+    }
+
+    let u_rows = k_max;
+    let mut final_u_data = vec![Complex64::zero(); u_rows * n];
+    for r in 0..u_rows {
+        for c in 0..n {
+            final_u_data[r * n + c] = u_data[r * n + c];
+        }
+    }
+
+    Ok(ComplexLuDecomp {
+        l: ComplexDenseMatrix {
+            rows: m,
+            cols: k_max,
+            data: l_data,
+        },
+        u: ComplexDenseMatrix {
+            rows: u_rows,
+            cols: n,
+            data: final_u_data,
+        },
+        p: DenseMatrix {
+            rows: m,
+            cols: m,
+            data: p_data,
+        },
+        p_vec,
+        num_swaps,
+    })
+}
+
+/// Single-output `Y = lu(A)` for complex A.
+pub fn lu_factor(
+    a: &ComplexDenseMatrix,
+    span: Option<Span>,
+) -> Result<ComplexDenseMatrix, Diagnostic> {
+    if a.rows != a.cols {
+        return Err(Diagnostic::error(
+            "Single-output lu(A) requires a square matrix.",
+            span,
+        ));
+    }
+    let decomp = pivoted_lu(a, span)?;
+    let n = a.rows;
+    let mut y_data = vec![Complex64::zero(); n * n];
+    for r in 0..n {
+        for c in 0..n {
+            if r > c {
+                y_data[r * n + c] = decomp.l.data[r * n + c];
+            } else {
+                y_data[r * n + c] = decomp.u.data[r * n + c];
+            }
+        }
+    }
+    Ok(ComplexDenseMatrix {
+        rows: n,
+        cols: n,
+        data: y_data,
+    })
+}
+
+/// Two-output `[L, U] = lu(A)` for complex A.
+pub fn lu_two_output(
+    a: &ComplexDenseMatrix,
+    span: Option<Span>,
+) -> Result<(ComplexDenseMatrix, ComplexDenseMatrix), Diagnostic> {
+    let decomp = pivoted_lu(a, span)?;
+    let m = decomp.l.rows;
+    let k = decomp.l.cols;
+    let mut l_perm = vec![Complex64::zero(); m * k];
+    for (i, &orig_row) in decomp.p_vec.iter().enumerate() {
+        for c in 0..k {
+            l_perm[orig_row * k + c] = decomp.l.data[i * k + c];
+        }
+    }
+    Ok((
+        ComplexDenseMatrix {
+            rows: m,
+            cols: k,
+            data: l_perm,
+        },
+        decomp.u,
+    ))
+}
+
+/// Three-output `[L, U, P] = lu(A)` for complex A.
+pub fn lu_three_output(
+    a: &ComplexDenseMatrix,
+    span: Option<Span>,
+) -> Result<(ComplexDenseMatrix, ComplexDenseMatrix, DenseMatrix), Diagnostic> {
+    let decomp = pivoted_lu(a, span)?;
+    Ok((decomp.l, decomp.u, decomp.p))
+}
+
+/// Complex determinant `det(A)`.
+pub fn det(a: &ComplexDenseMatrix, span: Option<Span>) -> Result<Complex64, Diagnostic> {
+    if a.rows != a.cols {
+        return Err(Diagnostic::error(
+            format!(
+                "Matrix must be square to compute determinant: {}x{}",
+                a.rows, a.cols
+            ),
+            span,
+        ));
+    }
+    let n = a.rows;
+    if n == 0 {
+        return Ok(Complex64::one());
+    }
+    if n == 1 {
+        return Ok(a.data[0]);
+    }
+    let decomp = pivoted_lu(a, span)?;
+    let mut d = if decomp.num_swaps % 2 == 1 {
+        Complex64::new(-1.0, 0.0)
+    } else {
+        Complex64::new(1.0, 0.0)
+    };
+    for i in 0..n {
+        d = d * decomp.u.data[i * n + i];
+    }
+    Ok(d)
+}
+
+/// Complex matrix trace `trace(A)`.
+pub fn trace(a: &ComplexDenseMatrix, _span: Option<Span>) -> Result<Complex64, Diagnostic> {
+    let d = a.rows.min(a.cols);
+    if d == 0 {
+        return Ok(Complex64::zero());
+    }
+    let mut sum = Complex64::zero();
+    for i in 0..d {
+        sum += a.data[i * a.cols + i];
+    }
+    Ok(sum)
+}
+
+/// Complex matrix inverse `inv(A)`.
+pub fn inv(a: &ComplexDenseMatrix, span: Option<Span>) -> Result<ComplexDenseMatrix, Diagnostic> {
+    if a.rows != a.cols {
+        return Err(Diagnostic::error(
+            format!(
+                "Matrix must be square to be inverted: {}x{}",
+                a.rows, a.cols
+            ),
+            span,
+        ));
+    }
+    let n = a.rows;
+    if n == 0 {
+        return Ok(ComplexDenseMatrix::empty());
+    }
+    if n == 1 {
+        let val = a.data[0];
+        if val.is_zero() {
+            return Err(Diagnostic::error(
+                "Matrix is singular to working precision.",
+                span,
+            ));
+        }
+        return Ok(ComplexDenseMatrix::scalar(Complex64::one() / val));
+    }
+
+    let decomp = pivoted_lu(a, span)?;
+    let max_abs = decomp
+        .u
+        .data
+        .iter()
+        .fold(0.0f64, |acc, z| acc.max(z.abs()))
+        .max(1.0);
+    for i in 0..n {
+        let diag = decomp.u.data[i * n + i].abs();
+        if diag <= 1e-15 * max_abs {
+            return Err(Diagnostic::error(
+                "Matrix is singular to working precision.",
+                span,
+            ));
+        }
+    }
+
+    let mut x_data = vec![Complex64::zero(); n * n];
+    let mut y = vec![Complex64::zero(); n];
+    let mut col_sol = vec![Complex64::zero(); n];
+
+    for col in 0..n {
+        for i in 0..n {
+            let b_val = if decomp.p_vec[i] == col {
+                Complex64::one()
+            } else {
+                Complex64::zero()
+            };
+            let mut sum = Complex64::zero();
+            for j in 0..i {
+                sum += decomp.l.data[i * n + j] * y[j];
+            }
+            y[i] = b_val - sum;
+        }
+
+        for i in (0..n).rev() {
+            let mut sum = Complex64::zero();
+            for j in (i + 1)..n {
+                sum += decomp.u.data[i * n + j] * col_sol[j];
+            }
+            col_sol[i] = (y[i] - sum) / decomp.u.data[i * n + i];
+        }
+
+        for r in 0..n {
+            x_data[r * n + col] = col_sol[r];
+        }
+    }
+
+    Ok(ComplexDenseMatrix {
+        rows: n,
+        cols: n,
+        data: x_data,
+    })
+}
+
+/// Complex left matrix division `X = A \ B` (`mldivide`).
+pub fn mldivide(
+    a: &ComplexDenseMatrix,
+    b: &ComplexDenseMatrix,
+    span: Option<Span>,
+) -> Result<ComplexDenseMatrix, Diagnostic> {
+    if a.is_scalar() {
+        let s = a.data[0];
+        if s.is_zero() {
+            return Err(Diagnostic::error("Division by zero.", span));
+        }
+        return Ok(ComplexDenseMatrix {
+            rows: b.rows,
+            cols: b.cols,
+            data: b.data.iter().map(|&x| x / s).collect(),
+        });
+    }
+
+    if a.rows != b.rows {
+        return Err(Diagnostic::error(
+            format!(
+                "Matrix dimensions must agree. Left operand has {} rows, but right operand has {} rows.",
+                a.rows, b.rows
+            ),
+            span,
+        ));
+    }
+
+    let m = a.rows;
+    let n = a.cols;
+    let k = b.cols;
+
+    if m == n {
+        let decomp = pivoted_lu(a, span)?;
+        let max_abs = decomp
+            .u
+            .data
+            .iter()
+            .fold(0.0f64, |acc, z| acc.max(z.abs()))
+            .max(1.0);
+        for i in 0..n {
+            let diag = decomp.u.data[i * n + i].abs();
+            if diag <= 1e-15 * max_abs {
+                return Err(Diagnostic::error(
+                    "Matrix is singular to working precision.",
+                    span,
+                ));
+            }
+        }
+
+        let mut x_data = vec![Complex64::zero(); n * k];
+        let mut y = vec![Complex64::zero(); n];
+        let mut x_col = vec![Complex64::zero(); n];
+
+        for c in 0..k {
+            for i in 0..n {
+                let orig_row = decomp.p_vec[i];
+                let b_val = b.data[orig_row * k + c];
+                let mut sum = Complex64::zero();
+                for j in 0..i {
+                    sum += decomp.l.data[i * n + j] * y[j];
+                }
+                y[i] = b_val - sum;
+            }
+
+            for i in (0..n).rev() {
+                let mut sum = Complex64::zero();
+                for j in (i + 1)..n {
+                    sum += decomp.u.data[i * n + j] * x_col[j];
+                }
+                x_col[i] = (y[i] - sum) / decomp.u.data[i * n + i];
+            }
+
+            for r in 0..n {
+                x_data[r * k + c] = x_col[r];
+            }
+        }
+
+        return Ok(ComplexDenseMatrix {
+            rows: n,
+            cols: k,
+            data: x_data,
+        });
+    }
+
+    if m > n {
+        return qr_least_squares(a, b, span);
+    }
+
+    // Underdetermined (m < n): minimum norm solution via pseudoinverse
+    let p_inv = crate::svd::complex_pinv(a, None, span)?;
+    matmul(&p_inv, b, span)
+}
+
+/// Complex Householder QR least squares solver for overdetermined A * X = B (m > n).
+fn qr_least_squares(
+    a: &ComplexDenseMatrix,
+    b: &ComplexDenseMatrix,
+    _span: Option<Span>,
+) -> Result<ComplexDenseMatrix, Diagnostic> {
+    let m = a.rows;
+    let n = a.cols;
+    let k = b.cols;
+
+    let mut r = a.data.clone();
+    let mut c = b.data.clone();
+
+    for j in 0..n {
+        let mut norm_sq = 0.0f64;
+        for i in j..m {
+            let val = r[i * n + j];
+            norm_sq += val.abs_sq();
+        }
+        let norm_x = norm_sq.sqrt();
+        if norm_x <= 1e-15 {
+            continue;
+        }
+
+        let x0 = r[j * n + j];
+        let alpha = if x0.abs() > 0.0 {
+            -(x0 / Complex64::real(x0.abs())) * Complex64::real(norm_x)
+        } else {
+            Complex64::real(-norm_x)
+        };
+        let u1 = x0 - alpha;
+
+        let mut v = Vec::with_capacity(m - j);
+        v.push(Complex64::one());
+        for i in (j + 1)..m {
+            v.push(r[i * n + j] / u1);
+        }
+
+        let mut v_norm_sq = 1.0f64;
+        for vi in &v[1..] {
+            v_norm_sq += vi.abs_sq();
+        }
+        let tau = 2.0 / v_norm_sq;
+
+        // Apply H = I - tau * v * v^H to R[j..m, j..n]
+        for col in j..n {
+            let mut dot = Complex64::zero();
+            for i in 0..(m - j) {
+                dot += v[i].conj() * r[(j + i) * n + col];
+            }
+            for i in 0..(m - j) {
+                let delta = Complex64::real(tau) * dot * v[i];
+                r[(j + i) * n + col] -= delta;
+            }
+        }
+
+        // Apply H to C[j..m, 0..k]
+        for col in 0..k {
+            let mut dot = Complex64::zero();
+            for i in 0..(m - j) {
+                dot += v[i].conj() * c[(j + i) * k + col];
+            }
+            for i in 0..(m - j) {
+                let delta = Complex64::real(tau) * dot * v[i];
+                c[(j + i) * k + col] -= delta;
+            }
+        }
+    }
+
+    // Back solve R[0..n, 0..n] * X = C[0..n, 0..k]
+    let mut x_data = vec![Complex64::zero(); n * k];
+    for col in 0..k {
+        for i in (0..n).rev() {
+            let mut sum = Complex64::zero();
+            for j in (i + 1)..n {
+                sum += r[i * n + j] * x_data[j * k + col];
+            }
+            x_data[i * k + col] = (c[i * k + col] - sum) / r[i * n + i];
+        }
+    }
+
+    Ok(ComplexDenseMatrix {
+        rows: n,
+        cols: k,
+        data: x_data,
+    })
+}
+
+/// Complex right matrix division `X = B / A` (`mrdivide`).
+/// Satisfies X * A = B <=> A^H * X^H = B^H <=> X^H = A^H \ B^H <=> X = (A^H \ B^H)^H
+pub fn mrdivide(
+    b: &ComplexDenseMatrix,
+    a: &ComplexDenseMatrix,
+    span: Option<Span>,
+) -> Result<ComplexDenseMatrix, Diagnostic> {
+    if a.is_scalar() {
+        let s = a.data[0];
+        if s.is_zero() {
+            return Err(Diagnostic::error("Division by zero.", span));
+        }
+        return Ok(ComplexDenseMatrix {
+            rows: b.rows,
+            cols: b.cols,
+            data: b.data.iter().map(|&x| x / s).collect(),
+        });
+    }
+
+    let a_h = ctranspose(a);
+    let b_h = ctranspose(b);
+    let x_h = mldivide(&a_h, &b_h, span)?;
+    Ok(ctranspose(&x_h))
+}
+
+pub fn mldivide_values(l: &Value, r: &Value, span: Option<Span>) -> Result<Value, Diagnostic> {
+    match (l, r) {
+        (Value::Matrix(lm), Value::Matrix(rm)) => Ok(Value::Matrix(crate::mldivide(lm, rm, span)?)),
+        _ => {
+            let lc = l.to_complex_matrix().ok_or_else(|| {
+                Diagnostic::error("Operands must be numeric matrices or scalars.", span)
+            })?;
+            let rc = r.to_complex_matrix().ok_or_else(|| {
+                Diagnostic::error("Operands must be numeric matrices or scalars.", span)
+            })?;
+            Ok(Value::from_complex_or_simplified(mldivide(
+                &lc, &rc, span,
+            )?))
+        }
+    }
+}
+
+pub fn mrdivide_values(l: &Value, r: &Value, span: Option<Span>) -> Result<Value, Diagnostic> {
+    match (l, r) {
+        (Value::Matrix(lm), Value::Matrix(rm)) => Ok(Value::Matrix(crate::mrdivide(lm, rm, span)?)),
+        _ => {
+            let lc = l.to_complex_matrix().ok_or_else(|| {
+                Diagnostic::error("Operands must be numeric matrices or scalars.", span)
+            })?;
+            let rc = r.to_complex_matrix().ok_or_else(|| {
+                Diagnostic::error("Operands must be numeric matrices or scalars.", span)
+            })?;
+            Ok(Value::from_complex_or_simplified(mrdivide(
+                &lc, &rc, span,
+            )?))
         }
     }
 }

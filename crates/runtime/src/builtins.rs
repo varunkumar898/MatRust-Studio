@@ -517,10 +517,7 @@ fn parse_norm_arg(
         }
         Value::Matrix(m) => {
             let val = m.as_scalar().ok_or_else(|| {
-                Diagnostic::error(
-                    "Norm type must be a scalar number or 'fro'.",
-                    Some(span),
-                )
+                Diagnostic::error("Norm type must be a scalar number or 'fro'.", Some(span))
             })?;
             if val == 1.0 {
                 Ok(la::NormType::One)
@@ -600,7 +597,10 @@ pub fn call_builtin(
         }
         "det" => {
             if args.len() != 1 {
-                return Err(Diagnostic::error("det expects 1 argument: det(A).", span_op));
+                return Err(Diagnostic::error(
+                    "det expects 1 argument: det(A).",
+                    span_op,
+                ));
             }
             let a = crate::arrayfn::matrix_arg(&args[0], env, io, span, "det")?;
             let d = la::det(&a, span_op)?;
@@ -608,7 +608,10 @@ pub fn call_builtin(
         }
         "inv" => {
             if args.len() != 1 {
-                return Err(Diagnostic::error("inv expects 1 argument: inv(A).", span_op));
+                return Err(Diagnostic::error(
+                    "inv expects 1 argument: inv(A).",
+                    span_op,
+                ));
             }
             let a = crate::arrayfn::matrix_arg(&args[0], env, io, span, "inv")?;
             let inv_m = la::inv(&a, span_op)?;
@@ -616,7 +619,10 @@ pub fn call_builtin(
         }
         "trace" => {
             if args.len() != 1 {
-                return Err(Diagnostic::error("trace expects 1 argument: trace(A).", span_op));
+                return Err(Diagnostic::error(
+                    "trace expects 1 argument: trace(A).",
+                    span_op,
+                ));
             }
             let a = crate::arrayfn::matrix_arg(&args[0], env, io, span, "trace")?;
             let tr = la::trace(&a, span_op)?;
@@ -624,7 +630,10 @@ pub fn call_builtin(
         }
         "svd" => {
             if args.len() != 1 {
-                return Err(Diagnostic::error("svd expects 1 argument: svd(A).", span_op));
+                return Err(Diagnostic::error(
+                    "svd expects 1 argument: svd(A).",
+                    span_op,
+                ));
             }
             let a = crate::arrayfn::matrix_arg(&args[0], env, io, span, "svd")?;
             let s = la::svd_values(&a, span_op)?;

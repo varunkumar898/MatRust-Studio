@@ -113,6 +113,18 @@ const BUILTINS: &[&str] = &[
     "range",
     "iqr",
     "prod",
+    "lu",
+    "det",
+    "inv",
+    "trace",
+    "rank",
+    "norm",
+    "svd",
+    "pinv",
+    "mldivide",
+    "mrdivide",
+    "ldivide",
+    "rdivide",
 ];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

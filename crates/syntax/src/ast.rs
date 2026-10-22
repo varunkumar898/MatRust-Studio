@@ -137,22 +137,22 @@ impl Expr {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BinaryOp {
-    Add,        // +
-    Sub,        // -
-    Mul,        // * (Matrix multiply)
-    Div,        // / (Matrix right division)
-    LDiv,       // \ (Matrix left division)
-    Pow,        // ^ (Matrix power)
-    DotMul,     // .* (Element-wise multiply)
-    DotDiv,     // ./ (Element-wise divide)
-    DotLDiv,    // .\ (Element-wise left divide)
-    DotPow,     // .^ (Element-wise power)
-    Eq,         // ==
-    Ne,         // ~=
-    Lt,         // <
-    Le,         // <=
-    Gt,         // >
-    Ge,         // >=
+    Add,     // +
+    Sub,     // -
+    Mul,     // * (Matrix multiply)
+    Div,     // / (Matrix right division)
+    LDiv,    // \ (Matrix left division)
+    Pow,     // ^ (Matrix power)
+    DotMul,  // .* (Element-wise multiply)
+    DotDiv,  // ./ (Element-wise divide)
+    DotLDiv, // .\ (Element-wise left divide)
+    DotPow,  // .^ (Element-wise power)
+    Eq,      // ==
+    Ne,      // ~=
+    Lt,      // <
+    Le,      // <=
+    Gt,      // >
+    Ge,      // >=
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

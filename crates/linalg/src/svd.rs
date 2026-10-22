@@ -241,19 +241,13 @@ pub fn svd_full(
 
 /// Matrix rank `rank(A, tol)`.
 /// Returns the number of singular values greater than the specified tolerance.
-pub fn rank(
-    a: &DenseMatrix,
-    tol: Option<f64>,
-    span: Option<Span>,
-) -> Result<usize, Diagnostic> {
+pub fn rank(a: &DenseMatrix, tol: Option<f64>, span: Option<Span>) -> Result<usize, Diagnostic> {
     if a.rows == 0 || a.cols == 0 {
         return Ok(0);
     }
     let res = svd_decompose(a, span)?;
     let sigma_max = res.singular_values.first().copied().unwrap_or(0.0);
-    let threshold = tol.unwrap_or_else(|| {
-        (a.rows.max(a.cols) as f64) * sigma_max * f64::EPSILON
-    });
+    let threshold = tol.unwrap_or_else(|| (a.rows.max(a.cols) as f64) * sigma_max * f64::EPSILON);
     let r = res
         .singular_values
         .iter()
@@ -285,9 +279,7 @@ pub fn pinv(
 
     let res = svd_decompose(a, span)?;
     let sigma_max = res.singular_values.first().copied().unwrap_or(0.0);
-    let threshold = tol.unwrap_or_else(|| {
-        (m.max(n) as f64) * sigma_max * f64::EPSILON
-    });
+    let threshold = tol.unwrap_or_else(|| (m.max(n) as f64) * sigma_max * f64::EPSILON);
 
     // S_pinv has size n x m
     // pinv(A) = V * S_pinv * U^T
@@ -334,11 +326,7 @@ pub enum NormType {
 }
 
 /// Matrix and vector norm `norm(A, p)`.
-pub fn norm(
-    a: &DenseMatrix,
-    norm_type: &NormType,
-    span: Option<Span>,
-) -> Result<f64, Diagnostic> {
+pub fn norm(a: &DenseMatrix, norm_type: &NormType, span: Option<Span>) -> Result<f64, Diagnostic> {
     if a.rows == 0 || a.cols == 0 {
         return Ok(0.0);
     }
@@ -361,10 +349,7 @@ pub fn norm(
                 Ok(sum_sq.sqrt())
             }
             NormType::Inf => {
-                let max_abs = a
-                    .data
-                    .iter()
-                    .fold(0.0f64, |acc, &x| acc.max(x.abs()));
+                let max_abs = a.data.iter().fold(0.0f64, |acc, &x| acc.max(x.abs()));
                 Ok(max_abs)
             }
             NormType::NegInf => {
@@ -376,10 +361,7 @@ pub fn norm(
             }
             NormType::P(p) => {
                 if *p <= 0.0 {
-                    return Err(Diagnostic::error(
-                        "Vector norm p must be positive.",
-                        span,
-                    ));
+                    return Err(Diagnostic::error("Vector norm p must be positive.", span));
                 }
                 let sum_p: f64 = a.data.iter().map(|&x| x.abs().powf(*p)).sum();
                 Ok(sum_p.powf(1.0 / p))

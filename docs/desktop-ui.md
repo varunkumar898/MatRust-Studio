@@ -139,3 +139,10 @@ set).
 - Command Window is a distinct `Panel::bottom` with `>>` prompt, transcript history, up/down command history, and real interpreter execution via `Worker` thread.
 - Workspace reflects actual session variables from `Env` snapshot; Current Folder uses `FolderState` with navigation, refresh, open, delete-confirmation.
 - Figures panel shows actual `egui_plot` output when `show_right` is true; when empty it displays a compact "No figures open" state and consumes minimal space (panel hidden by default).
+
+--- M3 Update (2026-10-23) ---
+Milestone M3 (Desktop Visual Verification) executed:
+- Desktop binary (`matrust-studio`) launched briefly (`timeout 8 cargo run -p matrust_studio`) without crash; display environment (`DISPLAY=:0`, `WAYLAND_DISPLAY=wayland-1`) present.
+- Full interactive visual interaction (clicks, plot updates, workspace inspection, resize/layout behavior) remains NOT TESTED in this audit session due to non-interactive execution and time constraints; no fabricated screenshots or rendering observations produced.
+- Architecture verified by source: `execution.rs` uses persistent `Session`; `figures.rs` links `GraphicsState`/`FigureState` to `egui_plot`; error recovery after invalid builtin (`bad()`) verified by `desktop_stage9_quick` (session reusable); plot creation (`plot(x,y)`) propagates to `GraphicsState` and verified.
+- Any missing visual features or interactive gaps observed manually must be recorded separately; current audit records architecture only, with automated model-level verification complete.

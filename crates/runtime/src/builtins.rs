@@ -199,6 +199,9 @@ pub fn call_builtin_multi(
             }
         }
         _ => {
+            if let Some(func_stmt) = env.function_table.get(name).cloned() {
+                return crate::interp::exec_user_function_multi(env, func_stmt, args, span, io);
+            }
             let val = call_builtin(name, args, env, span, io)?;
             Ok(vec![val])
         }
@@ -833,6 +836,22 @@ pub fn call_builtin(
             } else {
                 50.0
             };
+            if pct < 0.0 || pct > 100.0 {
+                return Err(Diagnostic::error(
+                    format!("prctile requires percentiles between 0 and 100; got {}.", pct),
+                    span_op,
+                ));
+            }
+            if let Some(vec_pct) = &pct_vec {
+                for &pv in vec_pct {
+                    if pv < 0.0 || pv > 100.0 {
+                        return Err(Diagnostic::error(
+                            format!("prctile requires percentiles between 0 and 100; got {}.", pv),
+                            span_op,
+                        ));
+                    }
+                }
+            }
             let d = if args.len() > 2 {
                 let ev = eval_expr_pub(env, &args[2], io)?;
                 match ev {
@@ -874,6 +893,12 @@ pub fn call_builtin(
             } else {
                 0.5
             };
+            if p < 0.0 || (p > 1.0 && p.fract() != 0.0) {
+                return Err(Diagnostic::error(
+                    format!("quantile requires probabilities between 0 and 1 (or integer count > 1); got {}.", p),
+                    span_op,
+                ));
+            }
             let d = if args.len() > 2 {
                 let ev = eval_expr_pub(env, &args[2], io)?;
                 match ev {
@@ -899,24 +924,22 @@ pub fn call_builtin(
             } else {
                 None
             };
-            let res = if let Some(probs) = p_vec {
-                // Integer-count form check: if second arg is scalar int >1, generate probs
-                if probs.len() == 1 {
-                    let s = probs[0];
-                    if s > 1.0 && s.fract() == 0.0 {
-                        let n = s as usize;
-                        let gen = (1..=n)
-                            .map(|k| k as f64 / (n as f64 + 1.0))
-                            .collect::<Vec<f64>>();
-                        la::stats::quantile_multi(&a, &gen, d)
-                    } else {
-                        la::stats::quantile_multi(&a, &probs, d)
-                    }
-                } else {
-                    la::stats::quantile_multi(&a, &probs, d)
-                }
+            let res = if p_vec.is_some() {
+                // Vector form: probabilities already supplied.
+                la::stats::quantile_multi(&a, &p_vec.unwrap(), d)
             } else {
-                la::stats::quantile_matrix(&a, p, d)
+                // Scalar probability argument.
+                // Integer-count form: scalar n > 1 produces n quantiles.
+                let p_val = p;
+                if p_val > 1.0 && p_val.fract() == 0.0 {
+                    let n = p_val as usize;
+                    let gen: Vec<f64> = (1..=n)
+                        .map(|k| k as f64 / (n as f64 + 1.0))
+                        .collect();
+                    la::stats::quantile_multi(&a, &gen, d)
+                } else {
+                    la::stats::quantile_matrix(&a, p_val, d)
+                }
             };
             Ok(Value::Matrix(res))
         }
@@ -926,12 +949,18 @@ pub fn call_builtin(
             }
             let v = eval_expr_pub(env, &args[0], io)?;
             let a = coerce_matrix_pub(v, span_op)?;
-            let w = if args.len() > 1 {
-                scalar_arg(&args[1..2], env, io, span, "cov")? as usize
+            let (w, b_opt) = if args.len() > 1 {
+                let v2 = eval_expr_pub(env, &args[1], io)?;
+                let m2 = coerce_matrix_pub(v2, span_op)?;
+                if m2.rows == 1 && m2.cols == 1 {
+                    (m2.data[0] as usize, None)
+                } else {
+                    (0, Some(m2))
+                }
             } else {
-                0
+                (0, None)
             };
-            let res = la::stats::cov_matrix(&a, w, None);
+            let res = la::stats::cov_matrix(&a, w, b_opt.as_ref());
             Ok(Value::Matrix(res))
         }
         "corrcoef" => {
@@ -2283,6 +2312,215 @@ pub fn call_builtin(
         "bar" => graphics_bar(args, env, io, span),
         "histogram" => graphics_histogram(name, args, env, io, span),
 
+        "csvread" => {
+            if args.len() < 1 || args.len() > 2 {
+                return Err(Diagnostic::error("csvread expects 1 or 2 arguments: csvread(filename) or csvread(filename, range).", span_op));
+            }
+            let v_path = eval_expr_pub(env, &args[0], io)?;
+            let path_str = match v_path {
+                Value::String(s) => s,
+                _ => {
+                    let m = coerce_matrix_pub(v_path, span_op)?;
+                    if let Some(s) = m.as_scalar() {
+                        s.to_string()
+                    } else {
+                        return Err(Diagnostic::error("csvread: file path must be a string or scalar.", span_op));
+                    }
+                }
+            };
+            let content = std::fs::read_to_string(&path_str).map_err(|e| Diagnostic::error(format!("csvread: cannot read '{}' ({}).", path_str, e), span_op))?;
+            let mut rows: Vec<Vec<f64>> = Vec::new();
+            for line in content.lines() {
+                let line = line.trim();
+                if line.is_empty() || line.starts_with('#') || line.starts_with('%') {
+                    continue;
+                }
+                // Skip variable-name header lines produced by `save` (single alphabetic word, no commas).
+                if !line.contains(',') && line.split_whitespace().next().map_or(false, |s| s.chars().all(|c| c.is_alphabetic() || c == '_')) {
+                    continue;
+                }
+                let mut row: Vec<f64> = Vec::new();
+                for token in line.split(',') {
+                    let token = token.trim();
+                    if token.is_empty() {
+                        return Err(Diagnostic::error("csvread: empty cell.", span_op));
+                    }
+                    if token.eq_ignore_ascii_case("NaN") || token.eq_ignore_ascii_case("nan") {
+                        row.push(f64::NAN);
+                    } else if token.eq_ignore_ascii_case("Inf") || token.eq_ignore_ascii_case("inf") {
+                        row.push(f64::INFINITY);
+                    } else if token.eq_ignore_ascii_case("-Inf") || token.eq_ignore_ascii_case("-inf") {
+                        row.push(f64::NEG_INFINITY);
+                    } else {
+                        let val: f64 = token.parse().map_err(|_| Diagnostic::error(format!("csvread: invalid number '{}'", token), span_op))?;
+                        row.push(val);
+                    }
+                }
+                if !row.is_empty() {
+                    rows.push(row);
+                }
+            }
+            if rows.is_empty() {
+                return Ok(Value::Matrix(DenseMatrix::empty()));
+            }
+            let ncols = rows[0].len();
+            for (i, r) in rows.iter().enumerate() {
+                if r.len() != ncols {
+                    return Err(Diagnostic::error(format!("csvread: row {} has {} columns, expected {}.", i + 1, r.len(), ncols), span_op));
+                }
+            }
+            let flat: Vec<f64> = rows.iter().flatten().copied().collect();
+            Ok(Value::Matrix(DenseMatrix { rows: rows.len(), cols: ncols, data: flat }))
+        }
+        "csvwrite" => {
+            if args.len() != 2 {
+                return Err(Diagnostic::error("csvwrite expects 2 arguments: csvwrite(filename, A).", span_op));
+            }
+            let v_path = eval_expr_pub(env, &args[0], io)?;
+            let path_str = match v_path {
+                Value::String(s) => s,
+                _ => {
+                    let m = coerce_matrix_pub(v_path, span_op)?;
+                    if let Some(s) = m.as_scalar() {
+                        s.to_string()
+                    } else {
+                        return Err(Diagnostic::error("csvwrite: file path must be a string or scalar.", span_op));
+                    }
+                }
+            };
+            let a = coerce_matrix_pub(eval_expr_pub(env, &args[1], io)?, span_op)?;
+            use std::fs::File;
+            use std::io::Write;
+            let mut f = File::create(&path_str).map_err(|e| Diagnostic::error(format!("csvwrite: cannot create '{}' ({}).", path_str, e), span_op))?;
+            for r in 1..=a.rows {
+                let mut line = String::new();
+                for c in 1..=a.cols {
+                    if c > 1 {
+                        line.push(',');
+                    }
+                    let v = a.get_2d(r, c, span_op)?;
+                    if v.is_nan() {
+                        line.push_str("NaN");
+                    } else if v.is_infinite() {
+                        line.push_str("Inf");
+                    } else if v == f64::NEG_INFINITY {
+                        line.push_str("-Inf");
+                    } else {
+                        line.push_str(&format!("{}", v));
+                    }
+                }
+                writeln!(f, "{}", line).map_err(|e| Diagnostic::error(format!("csvwrite: write error ({}).", e), span_op))?;
+            }
+            Ok(Value::Matrix(DenseMatrix::empty()))
+        }
+        "load" => {
+            if args.len() != 1 {
+                return Err(Diagnostic::error("load expects 1 argument: load(filename).", span_op));
+            }
+            let v_path = eval_expr_pub(env, &args[0], io)?;
+            let path_str = match v_path {
+                Value::String(s) => s,
+                _ => {
+                    let m = coerce_matrix_pub(v_path, span_op)?;
+                    if let Some(s) = m.as_scalar() {
+                        s.to_string()
+                    } else {
+                        return Err(Diagnostic::error("load: file path must be a string or scalar.", span_op));
+                    }
+                }
+            };
+            // Minimal persistence: read CSV and set variable `data` (or named variable in second arg if any)
+            let content = std::fs::read_to_string(&path_str).map_err(|e| Diagnostic::error(format!("load: cannot read '{}' ({}).", path_str, e), span_op))?;
+            let mut rows: Vec<Vec<f64>> = Vec::new();
+            for line in content.lines() {
+                let line = line.trim();
+                if line.is_empty() || line.starts_with('#') || line.starts_with('%') {
+                    continue;
+                }
+                // Skip variable-name header lines produced by `save` (single alphabetic word, no commas).
+                if !line.contains(',') && line.split_whitespace().next().map_or(false, |s| s.chars().all(|c| c.is_alphabetic() || c == '_')) {
+                    continue;
+                }
+                let mut row: Vec<f64> = Vec::new();
+                for token in line.split(',') {
+                    let token = token.trim();
+                    if token.is_empty() {
+                        return Err(Diagnostic::error("load: empty cell.", span_op));
+                    }
+                    if token.eq_ignore_ascii_case("NaN") || token.eq_ignore_ascii_case("nan") {
+                        row.push(f64::NAN);
+                    } else if token.eq_ignore_ascii_case("Inf") || token.eq_ignore_ascii_case("inf") {
+                        row.push(f64::INFINITY);
+                    } else if token.eq_ignore_ascii_case("-Inf") || token.eq_ignore_ascii_case("-inf") {
+                        row.push(f64::NEG_INFINITY);
+                    } else {
+                        let val: f64 = token.parse().map_err(|_| Diagnostic::error(format!("load: invalid number '{}'", token), span_op))?;
+                        row.push(val);
+                    }
+                }
+                if !row.is_empty() {
+                    rows.push(row);
+                }
+            }
+            if rows.is_empty() {
+                return Ok(Value::Matrix(DenseMatrix::empty()));
+            } else {
+                let ncols = rows[0].len();
+                for (i, r) in rows.iter().enumerate() {
+                    if r.len() != ncols {
+                        return Err(Diagnostic::error(format!("load: row {} has {} columns, expected {}.", i + 1, r.len(), ncols), span_op));
+                    }
+                }
+                let flat: Vec<f64> = rows.iter().flatten().copied().collect();
+                return Ok(Value::Matrix(DenseMatrix { rows: rows.len(), cols: ncols, data: flat }));
+            }
+        }
+        "save" => {
+            if args.len() != 1 && args.len() != 2 {
+                return Err(Diagnostic::error("save expects 1 or 2 arguments: save(filename) or save(filename, varname).", span_op));
+            }
+            let v_path = eval_expr_pub(env, &args[0], io)?;
+            let path_str = match v_path {
+                Value::String(s) => s,
+                _ => {
+                    let m = coerce_matrix_pub(v_path, span_op)?;
+                    if let Some(s) = m.as_scalar() {
+                        s.to_string()
+                    } else {
+                        return Err(Diagnostic::error("save: file path must be a string or scalar.", span_op));
+                    }
+                }
+            };
+            let mut f = std::fs::File::create(&path_str).map_err(|e| Diagnostic::error(format!("save: cannot create '{}' ({}).", path_str, e), span_op))?;
+            use std::io::Write;
+            for name in env.variable_names() {
+                if let Some(val) = env.get(name) {
+                    if let Value::Matrix(m) = val {
+                        writeln!(f, "{}", name).map_err(|e| Diagnostic::error(format!("save: write error ({}).", e), span_op))?;
+                        for r in 1..=m.rows {
+                            let mut line = String::new();
+                            for c in 1..=m.cols {
+                                if c > 1 {
+                                    line.push(',');
+                                }
+                                let v = m.get_2d(r, c, span_op)?;
+                                if v.is_nan() {
+                                    line.push_str("NaN");
+                                } else if v.is_infinite() {
+                                    line.push_str("Inf");
+                                } else if v == f64::NEG_INFINITY {
+                                    line.push_str("-Inf");
+                                } else {
+                                    line.push_str(&format!("{}", v));
+                                }
+                            }
+                            writeln!(f, "{}", line).map_err(|e| Diagnostic::error(format!("save: write error ({}).", e), span_op))?;
+                        }
+                    }
+                }
+            }
+            Ok(Value::Matrix(DenseMatrix::empty()))
+        }
         other => Err(Diagnostic::error(
             format!("Unrecognized function or variable '{}'.", other),
             span_op,
@@ -2725,3 +2963,4 @@ fn numeric_arg(
         )),
     }
 }
+

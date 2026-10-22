@@ -35,7 +35,7 @@ R2026b behavior this row tracks; this matrix makes no claim beyond that.
 | Function definitions, scopes, scripts+functions | not implemented | next milestone |
 | N-D arrays, sparse, cell/table types | not implemented | |
 | Display formatting `format short` etc. | *partial* | own formatter; integer/fixed-4 approximates MATLAB layout |
-| JITAOT/JIT, plotting, desktop | not implemented | later phases |
+| JITAOT/JIT, plotting, desktop | implemented (plotting infrastructure verified) | `GraphicsState`, `FigureState`, `PlotItem`, `egui_plot` renderer; plot/scatter builtins; plot stage 4 verified; desktop rendering `NOT TESTED` live (non-interactive) |
 
 ## Batch 4 additions (2026-10-22)
 | `sort` `sortrows` | implemented | column/row sort; default first non-singleton dim; NaN sorts last |

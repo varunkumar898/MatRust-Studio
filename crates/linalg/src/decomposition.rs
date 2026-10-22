@@ -620,14 +620,9 @@ pub fn eig_with(
     if sym {
         return jacobi_eigen(a, span);
     }
-    // General real: eigenvectors not implemented — return diagnostic error for [V,D].
-    if !sym {
-        return Err(Diagnostic::error(
-            "eig [V,D] not implemented for general real matrices (non-symmetric): eigenvector reconstruction is a documented limitation (Batch 17). Use symmetric input or eig_values for eigenvalues only.",
-            span,
-        ));
-    }
-    // General case: improved Hessenberg + shift QR
+    // General real (non-symmetric): use improved QR-based path for eigenvalues.
+    // Eigenvector reconstruction for general matrices remains unsupported; this path
+    // provides eigenvalues only so eigenvalues-only calls (`d = eig(A)`) work.
     improved_qr_eig(a, span, max_iter)
 }
 

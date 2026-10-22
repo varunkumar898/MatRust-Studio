@@ -106,6 +106,8 @@ pub struct Env {
     vars: HashMap<String, Value>,
     /// User-defined functions registered in this environment/session.
     pub function_table: HashMap<String, Stmt>,
+    /// Recursion depth for user-defined function calls (limit 256).
+    pub recursion_depth: usize,
 }
 
 impl Default for Env {
@@ -119,6 +121,7 @@ impl Env {
         Self {
             vars: HashMap::new(),
             function_table: HashMap::new(),
+            recursion_depth: 0,
         }
     }
 
@@ -608,7 +611,14 @@ fn exec_user_function(
     io: &mut ExecIo<'_>,
 ) -> Result<Value, Diagnostic> {
     if let Stmt::FunctionDef { outputs, params, body, .. } = func {
+        if parent_env.recursion_depth >= 256 {
+            return Err(Diagnostic::error(
+                "Maximum recursion limit (256) exceeded.",
+                Some(span),
+            ));
+        }
         let mut local_env = Env::new();
+        local_env.recursion_depth = parent_env.recursion_depth + 1;
         // Bind parameters by evaluating arguments against caller environment.
         for (i, (param_name, _)) in params.iter().enumerate() {
             let value = if i < args.len() {
@@ -644,6 +654,55 @@ fn exec_user_function(
                 Some(span),
             ));
         }
+    } else {
+        Err(Diagnostic::error("User-defined function definition expected.", Some(span)))
+    }
+}
+
+pub fn exec_user_function_multi(
+    parent_env: &Env,
+    func: Stmt,
+    args: &[Expr],
+    span: Span,
+    io: &mut ExecIo<'_>,
+) -> Result<Vec<Value>, Diagnostic> {
+    if let Stmt::FunctionDef { outputs, params, body, .. } = func {
+        if parent_env.recursion_depth >= 256 {
+            return Err(Diagnostic::error(
+                "Maximum recursion limit (256) exceeded.",
+                Some(span),
+            ));
+        }
+        let mut local_env = Env::new();
+        local_env.recursion_depth = parent_env.recursion_depth + 1;
+        for (i, (param_name, _)) in params.iter().enumerate() {
+            let value = if i < args.len() {
+                eval_expr_pub(parent_env, &args[i], io)?
+            } else {
+                Value::Matrix(DenseMatrix::scalar(0.0))
+            };
+            local_env.set(param_name.clone(), value);
+        }
+        local_env.set("nargin".to_string(), Value::Matrix(DenseMatrix::scalar(args.len() as f64)));
+        local_env.set("nargout".to_string(), Value::Matrix(DenseMatrix::scalar(outputs.len() as f64)));
+        for stmt in body {
+            let res = exec_statement(&mut local_env, stmt.clone(), io, 0)?;
+            if res.flow == Flow::Return {
+                break;
+            }
+        }
+        let mut out_vals = Vec::with_capacity(outputs.len());
+        for (out_name, _) in outputs {
+            if let Some(val) = local_env.get(&out_name) {
+                out_vals.push(val.clone());
+            } else {
+                return Err(Diagnostic::error(
+                    format!("Output argument '{}' not assigned.", out_name),
+                    Some(span),
+                ));
+            }
+        }
+        Ok(out_vals)
     } else {
         Err(Diagnostic::error("User-defined function definition expected.", Some(span)))
     }
@@ -1287,7 +1346,17 @@ pub fn eval_expr(env: &Env, expr: &Expr, io: &mut ExecIo<'_>) -> Result<Value, D
             Complex64::new(0.0, *n),
         ))),
         Expr::StringLit(s, _) => Ok(Value::String(s.clone())),
-        Expr::Variable(name, _) => match env.get(name) {
+        Expr::Variable(name, _) => {
+            if name == "NaN" {
+                return Ok(Value::Matrix(DenseMatrix::scalar(f64::NAN)));
+            }
+            if name == "true" {
+                return Ok(Value::Boolean(true));
+            }
+            if name == "false" {
+                return Ok(Value::Boolean(false));
+            }
+            match env.get(name) {
             Some(v) => Ok(v.clone()),
             None => {
                 // An unknown bare identifier is treated as a zero-argument
@@ -1296,6 +1365,7 @@ pub fn eval_expr(env: &Env, expr: &Expr, io: &mut ExecIo<'_>) -> Result<Value, D
                 // "Unrecognized function or variable" message, so the error
                 // text for undefined variables is unchanged.
                 crate::builtins::call_builtin(name, &[], env, expr.span(), io)
+            }
             }
         },
         Expr::MatrixLit(rows, _) => {

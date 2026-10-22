@@ -14,5 +14,5 @@ pub use builtins::format_value;
 pub use graphics::{FigureState, GraphicsState, PlotItem};
 pub use interp::{
     exec_program_env, exec_source, run_source, variable_rows, Env, ExecIo, RunResult, Session,
-    StatementOutput, VarRow,
+    StatementOutput, VarRow, exec_user_function_multi,
 };

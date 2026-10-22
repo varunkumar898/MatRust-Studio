@@ -86,3 +86,19 @@ R2026b behavior this row tracks; this matrix makes no claim beyond that.
 | Moore–Penrose pseudoinverse: `pinv` | implemented | Computed via SVD ($V * S^+ * U'$); satisfies all 4 Moore–Penrose identities; handles rectangular and rank-deficient matrices; explicit tolerance supported |
 | Vector & matrix norms: `norm` | implemented | Vector norms (1, 2, $\infty$, $-\infty$, general $p$); matrix norms (1 max column sum, 2 largest singular value via SVD, $\infty$ max row sum, 'fro' Frobenius norm) |
 | Operators: `\` and `.\` | implemented | Lexer tokens `Backslash` and `DotBackslash`, AST `BinaryOp::LDiv` and `BinaryOp::DotLDiv`, parser infix bindings (precedence 60, 61) |
+
+## Batch 10 additions (2026-10-22)
+| Feature | Status | Notes |
+|---|---|---|
+| Complex value representation | implemented | `Complex64` struct (`#[repr(C)]` interleaved `re`, `im: f64`); `ComplexDenseMatrix` with column-major 2-D indexing |
+| Runtime value variant | implemented | `Value::ComplexMatrix(ComplexDenseMatrix)` in `matlab_values`; scalar complex numbers represented as 1x1 complex matrices |
+| Imaginary literals and constants | implemented | Lexer recognizes `2i`, `3.5j`, `1e-3i` as `TokenKind::ImaginaryNumber`; AST `Expr::Imaginary`; constants `i` and `j` evaluate to `0 + 1i` when unshadowed |
+| Complex constructors | implemented | `complex(re)` and `complex(re, im)` with scalar broadcasting; matrix literal `[1 + 2i, 3; 4, 5 - 6i]` concatenation |
+| Component extraction & manipulation | implemented | `real(Z)`, `imag(Z)`, `conj(Z)`, `angle(Z)`, `abs(Z)` (via `hypot`), `isreal(Z)` |
+| Complex arithmetic | implemented | `+`, `-`, `*`, `.*`, `/`, `./`, `^`, `.^` with mixed real-complex promotion, robust Smith division, and scalar expansion |
+| Transpose semantics | implemented | Conjugate transpose `A'` (Hermitian transpose conjugating elements and swapping dimensions) vs non-conjugate transpose `A.'` (swapping dimensions without conjugating) |
+| Elementary function domain extensions | implemented | `sqrt(x)` promotes negative numbers to complex ($x < 0 \implies \sqrt{-x}\,i$); `(-1).^0.5` yields `0 + 1i`; `exp(1i*pi)` yields `-1 + 0i`; `log(-1)` yields $0 + \pi i$ |
+| Complex relational comparisons | implemented | `==` and `~=` compare both real and imaginary components; `<` `<=` `>` `>=` compare strictly the real components per MATLAB specifications |
+| Indexing and growth | implemented | Linear and 2-D indexing on complex matrices; out-of-bounds assignment growth with zero-filled complex numbers; promotion from real to complex on element assignment |
+| Desktop & CLI integration | implemented | Complex matrix display formatting (`format_matlab`), desktop workspace viewer grid and inspector support, syntax highlighter for complex builtins |
+

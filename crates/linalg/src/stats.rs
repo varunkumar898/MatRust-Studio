@@ -1,7 +1,7 @@
 use matlab_diagnostics::{Diagnostic, Span};
 use matlab_values::DenseMatrix;
 
-use crate::{map_binary_simple, MatResult};
+use crate::map_binary_simple;
 
 /// Resolve the effective reduction dimension for matrix `a`.
 /// If `dim` is specified, it is validated and returned.

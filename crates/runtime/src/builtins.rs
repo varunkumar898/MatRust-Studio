@@ -59,6 +59,76 @@ pub fn call_builtin_multi(
             }
             Ok(outputs)
         }
+        "min" if nargout > 1 => {
+            let span_op = Some(span);
+            if args.is_empty() || args.len() == 2 || args.len() > 3 {
+                return Err(Diagnostic::error(
+                    "min with 2 outputs expects 1 or 3 arguments: min(A) or min(A, [], dim).",
+                    span_op,
+                ));
+            }
+            let v0 = eval_expr_pub(env, &args[0], io)?;
+            let m0 = coerce_matrix_pub(v0, span_op)?;
+            if args.len() == 1 {
+                let (vals, idxs) = la::stats::min_reduction(&m0, None);
+                Ok(vec![Value::Matrix(vals), Value::Matrix(idxs)])
+            } else {
+                let _ = eval_expr_pub(env, &args[1], io)?;
+                let dim = parse_dim_arg(&args[2], env, io, span, "min")?;
+                match dim {
+                    DimArg::All => {
+                        let (val, idx0) = la::stats::min_slice(&m0.data);
+                        Ok(vec![
+                            Value::Matrix(DenseMatrix::scalar(val)),
+                            Value::Matrix(DenseMatrix::scalar((idx0 + 1) as f64)),
+                        ])
+                    }
+                    DimArg::Dim(d) => {
+                        let (vals, idxs) = la::stats::min_reduction(&m0, Some(d));
+                        Ok(vec![Value::Matrix(vals), Value::Matrix(idxs)])
+                    }
+                    DimArg::Default => {
+                        let (vals, idxs) = la::stats::min_reduction(&m0, None);
+                        Ok(vec![Value::Matrix(vals), Value::Matrix(idxs)])
+                    }
+                }
+            }
+        }
+        "max" if nargout > 1 => {
+            let span_op = Some(span);
+            if args.is_empty() || args.len() == 2 || args.len() > 3 {
+                return Err(Diagnostic::error(
+                    "max with 2 outputs expects 1 or 3 arguments: max(A) or max(A, [], dim).",
+                    span_op,
+                ));
+            }
+            let v0 = eval_expr_pub(env, &args[0], io)?;
+            let m0 = coerce_matrix_pub(v0, span_op)?;
+            if args.len() == 1 {
+                let (vals, idxs) = la::stats::max_reduction(&m0, None);
+                Ok(vec![Value::Matrix(vals), Value::Matrix(idxs)])
+            } else {
+                let _ = eval_expr_pub(env, &args[1], io)?;
+                let dim = parse_dim_arg(&args[2], env, io, span, "max")?;
+                match dim {
+                    DimArg::All => {
+                        let (val, idx0) = la::stats::max_slice(&m0.data);
+                        Ok(vec![
+                            Value::Matrix(DenseMatrix::scalar(val)),
+                            Value::Matrix(DenseMatrix::scalar((idx0 + 1) as f64)),
+                        ])
+                    }
+                    DimArg::Dim(d) => {
+                        let (vals, idxs) = la::stats::max_reduction(&m0, Some(d));
+                        Ok(vec![Value::Matrix(vals), Value::Matrix(idxs)])
+                    }
+                    DimArg::Default => {
+                        let (vals, idxs) = la::stats::max_reduction(&m0, None);
+                        Ok(vec![Value::Matrix(vals), Value::Matrix(idxs)])
+                    }
+                }
+            }
+        }
         _ => {
             let val = call_builtin(name, args, env, span, io)?;
             Ok(vec![val])
@@ -233,6 +303,91 @@ fn safe_bitshift(a: i64, k: i64, max_bits: Option<u32>) -> f64 {
         }
     } else {
         shifted as f64
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DimArg {
+    Default,
+    Dim(usize),
+    All,
+}
+
+pub fn parse_dim_arg(
+    arg: &Expr,
+    env: &Env,
+    io: &mut ExecIo<'_>,
+    span: Span,
+    name: &str,
+) -> Result<DimArg, Diagnostic> {
+    let span_op = Some(span);
+    let v = eval_expr_pub(env, arg, io)?;
+    match v {
+        Value::String(s) => {
+            if s.eq_ignore_ascii_case("all") {
+                Ok(DimArg::All)
+            } else {
+                Err(Diagnostic::error(
+                    format!("{}: unrecognized dimension option '{}'.", name, s),
+                    span_op,
+                ))
+            }
+        }
+        Value::Matrix(m) => {
+            if let Some(val) = m.as_scalar() {
+                if !val.is_finite() || val.fract() != 0.0 || val < 1.0 {
+                    return Err(Diagnostic::error(
+                        format!("{}: dimension must be a positive integer.", name),
+                        span_op,
+                    ));
+                }
+                Ok(DimArg::Dim(val as usize))
+            } else if m.data.is_empty() {
+                Ok(DimArg::Default)
+            } else {
+                Err(Diagnostic::error(
+                    format!("{}: dimension must be a positive integer scalar.", name),
+                    span_op,
+                ))
+            }
+        }
+        _ => Err(Diagnostic::error(
+            format!(
+                "{}: dimension must be a positive integer scalar or 'all'.",
+                name
+            ),
+            span_op,
+        )),
+    }
+}
+
+pub fn parse_w_from_value(v: &Value, span: Option<Span>, name: &str) -> Result<usize, Diagnostic> {
+    match v {
+        Value::Matrix(m) => {
+            if m.data.is_empty() {
+                Ok(0)
+            } else if let Some(val) = m.as_scalar() {
+                if val == 0.0 {
+                    Ok(0)
+                } else if val == 1.0 {
+                    Ok(1)
+                } else {
+                    Err(Diagnostic::error(
+                        format!("{}: normalization flag must be 0 or 1.", name),
+                        span,
+                    ))
+                }
+            } else {
+                Err(Diagnostic::error(
+                    format!("{}: normalization flag must be a scalar 0 or 1.", name),
+                    span,
+                ))
+            }
+        }
+        _ => Err(Diagnostic::error(
+            format!("{}: normalization flag must be 0 or 1.", name),
+            span,
+        )),
     }
 }
 

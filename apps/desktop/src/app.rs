@@ -150,7 +150,7 @@ impl MatRustApp {
             last_error: false,
             last_duration: None,
             toolstrip: 0,
-            left_split: 0.45,
+            left_split: 0.35,
             auto_run: std::env::var("MATRUST_AUTORUN")
                 .ok()
                 .filter(|s| !s.is_empty()),

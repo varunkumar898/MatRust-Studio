@@ -4,9 +4,11 @@
 //! This is intentionally a tree-walking interpreter (Phase E, milestone 1).
 //! No JIT, no parallelism — see docs/architecture.md for rationale.
 
+pub mod arrayfn;
 pub mod builtins;
 pub mod graphics;
 pub mod interp;
+pub mod rng;
 
 pub use builtins::format_value;
 pub use graphics::{FigureState, GraphicsState, PlotItem};

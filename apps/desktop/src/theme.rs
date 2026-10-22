@@ -191,8 +191,8 @@ pub fn apply(ctx: &egui::Context, kind: ThemeKind, font_size: f32) {
     ctx.all_styles_mut(|style| {
         style.visuals = visuals.clone();
         style.visuals.dark_mode = matches!(kind, ThemeKind::Dark);
-        style.spacing.item_spacing = egui::vec2(8.0, 6.0);
-        style.spacing.button_padding = egui::vec2(7.0, 3.0);
+        style.spacing.item_spacing = egui::vec2(6.0, 4.0);
+        style.spacing.button_padding = egui::vec2(6.0, 2.0);
         style.spacing.menu_margin = egui::Margin::symmetric(8, 4);
         style.spacing.icon_width_inner = 12.0;
         style.spacing.icon_width = 14.0;

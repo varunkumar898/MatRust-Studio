@@ -69,97 +69,41 @@ impl Parser {
         Ok(Program { statements })
     }
 
-    fn parse_statement(&mut self) -> Result<Stmt, Diagnostic> {
-        self.skip_newlines();
-        let start_span = self.peek_span();
-
-        // Check for assignment: Ident = ... OR Ident(...) = ...
-        if let TokenKind::Ident(name) = self.peek().clone() {
-            // Lookahead
-            let next_pos = self.pos + 1;
-            let next_kind = self.tokens.get(next_pos).map(|t| &t.kind);
-
-            if next_kind == Some(&TokenKind::Equal) {
-                // Simple variable assignment: name = expr
-                let ident_tok = self.advance();
-                self.advance(); // consume '='
-                let val_expr = self.parse_expression(0)?;
-                let (suppress, end_span) = self.consume_stmt_terminator();
-                let span = start_span.merge(end_span);
-                return Ok(Stmt::Assignment {
-                    target: AssignTarget::Ident(name, ident_tok.span),
-                    value: val_expr,
-                    suppress_output: suppress,
-                    span,
-                });
-            } else if next_kind == Some(&TokenKind::LParen) {
-                // Could be index assignment: A(1, 2) = ...
-                // Check if closing paren is followed by '='
-                if self.find_assignment_equals_after_paren(next_pos).is_some() {
-                    let ident_tok = self.advance();
-                    self.advance(); // consume '('
-                    let mut indices = Vec::new();
-                    while self.peek() != &TokenKind::RParen && self.peek() != &TokenKind::Eof {
-                        indices.push(self.parse_expression(0)?);
-                        if !self.match_token(&TokenKind::Comma) {
-                            break;
-                        }
-                    }
-                    if !self.match_token(&TokenKind::RParen) {
-                        return Err(Diagnostic::error(
-                            "Expected ')' closing array index",
-                            Some(self.peek_span()),
-                        ));
-                    }
-                    if !self.match_token(&TokenKind::Equal) {
-                        return Err(Diagnostic::error(
-                            "Expected '=' in assignment",
-                            Some(self.peek_span()),
-                        ));
-                    }
-                    let val_expr = self.parse_expression(0)?;
-                    let (suppress, end_span) = self.consume_stmt_terminator();
-                    let span = start_span.merge(end_span);
-                    return Ok(Stmt::Assignment {
-                        target: AssignTarget::Index {
-                            name,
-                            indices,
-                            span: ident_tok.span,
-                        },
-                        value: val_expr,
-                        suppress_output: suppress,
-                        span,
-                    });
+    /// `[X, Y] = expr`: parse the name list after an opening bracket. Returns
+    /// the multi-assignment target when the bracket contained a comma- or
+    /// space-separated identifier list, or None when this bracket is an
+    /// ordinary matrix literal (caller rewinds and retries as an expression).
+    fn try_parse_multi_assign_names(&mut self) -> Result<Option<AssignTarget>, Diagnostic> {
+        let bracket_span = self.peek_span();
+        self.advance(); // consume '['
+        let mut names: Vec<(String, Span)> = Vec::new();
+        loop {
+            match self.peek().clone() {
+                TokenKind::Ident(name) => {
+                    self.advance();
+                    names.push((name, self.tokens[self.pos - 1].span));
                 }
-            }
-
-            // Command syntax: `Ident Ident ...` at statement start (e.g.
-            // `grid on`, `close all`). Following identifiers are taken as
-            // (string) arguments; the runtime resolves zero-argument bare
-            // identifiers separately. Inside parentheses or after '=' this
-            // rule does not apply, matching MATLAB's scoping of command
-            // syntax to statement starts.
-            if matches!(next_kind, Some(TokenKind::Ident(_))) {
-                let call = self.parse_command_call(start_span)?;
-                let (suppress, end_span) = self.consume_stmt_terminator();
-                let span = start_span.merge(end_span);
-                return Ok(Stmt::Expr {
-                    expr: call,
-                    suppress_output: suppress,
-                    span,
-                });
+                TokenKind::Comma | TokenKind::Newline => {
+                    self.advance();
+                }
+                TokenKind::RBracket => {
+                    self.advance();
+                    if names.is_empty() {
+                        return Ok(None); // `[] = ...` never valid; treat as literal
+                    }
+                    // Assignment requires '=' next; caller checks and rewinds.
+                    return Ok(Some(AssignTarget::Multi(names, bracket_span)));
+                }
+                TokenKind::Number(_) | TokenKind::StringLit(_) => return Ok(None),
+                TokenKind::Eof => {
+                    return Err(Diagnostic::error(
+                        "Unterminated multiple-assignment: expected ']'",
+                        Some(self.peek_span()),
+                    ))
+                }
+                _ => return Ok(None),
             }
         }
-
-        // Otherwise, it is an expression statement
-        let expr = self.parse_expression(0)?;
-        let (suppress, end_span) = self.consume_stmt_terminator();
-        let span = start_span.merge(end_span);
-        Ok(Stmt::Expr {
-            expr,
-            suppress_output: suppress,
-            span,
-        })
     }
 
     /// Parse a command-syntax call: `Ident Ident...` at statement start.
@@ -453,6 +397,311 @@ impl Parser {
     }
 
     /// Parse matrix literal: [1 2; 3 4] or [1, 2; 3, 4]
+    // ---------------------------------------------------- control flow
+    fn parse_block(&mut self, stops: &[&str]) -> Result<Vec<Stmt>, Diagnostic> {
+        let mut stmts = Vec::new();
+        loop {
+            self.skip_newlines();
+            if self.peek() == &TokenKind::Eof {
+                return Ok(stmts);
+            }
+            if let TokenKind::Ident(name) = self.peek().clone() {
+                if stops.contains(&name.as_str()) {
+                    return Ok(stmts);
+                }
+            }
+            stmts.push(self.parse_statement()?);
+        }
+    }
+
+    fn parse_statement(&mut self) -> Result<Stmt, Diagnostic> {
+        self.skip_newlines();
+        let start_span = self.peek_span();
+        if let TokenKind::Ident(name) = self.peek().clone() {
+            match name.as_str() {
+                "if" => return self.parse_if(start_span),
+                "while" => return self.parse_while(start_span),
+                "for" => return self.parse_for(start_span),
+                "switch" => return self.parse_switch(start_span),
+                "break" => {
+                    let tok = self.advance();
+                    self.consume_stmt_terminator();
+                    return Ok(Stmt::Break { span: tok.span });
+                }
+                "continue" => {
+                    let tok = self.advance();
+                    self.consume_stmt_terminator();
+                    return Ok(Stmt::Continue { span: tok.span });
+                }
+                "return" => {
+                    let tok = self.advance();
+                    self.consume_stmt_terminator();
+                    return Ok(Stmt::Return { span: tok.span });
+                }
+                "end" | "else" | "elseif" | "case" | "otherwise" => {
+                    return Err(Diagnostic::error(
+                        format!("Unexpected '{}' outside of a block.", name),
+                        Some(start_span),
+                    ));
+                }
+                _ => {}
+            }
+        }
+        if self.peek() == &TokenKind::LBracket {
+            let save = self.pos;
+            if let Some(target) = self.try_parse_multi_assign_names()? {
+                if !self.match_token(&TokenKind::Equal) {
+                    self.pos = save;
+                } else {
+                    let val_expr = self.parse_expression(0)?;
+                    let (suppress, end_span) = self.consume_stmt_terminator();
+                    return Ok(Stmt::Assignment {
+                        target,
+                        value: val_expr,
+                        suppress_output: suppress,
+                        span: start_span.merge(end_span),
+                    });
+                }
+            }
+        }
+        if let TokenKind::Ident(name) = self.peek().clone() {
+            let next_pos = self.pos + 1;
+            let next_kind = self.tokens.get(next_pos).map(|t| &t.kind);
+            if next_kind == Some(&TokenKind::Equal) {
+                let ident_tok = self.advance();
+                self.advance();
+                let val_expr = self.parse_expression(0)?;
+                let (suppress, end_span) = self.consume_stmt_terminator();
+                return Ok(Stmt::Assignment {
+                    target: AssignTarget::Ident(name, ident_tok.span),
+                    value: val_expr,
+                    suppress_output: suppress,
+                    span: start_span.merge(end_span),
+                });
+            } else if next_kind == Some(&TokenKind::LParen) {
+                if self.find_assignment_equals_after_paren(next_pos).is_some() {
+                    let ident_tok = self.advance();
+                    self.advance();
+                    let mut indices = Vec::new();
+                    while self.peek() != &TokenKind::RParen && self.peek() != &TokenKind::Eof {
+                        indices.push(self.parse_expression(0)?);
+                        if !self.match_token(&TokenKind::Comma) {
+                            break;
+                        }
+                    }
+                    if !self.match_token(&TokenKind::RParen) {
+                        return Err(Diagnostic::error("Expected ')'", Some(self.peek_span())));
+                    }
+                    if !self.match_token(&TokenKind::Equal) {
+                        return Err(Diagnostic::error("Expected '='", Some(self.peek_span())));
+                    }
+                    let val_expr = self.parse_expression(0)?;
+                    let (suppress, end_span) = self.consume_stmt_terminator();
+                    return Ok(Stmt::Assignment {
+                        target: AssignTarget::Index {
+                            name,
+                            indices,
+                            span: ident_tok.span,
+                        },
+                        value: val_expr,
+                        suppress_output: suppress,
+                        span: start_span.merge(end_span),
+                    });
+                }
+            }
+            if matches!(next_kind, Some(TokenKind::Ident(_))) {
+                let call = self.parse_command_call(start_span)?;
+                let (suppress, end_span) = self.consume_stmt_terminator();
+                return Ok(Stmt::Expr {
+                    expr: call,
+                    suppress_output: suppress,
+                    span: start_span.merge(end_span),
+                });
+            }
+        }
+        let expr = self.parse_expression(0)?;
+        let (suppress, end_span) = self.consume_stmt_terminator();
+        Ok(Stmt::Expr {
+            expr,
+            suppress_output: suppress,
+            span: start_span.merge(end_span),
+        })
+    }
+
+    fn parse_if(&mut self, start_span: Span) -> Result<Stmt, Diagnostic> {
+        self.advance();
+        let cond = self.parse_expression(0)?;
+        self.consume_stmt_terminator();
+        let mut branches: Vec<(Expr, Vec<Stmt>)> = Vec::new();
+        let mut else_body: Option<Vec<Stmt>> = None;
+        branches.push((cond, self.parse_block(&["end", "else", "elseif"])?));
+        loop {
+            if let TokenKind::Ident(n) = self.peek().clone() {
+                if n == "elseif" {
+                    self.advance();
+                    let c = self.parse_expression(0)?;
+                    self.consume_stmt_terminator();
+                    branches.push((c, self.parse_block(&["end", "else", "elseif"])?));
+                    continue;
+                }
+                if n == "else" {
+                    self.advance();
+                    self.consume_stmt_terminator();
+                    else_body = Some(self.parse_block(&["end"])?);
+                    break;
+                }
+            }
+            break;
+        }
+        if let TokenKind::Ident(n) = self.peek().clone() {
+            if n == "end" {
+                self.advance();
+            } else {
+                return Err(Diagnostic::error("Expected 'end'", Some(self.peek_span())));
+            }
+        } else {
+            return Err(Diagnostic::error("Expected 'end'", Some(self.peek_span())));
+        }
+        let (_, end_span) = self.consume_stmt_terminator();
+        Ok(Stmt::If {
+            branches,
+            else_body,
+            span: start_span.merge(end_span),
+        })
+    }
+
+    fn parse_while(&mut self, start_span: Span) -> Result<Stmt, Diagnostic> {
+        self.advance();
+        let cond = self.parse_expression(0)?;
+        self.consume_stmt_terminator();
+        let body = self.parse_block(&["end"])?;
+        if let TokenKind::Ident(n) = self.peek().clone() {
+            if n == "end" {
+                self.advance();
+            } else {
+                return Err(Diagnostic::error("Expected 'end'", Some(self.peek_span())));
+            }
+        } else {
+            return Err(Diagnostic::error("Expected 'end'", Some(self.peek_span())));
+        }
+        let (_, end_span) = self.consume_stmt_terminator();
+        Ok(Stmt::While {
+            cond,
+            body,
+            span: start_span.merge(end_span),
+        })
+    }
+
+    fn parse_for(&mut self, start_span: Span) -> Result<Stmt, Diagnostic> {
+        self.advance();
+        let paren_open = self.match_token(&TokenKind::LParen);
+        if let TokenKind::Ident(name) = self.peek().clone() {
+            let var_tok = self.advance();
+            let var_span = var_tok.span;
+            if self.peek() == &TokenKind::Equal {
+                self.advance();
+                let expr = self.parse_expression(0)?;
+                if paren_open && !self.match_token(&TokenKind::RParen) {
+                    return Err(Diagnostic::error("Expected ')'", Some(self.peek_span())));
+                }
+                self.consume_stmt_terminator();
+                let body = self.parse_block(&["end"])?;
+                if let TokenKind::Ident(n) = self.peek().clone() {
+                    if n == "end" {
+                        self.advance();
+                    } else {
+                        return Err(Diagnostic::error("Expected 'end'", Some(self.peek_span())));
+                    }
+                } else {
+                    return Err(Diagnostic::error("Expected 'end'", Some(self.peek_span())));
+                }
+                let (_, end_span) = self.consume_stmt_terminator();
+                return Ok(Stmt::For {
+                    var: name,
+                    var_span,
+                    values: expr,
+                    body,
+                    span: start_span.merge(end_span),
+                });
+            }
+        }
+        Err(Diagnostic::error(
+            "Expected 'for var = expr'",
+            Some(start_span),
+        ))
+    }
+
+    fn parse_switch(&mut self, start_span: Span) -> Result<Stmt, Diagnostic> {
+        self.advance();
+        let expr = self.parse_expression(0)?;
+        self.consume_stmt_terminator();
+        let mut cases: Vec<(Vec<Expr>, Vec<Stmt>)> = Vec::new();
+        let mut otherwise: Option<Vec<Stmt>> = None;
+        loop {
+            self.skip_newlines();
+            if let TokenKind::Ident(n) = self.peek().clone() {
+                if n == "case" {
+                    self.advance();
+                    let mut labels = Vec::new();
+                    loop {
+                        labels.push(self.parse_expression(0)?);
+                        if self.peek() == &TokenKind::Comma {
+                            self.advance();
+                            if self.peek() == &TokenKind::Newline
+                                || matches!(self.peek(), TokenKind::Ident(x) if ["case","otherwise","end"].contains(&x.as_str()))
+                            {
+                                break;
+                            }
+                        } else {
+                            break;
+                        }
+                    }
+                    self.consume_stmt_terminator();
+                    cases.push((labels, self.parse_block(&["case", "otherwise", "end"])?));
+                    continue;
+                }
+                if n == "otherwise" {
+                    self.advance();
+                    self.consume_stmt_terminator();
+                    otherwise = Some(self.parse_block(&["end"])?);
+                    break;
+                }
+                if n == "end" {
+                    self.advance();
+                    let (_, end_span) = self.consume_stmt_terminator();
+                    return Ok(Stmt::Switch {
+                        expr,
+                        cases,
+                        otherwise,
+                        span: start_span.merge(end_span),
+                    });
+                }
+            }
+            if self.peek() == &TokenKind::Eof {
+                return Err(Diagnostic::error("Expected 'end'", Some(start_span)));
+            }
+            return Err(Diagnostic::error(
+                "Unexpected statement inside 'switch'",
+                Some(self.peek_span()),
+            ));
+        }
+        if let TokenKind::Ident(n) = self.peek().clone() {
+            if n == "end" {
+                self.advance();
+            } else {
+                return Err(Diagnostic::error("Expected 'end'", Some(self.peek_span())));
+            }
+        } else {
+            return Err(Diagnostic::error("Expected 'end'", Some(self.peek_span())));
+        }
+        let (_, end_span) = self.consume_stmt_terminator();
+        Ok(Stmt::Switch {
+            expr,
+            cases,
+            otherwise,
+            span: start_span.merge(end_span),
+        })
+    }
     fn parse_matrix_literal(&mut self, start_span: Span) -> Result<Expr, Diagnostic> {
         let mut rows: Vec<Vec<Expr>> = Vec::new();
         let mut current_row: Vec<Expr> = Vec::new();
@@ -492,8 +741,9 @@ impl Parser {
                 continue;
             }
 
-            // Parse one row element expression
-            let element = self.parse_expression(45)?;
+            // Parse one row element expression. Colon and comparisons bind
+            // inside brackets, matching MATLAB (`[1:3]` is [1 2 3]).
+            let element = self.parse_expression(COLON_BP)?;
             current_row.push(element);
 
             // Optional comma or continuation

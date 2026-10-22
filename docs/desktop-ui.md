@@ -128,3 +128,14 @@ set).
 - Docking controls (pop-out figures window, move panels between regions).
 - Editor: code folding, breakpoints in the gutter (for the future debugger).
 - Workspace panel: inline header search, in-place numeric editing.
+
+## Layout refinements verified (2026-10-22)
+
+- `app.rs`: `left_split` set to 0.35 (folder/workspace divider); command-default height uses `screen.height() * 0.28` clamped to 180–420 px; figures-default width 0.30 of screen; editor dominates central area.
+- `theme.rs`: spacing tightened to `item_spacing = (6,4)` and button padding to `(6,2)` for denser desktop density; no purple palette, blue accent restrained.
+- Panel order preserved: `status_panel` (bottom edge) → `command_window_panel` (above status) → `left_panel` (folder + workspace, 22 % width) → `figures_panel` (right, hidden by default, opens on plot) → `central_panel` (editor + tabs). This matches the MATLAB-style desktop layout.
+- `Home` toolstrip selected by default (`toolstrip = 0`). Toolstrip groups: File (New/Open/Save), Run (Run/Run Selection/Stop), Environment (Import/Clear/Layout/Preferences); Plots and Apps remain separate tabs.
+- Editor uses `CodeEditor` with real text, syntax highlighting, line numbers, selection, undo/redo, find, and error-line markers connected to interpreter diagnostics.
+- Command Window is a distinct `Panel::bottom` with `>>` prompt, transcript history, up/down command history, and real interpreter execution via `Worker` thread.
+- Workspace reflects actual session variables from `Env` snapshot; Current Folder uses `FolderState` with navigation, refresh, open, delete-confirmation.
+- Figures panel shows actual `egui_plot` output when `show_right` is true; when empty it displays a compact "No figures open" state and consumes minimal space (panel hidden by default).

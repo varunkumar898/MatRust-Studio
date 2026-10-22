@@ -1,6 +1,8 @@
 use matlab_diagnostics::{Diagnostic, Span};
 use matlab_values::DenseMatrix;
 
+pub mod arrays;
+
 /// Matrix multiplication `A * B`
 pub fn matmul(
     a: &DenseMatrix,

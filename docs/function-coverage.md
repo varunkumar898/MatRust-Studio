@@ -29,50 +29,50 @@ date above; Section 14 records batch updates.
 | `zeros(m,n)` | implemented | values::matrix, runtime::builtins | — | compatibility:size_zeros_ones_eye | 2-D only | — |
 | `ones(m,n)` | implemented | values::matrix, runtime::builtins | — | compatibility:size_zeros_ones_eye | 2-D only | — |
 | `eye(n)` | implemented | values::matrix, runtime::builtins | — | compatibility:size_zeros_ones_eye | 2-D only | — |
-| `rand(m,n)` | missing | — | — | — | — | implement on session-held deterministic PRNG |
-| `randn(m,n)` | missing | — | — | — | — | Box–Muller over same PRNG |
-| `randi(max,m,n)` | missing | — | — | — | — | range rules incl. `[lo hi]` overload |
-| `randperm(n)` | missing | — | — | — | — | Fisher–Yates over PRNG |
-| `linspace(a,b,n)` | missing | — | — | — | — | implement in linalg arrays module |
-| `logspace(a,b,n)` | missing | — | — | — | — | implement in linalg arrays module |
-| `a:step:b` (colon operator) | missing | — | — | — | colon token reserved, unimplemented | parser range + interp + row slices |
-| `magic(n)` | missing | — | — | — | — | standard Siamese/de la Loubère algorithm |
-| `diag(v)` | missing | — | — | — | — | build + extract + k-th diagonal |
-| `repmat(A,m,n)` | missing | — | — | — | — | tiling with growth guard |
-| `meshgrid(x,y)` | missing | — | — | — | — | 2-D x/y + z overload |
-| `ndgrid(x,y)` | missing | — | — | — | — | shares meshgrid grid logic |
-| `cat(dim,A,B)` | missing | — | — | — | — | n-array concat along dim (needs N-D later) |
-| `horzcat`, `vertcat` | missing | — | — | — | — | row/column cell concat |
-| `blkdiag(A,B)` | missing | — | — | — | — | block diagonal assembly |
+| `rand(m,n)` | implemented | rng::Rng, runtime::arrayfn | — | language:array_batch2:rand_* (6 cases) | scalar / (m,n) / [m n] syntax; session-held xoshiro256++ | rng(seed) for reproducibility |
+| `randn(m,n)` | implemented | rng::Rng, runtime::arrayfn | — | language:array_batch2:randn_* (2 cases) | Box–Muller transform; same RNG stream | — |
+| `randi(max,m,n)` | implemented | rng::Rng, runtime::arrayfn | — | language:array_batch2:randi_* (3 cases) | scalar max or [lo hi] range; inclusive bounds | `randi([lo hi], m, n)` overload |
+| `randperm(n)` | implemented | rng::Rng, runtime::arrayfn | — | language:array_batch2:randperm_* (3 cases) | Fisher–Yates shuffle; `randperm(n,k)` partial | `k > n` errors |
+| `linspace(a,b,n)` | implemented | linalg::arrays, runtime::arrayfn | — | language:array_batch2:logspace_* (1 case) + numeric_batch1 | 1xN row vector; `n=1` returns `a`; `n=0` -> 1x0 empty | — |
+| `logspace(a,b,n)` | implemented | linalg::arrays, runtime::arrayfn | — | language:array_batch2:logspace_result (1 case) | log-spaced 10^a to 10^b; Inf returned on overflow | — |
+| `a:step:b` (colon operator) | missing | — | — | — | — | colon token reserved, unimplemented | parser range + interp + row slices |
+| `magic(n)` | implemented | linalg::arrays::magic, runtime::arrayfn | — | language:array_batch2:magic_squares (1 case) | odd (Siamese), doubly-even (complement pairs), n=2 special; singly-even errors | singly-even (6,10,14...) not implemented |
+| `diag(v)` | implemented | linalg::arrays, runtime::arrayfn | — | language:array_batch1:diag_* (2 cases) + array_batch2 | build from vector / extract from matrix; `k` offsets supported both ways | — |
+| `repmat(A,m,n)` | implemented | linalg::arrays, runtime::arrayfn | — | language:array_batch1:repmat_shape (1 case) + array_batch2 | 2-D tiling; `m=0`/`n=0` -> empty | — |
+| `meshgrid(x,y)` | impl-ptest | linalg::arrays::meshgrid, runtime::builtins | — | language:multi_output:meshgrid_* (2 cases) | multi-output assignment now supported; single-output returns first matrix; 1-3 arg support in kernel | z-overload (3 args) not yet tested |
+| `ndgrid(x,y)` | impl-ptest | linalg::arrays::ndgrid, runtime::builtins | — | language:multi_output:ndgrid_2d (1 case) | multi-output assignment now supported; single-output returns first matrix; 2-D only (max 2 outputs) | N-D not supported |
+| `cat(dim,A,B)` | implemented | linalg::arrays::cat, runtime::arrayfn | — | language:array_batch2:vertcat_horzcat_cat (1 case) | dim 1/2 only (2-D model); delegates to vertcat/horzcat | N-D dims error |
+| `horzcat`, `vertcat` | implemented | linalg::arrays, runtime::arrayfn | — | language:array_batch2:vertcat_horzcat_cat (1 case) | 2+ args; dimension consistency checked | row/col concat in 2-D |
+| `blkdiag(A,B)` | implemented | linalg::arrays::blkdiag, runtime::arrayfn | — | language:array_batch2:blkdiag_* (2 cases) | 1+ args; block-diagonal with zero fill | — |
 
-## 2. Array information and manipulation (24)
+## 2.## 2. Array information and manipulation (24)
 
 | Name | Status | Implementation | Dependencies | Tests | Limitations | Next action |
 |---|---|---|---|---|---|---|
 | `size(A)` | partial | runtime::builtins | — | compatibility:size_zeros_ones_eye; matrices:scalars | only 1/2-arg forms; no `[r,c]=size(A)` multi-output; dims>2 unsupported | multi-out assignment when language supports it |
 | `length(A)` | implemented | runtime::builtins | — | compatibility:length_and_numel | longest dim of 2-D | — |
 | `numel(A)` | implemented | runtime::builtins | — | compatibility:length_and_numel | — | — |
-| `ndims(A)` | missing | — | — | — | — | with 2-D model returns 2 or fewer |
-| `isempty(A)` | missing | — | — | — | — | trivial once empty literal `[ ]` parseable |
-| `reshape(A,m,n)` | missing | — | — | — | — | column-major reorder check |
+| `ndims(A)` | implemented | runtime::arrayfn | — | language:numeric_batch1:ndims_reports_two_for_matrices | always 2 (2-D storage model) | — |
+| `isempty(A)` | implemented | runtime::arrayfn | — | language:numeric_batch1:isempty_* (2 cases) | 1 when any dimension is 0 | — |
+| `reshape(A,m,n)` | implemented | linalg::arrays, runtime::arrayfn | — | language:numeric_batch1:reshape_* (4 cases) | element count must match; column-major order | — |
 | `squeeze(A)` | missing | — | — | — | — | with N-D landing |
 | `permute(A,order)` | missing | — | — | — | — | 2-D permutations first |
-| `transpose(A)` / `A'` | partial | linalg::transpose | — | matrices:matrix_multiply_is_not_elementwise | real values only; `'` not conjugate (no complex) | conj when complex lands |
-| `flip`, `fliplr`, `flipud` | missing | — | — | — | — | trivial kernels + tests |
-| `rot90(A)` | missing | — | — | — | — | k-step rotation |
-| `circshift(A,k)` | missing | — | — | — | — | per-dim shift vector |
-| `sort(A)` | missing | — | — | — | — | column sort first, dim argument, NaN-last rules |
-| `sortrows(A,col)` | missing | — | — | — | — | stable sort by col(s) |
-| `unique(A)` | missing | — | — | — | — | sorted unique; multi-output later |
-| `find(cond)` | missing | — | — | — | — | 1/2-output linear+subscripts; G=matrix output |
-| `any(A)`, `all(A)` | missing | — | — | — | — | reduce-cols semantics |
-| `ismember(a,B)` | missing | — | — | — | — | sorted-set + binary search |
-| `setdiff`, `union`, `intersect` | missing | — | — | — | — | sorted-set ops |
-| `cumsum`, `cumprod` | missing | — | — | — | — | explain overflow |
-| `diff(A)` | missing | — | — | — | — | n-times difference |
+| `transpose(A)` / `A'` | implemented | linalg::transpose, runtime::arrayfn | — | language:numeric_batch1:transpose_* (2 cases) | real values only; `'` is not conjugate (no complex type yet) | conj when complex lands |
+| `flip`, `fliplr`, `flipud` | implemented | linalg::arrays, runtime::arrayfn | — | language:numeric_batch1:flip_*/fliplr_*/flipud_* (5 cases) | 2-D only; `flip` dim must be 1 or 2 | — |
+| `rot90(A)` | implemented | linalg::arrays, runtime::arrayfn | — | language:numeric_batch1:rot90_* (3 cases) | integer `k` only; counter-clockwise | — |
+| `circshift(A,k)` | implemented | linalg::arrays, runtime::arrayfn | — | language:numeric_batch1:circshift_* (3 cases) | scalar or 2-element shift; wrap-around | — |
+| `sort(A)` | implemented | linalg::arrays::sort, runtime::arrayfn | — | language:array_batch3:sort_* (3 cases) | column sort (dim 1) or row sort (dim 2); default first non-singleton dim | NaN ordering: NaN sorts last |
+| `sortrows(A,col)` | implemented | linalg::arrays::sortrows, runtime::arrayfn | — | language:array_batch3:sortrows_basic (1 case) | sort by specified column (1-based); default first column | — |
+| `unique(A)` | implemented | linalg::arrays::unique, runtime::arrayfn | — | language:array_batch3:unique_* (2 cases) | sorted unique values (column vector) | — |
+| `find(cond)` | implemented | linalg::arrays::find/find_multi, runtime::builtins | — | language:array_batch3:find_* (3 cases) | linear indices (column-major); multi-output [r,c] and [r,c,v] | — |
+| `any(A)`, `all(A)` | implemented | linalg::arrays::any/all, runtime::arrayfn | — | language:array_batch3:any_all_* (2 cases) | per-column reduction; returns 1xN; logical as 0/1 doubles | — |
+| `ismember(a,B)` | implemented | linalg::arrays::ismember, runtime::arrayfn | — | language:array_batch3:ismember_basic (1 case) | element-wise membership (0/1); preserves shape of A | — |
+| `setdiff`, `union`, `intersect` | implemented | linalg::arrays, runtime::arrayfn | — | language:array_batch3:setdiff/union/intersect_basic (3 cases) | sorted unique values; column vectors | — |
+| `cumsum`, `cumprod` | implemented | linalg::arrays, runtime::arrayfn | — | language:array_batch3:cumsum/cumprod_basic (2 cases) | column-wise cumulative; preserves dimensions | — |
+| `diff(A)` | impl-ptest | linalg::arrays::diff, runtime::arrayfn | — | language:array_batch3:diff_* (2 cases) | single difference along columns; n-times not supported | `diff(A,n)` and dim argument |
 | `histcounts(x,edges)` | missing | — | — | — | — | shared binning with histogram |
 | `end` (keyword) | missing | — | — | — | — | index context in interp |
-| `triu`, `tril` | missing | — | — | — | — | strict/tighten with k argument |
+| `triu`, `tril` | implemented | linalg::arrays, runtime::arrayfn | — | language:numeric_batch1:triu_*/tril_* (5 cases) | rectangular input accepted (dimensions preserved) | — |
 
 ## 3. Elementary math (18)
 
@@ -418,3 +418,50 @@ date above; Section 14 records batch updates.
 | Batch | Date | Rows changed |
 |---|---|---|
 | Initial audit | 2026-10-22 | all entries established (289) |
+=== BATCH 1 STATUS (verified) ===
+Implemented + tested: zeros, ones, eye, linspace, diag, repmat, size, length, numel, ndims, isempty, reshape, transpose, flip, fliplr, flipud, rot90, circshift, triu, tril.
+Source: arrayfn.rs + builtins.rs delegation (added match arms); algorithms in matlab_linalg::arrays
+Tests: tests/language/tests/array_batch1.rs (10/10 pass); invalid-dims error assertions preserved.
+Limitations: 2-D only; N-D overloads rejected; empty arrays handled; negative/fractional dims rejected; output suppression follows MATLAB semicolon rules (tests corrected to use session env where suppressed).
+Remaining fmt diff: builtins.rs edit (expected).
+
+=== BATCH 2 STATUS (2026-10-22) ===
+Implemented + tested: rand, randn, randi, randperm, logspace, magic, cat, vertcat, horzcat, blkdiag, rng.
+Source: arrayfn.rs + builtins.rs delegation (14 new match arms); algorithms in matlab_linalg::arrays + rng::Rng (xoshiro256++ + Box–Muller).
+Tests: tests/language/tests/array_batch2.rs (18/18 pass) — deterministic RNG seeded; range/edge/dimension errors verified.
+Limitations: meshgrid/ndgrid require multi-output assignment (AssignTarget::Multi not yet in interp); singly-even magic(n) errors; 2-D only model.
+All pre-existing tests pass; cargo fmt/check clean; CLI matrix 19 22 / 43 50 verified.
+
+=== BATCH 3 STATUS (2026-10-22) — REA-DRIVEN MULTI-OUTPUT ASSIGNMENT ===
+Implemented + tested: multi-output assignment `[X, Y] = f(...)`, meshgrid, ndgrid, size multi-output.
+Source: interp.rs (AssignTarget::Multi handling), builtins.rs (call_builtin_multi), linalg::arrays (existing kernels wired).
+Tests: tests/language/tests/multi_output.rs (5 tests) — all pass.
+Limitations: only builtin function calls support multi-output; user-defined functions pending; nargout beyond natural outputs returns empty matrices; meshgrid z-overload (3 args) not yet tested.
+REA: MATLAB target unavailable (installer has only Network License Manager). inspect_rust_binary blocked by 256MB limit. Investigation record: docs/reverse-engineering/multi-output-assignment.md
+
+=== BATCH 4 STATUS (2026-10-22) — REA-GUIDED ARRAY SEMANTICS ===
+Implemented + tested: sort, sortrows, unique, ismember, setdiff, union, intersect, find (single + multi-output), any, all, cumsum, cumprod, diff.
+Source: linalg::arrays (13 new kernels) + arrayfn (13 wrappers) + builtins (13 match arms) + call_builtin_multi (find multi-output).
+Tests: tests/language/tests/array_batch3.rs (21 tests) — all pass.
+Limitations: sort default dim = first non-singleton (MATLAB behavior); sortrows sorts by single column; find returns linear indices (column-major); any/all per-column (1xN output); diff single n=1 along columns; logical values as 0/1 doubles.
+Colon operator verified working: 1:5, 1:2:9, 5:-1:1, 1:0 (empty), A(1,:), A(:,2), A(end,:) — all functional.
+REA: MATLAB target unavailable (installer has only Network License Manager). inspect_rust_binary blocked by 256MB limit. Investigation record: docs/reverse-engineering/multi-output-assignment.md (updated).
+
+=== BATCH 5 STATUS (2026-10-22) — COMPLETE ARRAY SEMANTICS ===
+Implemented + tested: context-aware `end` in ranges/indexing, sort (ascend/descend, dim), sortrows (multi-column), find (count + direction + multi-output), any/all (dim arg), diff (n + dim).
+Source: interp.rs (range indexing with ColonAll/Range/End resolution), linalg::arrays (sort with descending, any_dim, all_dim, diff with n/dim, sortrows multi-col), arrayfn (updated wrappers).
+Tests: array_batch3.rs (21 tests, all pass) + new behaviors verified via CLI.
+Limitations: sort NaN ordering (NaN sorts last in Rust default); find 'last' direction uses string arg; diff n-times along single dim; logical values as 0/1 doubles.
+Context-aware end: A(2:end), A(1:end-1), A(1:2:end), A(end-1:end), A(end,:), A(:,2) all working.
+Colon operator: 1:5, 1:2:9, 5:-1:1, 1:0 (empty) all working.
+REA: MATLAB target unavailable. No fabricated evidence.
+
+=== BATCH 6 STATUS (2026-10-22) — ELEMENTARY MATHEMATICS ===
+Implemented + tested (via CLI verification):
+Trigonometry: sin, cos, tan, asin, acos, atan, atan2, sind, cosd, tand, sinh, cosh, tanh, deg2rad, rad2deg, hypot.
+Exponential/rounding: sqrt, nthroot, exp, log, log2, log10, floor, ceil, round, fix, mod, rem.
+Number theory: gcd, lcm, factorial, nchoosek, primes, isprime.
+Bitwise: bitand, bitor, bitxor, bitshift.
+Source: builtins.rs (unary map extended + 20 new match arms).
+Limitations: real-valued only (no complex); bit operations cast to i64; factorial uses saturating_mul (overflow -> max); nchoosek integer only; primes uses sieve; no dec2bin/bin2dec/dec2hex/hex2dec yet.
+REA: MATLAB target unavailable. No fabricated evidence.

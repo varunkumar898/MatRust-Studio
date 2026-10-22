@@ -7,6 +7,7 @@ use matlab_syntax::ast::*;
 use matlab_values::{DenseMatrix, Value};
 
 use crate::graphics::FigureState;
+use crate::rng::Rng;
 
 /// Persistent execution session: one environment plus graphics state.
 /// The desktop worker owns exactly one `Session`; the CLI may create
@@ -15,6 +16,7 @@ use crate::graphics::FigureState;
 pub struct Session {
     pub env: Env,
     pub graphics: crate::graphics::GraphicsState,
+    pub rng: Rng,
 }
 
 impl Session {
@@ -36,6 +38,7 @@ impl Session {
             stdout: &mut stdout,
             graphics: &mut self.graphics,
             cancel,
+            rng: &mut self.rng,
         };
         let mut outputs = Vec::new();
         let mut interrupted = false;
@@ -46,9 +49,8 @@ impl Session {
                     break;
                 }
             }
-            if let Some(out) = exec_statement(&mut self.env, stmt, &mut io)? {
-                outputs.push(out);
-            }
+            let res = exec_statement(&mut self.env, stmt, &mut io, 0)?;
+            outputs.extend(res.outputs);
         }
         Ok(RunResult {
             env: self.env.clone(),
@@ -66,6 +68,23 @@ pub struct ExecIo<'a> {
     pub stdout: &'a mut Vec<String>,
     pub graphics: &'a mut crate::graphics::GraphicsState,
     pub cancel: Option<&'a AtomicBool>,
+    pub rng: &'a mut Rng,
+}
+
+/// Control-flow signal propagated from a statement or block.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum Flow {
+    #[default]
+    Normal,
+    Break,
+    Continue,
+    Return,
+}
+
+#[derive(Debug, Default)]
+pub struct StmtResult {
+    pub outputs: Vec<StatementOutput>,
+    pub flow: Flow,
 }
 
 /// Variable environment. MATLAB variable names are case-sensitive.
@@ -217,16 +236,17 @@ pub fn exec_source(env: &mut Env, source: &str) -> Result<RunResult, Diagnostic>
     let program = matlab_syntax::Parser::new(tokens).parse_program()?;
     let mut stdout = Vec::new();
     let mut graphics = crate::graphics::GraphicsState::default();
+    let mut rng = Rng::default();
     let mut io = ExecIo {
         stdout: &mut stdout,
         graphics: &mut graphics,
         cancel: None,
+        rng: &mut rng,
     };
     let mut outputs = Vec::new();
     for stmt in program.statements {
-        if let Some(out) = exec_statement(env, stmt, &mut io)? {
-            outputs.push(out);
-        }
+        let res = exec_statement(env, stmt.clone(), &mut io, 0)?;
+        outputs.extend(res.outputs);
     }
     Ok(RunResult {
         env: env.clone(),
@@ -241,15 +261,16 @@ pub fn exec_program_env(env: &mut Env, program: Program) -> Result<RunResult, Di
     let mut outputs = Vec::new();
     let mut stdout = Vec::new();
     let mut graphics = crate::graphics::GraphicsState::default();
+    let mut rng = Rng::default();
     let mut io = ExecIo {
         stdout: &mut stdout,
         graphics: &mut graphics,
         cancel: None,
+        rng: &mut rng,
     };
     for stmt in program.statements {
-        if let Some(out) = exec_statement(env, stmt, &mut io)? {
-            outputs.push(out);
-        }
+        let res = exec_statement(env, stmt.clone(), &mut io, 0)?;
+        outputs.extend(res.outputs);
     }
     Ok(RunResult {
         env: env.clone(),
@@ -264,7 +285,8 @@ fn exec_statement(
     env: &mut Env,
     stmt: Stmt,
     io: &mut ExecIo<'_>,
-) -> Result<Option<StatementOutput>, Diagnostic> {
+    loop_depth: usize,
+) -> Result<StmtResult, Diagnostic> {
     match stmt {
         Stmt::Assignment {
             target,
@@ -272,17 +294,60 @@ fn exec_statement(
             suppress_output,
             span,
         } => {
+            // Handle multi-output assignment specially.
+            if let AssignTarget::Multi(names, _) = &target {
+                let (func_name, func_args) = match &value {
+                    Expr::Call { callee, args, .. } => (callee.clone(), args.clone()),
+                    _ => return Err(Diagnostic::error(
+                        "Multi-output assignment requires a function call on the right-hand side.",
+                        Some(span),
+                    )),
+                };
+                let nargout = names.len();
+                let outputs = crate::builtins::call_builtin_multi(
+                    &func_name, &func_args, env, span, io, nargout,
+                )?;
+                // Assign each output to the corresponding variable.
+                for (i, (name, _)) in names.iter().enumerate() {
+                    if i < outputs.len() {
+                        env.set(name.clone(), outputs[i].clone());
+                    } else {
+                        env.set(name.clone(), Value::Matrix(DenseMatrix::empty()));
+                    }
+                }
+                let mut stmt_outputs = Vec::new();
+                if !suppress_output {
+                    for (i, (name, _)) in names.iter().enumerate() {
+                        if i < outputs.len() {
+                            stmt_outputs.push(StatementOutput {
+                                label: Some(name.clone()),
+                                value: outputs[i].clone(),
+                            });
+                        }
+                    }
+                }
+                return Ok(StmtResult {
+                    outputs: stmt_outputs,
+                    flow: Flow::Normal,
+                });
+            }
             let value = eval_expr(env, &value, io)?;
             match &target {
                 AssignTarget::Ident(name, _) => {
                     env.set(name.clone(), value.clone());
                     if suppress_output {
-                        Ok(None)
+                        Ok(StmtResult {
+                            outputs: vec![],
+                            flow: Flow::Normal,
+                        })
                     } else {
-                        Ok(Some(StatementOutput {
-                            label: Some(name.clone()),
-                            value,
-                        }))
+                        Ok(StmtResult {
+                            outputs: vec![StatementOutput {
+                                label: Some(name.clone()),
+                                value,
+                            }],
+                            flow: Flow::Normal,
+                        })
                     }
                 }
                 AssignTarget::Index {
@@ -291,8 +356,9 @@ fn exec_statement(
                     span: _,
                 } => {
                     assign_index(env, name, indices.clone(), value, span, io)?;
-                    Ok(None)
+                    Ok(StmtResult::default())
                 }
+                AssignTarget::Multi(_, _) => unreachable!(),
             }
         }
         Stmt::Expr {
@@ -302,11 +368,244 @@ fn exec_statement(
         } => {
             let value = eval_expr(env, &expr, io)?;
             if suppress_output {
-                Ok(None)
+                Ok(StmtResult {
+                    outputs: vec![],
+                    flow: Flow::Normal,
+                })
             } else {
-                Ok(Some(StatementOutput { label: None, value }))
+                Ok(StmtResult {
+                    outputs: vec![StatementOutput { label: None, value }],
+                    flow: Flow::Normal,
+                })
             }
         }
+        // Control flow
+        Stmt::If {
+            branches,
+            else_body,
+            ..
+        } => {
+            for (cond, body) in branches {
+                let cond_val = eval_expr(env, &cond, io)?;
+                if condition_is_true(&cond_val, None)? {
+                    return exec_block(env, &body, io, loop_depth);
+                }
+            }
+            if let Some(body) = else_body {
+                return exec_block(env, &body, io, loop_depth);
+            }
+            Ok(StmtResult::default())
+        }
+        Stmt::While { cond, body, .. } => {
+            let mut last_outputs = Vec::new();
+            loop {
+                if let Some(c) = io.cancel {
+                    if c.load(Ordering::Relaxed) {
+                        break;
+                    }
+                }
+                let cond_val = eval_expr(env, &cond, io)?;
+                if !condition_is_true(&cond_val, None)? {
+                    break;
+                }
+                let block = exec_block(env, &body, io, loop_depth + 1)?;
+                last_outputs = block.outputs;
+                match block.flow {
+                    Flow::Break => break,
+                    Flow::Continue => continue,
+                    _ => {}
+                }
+            }
+            Ok(StmtResult {
+                outputs: last_outputs,
+                flow: Flow::Normal,
+            })
+        }
+        Stmt::For {
+            var, values, body, ..
+        } => {
+            let iter_vals = eval_for_iterable(env, &values, io)?;
+            let mut last_outputs = Vec::new();
+            for v in iter_vals {
+                if let Some(c) = io.cancel {
+                    if c.load(Ordering::Relaxed) {
+                        break;
+                    }
+                }
+                env.set(var.clone(), v);
+                let block = exec_block(env, &body, io, loop_depth + 1)?;
+                last_outputs = block.outputs;
+                match block.flow {
+                    Flow::Break => break,
+                    Flow::Continue => continue,
+                    _ => {}
+                }
+            }
+            Ok(StmtResult {
+                outputs: last_outputs,
+                flow: Flow::Normal,
+            })
+        }
+        Stmt::Break { .. } => {
+            if loop_depth == 0 {
+                return Err(Diagnostic::error(
+                    "A 'break' statement may only appear inside a loop.",
+                    None,
+                ));
+            }
+            Ok(StmtResult {
+                outputs: Vec::new(),
+                flow: Flow::Break,
+            })
+        }
+        Stmt::Continue { .. } => {
+            if loop_depth == 0 {
+                return Err(Diagnostic::error(
+                    "A 'continue' statement may only appear inside a loop.",
+                    None,
+                ));
+            }
+            Ok(StmtResult {
+                outputs: Vec::new(),
+                flow: Flow::Continue,
+            })
+        }
+        Stmt::Return { .. } => Ok(StmtResult {
+            outputs: Vec::new(),
+            flow: Flow::Return,
+        }),
+        Stmt::Switch {
+            expr,
+            cases,
+            otherwise,
+            ..
+        } => {
+            let val = eval_expr(env, &expr, io)?;
+            let target = coerce_matrix(val, Some(expr.span()))?;
+            let mut outputs = Vec::new();
+            for (labels, body) in cases {
+                let mut hit = false;
+                for label in labels {
+                    let lv = eval_expr(env, &label, io)?;
+                    let cand = coerce_matrix(lv, Some(label.span()))?;
+                    if target.rows == cand.rows
+                        && target.cols == cand.cols
+                        && target
+                            .data
+                            .iter()
+                            .zip(cand.data.iter())
+                            .all(|(x, y)| (x - y).abs() < 1e-12)
+                    {
+                        hit = true;
+                        break;
+                    }
+                }
+                if hit {
+                    let res = exec_block(env, &body, io, loop_depth)?;
+                    outputs.extend(res.outputs);
+                    return Ok(StmtResult {
+                        outputs,
+                        flow: res.flow,
+                    });
+                }
+            }
+            if let Some(body) = otherwise {
+                let res = exec_block(env, &body, io, loop_depth)?;
+                outputs.extend(res.outputs);
+                return Ok(StmtResult {
+                    outputs,
+                    flow: res.flow,
+                });
+            }
+            Ok(StmtResult {
+                outputs,
+                flow: Flow::Normal,
+            })
+        }
+        Stmt::FunctionDef { .. } => {
+            // Function definitions are parsed but not yet executable.
+            Ok(StmtResult::default())
+        }
+    }
+}
+
+/// Execute a block of statements, propagating flow signals.
+fn exec_block(
+    env: &mut Env,
+    stmts: &[Stmt],
+    io: &mut ExecIo<'_>,
+    loop_depth: usize,
+) -> Result<StmtResult, Diagnostic> {
+    let mut outputs = Vec::new();
+    let mut flow = Flow::Normal;
+    for stmt in stmts {
+        if let Some(c) = io.cancel {
+            if c.load(Ordering::Relaxed) {
+                break;
+            }
+        }
+        let res = exec_statement(env, stmt.clone(), io, loop_depth)?;
+        outputs.extend(res.outputs);
+        match res.flow {
+            Flow::Normal => {}
+            other => {
+                flow = other;
+                break;
+            }
+        }
+    }
+    Ok(StmtResult { outputs, flow })
+}
+
+/// MATLAB `for` iteration: iterate over columns of the array.
+fn eval_for_iterable(
+    env: &Env,
+    values: &Expr,
+    io: &mut ExecIo<'_>,
+) -> Result<Vec<Value>, Diagnostic> {
+    let v = eval_expr(env, &values, io)?;
+    let m = v.as_matrix().ok_or_else(|| {
+        Diagnostic::error("FOR loop values must be a numeric or logical array.", None)
+    })?;
+    // Iterate over columns (MATLAB convention).
+    let mut out = Vec::with_capacity(m.cols);
+    for c in 0..m.cols {
+        let col: Vec<f64> = (0..m.rows).map(|r| m.data[r * m.cols + c]).collect();
+        if col.len() == 1 {
+            out.push(Value::Matrix(DenseMatrix::scalar(col[0])));
+        } else {
+            out.push(Value::Matrix(DenseMatrix {
+                rows: col.len(),
+                cols: 1,
+                data: col,
+            }));
+        }
+    }
+    Ok(out)
+}
+
+/// Evaluate a condition to a boolean.
+fn condition_is_true(val: &Value, _span: Option<Span>) -> Result<bool, Diagnostic> {
+    match val {
+        Value::Matrix(m) => {
+            if m.data.is_empty() {
+                return Ok(false);
+            }
+            if m.data.len() == 1 {
+                Ok(m.data[0] != 0.0)
+            } else {
+                // For arrays, MATLAB requires scalar logical; error for non-scalar.
+                Err(Diagnostic::error(
+                    "Condition must be a scalar logical value.",
+                    None,
+                ))
+            }
+        }
+        Value::Boolean(b) => Ok(*b),
+        Value::String(_) => Err(Diagnostic::error(
+            "Condition must be a scalar logical value.",
+            None,
+        )),
     }
 }
 
@@ -330,7 +629,7 @@ fn assign_index(
     match indices.len() {
         1 => {
             // Linear indexing is column-major.
-            let k = index_value(&indices[0], env, io)?;
+            let k = index_value(&indices[0], env, Some(&existing), 0, io)?;
             let n = existing.rows * existing.cols;
             let grown = if k <= n {
                 let mut m = existing;
@@ -359,8 +658,8 @@ fn assign_index(
             Ok(())
         }
         2 => {
-            let i = index_value(&indices[0], env, io)?;
-            let j = index_value(&indices[1], env, io)?;
+            let i = index_value(&indices[0], env, Some(&existing), 2, io)?;
+            let j = index_value(&indices[1], env, Some(&existing), 1, io)?;
             let v = value_num.data[0];
             let mut grown = existing;
             if i > grown.rows || j > grown.cols {
@@ -407,17 +706,84 @@ fn call_or_index(
         let m = coerce_matrix(var, Some(span))?;
         match args.len() {
             1 => {
-                let k = index_value(&args[0], env, io)?;
-                Ok(Value::Matrix(DenseMatrix::scalar(
-                    m.get_linear(k, Some(span))?,
-                )))
+                match &args[0] {
+                    Expr::ColonAll(_) => {
+                        let data = m.to_col_major();
+                        Ok(Value::Matrix(DenseMatrix {
+                            rows: 1,
+                            cols: data.len(),
+                            data,
+                        }))
+                    }
+                    Expr::Range { .. } => {
+                        // Resolve end in the range and get indices.
+                        let indices = eval_range_indices(&args[0], Some(&m), 0, env, io)?;
+                        let mut data = Vec::with_capacity(indices.len());
+                        for &k in &indices {
+                            data.push(m.get_linear(k, Some(span))?);
+                        }
+                        Ok(Value::Matrix(DenseMatrix {
+                            rows: 1,
+                            cols: data.len(),
+                            data,
+                        }))
+                    }
+                    _ => {
+                        let k = index_value(&args[0], env, Some(&m), 0, io)?;
+                        Ok(Value::Matrix(DenseMatrix::scalar(
+                            m.get_linear(k, Some(span))?,
+                        )))
+                    }
+                }
             }
             2 => {
-                let i = index_value(&args[0], env, io)?;
-                let j = index_value(&args[1], env, io)?;
-                Ok(Value::Matrix(DenseMatrix::scalar(
-                    m.get_2d(i, j, Some(span))?,
-                )))
+                let i_expr = &args[0];
+                let j_expr = &args[1];
+                // Handle colon/range in either dimension.
+                let i_is_range = matches!(i_expr, Expr::ColonAll(_) | Expr::Range { .. });
+                let j_is_range = matches!(j_expr, Expr::ColonAll(_) | Expr::Range { .. });
+                if i_is_range || j_is_range {
+                    // Determine row indices.
+                    let row_indices = if i_is_range {
+                        if let Expr::ColonAll(_) = i_expr {
+                            (1..=m.rows).collect()
+                        } else {
+                            eval_range_indices(i_expr, Some(&m), 2, env, io)?
+                        }
+                    } else {
+                        let k = index_value(i_expr, env, Some(&m), 2, io)?;
+                        vec![k]
+                    };
+                    // Determine col indices.
+                    let col_indices = if j_is_range {
+                        if let Expr::ColonAll(_) = j_expr {
+                            (1..=m.cols).collect()
+                        } else {
+                            eval_range_indices(j_expr, Some(&m), 1, env, io)?
+                        }
+                    } else {
+                        let k = index_value(j_expr, env, Some(&m), 1, io)?;
+                        vec![k]
+                    };
+                    // Build submatrix.
+                    let mut data = Vec::with_capacity(row_indices.len() * col_indices.len());
+                    for &ri in &row_indices {
+                        for &cj in &col_indices {
+                            data.push(m.get_2d(ri, cj, Some(span))?);
+                        }
+                    }
+                    Ok(Value::Matrix(DenseMatrix {
+                        rows: row_indices.len(),
+                        cols: col_indices.len(),
+                        data,
+                    }))
+                } else {
+                    let i = index_value(i_expr, env, Some(&m), 2, io)?;
+                    let j = index_value(j_expr, env, Some(&m), 1, io)?;
+                    Ok(Value::Matrix(DenseMatrix::scalar(
+                        m.get_2d(i, j, Some(span))?,
+                    )))
+                }
             }
             n => Err(Diagnostic::error(
                 format!("Too many index expressions for '{}' ({} > 2). N-D indexing is not yet supported.", name, n),
@@ -430,9 +796,129 @@ fn call_or_index(
 }
 
 /// Evaluate an index expression; must be a positive integer.
-fn index_value(expr: &Expr, env: &Env, io: &mut ExecIo<'_>) -> Result<usize, Diagnostic> {
+fn eval_range_indices(
+    expr: &Expr,
+    array: Option<&DenseMatrix>,
+    dim: usize,
+    env: &Env,
+    io: &mut ExecIo<'_>,
+) -> Result<Vec<usize>, Diagnostic> {
+    if let Expr::Range {
+        start, step, stop, ..
+    } = expr
+    {
+        let dim_size = match array {
+            Some(m) => match dim {
+                0 => (m.rows * m.cols).max(1),
+                1 => m.cols,
+                _ => m.rows,
+            },
+            None => 1,
+        };
+        // Resolve End in start/stop/step.
+        let resolved_start = resolve_end_expr(start, dim_size);
+        let resolved_stop = resolve_end_expr(stop, dim_size);
+        let resolved_step = step.as_ref().map(|s| resolve_end_expr(s, dim_size));
+
+        let s_val = eval_simple_scalar(&resolved_start, env, io)?;
+        let e_val = eval_simple_scalar(&resolved_stop, env, io)?;
+        let step_val = match resolved_step {
+            Some(s_expr) => eval_simple_scalar(&s_expr, env, io)?,
+            None => 1.0,
+        };
+        if step_val == 0.0 {
+            return Err(Diagnostic::error("Step cannot be zero.", None));
+        }
+        let mut indices = Vec::new();
+        if step_val > 0.0 {
+            let mut k = s_val;
+            while k <= e_val + 1e-9 {
+                if k >= 1.0 {
+                    indices.push(k as usize);
+                }
+                k += step_val;
+            }
+        } else {
+            let mut k = s_val;
+            while k >= e_val - 1e-9 {
+                if k >= 1.0 {
+                    indices.push(k as usize);
+                }
+                k += step_val;
+            }
+        }
+        Ok(indices)
+    } else {
+        // Not a range - evaluate as single index.
+        let k = index_value(expr, env, array, dim, io)?;
+        Ok(vec![k])
+    }
+}
+
+fn resolve_end_expr(expr: &Expr, dim_size: usize) -> Expr {
+    match expr {
+        Expr::End(_) => Expr::Number(dim_size as f64, expr.span()),
+        Expr::Binary {
+            op,
+            left,
+            right,
+            span,
+        } => {
+            // Handle end-1, end+1, etc.
+            let new_left = Box::new(resolve_end_expr(left, dim_size));
+            let new_right = Box::new(resolve_end_expr(right, dim_size));
+            Expr::Binary {
+                op: *op,
+                left: new_left,
+                right: new_right,
+                span: *span,
+            }
+        }
+        other => other.clone(),
+    }
+}
+
+fn eval_simple_scalar(expr: &Expr, env: &Env, io: &mut ExecIo<'_>) -> Result<f64, Diagnostic> {
+    let v = eval_expr(env, &expr, io)?;
+    let m = coerce_matrix(v, None)?;
+    m.as_scalar()
+        .ok_or_else(|| Diagnostic::error("Expected scalar.", None))
+}
+
+fn index_value(
+    expr: &Expr,
+    env: &Env,
+    array: Option<&DenseMatrix>,
+    dim: usize,
+    io: &mut ExecIo<'_>,
+) -> Result<usize, Diagnostic> {
     let span = Some(expr.span());
-    let v = eval_expr(env, expr, io)?;
+    match expr {
+        Expr::End(_) => {
+            let m = match array {
+                Some(m) => m,
+                None => return Ok(1),
+            };
+            return Ok(match dim {
+                0 => (m.rows * m.cols).max(1),
+                1 => m.cols,
+                _ => m.rows,
+            });
+        }
+        Expr::ColonAll(_) => {
+            let m = match array {
+                Some(m) => m,
+                None => return Ok(1),
+            };
+            return Ok(match dim {
+                0 => (m.rows * m.cols).max(1),
+                1 => m.cols,
+                _ => m.rows,
+            });
+        }
+        _ => {}
+    }
+    let v = eval_expr(env, &expr, io)?;
     let m = coerce_matrix(v, span)?;
     if !m.is_scalar() {
         return Err(Diagnostic::error(
@@ -466,7 +952,7 @@ pub fn coerce_matrix_pub(v: Value, span: Option<Span>) -> Result<DenseMatrix, Di
 }
 
 pub fn eval_expr_pub(env: &Env, expr: &Expr, io: &mut ExecIo<'_>) -> Result<Value, Diagnostic> {
-    eval_expr(env, expr, io)
+    eval_expr(env, &expr, io)
 }
 
 pub fn eval_expr(env: &Env, expr: &Expr, io: &mut ExecIo<'_>) -> Result<Value, Diagnostic> {
@@ -532,6 +1018,57 @@ pub fn eval_expr(env: &Env, expr: &Expr, io: &mut ExecIo<'_>) -> Result<Value, D
             Ok(Value::Matrix(result))
         }
         Expr::Call { callee, args, .. } => call_or_index(env, callee, args, expr.span(), io),
+        Expr::Range {
+            start, step, stop, ..
+        } => {
+            let s = eval_expr(env, start, io)?;
+            let e = eval_expr(env, stop, io)?;
+            let step_val = match step {
+                Some(s_expr) => {
+                    let sv = eval_expr(env, s_expr, io)?;
+                    sv.as_matrix()
+                        .and_then(|m| m.as_scalar())
+                        .ok_or_else(|| Diagnostic::error("Range step must be a scalar.", span))?
+                }
+                None => 1.0,
+            };
+            if step_val == 0.0 {
+                return Err(Diagnostic::error("Step cannot be zero.", span));
+            }
+            match (s.as_matrix(), e.as_matrix()) {
+                (Some(sm), Some(em)) if sm.is_scalar() && em.is_scalar() => {
+                    let s_val = sm.data[0];
+                    let e_val = em.data[0];
+                    let mut data = Vec::new();
+                    if step_val > 0.0 {
+                        let mut k = s_val;
+                        while k <= e_val + 1e-12 {
+                            data.push(k);
+                            k += step_val;
+                        }
+                    } else {
+                        let mut k = s_val;
+                        while k >= e_val - 1e-12 {
+                            data.push(k);
+                            k += step_val;
+                        }
+                    }
+                    Ok(Value::Matrix(DenseMatrix::from_rows(vec![data], span)?))
+                }
+                _ => Err(Diagnostic::error(
+                    "Range requires scalar start/stop values.",
+                    span,
+                )),
+            }
+        }
+        Expr::End(_) => Err(Diagnostic::error(
+            "`end` keyword requires indexing context.",
+            span,
+        )),
+        Expr::ColonAll(_) => Err(Diagnostic::error(
+            "`:` keyword requires indexing context.",
+            span,
+        )),
         Expr::Transpose { expr: inner, .. } => {
             let v = eval_expr(env, inner, io)?;
             let m = coerce_matrix(v, span)?;

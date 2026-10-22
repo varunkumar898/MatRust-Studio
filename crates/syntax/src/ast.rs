@@ -18,6 +18,51 @@ pub enum Stmt {
         suppress_output: bool,
         span: Span,
     },
+    /// `if cond / elseif cond / else / end`. `branches` holds the
+    /// `(condition, body)` pairs in source order; `else_body` is the
+    /// optional trailing `else` block.
+    If {
+        branches: Vec<(Expr, Vec<Stmt>)>,
+        else_body: Option<Vec<Stmt>>,
+        span: Span,
+    },
+    /// `while cond / ... / end`
+    While {
+        cond: Expr,
+        body: Vec<Stmt>,
+        span: Span,
+    },
+    /// `for var = values / ... / end`
+    For {
+        var: String,
+        var_span: Span,
+        values: Expr,
+        body: Vec<Stmt>,
+        span: Span,
+    },
+    /// `switch expr / case v / ... / otherwise / ... / end`.
+    /// Each case holds the alternative label values and the body.
+    Switch {
+        expr: Expr,
+        cases: Vec<(Vec<Expr>, Vec<Stmt>)>,
+        otherwise: Option<Vec<Stmt>>,
+        span: Span,
+    },
+    /// `break` — leaves the innermost loop.
+    Break { span: Span },
+    /// `continue` — starts the next iteration of the innermost loop.
+    Continue { span: Span },
+    /// `return` — leaves the enclosing function (or script).
+    Return { span: Span },
+    /// `function [y1, y2] = name(x1, x2) / ... / end`
+    FunctionDef {
+        outputs: Vec<(String, Span)>,
+        name: String,
+        name_span: Span,
+        params: Vec<(String, Span)>,
+        body: Vec<Stmt>,
+        span: Span,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq)]

@@ -2409,6 +2409,10 @@ pub fn call_builtin(
                         line.push_str(&format!("{}", v));
                     }
                 }
+/// Minimal persistence builtin: reads a structured CSV file and returns a dense matrix.
+/// Variable-name header lines produced by `save` are skipped. Supports optional variable
+/// assignment through interpreter assignment (not direct session mutation).
+
                 writeln!(f, "{}", line).map_err(|e| Diagnostic::error(format!("csvwrite: write error ({}).", e), span_op))?;
             }
             Ok(Value::Matrix(DenseMatrix::empty()))

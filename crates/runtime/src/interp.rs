@@ -102,6 +102,8 @@ pub struct StmtResult {
 
 /// Variable environment. MATLAB variable names are case-sensitive.
 #[derive(Debug, Clone)]
+/// Persistent environment tracking variables, user-defined function definitions, and 
+/// multi-output call results. Recursion depth and session persistence tracked here.
 pub struct Env {
     vars: HashMap<String, Value>,
     /// User-defined functions registered in this environment/session.

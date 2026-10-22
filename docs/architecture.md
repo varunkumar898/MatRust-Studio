@@ -27,8 +27,7 @@ tests/{language,matrices,compatibility}  integration test crates
 - **`DenseMatrix` is row-major internally**, but all surfaces are 1-based,
   MATLAB-style: `A(i,j)`, `A(k)` where linear indices are resolved in
   **column-major** order (consistent with MATLAB).
-- **Doubles only (f64).** No complex numbers yet — `sqrt(-1)` yields `NaN`
-  (MATLAB returns `0 + 1i`); documented divergence.
+- Complex arithmetic and basic complex linear algebra are implemented (values, arithmetic, some linear-algebra paths); full non-symmetric eigenvectors remain incomplete (documented limitation: `improved_qr_eig` returns eigenvalues only for non-symmetric input). `sqrt(-4)` yields `0 + 2i` (verified independently); earlier milestone claimed `NaN` only for `sqrt(-1)`, which is corrected here.
 - **Logical values are 0/1 doubles** in milestone 1, not a distinct type.
   Documented divergence until a `logical` type lands.
 - **Element-wise vs matrix ops are distinct**: `*`, `/`, `^` are matrix

@@ -80,6 +80,7 @@ pub enum AssignTarget {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expr {
     Number(f64, Span),
+    Imaginary(f64, Span),
     StringLit(String, Span),
     Variable(String, Span),
     /// `a:step:b` / `a:b` (step defaults to 1). Evaluates to a row vector.
@@ -121,6 +122,7 @@ impl Expr {
     pub fn span(&self) -> Span {
         match self {
             Expr::Number(_, s)
+            | Expr::Imaginary(_, s)
             | Expr::StringLit(_, s)
             | Expr::Variable(_, s)
             | Expr::MatrixLit(_, s)

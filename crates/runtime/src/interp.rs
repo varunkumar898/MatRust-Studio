@@ -4,7 +4,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use matlab_diagnostics::{Diagnostic, Span};
 use matlab_linalg as la;
 use matlab_syntax::ast::*;
-use matlab_values::{DenseMatrix, Value};
+use matlab_values::{Complex64, ComplexDenseMatrix, DenseMatrix, Value};
 
 use crate::graphics::FigureState;
 use crate::rng::Rng;
@@ -618,75 +618,166 @@ fn assign_index(
     span: Span,
     io: &mut ExecIo<'_>,
 ) -> Result<(), Diagnostic> {
-    let span = Some(span);
-    let existing = env
-        .get(name)
-        .map(|v| coerce_matrix(v.clone(), span))
-        .unwrap_or_else(|| Ok(DenseMatrix::scalar(0.0)))?;
+    let span_op = Some(span);
 
-    let value_num = coerce_matrix(value, span)?;
+    let is_complex_assignment = match (env.get(name), &value) {
+        (Some(Value::ComplexMatrix(_)), _) => true,
+        (_, Value::ComplexMatrix(_)) => true,
+        _ => false,
+    };
 
-    match indices.len() {
-        1 => {
-            // Linear indexing is column-major.
-            let k = index_value(&indices[0], env, Some(&existing), 0, io)?;
-            let n = existing.rows * existing.cols;
-            let grown = if k <= n {
-                let mut m = existing;
-                let k0 = k - 1;
-                let r0 = k0 % m.rows;
-                let c0 = k0 / m.rows;
-                m.data[r0 * m.cols + c0] = value_num.data[0];
-                m
-            } else {
-                // Out-of-bounds linear assignment grows the array to a 1-by-k vector.
-                let mut data = vec![0.0; k];
-                for old_c in 0..existing.cols {
-                    for old_r in 0..existing.rows {
-                        data[old_c * existing.rows + old_r] =
-                            existing.data[old_r * existing.cols + old_c];
+    if is_complex_assignment {
+        let existing = env
+            .get(name)
+            .map(|v| {
+                v.to_complex_matrix().ok_or_else(|| {
+                    Diagnostic::error("Cannot index into non-numeric array.", span_op)
+                })
+            })
+            .unwrap_or_else(|| Ok(ComplexDenseMatrix::scalar(Complex64::zero())))?;
+
+        let val_c = value
+            .to_complex_matrix()
+            .and_then(|m| m.as_scalar())
+            .ok_or_else(|| {
+                Diagnostic::error(
+                    "Only scalar values can be assigned into array elements.",
+                    span_op,
+                )
+            })?;
+
+        let shape = Some((existing.rows, existing.cols));
+
+        match indices.len() {
+            1 => {
+                let k = index_value(&indices[0], env, shape, 0, io)?;
+                let n = existing.rows * existing.cols;
+                let grown = if k <= n {
+                    let mut m = existing;
+                    let k0 = k - 1;
+                    let r0 = k0 % m.rows;
+                    let c0 = k0 / m.rows;
+                    m.data[r0 * m.cols + c0] = val_c;
+                    m
+                } else {
+                    let mut data = vec![Complex64::zero(); k];
+                    for old_c in 0..existing.cols {
+                        for old_r in 0..existing.rows {
+                            data[old_c * existing.rows + old_r] =
+                                existing.data[old_r * existing.cols + old_c];
+                        }
                     }
-                }
-                data[k - 1] = value_num.data[0];
-                DenseMatrix {
-                    rows: 1,
-                    cols: k,
-                    data,
-                }
-            };
-            env.set(name, Value::Matrix(grown));
-            Ok(())
-        }
-        2 => {
-            let i = index_value(&indices[0], env, Some(&existing), 2, io)?;
-            let j = index_value(&indices[1], env, Some(&existing), 1, io)?;
-            let v = value_num.data[0];
-            let mut grown = existing;
-            if i > grown.rows || j > grown.cols {
-                let mut data = vec![0.0; i.max(grown.rows) * j.max(grown.cols)];
-                for r_src in 0..grown.rows {
-                    for c_src in 0..grown.cols {
-                        data[r_src * j.max(grown.cols) + c_src] =
-                            grown.data[r_src * grown.cols + c_src];
+                    data[k - 1] = val_c;
+                    ComplexDenseMatrix {
+                        rows: 1,
+                        cols: k,
+                        data,
                     }
-                }
-                grown = DenseMatrix {
-                    rows: i.max(grown.rows),
-                    cols: j.max(grown.cols),
-                    data,
                 };
+                env.set(name, Value::ComplexMatrix(grown));
+                Ok(())
             }
-            grown.set_2d(i, j, v, span)?;
-            env.set(name, Value::Matrix(grown));
-            Ok(())
+            2 => {
+                let i = index_value(&indices[0], env, shape, 2, io)?;
+                let j = index_value(&indices[1], env, shape, 1, io)?;
+                let mut grown = existing;
+                if i > grown.rows || j > grown.cols {
+                    let mut data = vec![Complex64::zero(); i.max(grown.rows) * j.max(grown.cols)];
+                    for r_src in 0..grown.rows {
+                        for c_src in 0..grown.cols {
+                            data[r_src * j.max(grown.cols) + c_src] =
+                                grown.data[r_src * grown.cols + c_src];
+                        }
+                    }
+                    grown = ComplexDenseMatrix {
+                        rows: i.max(grown.rows),
+                        cols: j.max(grown.cols),
+                        data,
+                    };
+                }
+                grown.set_2d(i, j, val_c, span_op)?;
+                env.set(name, Value::ComplexMatrix(grown));
+                Ok(())
+            }
+            n => Err(Diagnostic::error(
+                format!(
+                    "Too many index expressions for '{}' ({} > 2). N-D indexing is not yet supported.",
+                    name, n
+                ),
+                span_op,
+            )),
         }
-        n => Err(Diagnostic::error(
-            format!(
-                "Too many index expressions for '{}' ({} > 2). N-D indexing is not yet supported.",
-                name, n
-            ),
-            span,
-        )),
+    } else {
+        let existing = env
+            .get(name)
+            .map(|v| coerce_matrix(v.clone(), span_op))
+            .unwrap_or_else(|| Ok(DenseMatrix::scalar(0.0)))?;
+
+        let value_num = coerce_matrix(value, span_op)?;
+        let shape = Some((existing.rows, existing.cols));
+
+        match indices.len() {
+            1 => {
+                // Linear indexing is column-major.
+                let k = index_value(&indices[0], env, shape, 0, io)?;
+                let n = existing.rows * existing.cols;
+                let grown = if k <= n {
+                    let mut m = existing;
+                    let k0 = k - 1;
+                    let r0 = k0 % m.rows;
+                    let c0 = k0 / m.rows;
+                    m.data[r0 * m.cols + c0] = value_num.data[0];
+                    m
+                } else {
+                    // Out-of-bounds linear assignment grows the array to a 1-by-k vector.
+                    let mut data = vec![0.0; k];
+                    for old_c in 0..existing.cols {
+                        for old_r in 0..existing.rows {
+                            data[old_c * existing.rows + old_r] =
+                                existing.data[old_r * existing.cols + old_c];
+                        }
+                    }
+                    data[k - 1] = value_num.data[0];
+                    DenseMatrix {
+                        rows: 1,
+                        cols: k,
+                        data,
+                    }
+                };
+                env.set(name, Value::Matrix(grown));
+                Ok(())
+            }
+            2 => {
+                let i = index_value(&indices[0], env, shape, 2, io)?;
+                let j = index_value(&indices[1], env, shape, 1, io)?;
+                let v = value_num.data[0];
+                let mut grown = existing;
+                if i > grown.rows || j > grown.cols {
+                    let mut data = vec![0.0; i.max(grown.rows) * j.max(grown.cols)];
+                    for r_src in 0..grown.rows {
+                        for c_src in 0..grown.cols {
+                            data[r_src * j.max(grown.cols) + c_src] =
+                                grown.data[r_src * grown.cols + c_src];
+                        }
+                    }
+                    grown = DenseMatrix {
+                        rows: i.max(grown.rows),
+                        cols: j.max(grown.cols),
+                        data,
+                    };
+                }
+                grown.set_2d(i, j, v, span_op)?;
+                env.set(name, Value::Matrix(grown));
+                Ok(())
+            }
+            n => Err(Diagnostic::error(
+                format!(
+                    "Too many index expressions for '{}' ({} > 2). N-D indexing is not yet supported.",
+                    name, n
+                ),
+                span_op,
+            )),
+        }
     }
 }
 
@@ -703,92 +794,178 @@ fn call_or_index(
         if args.is_empty() {
             return Ok(var);
         }
-        let m = coerce_matrix(var, Some(span))?;
-        match args.len() {
-            1 => {
-                match &args[0] {
-                    Expr::ColonAll(_) => {
-                        let data = m.to_col_major();
-                        Ok(Value::Matrix(DenseMatrix {
-                            rows: 1,
-                            cols: data.len(),
-                            data,
-                        }))
-                    }
-                    Expr::Range { .. } => {
-                        // Resolve end in the range and get indices.
-                        let indices = eval_range_indices(&args[0], Some(&m), 0, env, io)?;
-                        let mut data = Vec::with_capacity(indices.len());
-                        for &k in &indices {
-                            data.push(m.get_linear(k, Some(span))?);
+        match var {
+            Value::ComplexMatrix(c) => {
+                let shape = Some((c.rows, c.cols));
+                match args.len() {
+                    1 => match &args[0] {
+                        Expr::ColonAll(_) => {
+                            let data = c.to_col_major();
+                            Ok(Value::ComplexMatrix(ComplexDenseMatrix {
+                                rows: 1,
+                                cols: data.len(),
+                                data,
+                            }))
                         }
-                        Ok(Value::Matrix(DenseMatrix {
-                            rows: 1,
-                            cols: data.len(),
-                            data,
-                        }))
+                        Expr::Range { .. } => {
+                            let indices = eval_range_indices(&args[0], shape, 0, env, io)?;
+                            let mut data = Vec::with_capacity(indices.len());
+                            for &k in &indices {
+                                data.push(c.get_linear(k, Some(span))?);
+                            }
+                            Ok(Value::ComplexMatrix(ComplexDenseMatrix {
+                                rows: 1,
+                                cols: data.len(),
+                                data,
+                            }))
+                        }
+                        _ => {
+                            let k = index_value(&args[0], env, shape, 0, io)?;
+                            Ok(Value::ComplexMatrix(ComplexDenseMatrix::scalar(
+                                c.get_linear(k, Some(span))?,
+                            )))
+                        }
+                    },
+                    2 => {
+                        let i_expr = &args[0];
+                        let j_expr = &args[1];
+                        let i_is_range = matches!(i_expr, Expr::ColonAll(_) | Expr::Range { .. });
+                        let j_is_range = matches!(j_expr, Expr::ColonAll(_) | Expr::Range { .. });
+                        if i_is_range || j_is_range {
+                            let row_indices = if i_is_range {
+                                if let Expr::ColonAll(_) = i_expr {
+                                    (1..=c.rows).collect()
+                                } else {
+                                    eval_range_indices(i_expr, shape, 2, env, io)?
+                                }
+                            } else {
+                                let k = index_value(i_expr, env, shape, 2, io)?;
+                                vec![k]
+                            };
+                            let col_indices = if j_is_range {
+                                if let Expr::ColonAll(_) = j_expr {
+                                    (1..=c.cols).collect()
+                                } else {
+                                    eval_range_indices(j_expr, shape, 1, env, io)?
+                                }
+                            } else {
+                                let k = index_value(j_expr, env, shape, 1, io)?;
+                                vec![k]
+                            };
+                            let mut data = Vec::with_capacity(row_indices.len() * col_indices.len());
+                            for &ri in &row_indices {
+                                for &cj in &col_indices {
+                                    data.push(c.get_2d(ri, cj, Some(span))?);
+                                }
+                            }
+                            Ok(Value::ComplexMatrix(ComplexDenseMatrix {
+                                rows: row_indices.len(),
+                                cols: col_indices.len(),
+                                data,
+                            }))
+                        } else {
+                            let i = index_value(i_expr, env, shape, 2, io)?;
+                            let j = index_value(j_expr, env, shape, 1, io)?;
+                            Ok(Value::ComplexMatrix(ComplexDenseMatrix::scalar(
+                                c.get_2d(i, j, Some(span))?,
+                            )))
+                        }
                     }
-                    _ => {
-                        let k = index_value(&args[0], env, Some(&m), 0, io)?;
-                        Ok(Value::Matrix(DenseMatrix::scalar(
-                            m.get_linear(k, Some(span))?,
-                        )))
-                    }
+                    n => Err(Diagnostic::error(
+                        format!(
+                            "Too many index expressions for '{}' ({} > 2). N-D indexing is not yet supported.",
+                            name, n
+                        ),
+                        Some(span),
+                    )),
                 }
             }
-            2 => {
-                let i_expr = &args[0];
-                let j_expr = &args[1];
-                // Handle colon/range in either dimension.
-                let i_is_range = matches!(i_expr, Expr::ColonAll(_) | Expr::Range { .. });
-                let j_is_range = matches!(j_expr, Expr::ColonAll(_) | Expr::Range { .. });
-                if i_is_range || j_is_range {
-                    // Determine row indices.
-                    let row_indices = if i_is_range {
-                        if let Expr::ColonAll(_) = i_expr {
-                            (1..=m.rows).collect()
-                        } else {
-                            eval_range_indices(i_expr, Some(&m), 2, env, io)?
+            _ => {
+                let m = coerce_matrix(var, Some(span))?;
+                let shape = Some((m.rows, m.cols));
+                match args.len() {
+                    1 => match &args[0] {
+                        Expr::ColonAll(_) => {
+                            let data = m.to_col_major();
+                            Ok(Value::Matrix(DenseMatrix {
+                                rows: 1,
+                                cols: data.len(),
+                                data,
+                            }))
                         }
-                    } else {
-                        let k = index_value(i_expr, env, Some(&m), 2, io)?;
-                        vec![k]
-                    };
-                    // Determine col indices.
-                    let col_indices = if j_is_range {
-                        if let Expr::ColonAll(_) = j_expr {
-                            (1..=m.cols).collect()
-                        } else {
-                            eval_range_indices(j_expr, Some(&m), 1, env, io)?
+                        Expr::Range { .. } => {
+                            let indices = eval_range_indices(&args[0], shape, 0, env, io)?;
+                            let mut data = Vec::with_capacity(indices.len());
+                            for &k in &indices {
+                                data.push(m.get_linear(k, Some(span))?);
+                            }
+                            Ok(Value::Matrix(DenseMatrix {
+                                rows: 1,
+                                cols: data.len(),
+                                data,
+                            }))
                         }
-                    } else {
-                        let k = index_value(j_expr, env, Some(&m), 1, io)?;
-                        vec![k]
-                    };
-                    // Build submatrix.
-                    let mut data = Vec::with_capacity(row_indices.len() * col_indices.len());
-                    for &ri in &row_indices {
-                        for &cj in &col_indices {
-                            data.push(m.get_2d(ri, cj, Some(span))?);
+                        _ => {
+                            let k = index_value(&args[0], env, shape, 0, io)?;
+                            Ok(Value::Matrix(DenseMatrix::scalar(
+                                m.get_linear(k, Some(span))?,
+                            )))
+                        }
+                    },
+                    2 => {
+                        let i_expr = &args[0];
+                        let j_expr = &args[1];
+                        let i_is_range = matches!(i_expr, Expr::ColonAll(_) | Expr::Range { .. });
+                        let j_is_range = matches!(j_expr, Expr::ColonAll(_) | Expr::Range { .. });
+                        if i_is_range || j_is_range {
+                            let row_indices = if i_is_range {
+                                if let Expr::ColonAll(_) = i_expr {
+                                    (1..=m.rows).collect()
+                                } else {
+                                    eval_range_indices(i_expr, shape, 2, env, io)?
+                                }
+                            } else {
+                                let k = index_value(i_expr, env, shape, 2, io)?;
+                                vec![k]
+                            };
+                            let col_indices = if j_is_range {
+                                if let Expr::ColonAll(_) = j_expr {
+                                    (1..=m.cols).collect()
+                                } else {
+                                    eval_range_indices(j_expr, shape, 1, env, io)?
+                                }
+                            } else {
+                                let k = index_value(j_expr, env, shape, 1, io)?;
+                                vec![k]
+                            };
+                            let mut data = Vec::with_capacity(row_indices.len() * col_indices.len());
+                            for &ri in &row_indices {
+                                for &cj in &col_indices {
+                                    data.push(m.get_2d(ri, cj, Some(span))?);
+                                }
+                            }
+                            Ok(Value::Matrix(DenseMatrix {
+                                rows: row_indices.len(),
+                                cols: col_indices.len(),
+                                data,
+                            }))
+                        } else {
+                            let i = index_value(i_expr, env, shape, 2, io)?;
+                            let j = index_value(j_expr, env, shape, 1, io)?;
+                            Ok(Value::Matrix(DenseMatrix::scalar(
+                                m.get_2d(i, j, Some(span))?,
+                            )))
                         }
                     }
-                    Ok(Value::Matrix(DenseMatrix {
-                        rows: row_indices.len(),
-                        cols: col_indices.len(),
-                        data,
-                    }))
-                } else {
-                    let i = index_value(i_expr, env, Some(&m), 2, io)?;
-                    let j = index_value(j_expr, env, Some(&m), 1, io)?;
-                    Ok(Value::Matrix(DenseMatrix::scalar(
-                        m.get_2d(i, j, Some(span))?,
-                    )))
+                    n => Err(Diagnostic::error(
+                        format!(
+                            "Too many index expressions for '{}' ({} > 2). N-D indexing is not yet supported.",
+                            name, n
+                        ),
+                        Some(span),
+                    )),
                 }
             }
-            n => Err(Diagnostic::error(
-                format!("Too many index expressions for '{}' ({} > 2). N-D indexing is not yet supported.", name, n),
-                Some(span),
-            )),
         }
     } else {
         crate::builtins::call_builtin(name, args, env, span, io)
@@ -798,7 +975,7 @@ fn call_or_index(
 /// Evaluate an index expression; must be a positive integer.
 fn eval_range_indices(
     expr: &Expr,
-    array: Option<&DenseMatrix>,
+    shape: Option<(usize, usize)>,
     dim: usize,
     env: &Env,
     io: &mut ExecIo<'_>,
@@ -807,11 +984,11 @@ fn eval_range_indices(
         start, step, stop, ..
     } = expr
     {
-        let dim_size = match array {
-            Some(m) => match dim {
-                0 => (m.rows * m.cols).max(1),
-                1 => m.cols,
-                _ => m.rows,
+        let dim_size = match shape {
+            Some((rows, cols)) => match dim {
+                0 => (rows * cols).max(1),
+                1 => cols,
+                _ => rows,
             },
             None => 1,
         };
@@ -850,7 +1027,7 @@ fn eval_range_indices(
         Ok(indices)
     } else {
         // Not a range - evaluate as single index.
-        let k = index_value(expr, env, array, dim, io)?;
+        let k = index_value(expr, env, shape, dim, io)?;
         Ok(vec![k])
     }
 }
@@ -888,32 +1065,32 @@ fn eval_simple_scalar(expr: &Expr, env: &Env, io: &mut ExecIo<'_>) -> Result<f64
 fn index_value(
     expr: &Expr,
     env: &Env,
-    array: Option<&DenseMatrix>,
+    shape: Option<(usize, usize)>,
     dim: usize,
     io: &mut ExecIo<'_>,
 ) -> Result<usize, Diagnostic> {
     let span = Some(expr.span());
     match expr {
         Expr::End(_) => {
-            let m = match array {
-                Some(m) => m,
+            let (rows, cols) = match shape {
+                Some(s) => s,
                 None => return Ok(1),
             };
             return Ok(match dim {
-                0 => (m.rows * m.cols).max(1),
-                1 => m.cols,
-                _ => m.rows,
+                0 => (rows * cols).max(1),
+                1 => cols,
+                _ => rows,
             });
         }
         Expr::ColonAll(_) => {
-            let m = match array {
-                Some(m) => m,
+            let (rows, cols) = match shape {
+                Some(s) => s,
                 None => return Ok(1),
             };
             return Ok(match dim {
-                0 => (m.rows * m.cols).max(1),
-                1 => m.cols,
-                _ => m.rows,
+                0 => (rows * cols).max(1),
+                1 => cols,
+                _ => rows,
             });
         }
         _ => {}
@@ -959,12 +1136,15 @@ pub fn eval_expr(env: &Env, expr: &Expr, io: &mut ExecIo<'_>) -> Result<Value, D
     let span = Some(expr.span());
     match expr {
         Expr::Number(n, _) => Ok(Value::Matrix(DenseMatrix::scalar(*n))),
+        Expr::Imaginary(n, _) => Ok(Value::ComplexMatrix(ComplexDenseMatrix::scalar(
+            Complex64::new(0.0, *n),
+        ))),
         Expr::StringLit(s, _) => Ok(Value::String(s.clone())),
         Expr::Variable(name, _) => match env.get(name) {
             Some(v) => Ok(v.clone()),
             None => {
                 // An unknown bare identifier is treated as a zero-argument
-                // builtin call (e.g. `pi`, `figure`, `clf`, `close`).
+                // builtin call (e.g. `pi`, `figure`, `clf`, `close`, `i`, `j`).
                 // Unknown names fall into the builtin dispatcher's own
                 // "Unrecognized function or variable" message, so the error
                 // text for undefined variables is unchanged.
@@ -972,32 +1152,89 @@ pub fn eval_expr(env: &Env, expr: &Expr, io: &mut ExecIo<'_>) -> Result<Value, D
             }
         },
         Expr::MatrixLit(rows, _) => {
-            let mut out_rows = Vec::with_capacity(rows.len());
+            let mut evaled_rows: Vec<Vec<Value>> = Vec::with_capacity(rows.len());
+            let mut has_complex = false;
             for row in rows {
-                let mut out_row = Vec::with_capacity(row.len());
+                let mut evaled_row = Vec::with_capacity(row.len());
                 for element in row {
-                    match eval_expr(env, element, io)? {
-                        Value::Matrix(m) => {
-                            if !m.is_scalar() {
+                    let val = eval_expr(env, element, io)?;
+                    if val.is_complex() {
+                        has_complex = true;
+                    }
+                    evaled_row.push(val);
+                }
+                evaled_rows.push(evaled_row);
+            }
+
+            if has_complex {
+                let mut out_rows = Vec::with_capacity(evaled_rows.len());
+                for evaled_row in evaled_rows {
+                    let mut out_row = Vec::with_capacity(evaled_row.len());
+                    for v in evaled_row {
+                        match v {
+                            Value::Matrix(m) => {
+                                if !m.is_scalar() {
+                                    return Err(Diagnostic::error(
+                                        "Only scalar elements are supported inside matrix literals for now; nested concatenation is not yet supported.",
+                                        span,
+                                    ));
+                                }
+                                out_row.push(Complex64::real(m.data[0]));
+                            }
+                            Value::ComplexMatrix(c) => {
+                                if !c.is_scalar() {
+                                    return Err(Diagnostic::error(
+                                        "Only scalar elements are supported inside matrix literals for now; nested concatenation is not yet supported.",
+                                        span,
+                                    ));
+                                }
+                                out_row.push(c.data[0]);
+                            }
+                            Value::Boolean(b) => {
+                                out_row.push(Complex64::real(if b { 1.0 } else { 0.0 }))
+                            }
+                            Value::String(_) => {
                                 return Err(Diagnostic::error(
-                                    "Only scalar elements are supported inside matrix literals for now; nested concatenation is not yet supported.",
+                                    "Conversion to double from char is not possible.",
                                     span,
                                 ));
                             }
-                            out_row.push(m.data[0]);
-                        }
-                        Value::Boolean(b) => out_row.push(if b { 1.0 } else { 0.0 }),
-                        Value::String(_) => {
-                            return Err(Diagnostic::error(
-                                "Conversion to double from char is not possible.",
-                                span,
-                            ));
                         }
                     }
+                    out_rows.push(out_row);
                 }
-                out_rows.push(out_row);
+                Ok(Value::ComplexMatrix(ComplexDenseMatrix::from_rows(
+                    out_rows, span,
+                )?))
+            } else {
+                let mut out_rows = Vec::with_capacity(evaled_rows.len());
+                for evaled_row in evaled_rows {
+                    let mut out_row = Vec::with_capacity(evaled_row.len());
+                    for v in evaled_row {
+                        match v {
+                            Value::Matrix(m) => {
+                                if !m.is_scalar() {
+                                    return Err(Diagnostic::error(
+                                        "Only scalar elements are supported inside matrix literals for now; nested concatenation is not yet supported.",
+                                        span,
+                                    ));
+                                }
+                                out_row.push(m.data[0]);
+                            }
+                            Value::Boolean(b) => out_row.push(if b { 1.0 } else { 0.0 }),
+                            Value::String(_) => {
+                                return Err(Diagnostic::error(
+                                    "Conversion to double from char is not possible.",
+                                    span,
+                                ));
+                            }
+                            Value::ComplexMatrix(_) => unreachable!(),
+                        }
+                    }
+                    out_rows.push(out_row);
+                }
+                Ok(Value::Matrix(DenseMatrix::from_rows(out_rows, span)?))
             }
-            Ok(Value::Matrix(DenseMatrix::from_rows(out_rows, span)?))
         }
         Expr::Binary {
             op, left, right, ..
@@ -1010,12 +1247,23 @@ pub fn eval_expr(env: &Env, expr: &Expr, io: &mut ExecIo<'_>) -> Result<Value, D
             op, expr: inner, ..
         } => {
             let v = eval_expr(env, inner, io)?;
-            let m = coerce_matrix(v, span)?;
-            let result = match op {
-                UnaryOp::Pos => m,
-                UnaryOp::Neg => la::negate(&m),
-            };
-            Ok(Value::Matrix(result))
+            match v {
+                Value::ComplexMatrix(c) => {
+                    let result = match op {
+                        UnaryOp::Pos => c,
+                        UnaryOp::Neg => la::complex::negate(&c),
+                    };
+                    Ok(Value::ComplexMatrix(result))
+                }
+                _ => {
+                    let m = coerce_matrix(v, span)?;
+                    let result = match op {
+                        UnaryOp::Pos => m,
+                        UnaryOp::Neg => la::negate(&m),
+                    };
+                    Ok(Value::Matrix(result))
+                }
+            }
         }
         Expr::Call { callee, args, .. } => call_or_index(env, callee, args, expr.span(), io),
         Expr::Range {
@@ -1069,10 +1317,25 @@ pub fn eval_expr(env: &Env, expr: &Expr, io: &mut ExecIo<'_>) -> Result<Value, D
             "`:` keyword requires indexing context.",
             span,
         )),
-        Expr::Transpose { expr: inner, .. } => {
+        Expr::Transpose {
+            expr: inner,
+            conjugate,
+            ..
+        } => {
             let v = eval_expr(env, inner, io)?;
-            let m = coerce_matrix(v, span)?;
-            Ok(Value::Matrix(la::transpose(&m)))
+            match v {
+                Value::ComplexMatrix(c) => {
+                    if *conjugate {
+                        Ok(Value::ComplexMatrix(la::complex::ctranspose(&c)))
+                    } else {
+                        Ok(Value::ComplexMatrix(la::complex::transpose(&c)))
+                    }
+                }
+                _ => {
+                    let m = coerce_matrix(v, span)?;
+                    Ok(Value::Matrix(la::transpose(&m)))
+                }
+            }
         }
     }
 }
@@ -1091,31 +1354,158 @@ fn apply_binary(
         ));
     }
 
-    let l = coerce_matrix(l.clone(), span)?;
-    let r = coerce_matrix(r.clone(), span)?;
+    if l.is_complex() || r.is_complex() {
+        return match op {
+            BinaryOp::Add => la::add_values(l, r, span),
+            BinaryOp::Sub => la::sub_values(l, r, span),
+            BinaryOp::Mul => la::mul_values(l, r, span),
+            BinaryOp::DotMul => la::dotmul_values(l, r, span),
+            BinaryOp::DotDiv => la::dotdiv_values(l, r, span),
+            BinaryOp::DotLDiv => la::dotdiv_values(r, l, span),
+            BinaryOp::Div => {
+                if let Some(rc) = r.to_complex_matrix() {
+                    if rc.is_scalar() {
+                        return la::dotdiv_values(l, r, span);
+                    }
+                }
+                Err(Diagnostic::error(
+                    "Complex matrix division (solve) is not yet supported for non-scalar matrices.",
+                    span,
+                ))
+            }
+            BinaryOp::LDiv => {
+                if let Some(lc) = l.to_complex_matrix() {
+                    if lc.is_scalar() {
+                        return la::dotdiv_values(r, l, span);
+                    }
+                }
+                Err(Diagnostic::error(
+                    "Complex matrix left-division (solve) is not yet supported for non-scalar matrices.",
+                    span,
+                ))
+            }
+            BinaryOp::Pow => {
+                let lc = l.to_complex_matrix().and_then(|m| m.as_scalar());
+                let rc = r.to_complex_matrix().and_then(|m| m.as_scalar());
+                if let (Some(base), Some(exp)) = (lc, rc) {
+                    return Ok(Value::ComplexMatrix(ComplexDenseMatrix::scalar(
+                        base.powc(exp),
+                    )));
+                }
+                let lc_mat = l.to_complex_matrix().ok_or_else(|| {
+                    Diagnostic::error("Invalid operand for power.", span)
+                })?;
+                let p = r.as_matrix().and_then(|m| m.as_scalar()).ok_or_else(|| {
+                    Diagnostic::error("Exponent must be a scalar for matrix power.", span)
+                })?;
+                if lc_mat.rows != lc_mat.cols {
+                    return Err(Diagnostic::error(
+                        "Matrix must be square to calculate power.",
+                        span,
+                    ));
+                }
+                if p.fract() != 0.0 || p < 0.0 {
+                    return Err(Diagnostic::error(
+                        "Matrix power with non-integer or negative exponent is not yet supported for complex matrices.",
+                        span,
+                    ));
+                }
+                let p_int = p as usize;
+                if p_int == 0 {
+                    return Ok(Value::ComplexMatrix(ComplexDenseMatrix::eye(
+                        lc_mat.rows,
+                    )));
+                }
+                let mut res = lc_mat.clone();
+                for _ in 1..p_int {
+                    res = la::complex::matmul(&res, &lc_mat, span)?;
+                }
+                Ok(Value::ComplexMatrix(res))
+            }
+            BinaryOp::DotPow => la::dotpow_values(l, r, span),
+            BinaryOp::Eq => Ok(Value::Matrix(la::compare_values(
+                la::CompareOp::Eq,
+                l,
+                r,
+                span,
+            )?)),
+            BinaryOp::Ne => Ok(Value::Matrix(la::compare_values(
+                la::CompareOp::Ne,
+                l,
+                r,
+                span,
+            )?)),
+            BinaryOp::Lt => Ok(Value::Matrix(la::compare_values(
+                la::CompareOp::Lt,
+                l,
+                r,
+                span,
+            )?)),
+            BinaryOp::Le => Ok(Value::Matrix(la::compare_values(
+                la::CompareOp::Le,
+                l,
+                r,
+                span,
+            )?)),
+            BinaryOp::Gt => Ok(Value::Matrix(la::compare_values(
+                la::CompareOp::Gt,
+                l,
+                r,
+                span,
+            )?)),
+            BinaryOp::Ge => Ok(Value::Matrix(la::compare_values(
+                la::CompareOp::Ge,
+                l,
+                r,
+                span,
+            )?)),
+        };
+    }
+
+    // Both operands are real matrices or booleans.
+    // Check if DotPow or scalar Pow promotes negative bases with fractional powers to complex!
+    if matches!(op, BinaryOp::DotPow) {
+        return la::dotpow_values(l, r, span);
+    }
+
+    let lm = coerce_matrix(l.clone(), span)?;
+    let rm = coerce_matrix(r.clone(), span)?;
+
+    if matches!(op, BinaryOp::Pow) {
+        if lm.is_scalar() && rm.is_scalar() {
+            let base = lm.data[0];
+            let exp = rm.data[0];
+            if base < 0.0 && exp.fract() != 0.0 {
+                let base_c = Complex64::real(base);
+                let exp_c = Complex64::real(exp);
+                return Ok(Value::ComplexMatrix(ComplexDenseMatrix::scalar(
+                    base_c.powc(exp_c),
+                )));
+            }
+        }
+        let p = rm.as_scalar().ok_or_else(|| {
+            Diagnostic::error("Exponent must be a scalar for matrix power.", span)
+        })?;
+        let m = la::matrix_pow(&lm, p, span)?;
+        return Ok(Value::Matrix(m));
+    }
 
     let m = match op {
-        BinaryOp::Add => la::add(&l, &r, span)?,
-        BinaryOp::Sub => la::sub(&l, &r, span)?,
-        BinaryOp::Mul => la::matmul(&l, &r, span)?,
-        BinaryOp::Div => la::mrdivide(&l, &r, span)?,
-        BinaryOp::LDiv => la::mldivide(&l, &r, span)?,
-        BinaryOp::DotMul => la::elementwise_mul(&l, &r, span)?,
-        BinaryOp::DotDiv => la::elementwise_div(&l, &r, span)?,
-        BinaryOp::DotLDiv => la::elementwise_ldiv(&l, &r, span)?,
-        BinaryOp::Pow => {
-            let p = r.as_scalar().ok_or_else(|| {
-                Diagnostic::error("Exponent must be a scalar for matrix power.", span)
-            })?;
-            la::matrix_pow(&l, p, span)?
-        }
-        BinaryOp::DotPow => la::elementwise_pow(&l, &r, span)?,
-        BinaryOp::Eq => la::compare(la::CompareOp::Eq, &l, &r, span)?,
-        BinaryOp::Ne => la::compare(la::CompareOp::Ne, &l, &r, span)?,
-        BinaryOp::Lt => la::compare(la::CompareOp::Lt, &l, &r, span)?,
-        BinaryOp::Le => la::compare(la::CompareOp::Le, &l, &r, span)?,
-        BinaryOp::Gt => la::compare(la::CompareOp::Gt, &l, &r, span)?,
-        BinaryOp::Ge => la::compare(la::CompareOp::Ge, &l, &r, span)?,
+        BinaryOp::Add => la::add(&lm, &rm, span)?,
+        BinaryOp::Sub => la::sub(&lm, &rm, span)?,
+        BinaryOp::Mul => la::matmul(&lm, &rm, span)?,
+        BinaryOp::Div => la::mrdivide(&lm, &rm, span)?,
+        BinaryOp::LDiv => la::mldivide(&lm, &rm, span)?,
+        BinaryOp::DotMul => la::elementwise_mul(&lm, &rm, span)?,
+        BinaryOp::DotDiv => la::elementwise_div(&lm, &rm, span)?,
+        BinaryOp::DotLDiv => la::elementwise_ldiv(&lm, &rm, span)?,
+        BinaryOp::Pow | BinaryOp::DotPow => unreachable!(),
+        BinaryOp::Eq => la::compare(la::CompareOp::Eq, &lm, &rm, span)?,
+        BinaryOp::Ne => la::compare(la::CompareOp::Ne, &lm, &rm, span)?,
+        BinaryOp::Lt => la::compare(la::CompareOp::Lt, &lm, &rm, span)?,
+        BinaryOp::Le => la::compare(la::CompareOp::Le, &lm, &rm, span)?,
+        BinaryOp::Gt => la::compare(la::CompareOp::Gt, &lm, &rm, span)?,
+        BinaryOp::Ge => la::compare(la::CompareOp::Ge, &lm, &rm, span)?,
     };
     Ok(Value::Matrix(m))
 }

@@ -327,6 +327,7 @@ impl Parser {
         let tok = self.advance();
         match tok.kind {
             TokenKind::Number(val) => Ok(Expr::Number(val, tok.span)),
+            TokenKind::ImaginaryNumber(val) => Ok(Expr::Imaginary(val, tok.span)),
             TokenKind::StringLit(s) => Ok(Expr::StringLit(s, tok.span)),
             TokenKind::Colon => Ok(Expr::ColonAll(tok.span)),
             TokenKind::Ident(name) => {

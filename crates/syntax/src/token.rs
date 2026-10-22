@@ -4,6 +4,7 @@ use matlab_diagnostics::Span;
 pub enum TokenKind {
     // Literals
     Number(f64),
+    ImaginaryNumber(f64),
     StringLit(String),
     Ident(String),
 

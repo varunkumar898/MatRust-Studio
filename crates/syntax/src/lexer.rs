@@ -318,12 +318,29 @@ impl<'a> Lexer<'a> {
 
         let end_byte = self.current_byte_pos();
         let num_str = &self.source[start_byte..end_byte];
-        match num_str.parse::<f64>() {
-            Ok(v) => Ok(TokenKind::Number(v)),
-            Err(e) => Err(Diagnostic::error(
-                format!("Invalid numeric literal '{}': {}", num_str, e),
-                Some(Span::new(start_byte, end_byte, start_line, start_col)),
-            )),
+        let val = match num_str.parse::<f64>() {
+            Ok(v) => v,
+            Err(e) => {
+                return Err(Diagnostic::error(
+                    format!("Invalid numeric literal '{}': {}", num_str, e),
+                    Some(Span::new(start_byte, end_byte, start_line, start_col)),
+                ));
+            }
+        };
+
+        if let Some(ch) = self.peek() {
+            if ch == 'i' || ch == 'j' {
+                let next_is_ident = match self.peek_next() {
+                    Some(c) => c.is_ascii_alphanumeric() || c == '_',
+                    None => false,
+                };
+                if !next_is_ident {
+                    self.advance();
+                    return Ok(TokenKind::ImaginaryNumber(val));
+                }
+            }
         }
+
+        Ok(TokenKind::Number(val))
     }
 }

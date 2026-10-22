@@ -517,6 +517,20 @@ impl ComplexDenseMatrix {
         Ok(())
     }
 
+    /// All elements in MATLAB's canonical column-major order.
+    pub fn to_col_major(&self) -> Vec<Complex64> {
+        if self.rows == 0 || self.cols == 0 {
+            return Vec::new();
+        }
+        let mut out = Vec::with_capacity(self.data.len());
+        for c in 0..self.cols {
+            for r in 0..self.rows {
+                out.push(self.data[r * self.cols + c]);
+            }
+        }
+        out
+    }
+
     /// Format matching MATLAB display conventions.
     pub fn format_matlab(&self) -> String {
         if self.rows == 0 || self.cols == 0 {

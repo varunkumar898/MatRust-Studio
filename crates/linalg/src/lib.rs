@@ -231,6 +231,67 @@ pub fn map_unary(a: &DenseMatrix, f: impl Fn(f64) -> f64) -> DenseMatrix {
     }
 }
 
+/// Generic binary element-wise map with MATLAB scalar expansion and dimension checking.
+pub fn map_binary(
+    a: &DenseMatrix,
+    b: &DenseMatrix,
+    span: Option<Span>,
+    f: impl Fn(f64, f64) -> Result<f64, Diagnostic>,
+) -> Result<DenseMatrix, Diagnostic> {
+    if a.is_scalar() {
+        let s = a.data[0];
+        let mut data = Vec::with_capacity(b.data.len());
+        for &x in &b.data {
+            data.push(f(s, x)?);
+        }
+        return Ok(DenseMatrix {
+            rows: b.rows,
+            cols: b.cols,
+            data,
+        });
+    }
+    if b.is_scalar() {
+        let s = b.data[0];
+        let mut data = Vec::with_capacity(a.data.len());
+        for &x in &a.data {
+            data.push(f(x, s)?);
+        }
+        return Ok(DenseMatrix {
+            rows: a.rows,
+            cols: a.cols,
+            data,
+        });
+    }
+    if a.rows != b.rows || a.cols != b.cols {
+        return Err(Diagnostic::error(
+            format!(
+                "Arrays have incompatible sizes for this operation: {}x{} vs {}x{}",
+                a.rows, a.cols, b.rows, b.cols
+            ),
+            span,
+        ));
+    }
+    let mut data = Vec::with_capacity(a.data.len());
+    for (&x, &y) in a.data.iter().zip(b.data.iter()) {
+        data.push(f(x, y)?);
+    }
+    Ok(DenseMatrix {
+        rows: a.rows,
+        cols: a.cols,
+        data,
+    })
+}
+
+/// Non-fallible binary element-wise map with MATLAB scalar expansion.
+pub fn map_binary_simple(
+    a: &DenseMatrix,
+    b: &DenseMatrix,
+    span: Option<Span>,
+    f: impl Fn(f64, f64) -> f64,
+) -> Result<DenseMatrix, Diagnostic> {
+    map_binary(a, b, span, |x, y| Ok(f(x, y)))
+}
+
 /// Column-wise reduction helper used by `sum`/`max`/`min` (MATLAB default: reduce along columns).
 /// Returns a 1-by-cols matrix (or the same scalar).
 pub fn reduce_cols(a: &DenseMatrix, init: f64, fold: impl Fn(f64, f64) -> f64) -> DenseMatrix {

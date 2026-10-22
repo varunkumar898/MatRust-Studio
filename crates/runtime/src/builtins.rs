@@ -104,6 +104,229 @@ pub fn is_known_constant(name: &str) -> bool {
     matches!(name, "pi")
 }
 
+fn sind_deg(x: f64) -> f64 {
+    if !x.is_finite() {
+        return f64::NAN;
+    }
+    let k = (x / 90.0).round();
+    if (x - k * 90.0).abs() < 1e-12 {
+        let ki = k as i64;
+        match ki.rem_euclid(4) {
+            0 => 0.0,
+            1 => 1.0,
+            2 => 0.0,
+            3 => -1.0,
+            _ => unreachable!(),
+        }
+    } else {
+        x.to_radians().sin()
+    }
+}
+
+fn cosd_deg(x: f64) -> f64 {
+    if !x.is_finite() {
+        return f64::NAN;
+    }
+    let k = (x / 90.0).round();
+    if (x - k * 90.0).abs() < 1e-12 {
+        let ki = k as i64;
+        match ki.rem_euclid(4) {
+            0 => 1.0,
+            1 => 0.0,
+            2 => -1.0,
+            3 => 0.0,
+            _ => unreachable!(),
+        }
+    } else {
+        x.to_radians().cos()
+    }
+}
+
+fn tand_deg(x: f64) -> f64 {
+    if !x.is_finite() {
+        return f64::NAN;
+    }
+    let k = (x / 90.0).round();
+    if (x - k * 90.0).abs() < 1e-12 {
+        let ki = k as i64;
+        match ki.rem_euclid(4) {
+            0 | 2 => 0.0,
+            1 => f64::INFINITY,
+            3 => f64::NEG_INFINITY,
+            _ => unreachable!(),
+        }
+    } else {
+        x.to_radians().tan()
+    }
+}
+
+fn asind_deg(x: f64) -> f64 {
+    if x.is_nan() {
+        f64::NAN
+    } else if x == 1.0 {
+        90.0
+    } else if x == -1.0 {
+        -90.0
+    } else if x == 0.0 {
+        0.0
+    } else if !(-1.0..=1.0).contains(&x) {
+        f64::NAN
+    } else {
+        x.asin().to_degrees()
+    }
+}
+
+fn acosd_deg(x: f64) -> f64 {
+    if x.is_nan() {
+        f64::NAN
+    } else if x == 1.0 {
+        0.0
+    } else if x == 0.0 {
+        90.0
+    } else if x == -1.0 {
+        180.0
+    } else if !(-1.0..=1.0).contains(&x) {
+        f64::NAN
+    } else {
+        x.acos().to_degrees()
+    }
+}
+
+fn atand_deg(x: f64) -> f64 {
+    if x.is_nan() {
+        f64::NAN
+    } else if x == 0.0 {
+        0.0
+    } else if x == 1.0 {
+        45.0
+    } else if x == -1.0 {
+        -45.0
+    } else if x == f64::INFINITY {
+        90.0
+    } else if x == f64::NEG_INFINITY {
+        -90.0
+    } else {
+        x.atan().to_degrees()
+    }
+}
+
+fn safe_bitshift(a: i64, k: i64, max_bits: Option<u32>) -> f64 {
+    let shifted = if k >= 64 {
+        0i64
+    } else if k > 0 {
+        a.checked_shl(k as u32).unwrap_or(0)
+    } else if k <= -64 {
+        if a >= 0 {
+            0i64
+        } else {
+            -1i64
+        }
+    } else {
+        a >> (-k as u32)
+    };
+    if let Some(bits) = max_bits {
+        if bits < 64 {
+            let mask = ((1u64 << bits) - 1) as i64;
+            (shifted & mask) as f64
+        } else {
+            shifted as f64
+        }
+    } else {
+        shifted as f64
+    }
+}
+
+fn parse_dec_args(
+    args: &[Expr],
+    env: &Env,
+    io: &mut ExecIo<'_>,
+    span: Span,
+    name: &str,
+) -> Result<(f64, Option<usize>), Diagnostic> {
+    let span_op = Some(span);
+    if args.is_empty() || args.len() > 2 {
+        return Err(Diagnostic::error(
+            format!("{} expects 1 or 2 arguments.", name),
+            span_op,
+        ));
+    }
+    let v0 = eval_expr_pub(env, &args[0], io)?;
+    let m0 = coerce_matrix_pub(v0, span_op)?;
+    let val = m0.as_scalar().ok_or_else(|| {
+        Diagnostic::error(
+            format!("{} expects a scalar first argument.", name),
+            span_op,
+        )
+    })?;
+    if !val.is_finite() {
+        return Err(Diagnostic::error(
+            format!("{}: input must be finite.", name),
+            span_op,
+        ));
+    }
+    if val.fract() != 0.0 {
+        return Err(Diagnostic::error(
+            format!("{}: input must be an integer.", name),
+            span_op,
+        ));
+    }
+    let width = if args.len() == 2 {
+        let v1 = eval_expr_pub(env, &args[1], io)?;
+        let m1 = coerce_matrix_pub(v1, span_op)?;
+        let w = m1.as_scalar().ok_or_else(|| {
+            Diagnostic::error(
+                format!("{} expects a scalar second argument.", name),
+                span_op,
+            )
+        })?;
+        if !w.is_finite() || w.fract() != 0.0 || w < 0.0 {
+            return Err(Diagnostic::error(
+                format!("{}: min digits must be a non-negative integer.", name),
+                span_op,
+            ));
+        }
+        Some(w as usize)
+    } else {
+        None
+    };
+    Ok((val, width))
+}
+
+fn extract_string_or_chars(
+    v: &Value,
+    span: Option<Span>,
+    name: &str,
+) -> Result<String, Diagnostic> {
+    match v {
+        Value::String(s) => Ok(s.clone()),
+        Value::Matrix(m) => {
+            if m.rows <= 1 {
+                let mut s = String::with_capacity(m.data.len());
+                for &b in &m.data {
+                    if (0.0..=255.0).contains(&b) && b.fract() == 0.0 {
+                        s.push(b as u8 as char);
+                    } else {
+                        return Err(Diagnostic::error(
+                            format!("{}: invalid character code.", name),
+                            span,
+                        ));
+                    }
+                }
+                Ok(s)
+            } else {
+                Err(Diagnostic::error(
+                    format!("{} expects a character vector or string.", name),
+                    span,
+                ))
+            }
+        }
+        _ => Err(Diagnostic::error(
+            format!("{} expects a character vector or string.", name),
+            span,
+        )),
+    }
+}
+
 /// Dispatch a builtin call. `io.stdout` receives any side-effecting text;
 /// `io.graphics` receives figure mutations.
 pub fn call_builtin(
@@ -255,7 +478,7 @@ pub fn call_builtin(
         }
         "abs" | "sqrt" | "floor" | "ceil" | "round" | "fix" | "exp" | "log" | "log2" | "log10"
         | "sin" | "cos" | "tan" | "asin" | "acos" | "atan" | "sinh" | "cosh" | "tanh"
-        | "deg2rad" | "rad2deg" | "sind" | "cosd" | "tand" => {
+        | "deg2rad" | "rad2deg" | "sind" | "cosd" | "tand" | "asind" | "acosd" | "atand" => {
             if args.len() != 1 {
                 return Err(Diagnostic::error(
                     format!("{} expects 1 argument.", name),
@@ -286,9 +509,12 @@ pub fn call_builtin(
                 "tanh" => f64::tanh,
                 "deg2rad" => |x| x * std::f64::consts::PI / 180.0,
                 "rad2deg" => |x| x * 180.0 / std::f64::consts::PI,
-                "sind" => |x| (x * std::f64::consts::PI / 180.0).sin(),
-                "cosd" => |x| (x * std::f64::consts::PI / 180.0).cos(),
-                "tand" => |x| (x * std::f64::consts::PI / 180.0).tan(),
+                "sind" => sind_deg,
+                "cosd" => cosd_deg,
+                "tand" => tand_deg,
+                "asind" => asind_deg,
+                "acosd" => acosd_deg,
+                "atand" => atand_deg,
                 _ => unreachable!(),
             };
             Ok(Value::Matrix(la::map_unary(&m, f)))
@@ -331,17 +557,28 @@ pub fn call_builtin(
             let v2 = eval_expr_pub(env, &args[1], io)?;
             let m1 = coerce_matrix_pub(v1, span_op)?;
             let m2 = coerce_matrix_pub(v2, span_op)?;
-            let data = m1
-                .data
-                .iter()
-                .zip(m2.data.iter())
-                .map(|(&x, &n)| x.powf(1.0 / n))
-                .collect();
-            Ok(Value::Matrix(DenseMatrix {
-                rows: m1.rows,
-                cols: m1.cols,
-                data,
-            }))
+            let res = la::map_binary(&m1, &m2, span_op, |x, n| {
+                if x.is_nan() || n.is_nan() {
+                    Ok(f64::NAN)
+                } else if n == 0.0 {
+                    Err(Diagnostic::error(
+                        "nthroot: root must be non-zero.",
+                        span_op,
+                    ))
+                } else if x < 0.0 {
+                    if n.fract() == 0.0 && (n as i64) % 2 != 0 {
+                        Ok(-((-x).powf(1.0 / n)))
+                    } else {
+                        Err(Diagnostic::error(
+                            "If X is negative, N must be an odd integer.",
+                            span_op,
+                        ))
+                    }
+                } else {
+                    Ok(x.powf(1.0 / n))
+                }
+            })?;
+            Ok(Value::Matrix(res))
         }
         "gcd" => {
             if args.len() != 2 {
@@ -351,26 +588,17 @@ pub fn call_builtin(
             let v2 = eval_expr_pub(env, &args[1], io)?;
             let m1 = coerce_matrix_pub(v1, span_op)?;
             let m2 = coerce_matrix_pub(v2, span_op)?;
-            let data = m1
-                .data
-                .iter()
-                .zip(m2.data.iter())
-                .map(|(&a, &b)| {
-                    let mut a = a.abs() as i64;
-                    let mut b = b.abs() as i64;
-                    while b != 0 {
-                        let t = b;
-                        b = a % b;
-                        a = t;
-                    }
-                    a as f64
-                })
-                .collect();
-            Ok(Value::Matrix(DenseMatrix {
-                rows: m1.rows,
-                cols: m1.cols,
-                data,
-            }))
+            let res = la::map_binary_simple(&m1, &m2, span_op, |a, b| {
+                let mut a = a.abs() as i64;
+                let mut b = b.abs() as i64;
+                while b != 0 {
+                    let t = b;
+                    b = a % b;
+                    a = t;
+                }
+                a as f64
+            })?;
+            Ok(Value::Matrix(res))
         }
         "lcm" => {
             if args.len() != 2 {
@@ -380,32 +608,23 @@ pub fn call_builtin(
             let v2 = eval_expr_pub(env, &args[1], io)?;
             let m1 = coerce_matrix_pub(v1, span_op)?;
             let m2 = coerce_matrix_pub(v2, span_op)?;
-            let data = m1
-                .data
-                .iter()
-                .zip(m2.data.iter())
-                .map(|(&a, &b)| {
-                    let a = a.abs() as i64;
-                    let b = b.abs() as i64;
-                    if a == 0 || b == 0 {
-                        0.0
-                    } else {
-                        let mut g = a;
-                        let mut bb = b;
-                        while bb != 0 {
-                            let t = bb;
-                            bb = g % bb;
-                            g = t;
-                        }
-                        (a / g * b) as f64
+            let res = la::map_binary_simple(&m1, &m2, span_op, |a, b| {
+                let a = a.abs() as i64;
+                let b = b.abs() as i64;
+                if a == 0 || b == 0 {
+                    0.0
+                } else {
+                    let mut g = a;
+                    let mut bb = b;
+                    while bb != 0 {
+                        let t = bb;
+                        bb = g % bb;
+                        g = t;
                     }
-                })
-                .collect();
-            Ok(Value::Matrix(DenseMatrix {
-                rows: m1.rows,
-                cols: m1.cols,
-                data,
-            }))
+                    (a / g * b) as f64
+                }
+            })?;
+            Ok(Value::Matrix(res))
         }
         "factorial" => {
             if args.len() != 1 {
@@ -417,15 +636,19 @@ pub fn call_builtin(
                 .data
                 .iter()
                 .map(|&x| {
-                    if x < 0.0 {
+                    if x.is_nan() || x < 0.0 || x.fract() != 0.0 {
                         f64::NAN
                     } else {
                         let n = x as u64;
-                        let mut r = 1u64;
-                        for i in 2..=n {
-                            r = r.saturating_mul(i);
+                        if n > 170 {
+                            f64::INFINITY
+                        } else {
+                            let mut r = 1.0f64;
+                            for i in 2..=n {
+                                r *= i as f64;
+                            }
+                            r
                         }
-                        r as f64
                     }
                 })
                 .collect();
@@ -441,16 +664,41 @@ pub fn call_builtin(
             }
             let v1 = eval_expr_pub(env, &args[0], io)?;
             let v2 = eval_expr_pub(env, &args[1], io)?;
-            let n = coerce_matrix_pub(v1, span_op)?.data[0] as i64;
-            let k = coerce_matrix_pub(v2, span_op)?.data[0] as i64;
+            let m1 = coerce_matrix_pub(v1, span_op)?;
+            let m2 = coerce_matrix_pub(v2, span_op)?;
+            let n_val = m1.as_scalar().ok_or_else(|| {
+                Diagnostic::error("nchoosek: first argument must be a scalar.", span_op)
+            })?;
+            let k_val = m2.as_scalar().ok_or_else(|| {
+                Diagnostic::error("nchoosek: second argument must be a scalar.", span_op)
+            })?;
+            if !n_val.is_finite()
+                || !k_val.is_finite()
+                || n_val.fract() != 0.0
+                || k_val.fract() != 0.0
+            {
+                return Err(Diagnostic::error(
+                    "nchoosek: arguments must be non-negative integers.",
+                    span_op,
+                ));
+            }
+            let n = n_val as i64;
+            let k = k_val as i64;
             if n < 0 || k < 0 || k > n {
-                return Err(Diagnostic::error("nchoosek: invalid n or k.", span_op));
+                return Err(Diagnostic::error(
+                    "nchoosek: invalid n or k (k must be between 0 and n).",
+                    span_op,
+                ));
             }
-            let mut result = 1i64;
-            for i in 1..=k {
-                result = result * (n - k + i) / i;
+            if k == 0 || k == n {
+                return Ok(Value::Matrix(DenseMatrix::scalar(1.0)));
             }
-            Ok(Value::Matrix(DenseMatrix::scalar(result as f64)))
+            let k_eff = (k as u64).min((n - k) as u64);
+            let mut result = 1.0f64;
+            for i in 1..=k_eff {
+                result = result * (n as f64 - k_eff as f64 + i as f64) / (i as f64);
+            }
+            Ok(Value::Matrix(DenseMatrix::scalar(result.round())))
         }
         "isprime" => {
             if args.len() != 1 {
@@ -462,27 +710,29 @@ pub fn call_builtin(
                 .data
                 .iter()
                 .map(|&x| {
-                    let n = x as i64;
-                    if n < 2 {
-                        0.0
-                    } else if n == 2 {
-                        1.0
-                    } else if n % 2 == 0 {
+                    if x < 2.0 || x.fract() != 0.0 || !x.is_finite() {
                         0.0
                     } else {
-                        let mut is_p = true;
-                        let mut i = 3;
-                        while i * i <= n {
-                            if n % i == 0 {
-                                is_p = false;
-                                break;
-                            }
-                            i += 2;
-                        }
-                        if is_p {
+                        let n = x as i64;
+                        if n == 2 {
                             1.0
-                        } else {
+                        } else if n % 2 == 0 {
                             0.0
+                        } else {
+                            let mut is_p = true;
+                            let mut i = 3i64;
+                            while i.saturating_mul(i) <= n {
+                                if n % i == 0 {
+                                    is_p = false;
+                                    break;
+                                }
+                                i += 2;
+                            }
+                            if is_p {
+                                1.0
+                            } else {
+                                0.0
+                            }
                         }
                     }
                 })
@@ -499,18 +749,22 @@ pub fn call_builtin(
             }
             let v = eval_expr_pub(env, &args[0], io)?;
             let m = coerce_matrix_pub(v, span_op)?;
-            let n = m.data[0] as usize;
-            if n < 2 {
+            let val = m
+                .as_scalar()
+                .ok_or_else(|| Diagnostic::error("primes expects a scalar argument.", span_op))?;
+            if !val.is_finite() || val < 2.0 {
                 return Ok(Value::Matrix(DenseMatrix {
-                    rows: 0,
+                    rows: 1,
                     cols: 0,
                     data: Vec::new(),
                 }));
             }
+            let n = val as usize;
             let mut sieve = vec![true; n + 1];
             sieve[0] = false;
             sieve[1] = false;
-            for i in 2..=n {
+            let limit = (n as f64).sqrt() as usize;
+            for i in 2..=limit {
                 if sieve[i] {
                     let mut j = i * i;
                     while j <= n {
@@ -533,36 +787,50 @@ pub fn call_builtin(
             }
             let v = eval_expr_pub(env, &args[0], io)?;
             let m = coerce_matrix_pub(v, span_op)?;
-            let n = m.data[0] as i64;
-            if n < 0 {
+            let val = m
+                .as_scalar()
+                .ok_or_else(|| Diagnostic::error("factor expects a scalar argument.", span_op))?;
+            if !val.is_finite() {
+                return Err(Diagnostic::error("factor: input must be finite.", span_op));
+            }
+            if val.fract() != 0.0 {
                 return Err(Diagnostic::error(
-                    "factor: input must be a non-negative integer.",
+                    "factor: input must be an integer.",
                     span_op,
                 ));
             }
-            if n <= 1 {
-                if n == 1 {
-                    return Ok(Value::Matrix(DenseMatrix {
-                        rows: 1,
-                        cols: 1,
-                        data: vec![1.0],
-                    }));
-                }
+            if val <= 0.0 {
+                return Err(Diagnostic::error(
+                    "factor: input must be a positive integer.",
+                    span_op,
+                ));
+            }
+            if val > 9007199254740991.0 {
+                return Err(Diagnostic::error(
+                    "factor: input exceeds maximum supported integer 2^53 - 1.",
+                    span_op,
+                ));
+            }
+            if val == 1.0 {
                 return Ok(Value::Matrix(DenseMatrix {
-                    rows: 0,
-                    cols: 0,
-                    data: Vec::new(),
+                    rows: 1,
+                    cols: 1,
+                    data: vec![1.0],
                 }));
             }
             let mut factors = Vec::new();
-            let mut remaining = n;
-            let mut d = 2i64;
-            while d * d <= remaining {
+            let mut remaining = val as u64;
+            while remaining % 2 == 0 {
+                factors.push(2.0);
+                remaining /= 2;
+            }
+            let mut d = 3u64;
+            while d.saturating_mul(d) <= remaining {
                 while remaining % d == 0 {
                     factors.push(d as f64);
                     remaining /= d;
                 }
-                d += if d == 2 { 1 } else { 2 };
+                d += 2;
             }
             if remaining > 1 {
                 factors.push(remaining as f64);
@@ -574,65 +842,35 @@ pub fn call_builtin(
                 data: factors,
             }))
         }
-        "bitand" => {
+        "bitand" | "bitor" | "bitxor" => {
             if args.len() != 2 {
-                return Err(Diagnostic::error("bitand expects 2 arguments.", span_op));
+                return Err(Diagnostic::error(
+                    format!("{} expects 2 arguments.", name),
+                    span_op,
+                ));
             }
             let v1 = eval_expr_pub(env, &args[0], io)?;
             let v2 = eval_expr_pub(env, &args[1], io)?;
             let m1 = coerce_matrix_pub(v1, span_op)?;
             let m2 = coerce_matrix_pub(v2, span_op)?;
-            let data = m1
-                .data
-                .iter()
-                .zip(m2.data.iter())
-                .map(|(&a, &b)| ((a as i64) & (b as i64)) as f64)
-                .collect();
-            Ok(Value::Matrix(DenseMatrix {
-                rows: m1.rows,
-                cols: m1.cols,
-                data,
-            }))
-        }
-        "bitor" => {
-            if args.len() != 2 {
-                return Err(Diagnostic::error("bitor expects 2 arguments.", span_op));
-            }
-            let v1 = eval_expr_pub(env, &args[0], io)?;
-            let v2 = eval_expr_pub(env, &args[1], io)?;
-            let m1 = coerce_matrix_pub(v1, span_op)?;
-            let m2 = coerce_matrix_pub(v2, span_op)?;
-            let data = m1
-                .data
-                .iter()
-                .zip(m2.data.iter())
-                .map(|(&a, &b)| ((a as i64) | (b as i64)) as f64)
-                .collect();
-            Ok(Value::Matrix(DenseMatrix {
-                rows: m1.rows,
-                cols: m1.cols,
-                data,
-            }))
-        }
-        "bitxor" => {
-            if args.len() != 2 {
-                return Err(Diagnostic::error("bitxor expects 2 arguments.", span_op));
-            }
-            let v1 = eval_expr_pub(env, &args[0], io)?;
-            let v2 = eval_expr_pub(env, &args[1], io)?;
-            let m1 = coerce_matrix_pub(v1, span_op)?;
-            let m2 = coerce_matrix_pub(v2, span_op)?;
-            let data = m1
-                .data
-                .iter()
-                .zip(m2.data.iter())
-                .map(|(&a, &b)| ((a as i64) ^ (b as i64)) as f64)
-                .collect();
-            Ok(Value::Matrix(DenseMatrix {
-                rows: m1.rows,
-                cols: m1.cols,
-                data,
-            }))
+            let res = la::map_binary(&m1, &m2, span_op, |a, b| {
+                if !a.is_finite() || !b.is_finite() || a.fract() != 0.0 || b.fract() != 0.0 {
+                    return Err(Diagnostic::error(
+                        format!("{}: inputs must be integers.", name),
+                        span_op,
+                    ));
+                }
+                let ai = a as i64;
+                let bi = b as i64;
+                let r = match name {
+                    "bitand" => ai & bi,
+                    "bitor" => ai | bi,
+                    "bitxor" => ai ^ bi,
+                    _ => unreachable!(),
+                };
+                Ok(r as f64)
+            })?;
+            Ok(Value::Matrix(res))
         }
         "bitshift" => {
             if args.len() < 2 || args.len() > 3 {
@@ -645,81 +883,58 @@ pub fn call_builtin(
             let v2 = eval_expr_pub(env, &args[1], io)?;
             let m1 = coerce_matrix_pub(v1, span_op)?;
             let m2 = coerce_matrix_pub(v2, span_op)?;
-            let data = m1
-                .data
-                .iter()
-                .zip(m2.data.iter())
-                .map(|(&a, &k)| {
-                    let shift = k as i64;
-                    if shift >= 0 {
-                        ((a as i64) << shift) as f64
-                    } else {
-                        ((a as i64) >> (-shift)) as f64
-                    }
-                })
-                .collect();
-            Ok(Value::Matrix(DenseMatrix {
-                rows: m1.rows,
-                cols: m1.cols,
-                data,
-            }))
-        }
-        "asind" => {
-            if args.len() != 1 {
-                return Err(Diagnostic::error("asind expects 1 argument.", span_op));
-            }
-            let v = eval_expr_pub(env, &args[0], io)?;
-            let m = coerce_matrix_pub(v, span_op)?;
-            Ok(Value::Matrix(la::map_unary(&m, |x| {
-                x.asin() * 180.0 / std::f64::consts::PI
-            })))
-        }
-        "acosd" => {
-            if args.len() != 1 {
-                return Err(Diagnostic::error("acosd expects 1 argument.", span_op));
-            }
-            let v = eval_expr_pub(env, &args[0], io)?;
-            let m = coerce_matrix_pub(v, span_op)?;
-            Ok(Value::Matrix(la::map_unary(&m, |x| {
-                x.acos() * 180.0 / std::f64::consts::PI
-            })))
-        }
-        "atand" => {
-            if args.len() != 1 {
-                return Err(Diagnostic::error("atand expects 1 argument.", span_op));
-            }
-            let v = eval_expr_pub(env, &args[0], io)?;
-            let m = coerce_matrix_pub(v, span_op)?;
-            Ok(Value::Matrix(la::map_unary(&m, |x| {
-                x.atan() * 180.0 / std::f64::consts::PI
-            })))
-        }
-        "dec2bin" => {
-            if args.is_empty() || args.len() > 2 {
-                return Err(Diagnostic::error(
-                    "dec2bin expects 1 or 2 arguments.",
-                    span_op,
-                ));
-            }
-            let v = eval_expr_pub(env, &args[0], io)?;
-            let m = coerce_matrix_pub(v, span_op)?;
-            let n = if args.len() == 2 {
-                eval_expr_pub(env, &args[1], io)?
-                    .as_matrix()
-                    .and_then(|m| m.as_scalar())
-                    .map(|x| x as usize)
+            let max_bits: Option<u32> = if args.len() == 3 {
+                let v3 = eval_expr_pub(env, &args[2], io)?;
+                let m3 = coerce_matrix_pub(v3, span_op)?;
+                let n_val = m3.as_scalar().ok_or_else(|| {
+                    Diagnostic::error(
+                        "bitshift: third argument must be a scalar integer.",
+                        span_op,
+                    )
+                })?;
+                if !n_val.is_finite() || n_val.fract() != 0.0 || n_val < 1.0 || n_val > 64.0 {
+                    return Err(Diagnostic::error(
+                        "bitshift: maximum bits N must be an integer between 1 and 64.",
+                        span_op,
+                    ));
+                }
+                Some(n_val as u32)
             } else {
                 None
             };
-            let val = m.data[0] as i64;
-            let mut s = if val < 0 {
-                format!("{:b}", val as u32)
+            let res = la::map_binary(&m1, &m2, span_op, |a, k| {
+                if !a.is_finite() || !k.is_finite() || a.fract() != 0.0 || k.fract() != 0.0 {
+                    return Err(Diagnostic::error(
+                        "bitshift: inputs must be integers.",
+                        span_op,
+                    ));
+                }
+                Ok(safe_bitshift(a as i64, k as i64, max_bits))
+            })?;
+            Ok(Value::Matrix(res))
+        }
+        "dec2bin" => {
+            let (val, width) = parse_dec_args(args, env, io, span, "dec2bin")?;
+            let mut s = if val < 0.0 {
+                if val < -2147483648.0 {
+                    return Err(Diagnostic::error(
+                        "dec2bin: negative value exceeds 32-bit range.",
+                        span_op,
+                    ));
+                }
+                format!("{:b}", (val as i32) as u32)
             } else {
+                if val > 9007199254740991.0 {
+                    return Err(Diagnostic::error(
+                        "dec2bin: value exceeds maximum supported integer 2^53 - 1.",
+                        span_op,
+                    ));
+                }
                 format!("{:b}", val as u64)
             };
-            if let Some(width) = n {
-                if s.len() < width {
-                    s = format!("{:0>width$}", s, width = width);
+            if let Some(w) = width {
+                if s.len() < w {
+                    s = format!("{:0>width$}", s, width = w);
                 }
             }
             Ok(Value::String(s))
@@ -729,46 +944,54 @@ pub fn call_builtin(
                 return Err(Diagnostic::error("bin2dec expects 1 argument.", span_op));
             }
             let v = eval_expr_pub(env, &args[0], io)?;
-            let s = match v {
-                Value::String(s) => s,
-                Value::Matrix(m) => m.data.iter().map(|&x| x as u8 as char).collect(),
-                _ => {
+            let s = extract_string_or_chars(&v, span_op, "bin2dec")?;
+            let trimmed = s.trim();
+            if trimmed.is_empty() {
+                return Err(Diagnostic::error(
+                    "bin2dec: input must be a non-empty binary string.",
+                    span_op,
+                ));
+            }
+            for c in trimmed.chars() {
+                if c != '0' && c != '1' {
                     return Err(Diagnostic::error(
-                        "bin2dec expects a character vector.",
+                        "bin2dec: invalid binary string.",
                         span_op,
-                    ))
+                    ));
                 }
-            };
-            let val = i64::from_str_radix(s.trim(), 2)
+            }
+            if trimmed.len() > 53 {
+                return Err(Diagnostic::error(
+                    "bin2dec: binary string exceeds maximum precision of 53 bits.",
+                    span_op,
+                ));
+            }
+            let val = u64::from_str_radix(trimmed, 2)
                 .map_err(|_| Diagnostic::error("bin2dec: invalid binary string.", span_op))?;
             Ok(Value::Matrix(DenseMatrix::scalar(val as f64)))
         }
         "dec2hex" => {
-            if args.is_empty() || args.len() > 2 {
-                return Err(Diagnostic::error(
-                    "dec2hex expects 1 or 2 arguments.",
-                    span_op,
-                ));
-            }
-            let v = eval_expr_pub(env, &args[0], io)?;
-            let m = coerce_matrix_pub(v, span_op)?;
-            let n = if args.len() == 2 {
-                eval_expr_pub(env, &args[1], io)?
-                    .as_matrix()
-                    .and_then(|m| m.as_scalar())
-                    .map(|x| x as usize)
+            let (val, width) = parse_dec_args(args, env, io, span, "dec2hex")?;
+            let mut s = if val < 0.0 {
+                if val < -2147483648.0 {
+                    return Err(Diagnostic::error(
+                        "dec2hex: negative value exceeds 32-bit range.",
+                        span_op,
+                    ));
+                }
+                format!("{:X}", (val as i32) as u32)
             } else {
-                None
-            };
-            let val = m.data[0] as i64;
-            let mut s = if val < 0 {
-                format!("{:X}", val as u32)
-            } else {
+                if val > 9007199254740991.0 {
+                    return Err(Diagnostic::error(
+                        "dec2hex: value exceeds maximum supported integer 2^53 - 1.",
+                        span_op,
+                    ));
+                }
                 format!("{:X}", val as u64)
             };
-            if let Some(width) = n {
-                if s.len() < width {
-                    s = format!("{:0>width$}", s, width = width);
+            if let Some(w) = width {
+                if s.len() < w {
+                    s = format!("{:0>width$}", s, width = w);
                 }
             }
             Ok(Value::String(s))
@@ -778,17 +1001,34 @@ pub fn call_builtin(
                 return Err(Diagnostic::error("hex2dec expects 1 argument.", span_op));
             }
             let v = eval_expr_pub(env, &args[0], io)?;
-            let s = match v {
-                Value::String(s) => s,
-                Value::Matrix(m) => m.data.iter().map(|&x| x as u8 as char).collect(),
-                _ => {
-                    return Err(Diagnostic::error(
-                        "hex2dec expects a character vector.",
-                        span_op,
-                    ))
-                }
+            let s = extract_string_or_chars(&v, span_op, "hex2dec")?;
+            let trimmed = s.trim();
+            let clean = if trimmed.starts_with("0x") || trimmed.starts_with("0X") {
+                &trimmed[2..]
+            } else {
+                trimmed
             };
-            let val = i64::from_str_radix(s.trim().trim_start_matches("0x"), 16)
+            if clean.is_empty() {
+                return Err(Diagnostic::error(
+                    "hex2dec: input must be a non-empty hexadecimal string.",
+                    span_op,
+                ));
+            }
+            for c in clean.chars() {
+                if !c.is_ascii_hexdigit() {
+                    return Err(Diagnostic::error(
+                        "hex2dec: invalid hexadecimal string.",
+                        span_op,
+                    ));
+                }
+            }
+            if clean.len() > 13 {
+                return Err(Diagnostic::error(
+                    "hex2dec: hexadecimal string exceeds maximum precision of 52 bits.",
+                    span_op,
+                ));
+            }
+            let val = u64::from_str_radix(clean, 16)
                 .map_err(|_| Diagnostic::error("hex2dec: invalid hexadecimal string.", span_op))?;
             Ok(Value::Matrix(DenseMatrix::scalar(val as f64)))
         }
@@ -800,17 +1040,8 @@ pub fn call_builtin(
             let v2 = eval_expr_pub(env, &args[1], io)?;
             let m1 = coerce_matrix_pub(v1, span_op)?;
             let m2 = coerce_matrix_pub(v2, span_op)?;
-            let data = m1
-                .data
-                .iter()
-                .zip(m2.data.iter())
-                .map(|(&y, &x)| y.atan2(x))
-                .collect();
-            Ok(Value::Matrix(DenseMatrix {
-                rows: m1.rows,
-                cols: m1.cols,
-                data,
-            }))
+            let res = la::map_binary_simple(&m1, &m2, span_op, |y, x| y.atan2(x))?;
+            Ok(Value::Matrix(res))
         }
         "hypot" => {
             if args.len() != 2 {
@@ -820,17 +1051,8 @@ pub fn call_builtin(
             let v2 = eval_expr_pub(env, &args[1], io)?;
             let m1 = coerce_matrix_pub(v1, span_op)?;
             let m2 = coerce_matrix_pub(v2, span_op)?;
-            let data = m1
-                .data
-                .iter()
-                .zip(m2.data.iter())
-                .map(|(&a, &b)| a.hypot(b))
-                .collect();
-            Ok(Value::Matrix(DenseMatrix {
-                rows: m1.rows,
-                cols: m1.cols,
-                data,
-            }))
+            let res = la::map_binary_simple(&m1, &m2, span_op, |a, b| a.hypot(b))?;
+            Ok(Value::Matrix(res))
         }
         "mod" | "rem" => {
             if args.len() != 2 {
@@ -843,23 +1065,23 @@ pub fn call_builtin(
             let v2 = eval_expr_pub(env, &args[1], io)?;
             let m1 = coerce_matrix_pub(v1, span_op)?;
             let m2 = coerce_matrix_pub(v2, span_op)?;
-            let data = m1
-                .data
-                .iter()
-                .zip(m2.data.iter())
-                .map(|(&a, &b)| {
-                    if name == "mod" {
-                        a - b * (a / b).floor()
+            let is_mod = name == "mod";
+            let res = la::map_binary_simple(&m1, &m2, span_op, |a, b| {
+                if a.is_nan() || b.is_nan() {
+                    f64::NAN
+                } else if b == 0.0 {
+                    if is_mod {
+                        a
                     } else {
-                        a - b * (a / b).trunc()
+                        f64::NAN
                     }
-                })
-                .collect();
-            Ok(Value::Matrix(DenseMatrix {
-                rows: m1.rows,
-                cols: m1.cols,
-                data,
-            }))
+                } else if is_mod {
+                    a - b * (a / b).floor()
+                } else {
+                    a - b * (a / b).trunc()
+                }
+            })?;
+            Ok(Value::Matrix(res))
         }
 
         "pi" => {

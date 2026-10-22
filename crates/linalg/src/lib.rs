@@ -2,6 +2,7 @@ use matlab_diagnostics::{Diagnostic, Span};
 use matlab_values::DenseMatrix;
 
 pub mod arrays;
+pub mod stats;
 
 /// Matrix multiplication `A * B`
 pub fn matmul(

@@ -1099,8 +1099,10 @@ fn apply_binary(
         BinaryOp::Sub => la::sub(&l, &r, span)?,
         BinaryOp::Mul => la::matmul(&l, &r, span)?,
         BinaryOp::Div => la::mrdivide(&l, &r, span)?,
+        BinaryOp::LDiv => la::mldivide(&l, &r, span)?,
         BinaryOp::DotMul => la::elementwise_mul(&l, &r, span)?,
         BinaryOp::DotDiv => la::elementwise_div(&l, &r, span)?,
+        BinaryOp::DotLDiv => la::elementwise_ldiv(&l, &r, span)?,
         BinaryOp::Pow => {
             let p = r.as_scalar().ok_or_else(|| {
                 Diagnostic::error("Exponent must be a scalar for matrix power.", span)

@@ -18,7 +18,7 @@ pub struct LuDecomp {
 
 /// Compute LU factorization with partial row pivoting for a matrix A (m x n).
 /// Produces P * A = L * U, where L is unit lower triangular and U is upper triangular.
-pub fn pivoted_lu(a: &DenseMatrix, span: Option<Span>) -> Result<LuDecomp, Diagnostic> {
+pub fn pivoted_lu(a: &DenseMatrix, _span: Option<Span>) -> Result<LuDecomp, Diagnostic> {
     let m = a.rows;
     let n = a.cols;
     if m == 0 || n == 0 {

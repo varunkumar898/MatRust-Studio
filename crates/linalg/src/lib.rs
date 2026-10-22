@@ -2,7 +2,12 @@ use matlab_diagnostics::{Diagnostic, Span};
 use matlab_values::DenseMatrix;
 
 pub mod arrays;
+pub mod decomposition;
 pub mod stats;
+pub mod svd;
+
+pub use decomposition::*;
+pub use svd::*;
 
 /// Matrix multiplication `A * B`
 pub fn matmul(
@@ -478,78 +483,7 @@ pub fn compare(
     })
 }
 
-/// Matrix inverse via Gauss-Jordan elimination with partial pivoting.
-fn matrix_inv(b: &DenseMatrix, span: Option<Span>) -> Result<DenseMatrix, Diagnostic> {
-    if b.rows != b.cols {
-        return Err(Diagnostic::error(
-            format!(
-                "Matrix must be square to be inverted: {}x{}",
-                b.rows, b.cols
-            ),
-            span,
-        ));
-    }
-    let n = b.rows;
-    let mut m = vec![0.0; n * 2 * n];
-    for r in 0..n {
-        let a_row = b.cols * r;
-        m[r * 2 * n..r * 2 * n + n].copy_from_slice(&b.data[a_row..a_row + n]);
-        for k in 0..n {
-            m[r * 2 * n + n + k] = if k == r { 1.0 } else { 0.0 };
-        }
-    }
-
-    for col in 0..n {
-        // Partial pivot: pick largest magnitude in the column
-        let mut pivot_row = col;
-        let mut pivot_val = m[col * 2 * n + col].abs();
-        for r in (col + 1)..n {
-            let cand = m[r * 2 * n + col].abs();
-            if cand > pivot_val {
-                pivot_val = cand;
-                pivot_row = r;
-            }
-        }
-        if pivot_val < 1e-15 {
-            return Err(Diagnostic::error(
-                "Matrix is singular to working precision.",
-                span,
-            ));
-        }
-        if pivot_row != col {
-            for j in 0..(2 * n) {
-                m.swap(col * 2 * n + j, pivot_row * 2 * n + j);
-            }
-        }
-        let pivot = m[col * 2 * n + col];
-        for j in 0..2 * n {
-            m[col * 2 * n + j] /= pivot;
-        }
-        for r in 0..n {
-            if r == col {
-                continue;
-            }
-            let factor = m[r * 2 * n + col];
-            for j in 0..2 * n {
-                m[r * 2 * n + j] -= factor * m[col * 2 * n + j];
-            }
-        }
-    }
-
-    let mut data = vec![0.0; n * n];
-    for r in 0..n {
-        for c in 0..n {
-            data[r * n + c] = m[r * 2 * n + n + c];
-        }
-    }
-    Ok(DenseMatrix {
-        rows: n,
-        cols: n,
-        data,
-    })
-}
-
-/// Matrix right division `A / B`: `A / s` scales; `A / B` computes `A * inv(B)`.
+/// Matrix right division `A / B`: `A / s` scales; `A / B` computes `(B.' \ A.').'`.
 pub fn mrdivide(
     a: &DenseMatrix,
     b: &DenseMatrix,
@@ -566,8 +500,11 @@ pub fn mrdivide(
             data: a.data.iter().map(|&x| x / s).collect(),
         });
     }
-    let b_inv = matrix_inv(b, span)?;
-    matmul(a, &b_inv, span)
+    // A / B = (B.' \ A.').'
+    let b_t = transpose(b);
+    let a_t = transpose(a);
+    let sol_t = mldivide(&b_t, &a_t, span)?;
+    Ok(transpose(&sol_t))
 }
 
 /// Matrix power `A ^ p`: scalar exponent on scalars, integer non-negative exponent
@@ -592,8 +529,8 @@ pub fn matrix_pow(a: &DenseMatrix, p: f64, span: Option<Span>) -> Result<DenseMa
         ));
     }
     if p < 0.0 {
-        let inv = matrix_inv(a, span)?;
-        return matrix_pow(&inv, -p, span);
+        let inv_mat = inv(a, span)?;
+        return matrix_pow(&inv_mat, -p, span);
     }
     let mut result = DenseMatrix::eye(a.rows);
     let mut power = a.clone();

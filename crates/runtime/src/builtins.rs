@@ -129,6 +129,33 @@ pub fn call_builtin_multi(
                 }
             }
         }
+        "lu" if nargout > 1 => {
+            if args.len() != 1 {
+                return Err(Diagnostic::error(
+                    "lu expects 1 input argument.",
+                    Some(span),
+                ));
+            }
+            let a = crate::arrayfn::matrix_arg(&args[0], env, io, span, "lu")?;
+            if nargout == 2 {
+                let (l, u) = la::lu_two_output(&a, Some(span))?;
+                Ok(vec![Value::Matrix(l), Value::Matrix(u)])
+            } else {
+                let (l, u, p) = la::lu_three_output(&a, Some(span))?;
+                Ok(vec![Value::Matrix(l), Value::Matrix(u), Value::Matrix(p)])
+            }
+        }
+        "svd" if nargout > 1 => {
+            if args.len() != 1 {
+                return Err(Diagnostic::error(
+                    "svd expects 1 input argument.",
+                    Some(span),
+                ));
+            }
+            let a = crate::arrayfn::matrix_arg(&args[0], env, io, span, "svd")?;
+            let (u, s, v) = la::svd_full(&a, Some(span))?;
+            Ok(vec![Value::Matrix(u), Value::Matrix(s), Value::Matrix(v)])
+        }
         _ => {
             let val = call_builtin(name, args, env, span, io)?;
             Ok(vec![val])
@@ -171,7 +198,7 @@ fn scalar_arg(
 
 /// Names that resolve as bare identifiers when not shadowed by a variable.
 pub fn is_known_constant(name: &str) -> bool {
-    matches!(name, "pi")
+    matches!(name, "pi" | "inf" | "Inf")
 }
 
 fn sind_deg(x: f64) -> f64 {

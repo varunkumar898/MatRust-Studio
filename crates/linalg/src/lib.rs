@@ -2,10 +2,15 @@ use matlab_diagnostics::{Diagnostic, Span};
 use matlab_values::DenseMatrix;
 
 pub mod arrays;
+pub mod complex;
 pub mod decomposition;
 pub mod stats;
 pub mod svd;
 
+pub use complex::{
+    add_values, compare_values, ctranspose, dotdiv_values, dotmul_values, dotpow_values,
+    mul_values, sub_values,
+};
 pub use decomposition::*;
 pub use svd::*;
 

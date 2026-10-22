@@ -659,3 +659,14 @@ Verification performed:
 - No release tag created (not authorized beyond this work).
 - Supported scope explicitly documented in docs/compatibility-matrix.md, docs/function-coverage.md, docs/progress.md.
 Status: PASS (release-readiness documented; final tag/release requires separate authorization).
+--- Phase C — Integrated Data/Computation/Visualization Workflow (2026-10-23) ---
+Objective: end-to-end workflow connecting CSV I/O, statistics, plotting, persistence.
+Implementation: new integration test `tests/language/tests/data_workflow_stageC.rs` (1 pass).
+Path verified: dataset creation -> save (`save`) -> load (`load`) -> mean/std -> plot (`plot`) -> session reuse (`final_check`).
+No new numerical algorithms required; existing runtime, builtins, graphics state used.
+Status: PASS.
+
+--- Phase D — Engineering Simulation Kernel (Partial / Started) ---
+Objective: coherent simulation kernel with basic continuous-time dynamics.
+Next step (not completed in this session): implement/time-step first-order/state-space model with plot result verification. Blocked only by decision of what minimal model to include; architecture supports it via existing array/math/plot path.
+Status: PARTIAL — framework verified (array math + plot + session); specific simulation module not yet added.

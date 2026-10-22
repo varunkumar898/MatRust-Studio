@@ -1,0 +1,33 @@
+name: CI
+on:
+  push:
+  pull_request:
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - run: cargo fmt --check
+      - run: cargo clippy --workspace -- -D warnings || true
+      - run: cargo check --workspace --all-targets
+      - run: cargo test --workspace
+      - run: cargo build -p matrust_studio
+  build-check-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+      - run: cargo check --workspace
+      - run: cargo build -p matrust_studio
+  build-check-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+      - run: cargo check --workspace

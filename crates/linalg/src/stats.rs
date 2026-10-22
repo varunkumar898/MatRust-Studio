@@ -574,9 +574,18 @@ pub fn quantile_matrix(a: &DenseMatrix, p: f64, dim: Option<usize>) -> DenseMatr
 }
 
 pub fn quantile_multi(a: &DenseMatrix, probs: &[f64], dim: Option<usize>) -> DenseMatrix {
-    // Convert probabilities to percentiles and pass to multi-prctile
     let pct_vec: Vec<f64> = probs.iter().map(|&p| p * 100.0).collect();
     prctile_multi(a, &pct_vec, dim)
+}
+
+/// Integer-count form: n > 1 produces n quantiles at 1/(n+1)...n/(n+1)
+pub fn quantile_count(a: &DenseMatrix, n: usize, dim: Option<usize>) -> DenseMatrix {
+    if n <= 1 {
+        // n==1 should be handled as probability 1 by caller; here return scalar for consistency
+        return quantile_matrix(a, 1.0, dim);
+    }
+    let probs: Vec<f64> = (1..=n).map(|k| k as f64 / (n as f64 + 1.0)).collect();
+    quantile_multi(a, &probs, dim)
 }
 
 pub fn cov_matrix(a: &DenseMatrix, w: usize, b: Option<&DenseMatrix>) -> DenseMatrix {

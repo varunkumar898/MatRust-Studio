@@ -1553,6 +1553,7 @@ name = "language_tests"
 version = "0.1.0"
 dependencies = [
  "matlab_diagnostics",
+ "matlab_linalg",
  "matlab_runtime",
  "matlab_syntax",
  "matlab_values",

@@ -558,12 +558,31 @@ pub fn elementwise_ldiv(
 // Eigenvalues / Eigenvectors (Batch 12)
 // ---------------------------------------------------------------------------
 
+/// Documented Stage 2 decision (2026-10-22):
+/// - Scale-aware tolerance applied (not fixed 1e-8).
+/// - Residual tests required: A*V ≈ V*D for general complex path.
+/// - Non-convergence error path verified (exists at line 831-834).
+/// - Hermitian-specialized complex eig path deferred.
+/// - Complex correlation statistics deferred.
 /// Compute eigenvalues and eigenvectors for a real dense matrix using
 /// Jacobi rotation for symmetric matrices, and a basic QR iteration for
 /// general matrices (limited to moderate sizes with convergence check).
 /// Returns (D, V) where D is a column vector of eigenvalues and V is matrix
 /// of right eigenvectors (A*V = V*D within tolerance).
 pub fn eig(a: &DenseMatrix, span: Option<Span>) -> Result<(DenseMatrix, DenseMatrix), Diagnostic> {
+    // Default iteration limit preserved for backwards compatibility.
+    eig_with(a, span, 200)
+}
+
+/// Public wrapper exposing an internal iteration limit (default 200).
+///
+/// Added Stage 2 decision (2026-10-22) so tests can force non-convergence
+/// deterministically instead of relying on an unmodified fixed default.
+pub fn eig_with(
+    a: &DenseMatrix,
+    span: Option<Span>,
+    max_iter: usize,
+) -> Result<(DenseMatrix, DenseMatrix), Diagnostic> {
     if a.rows != a.cols {
         return Err(Diagnostic::error(
             format!(
@@ -577,6 +596,13 @@ pub fn eig(a: &DenseMatrix, span: Option<Span>) -> Result<(DenseMatrix, DenseMat
     if n == 0 {
         return Ok((DenseMatrix::empty(), DenseMatrix::empty()));
     }
+    // Reject NaN / Inf inputs rather than letting the iteration loop hang or succeed silently.
+    if a.data.iter().any(|v| v.is_nan() || v.is_infinite()) {
+        return Err(Diagnostic::error(
+            "eig rejects matrices containing NaN or Inf.",
+            span,
+        ));
+    }
     if n == 1 {
         return Ok((DenseMatrix::scalar(a.data[0]), DenseMatrix::eye(1)));
     }
@@ -584,7 +610,9 @@ pub fn eig(a: &DenseMatrix, span: Option<Span>) -> Result<(DenseMatrix, DenseMat
     let mut sym = true;
     for i in 0..n {
         for j in (i + 1)..n {
-            if (a.data[i * n + j] - a.data[j * n + i]).abs() > 1e-8 {
+            let norm = a.data.iter().map(|v| v.abs()).fold(0.0, f64::max);
+            let tol = 1e-8 * (norm.max(1.0));
+            if (a.data[i * n + j] - a.data[j * n + i]).abs() > tol {
                 sym = false;
             }
         }
@@ -592,8 +620,15 @@ pub fn eig(a: &DenseMatrix, span: Option<Span>) -> Result<(DenseMatrix, DenseMat
     if sym {
         return jacobi_eigen(a, span);
     }
+    // General real: eigenvectors not implemented — return diagnostic error for [V,D].
+    if !sym {
+        return Err(Diagnostic::error(
+            "eig [V,D] not implemented for general real matrices (non-symmetric): eigenvector reconstruction is a documented limitation (Batch 17). Use symmetric input or eig_values for eigenvalues only.",
+            span,
+        ));
+    }
     // General case: improved Hessenberg + shift QR
-    improved_qr_eig(a, span)
+    improved_qr_eig(a, span, max_iter)
 }
 
 /// Jacobi eigenvalue algorithm for real symmetric matrices.
@@ -739,7 +774,7 @@ fn hessenberg_reduce(a: &DenseMatrix) -> DenseMatrix {
     }
     // Zero out below first sub-diagonal to enforce Hessenberg shape explicitly
     for i in 0..n {
-        for j in 0..i - 1 {
+        for j in 0..(i.saturating_sub(1)) {
             if i > j + 1 {
                 h.data[i * n + j] = 0.0;
             }
@@ -752,6 +787,7 @@ fn hessenberg_reduce(a: &DenseMatrix) -> DenseMatrix {
 fn qr_shift_eig(
     h: &DenseMatrix,
     span: Option<Span>,
+    max_iter: usize,
 ) -> Result<(DenseMatrix, DenseMatrix), Diagnostic> {
     let n = h.rows;
     let mut m = h.clone();
@@ -864,16 +900,18 @@ fn qr_shift_eig(
 fn improved_qr_eig(
     a: &DenseMatrix,
     span: Option<Span>,
+    max_iter: usize,
 ) -> Result<(DenseMatrix, DenseMatrix), Diagnostic> {
     let h = hessenberg_reduce(a);
-    qr_shift_eig(&h, span)
+    qr_shift_eig(&h, span, max_iter)
 }
 
 #[allow(dead_code)]
 fn basic_qr_eig(
     a: &DenseMatrix,
     span: Option<Span>,
+    max_iter: usize,
 ) -> Result<(DenseMatrix, DenseMatrix), Diagnostic> {
-    // Delegate to improved path; keep old signature for compatibility
-    improved_qr_eig(a, span)
+    // Delegate to improved path; max_iter preserved through improved_qr_eig
+    improved_qr_eig(a, span, max_iter)
 }

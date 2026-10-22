@@ -9,3 +9,4 @@ matlab_diagnostics = { path = "../../crates/diagnostics" }
 matlab_syntax = { path = "../../crates/syntax" }
 matlab_values = { path = "../../crates/values" }
 matlab_runtime = { path = "../../crates/runtime" }
+matlab_linalg = { path = "../../crates/linalg" }

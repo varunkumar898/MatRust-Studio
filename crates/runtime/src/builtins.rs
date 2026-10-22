@@ -190,7 +190,11 @@ pub fn call_builtin_multi(
                 _ => {
                     let a = coerce_matrix_pub(v, Some(span))?;
                     let (u, s, v_mat) = la::svd_full(&a, Some(span))?;
-                    Ok(vec![Value::Matrix(u), Value::Matrix(s), Value::Matrix(v_mat)])
+                    Ok(vec![
+                        Value::Matrix(u),
+                        Value::Matrix(s),
+                        Value::Matrix(v_mat),
+                    ])
                 }
             }
         }
@@ -770,12 +774,16 @@ pub fn call_builtin(
         }
         "eig" => {
             if args.len() != 1 {
-                return Err(Diagnostic::error("eig expects 1 argument: eig(A).", span_op));
+                return Err(Diagnostic::error(
+                    "eig expects 1 argument: eig(A).",
+                    span_op,
+                ));
             }
             let v = eval_expr_pub(env, &args[0], io)?;
             match v {
-                Value::ComplexMatrix(_) => {
-                    return Err(Diagnostic::error("Complex eig not yet implemented in runtime.", span_op));
+                Value::ComplexMatrix(c) => {
+                    let (d, _) = la::complex::eig_complex(&c, span_op)?;
+                    Ok(Value::ComplexMatrix(d))
                 }
                 _ => {
                     let a = coerce_matrix_pub(v, span_op)?;
@@ -786,26 +794,36 @@ pub fn call_builtin(
         }
         "prctile" => {
             if args.is_empty() || args.len() > 3 {
-                return Err(Diagnostic::error("prctile expects 2 or 3 arguments.", span_op));
+                return Err(Diagnostic::error(
+                    "prctile expects 2 or 3 arguments.",
+                    span_op,
+                ));
             }
             let v = eval_expr_pub(env, &args[0], io)?;
             let pct = scalar_arg(&args[1..2], env, io, span, "prctile")?;
             let d = if args.len() > 2 {
                 Some(scalar_arg(&args[2..3], env, io, span, "prctile")? as usize)
-            } else { None };
+            } else {
+                None
+            };
             let a = coerce_matrix_pub(v, span_op)?;
             let res = la::stats::prctile(&a, pct, d);
             Ok(Value::Matrix(res))
         }
         "quantile" => {
             if args.is_empty() || args.len() > 3 {
-                return Err(Diagnostic::error("quantile expects 2 or 3 arguments.", span_op));
+                return Err(Diagnostic::error(
+                    "quantile expects 2 or 3 arguments.",
+                    span_op,
+                ));
             }
             let v = eval_expr_pub(env, &args[0], io)?;
             let p = scalar_arg(&args[1..2], env, io, span, "quantile")?;
             let d = if args.len() > 2 {
                 Some(scalar_arg(&args[2..3], env, io, span, "quantile")? as usize)
-            } else { None };
+            } else {
+                None
+            };
             let a = coerce_matrix_pub(v, span_op)?;
             let res = la::stats::quantile_matrix(&a, p, d);
             Ok(Value::Matrix(res))
@@ -816,13 +834,20 @@ pub fn call_builtin(
             }
             let v = eval_expr_pub(env, &args[0], io)?;
             let a = coerce_matrix_pub(v, span_op)?;
-            let w = if args.len() > 1 { scalar_arg(&args[1..2], env, io, span, "cov")? as usize } else { 0 };
+            let w = if args.len() > 1 {
+                scalar_arg(&args[1..2], env, io, span, "cov")? as usize
+            } else {
+                0
+            };
             let res = la::stats::cov_matrix(&a, w, None);
             Ok(Value::Matrix(res))
         }
         "corrcoef" => {
             if args.is_empty() || args.len() > 2 {
-                return Err(Diagnostic::error("corrcoef expects 1 or 2 arguments.", span_op));
+                return Err(Diagnostic::error(
+                    "corrcoef expects 1 or 2 arguments.",
+                    span_op,
+                ));
             }
             let v = eval_expr_pub(env, &args[0], io)?;
             let a = coerce_matrix_pub(v, span_op)?;

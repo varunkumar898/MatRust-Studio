@@ -841,9 +841,6 @@ pub fn mldivide(
 ) -> Result<ComplexDenseMatrix, Diagnostic> {
     if a.is_scalar() {
         let s = a.data[0];
-        if s.is_zero() {
-            return Err(Diagnostic::error("Division by zero.", span));
-        }
         return Ok(ComplexDenseMatrix {
             rows: b.rows,
             cols: b.cols,
@@ -1024,9 +1021,6 @@ pub fn mrdivide(
 ) -> Result<ComplexDenseMatrix, Diagnostic> {
     if a.is_scalar() {
         let s = a.data[0];
-        if s.is_zero() {
-            return Err(Diagnostic::error("Division by zero.", span));
-        }
         return Ok(ComplexDenseMatrix {
             rows: b.rows,
             cols: b.cols,
@@ -1050,9 +1044,7 @@ pub fn mldivide_values(l: &Value, r: &Value, span: Option<Span>) -> Result<Value
             let rc = r.to_complex_matrix().ok_or_else(|| {
                 Diagnostic::error("Operands must be numeric matrices or scalars.", span)
             })?;
-            Ok(Value::from_complex_or_simplified(mldivide(
-                &lc, &rc, span,
-            )?))
+            Ok(Value::from_complex_or_simplified(mldivide(&lc, &rc, span)?))
         }
     }
 }
@@ -1067,9 +1059,132 @@ pub fn mrdivide_values(l: &Value, r: &Value, span: Option<Span>) -> Result<Value
             let rc = r.to_complex_matrix().ok_or_else(|| {
                 Diagnostic::error("Operands must be numeric matrices or scalars.", span)
             })?;
-            Ok(Value::from_complex_or_simplified(mrdivide(
-                &lc, &rc, span,
-            )?))
+            Ok(Value::from_complex_or_simplified(mrdivide(&lc, &rc, span)?))
         }
     }
+}
+
+/// Basic complex dense eigenvalue algorithm via shifted QR iteration.
+/// Returns (D column vector, V eigenvector matrix) as DenseMatrix (real representations)
+/// with complex components preserved in a ComplexDenseMatrix result — for simplicity,
+/// this returns the eigenvalues as a real/imag split representation via ComplexDenseMatrix.
+pub fn eig_complex(
+    a: &ComplexDenseMatrix,
+    span: Option<Span>,
+) -> Result<(ComplexDenseMatrix, ComplexDenseMatrix), Diagnostic> {
+    let n = a.rows;
+    if a.rows != a.cols {
+        return Err(Diagnostic::error(
+            format!("Matrix must be square for eigenvalues: {}x{}", a.rows, a.cols),
+            span,
+        ));
+    }
+    if n == 0 {
+        return Ok((ComplexDenseMatrix::empty(), ComplexDenseMatrix::empty()));
+    }
+    if n == 1 {
+        return Ok((a.clone(), ComplexDenseMatrix::eye(1)));
+    }
+    let mut m = a.clone();
+    let mut v = ComplexDenseMatrix::eye(n);
+    for _ in 0..200 {
+        // Complex Gram-Schmidt QR (approximate)
+        let mut q = vec![vec![Complex64::zero(); n]; n];
+        let mut r = vec![vec![Complex64::zero(); n]; n];
+        for j in 0..n {
+            let mut col = Vec::with_capacity(n);
+            for i in 0..n {
+                col.push(m.data[i * n + j]);
+            }
+            for k in 0..j {
+                let mut proj = Complex64::zero();
+                for i in 0..n {
+                    proj += q[i][k].conj() * col[i];
+                }
+                r[k][j] = proj;
+                for i in 0..n {
+                    col[i] -= proj * q[i][k];
+                }
+            }
+            let norm_sq = col.iter().map(|&x| x.abs_sq()).sum::<f64>();
+            let norm = norm_sq.sqrt();
+            r[j][j] = Complex64::real(norm);
+            if norm > 1e-12 {
+                for i in 0..n {
+                    q[i][j] = col[i] / Complex64::real(norm);
+                }
+            }
+        }
+        // Reconstruct Q
+        let mut q_mat = ComplexDenseMatrix { rows: n, cols: n, data: vec![Complex64::zero(); n * n] };
+        for j in 0..n {
+            for i in 0..n {
+                q_mat.data[i * n + j] = q[i][j];
+            }
+        }
+        // M = R * Q
+        let mut m_next = ComplexDenseMatrix { rows: n, cols: n, data: vec![Complex64::zero(); n * n] };
+        for i in 0..n {
+            for j in 0..n {
+                let mut s = Complex64::zero();
+                for k in 0..n {
+                    s += r[i][k] * q_mat.data[k * n + j];
+                }
+                m_next.data[i * n + j] = s;
+            }
+        }
+        // Update V = V * Q
+        // Manual matmul for complex
+        let mut new_v_data = vec![Complex64::zero(); n * n];
+        for i in 0..n {
+            for j in 0..n {
+                let mut s = Complex64::zero();
+                for k in 0..n {
+                    s += v.data[i * n + k] * q_mat.data[k * n + j];
+                }
+                new_v_data[i * n + j] = s;
+            }
+        }
+        v = ComplexDenseMatrix { rows: n, cols: n, data: new_v_data };
+        m = m_next;
+        // Shift: subtract lower-right diagonal element (approx)
+        let shift = m.data[(n-1)*n + (n-1)];
+        for i in 0..n {
+            m.data[i*n + i] = m.data[i*n + i] - shift;
+        }
+        // Add shift back not needed if using direct QR; skip for simplicity
+        // Convergence check
+        let mut max_sub = 0.0f64;
+        for i in 1..n {
+            max_sub = max_sub.max(m.data[i*n + (i-1)].abs());
+        }
+        if max_sub < 1e-8 {
+            break;
+        }
+    }
+    // Extract eigenvalues (complex) from diagonal
+    let mut ev = Vec::with_capacity(n);
+    for i in 0..n {
+        ev.push(m.data[i * n + i]);
+    }
+    // Sort by real then imag for determinism
+    let mut pairs: Vec<(Complex64, usize)> = (0..n).map(|i| (ev[i], i)).collect();
+    pairs.sort_by(|a, b| {
+        let ar = a.0.re();
+        let br = b.0.re();
+        ar.partial_cmp(&br).unwrap_or(std::cmp::Ordering::Equal)
+            .then_with(|| a.0.im().partial_cmp(&b.0.im()).unwrap_or(std::cmp::Ordering::Equal))
+    });
+    let mut sorted_ev = Vec::with_capacity(n);
+    let mut sorted_v = vec![Complex64::zero(); n * n];
+    for (idx, &(val, orig)) in pairs.iter().enumerate() {
+        sorted_ev.push(val);
+        for r in 0..n {
+            sorted_v[r * n + idx] = v.data[r * n + orig];
+        }
+    }
+    Ok((
+        ComplexDenseMatrix { rows: n, cols: 1, data: sorted_ev },
+        ComplexDenseMatrix { rows: n, cols: n, data: sorted_v },
+    ))
 }

@@ -139,14 +139,16 @@ fn test_isreal_builtin() {
         "t1 = isreal(42); \
          t2 = isreal([1, 2; 3, 4]); \
          t3 = isreal(3 + 4i); \
-         t4 = isreal(complex(3, 0));",
+         t4 = isreal(complex(3, 0)); \
+         t5 = isreal((3 + 4i) + (5 - 4i));",
     )
     .unwrap();
 
     assert_eq!(r.env.get("t1").unwrap(), &Value::Boolean(true));
     assert_eq!(r.env.get("t2").unwrap(), &Value::Boolean(true));
     assert_eq!(r.env.get("t3").unwrap(), &Value::Boolean(false));
-    assert_eq!(r.env.get("t4").unwrap(), &Value::Boolean(true));
+    assert_eq!(r.env.get("t4").unwrap(), &Value::Boolean(false));
+    assert_eq!(r.env.get("t5").unwrap(), &Value::Boolean(true));
 }
 
 // ============================================================================

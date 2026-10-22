@@ -511,20 +511,20 @@ pub fn complex_svd_decompose(
                 let c = 1.0 / (1.0 + t * t).sqrt();
                 let sigma = c * t;
                 let phase = gamma / Complex64::real(gamma_abs);
-                let s = phase * Complex64::real(sigma);
-                let s_conj = s.conj();
+                let w1 = phase.conj() * Complex64::real(sigma);
+                let w2 = phase * Complex64::real(sigma);
 
                 for r in 0..m {
                     let bi = b_data[r * n + i];
                     let bj = b_data[r * n + j];
-                    b_data[r * n + i] = bi * Complex64::real(c) + bj * s;
-                    b_data[r * n + j] = -bi * s_conj + bj * Complex64::real(c);
+                    b_data[r * n + i] = bi * Complex64::real(c) - bj * w1;
+                    b_data[r * n + j] = bi * w2 + bj * Complex64::real(c);
                 }
                 for r in 0..n {
                     let vi = v_data[r * n + i];
                     let vj = v_data[r * n + j];
-                    v_data[r * n + i] = vi * Complex64::real(c) + vj * s;
-                    v_data[r * n + j] = -vi * s_conj + vj * Complex64::real(c);
+                    v_data[r * n + i] = vi * Complex64::real(c) - vj * w1;
+                    v_data[r * n + j] = vi * w2 + vj * Complex64::real(c);
                 }
             }
         }
@@ -587,13 +587,15 @@ pub fn complex_svd_decompose(
             let mut cand = vec![Complex64::zero(); m];
             cand[basis] = Complex64::one();
 
-            for c in 0..current_cols {
-                let mut dot = Complex64::zero();
-                for r in 0..m {
-                    dot += u_data[r * m + c].conj() * cand[r];
-                }
-                for r in 0..m {
-                    cand[r] -= u_data[r * m + c] * dot;
+            for _pass in 0..2 {
+                for c in 0..current_cols {
+                    let mut dot = Complex64::zero();
+                    for r in 0..m {
+                        dot += u_data[r * m + c].conj() * cand[r];
+                    }
+                    for r in 0..m {
+                        cand[r] -= u_data[r * m + c] * dot;
+                    }
                 }
             }
 
@@ -767,10 +769,7 @@ pub fn complex_norm(
                 Ok(max_abs)
             }
             NormType::NegInf => {
-                let min_abs = a
-                    .data
-                    .iter()
-                    .fold(f64::INFINITY, |acc, z| acc.min(z.abs()));
+                let min_abs = a.data.iter().fold(f64::INFINITY, |acc, z| acc.min(z.abs()));
                 Ok(min_abs)
             }
             NormType::P(p) => {

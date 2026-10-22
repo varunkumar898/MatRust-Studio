@@ -508,7 +508,11 @@ pub fn prctile(a: &DenseMatrix, pct: f64, dim: Option<usize>) -> DenseMatrix {
             col.sort_by(|x, y| x.partial_cmp(y).unwrap_or(std::cmp::Ordering::Equal));
             res.push(quantile_slice(&col, pct / 100.0));
         }
-        DenseMatrix { rows: 1, cols: a.cols, data: res }
+        DenseMatrix {
+            rows: 1,
+            cols: a.cols,
+            data: res,
+        }
     } else if d == 2 {
         let mut res = Vec::with_capacity(a.rows);
         for r in 0..a.rows {
@@ -516,11 +520,19 @@ pub fn prctile(a: &DenseMatrix, pct: f64, dim: Option<usize>) -> DenseMatrix {
             row.sort_by(|x, y| x.partial_cmp(y).unwrap_or(std::cmp::Ordering::Equal));
             res.push(quantile_slice(&row, pct / 100.0));
         }
-        DenseMatrix { rows: a.rows, cols: 1, data: res }
+        DenseMatrix {
+            rows: a.rows,
+            cols: 1,
+            data: res,
+        }
     } else {
         let mut all = a.data.clone();
         all.sort_by(|x, y| x.partial_cmp(y).unwrap_or(std::cmp::Ordering::Equal));
-        DenseMatrix { rows: 1, cols: 1, data: vec![quantile_slice(&all, pct / 100.0)] }
+        DenseMatrix {
+            rows: 1,
+            cols: 1,
+            data: vec![quantile_slice(&all, pct / 100.0)],
+        }
     }
 }
 
@@ -546,7 +558,11 @@ pub fn cov_matrix(a: &DenseMatrix, w: usize, _b: Option<&DenseMatrix>) -> DenseM
         }
     }
     let denom = if w == 0 {
-        if n <= 1 { 1.0 } else { (n - 1) as f64 }
+        if n <= 1 {
+            1.0
+        } else {
+            (n - 1) as f64
+        }
     } else {
         n as f64
     };
@@ -560,7 +576,11 @@ pub fn cov_matrix(a: &DenseMatrix, w: usize, _b: Option<&DenseMatrix>) -> DenseM
             c_data[i * p + j] = s / denom;
         }
     }
-    DenseMatrix { rows: p, cols: p, data: c_data }
+    DenseMatrix {
+        rows: p,
+        cols: p,
+        data: c_data,
+    }
 }
 
 pub fn corrcoef_matrix(a: &DenseMatrix) -> DenseMatrix {
@@ -583,5 +603,9 @@ pub fn corrcoef_matrix(a: &DenseMatrix) -> DenseMatrix {
             }
         }
     }
-    DenseMatrix { rows: p, cols: p, data: r_data }
+    DenseMatrix {
+        rows: p,
+        cols: p,
+        data: r_data,
+    }
 }

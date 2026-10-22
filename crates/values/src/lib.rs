@@ -63,9 +63,11 @@ impl Value {
         match self {
             Value::Matrix(m) => Some(ComplexDenseMatrix::from_real(m)),
             Value::ComplexMatrix(c) => Some(c.clone()),
-            Value::Boolean(b) => Some(ComplexDenseMatrix::scalar(Complex64::real(
-                if *b { 1.0 } else { 0.0 },
-            ))),
+            Value::Boolean(b) => Some(ComplexDenseMatrix::scalar(Complex64::real(if *b {
+                1.0
+            } else {
+                0.0
+            }))),
             _ => None,
         }
     }

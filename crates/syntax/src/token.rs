@@ -8,16 +8,18 @@ pub enum TokenKind {
     Ident(String),
 
     // Arithmetic operators
-    Plus,     // +
-    Minus,    // -
-    Star,     // *
-    Slash,    // /
-    Caret,    // ^
-    DotStar,  // .*
-    DotSlash, // ./
-    DotCaret, // .^
-    DotQuote, // .'
-    Quote,    // '
+    Plus,         // +
+    Minus,        // -
+    Star,         // *
+    Slash,        // /
+    Backslash,    // \
+    Caret,        // ^
+    DotStar,      // .*
+    DotSlash,     // ./
+    DotBackslash, // .\
+    DotCaret,     // .^
+    DotQuote,     // .'
+    Quote,        // '
 
     // Assignment & Comparison
     Equal,        // =

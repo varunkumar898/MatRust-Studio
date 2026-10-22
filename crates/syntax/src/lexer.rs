@@ -97,6 +97,7 @@ impl<'a> Lexer<'a> {
                 '-' => TokenKind::Minus,
                 '*' => TokenKind::Star,
                 '/' => TokenKind::Slash,
+                '\\' => TokenKind::Backslash,
                 '^' => TokenKind::Caret,
                 '\'' => {
                     // MATLAB rule: an apostrophe starts a char literal when an operand
@@ -188,6 +189,10 @@ impl<'a> Lexer<'a> {
                         Some('/') => {
                             self.advance();
                             TokenKind::DotSlash
+                        }
+                        Some('\\') => {
+                            self.advance();
+                            TokenKind::DotBackslash
                         }
                         Some('^') => {
                             self.advance();

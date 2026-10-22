@@ -335,3 +335,56 @@ validation in `crates/runtime/src/arrayfn.rs`, dispatch in `crates/runtime/src/b
   - `cargo test --workspace`: all 148+ tests pass, including 18 new comprehensive integration tests in `tests/language/tests/numeric_batch8.rs`.
   - `cargo build -p matrust_studio`: clean desktop application build.
   - Verified representative commands in CLI: `M = [1, 2; 3, 4]; disp(mean(M)); disp(std(M)); [m, idx] = min(M); disp(m); disp(idx);`.
+
+---
+
+## Batch 9 — REA-Guided Linear Algebra Implementation (2026-10-22)
+
+- **REA & MATLAB Target Status**:
+  - Verified REA MCP server connectivity via `binary_session` in Antigravity session.
+  - Scanned `/home/cherry/Downloads/matlab_R2026b_Linux/archives` and system directories (`/usr/local/MATLAB`, `/opt/MATLAB`).
+  - Only Network License Manager archives are present (`Network_License_Manager262_common.zip` and `Network_License_Manager262_glnxa64.zip`).
+  - MATLAB numerical engine (`libmwlapack.so`, `libmx.so`, `matlab` binary) is absent.
+  - Genuine native MATLAB reverse engineering remains recorded as blocked; no fabricated artifacts or pseudo-evidence generated.
+  - Proceeded with official MathWorks specifications, standard numerical linear algebra algorithms (Doolittle LU, Householder QR, Hestenes Jacobi SVD), and independent verification tests.
+- **Syntax & Language Support**:
+  - Added `Backslash` (`\`) and `DotBackslash` (`.\`) to `crates/syntax/src/token.rs`.
+  - Extended `BinaryOp` with `LDiv` and `DotLDiv` in `crates/syntax/src/ast.rs`.
+  - Added lexer support for `'\\'` and `'.\\'` in `crates/syntax/src/lexer.rs`.
+  - Configured operator binding power in Pratt parser `crates/syntax/src/parser.rs` matching multiplicative precedence (60, 61).
+  - Wired `BinaryOp::LDiv` and `BinaryOp::DotLDiv` execution in `crates/runtime/src/interp.rs`.
+- **LU Factorization & Linear Systems (`crates/linalg/src/decomposition.rs`)**:
+  - `pivoted_lu`: Doolittle LU decomposition with partial row pivoting, tracking permutation vector and swap count for parity.
+  - `mldivide` (`A \ B`):
+    - Square nonsingular systems solved via pivoted LU forward/backward substitution ($P A X = P B \implies L Y = P B, U X = Y$) without explicitly computing the inverse.
+    - Multiple RHS columns supported.
+    - Overdetermined rectangular systems ($m > n$) solved via Householder QR least-squares.
+    - Underdetermined systems ($m < n$) solved via Moore–Penrose pseudoinverse.
+    - Scalar broadcasting supported; singular systems return clean diagnostics.
+  - `mrdivide` (`A / B`): Solves $X B = A$ via $(B' \setminus A')'$, replacing previous ad-hoc Gauss-Jordan inversion.
+  - `lu`:
+    - Single-output compact form $Y = \text{lu}(A)$ (strictly lower triangle multipliers + upper triangle $U$).
+    - Two-output $[L, U] = \text{lu}(A)$ with permuted lower triangular factor satisfying $A = L * U$.
+    - Three-output $[L, U, P] = \text{lu}(A)$ with unit lower triangular $L$, upper triangular $U$, and permutation matrix $P$ satisfying $P * A = L * U$.
+  - `det`: Determinant computed via pivoted LU, taking into account row permutation parity $(-1)^{\text{swaps}} \times \prod U_{ii}$; returns $0.0$ for singular matrices and $1.0$ for empty matrix.
+  - `inv`: Matrix inversion by solving $A * X = I_n$ via pivoted LU forward/backward substitution; strictly errors on singular matrices without replacing with pseudoinverse.
+  - `trace`: Sums main diagonal elements $A(i, i)$ for square and rectangular matrices; returns $0.0$ for empty matrix.
+- **SVD, Rank, Pseudoinverse & Norms (`crates/linalg/src/svd.rs`)**:
+  - `svd_decompose`: Pure Rust One-Sided Jacobi SVD (Hestenes method) with Gram-Schmidt orthonormal completion for full $m \times m$ $U$ and $n \times n$ $V$.
+    - 1-output $s = \text{svd}(A)$ returns descending column vector of singular values.
+    - 3-output $[U, S, V] = \text{svd}(A)$ satisfies $U * S * V' \approx A$ with orthonormal $U$ and $V$.
+  - `rank`: Counts singular values above threshold; default tolerance $\max(m, n) \times \sigma_{\max} \times \text{eps}$; explicit tolerance parameter supported.
+  - `pinv`: Moore–Penrose pseudoinverse $V S^+ U^T$; verified against all 4 Moore–Penrose identities ($A P A = A$, $P A P = P$, $(A P)' = A P$, $(P A)' = P A$); handles rectangular and rank-deficient matrices.
+  - `norm`: Complete vector and matrix norm implementations:
+    - Vectors: 1-norm, 2-norm, $\infty$-norm, $-\infty$-norm, arbitrary positive $p$-norm.
+    - Matrices: 1-norm (max column sum), 2-norm (largest singular value via SVD), $\infty$-norm (max row sum), Frobenius norm ('fro').
+- **Desktop & Runtime Integration**:
+  - Registered all new builtins in `crates/runtime/src/builtins.rs` (`call_builtin` and `call_builtin_multi`).
+  - Updated syntax highlighter in `apps/desktop/src/editor.rs` (`BUILTINS`).
+  - Added `inf` and `Inf` to constants in runtime.
+- **Verification**:
+  - `cargo fmt --check`: 100% clean formatting across all crates.
+  - `cargo check --workspace`: 0 warnings, 0 errors.
+  - `cargo test --workspace`: 173+ tests pass (18 new comprehensive tests in `tests/language/tests/numeric_batch9.rs`).
+  - `cargo build -p matrust_studio`: clean desktop application build.
+  - Tested CLI execution with real expressions: `A = [0, 2; 3, 1]; b = [4; 7]; x = A \ b; [L, U, P] = lu(A); d = det(A); s = svd(A); disp(x); disp(d);` producing exact analytical solutions.

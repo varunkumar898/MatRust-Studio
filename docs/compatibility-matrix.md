@@ -70,3 +70,19 @@ R2026b behavior this row tracks; this matrix makes no claim beyond that.
 | Measures of spread: `range`, `iqr` | implemented | `range = max - min`; `iqr` uses empirical quantile linear interpolation ($r = 0.5 + N \times p$) matching MATLAB; dimension and `'all'` support; empty inputs return NaN |
 | Products and Sums: `prod`, `sum` | implemented | default, explicit dim, and `'all'` reduction; empty `sum([]) == 0.0`; empty `prod([]) == 1.0` |
 | Minima and Maxima: `min`, `max` | implemented | 1-arg reduction along dim or `'all'`; 2-arg element-wise pairwise `min(A,B)` / `max(A,B)` with scalar expansion; 2-output `[M, I] = min/max(...)` returning 1-based column-major indices |
+
+## Batch 9 additions (2026-10-22)
+| Feature | Status | Notes |
+|---|---|---|
+| Matrix left division: `\`, `mldivide` | implemented | Solves linear system $A * X = B$. Square nonsingular systems solved via pivoted LU with forward/backward substitution; overdetermined systems solved via Householder QR least squares; underdetermined via SVD pseudoinverse; scalar broadcasting supported; strict error on singular matrices |
+| Element-wise left division: `.\`, `ldivide` | implemented | Equivalent to `B ./ A`; supports scalar broadcasting |
+| Matrix right division: `/`, `mrdivide` | implemented | Solves $X * B = A$ via $(B' \setminus A')'$; replaces explicit Gauss-Jordan inversion |
+| LU factorization: `lu` | implemented | Partial row pivoting; supports 1-output compact $Y$, 2-output $[L, U]$ where $A = L * U$ ($L$ permuted), and 3-output $[L, U, P]$ where $P * A = L * U$ with unit lower triangular $L$ |
+| Determinant: `det` | implemented | Computed via pivoted LU; accounts for permutation parity ($(-1)^{\text{swaps}}$) and diagonal pivot product; $0.0$ for singular matrices; $1.0$ for empty matrix |
+| Matrix inverse: `inv` | implemented | Solves $A * X = I_n$ via pivoted LU forward/backward substitution; errors on singular matrices without fallback to pseudoinverse |
+| Matrix trace: `trace` | implemented | Sum of main diagonal elements for square and rectangular matrices; returns $0.0$ for empty matrices |
+| Singular value decomposition: `svd` | implemented | One-sided Jacobi (Hestenes method) with Gram-Schmidt orthonormal completion; 1-output $s$ (descending singular values column vector) and 3-output $[U, S, V]$ satisfying $U * S * V' \approx A$ with orthonormal $U$ and $V$ |
+| Numerical rank: `rank` | implemented | Number of singular values greater than tolerance; default tolerance $\max(m,n) \times \sigma_{\max} \times \text{eps}$; explicit tolerance parameter supported |
+| Moore–Penrose pseudoinverse: `pinv` | implemented | Computed via SVD ($V * S^+ * U'$); satisfies all 4 Moore–Penrose identities; handles rectangular and rank-deficient matrices; explicit tolerance supported |
+| Vector & matrix norms: `norm` | implemented | Vector norms (1, 2, $\infty$, $-\infty$, general $p$); matrix norms (1 max column sum, 2 largest singular value via SVD, $\infty$ max row sum, 'fro' Frobenius norm) |
+| Operators: `\` and `.\` | implemented | Lexer tokens `Backslash` and `DotBackslash`, AST `BinaryOp::LDiv` and `BinaryOp::DotLDiv`, parser infix bindings (precedence 60, 61) |

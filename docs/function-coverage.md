@@ -119,15 +119,16 @@ date above; Section 14 records batch updates.
 | Name | Status | Implementation | Dependencies | Tests | Limitations | Next action |
 |---|---|---|---|---|---|---|
 | `A*B`, `A.*B` | implemented | linalg::matmul / elementwise_mul | — | matrices:matrix_multiply_* | scalar broadcast like MATLAB | — |
-| `A\b` | missing | — | — | — | no `\` token; `/` uses Gauss-Jordan inverse (documented divergence) | LU solve is the required first solver |
-| `inv(A)`, `pinv(A)` | partial | linalg::matrix_inv (internal only) | — | matrices:matrix_power_and_inverse_division | inverse exists for `/`; no `inv` builtin; `pinv` missing | expose `inv`; SVD-based `pinv` |
-| `det(A)` | missing | — | — | — | — | LU with partial pivoting |
-| `rank(A)` | missing | — | — | — | — | via RREF threshold |
-| `trace(A)` | missing | — | — | — | — | trivial |
-| `norm(A)` | missing | — | — | — | — | p-norms (1,2,inf,fro) |
+| `A\b`, `mldivide`, `ldivide` | implemented | linalg::decomposition::mldivide, runtime::interp, runtime::builtins | — | language:numeric_batch9:test_mldivide_* | square pivoted LU solve, rectangular Householder QR least-squares, pseudoinverse underdetermined | complex matrices |
+| `inv(A)` | implemented | linalg::decomposition::inv, runtime::builtins | — | language:numeric_batch9:test_inv_* | square nonsingular systems via pivoted LU solve; errors on singular matrices | complex matrices |
+| `pinv(A)` | implemented | linalg::svd::pinv, runtime::builtins | — | language:numeric_batch9:test_pinv_* | SVD-based Moore–Penrose pseudoinverse; explicit or default tolerance | complex matrices |
+| `det(A)` | implemented | linalg::decomposition::det, runtime::builtins | — | language:numeric_batch9:test_det_* | pivoted LU decomposition; accounts for permutation parity and pivot signs | complex matrices |
+| `rank(A)` | implemented | linalg::svd::rank, runtime::builtins | — | language:numeric_batch9:test_rank_* | singular values threshold; explicit or dimension-based machine precision default | complex matrices |
+| `trace(A)` | implemented | linalg::decomposition::trace, runtime::builtins | — | language:numeric_batch9:test_trace_* | sum of main diagonal elements for square or rectangular; empty returns 0 | — |
+| `norm(A)` | implemented | linalg::svd::norm, runtime::builtins | — | language:numeric_batch9:test_norm_* | vector p-norms (1,2,inf,-inf,p); matrix norms (1,2,inf,fro); 2-norm uses svd | complex matrices |
 | `eig(A)` | missing | — | — | — | real 2x2 possible by hand; general needs complex QZ/eig | real Schur or LAPACK-style dependency decision |
-| `svd(A)` | missing | — | — | — | — | Golub–Kahan one-sided, small matrices |
-| `lu`, `qr`, `chol` | missing | — | — | — | — | LU first (also powers `A\b`) |
+| `svd(A)` | implemented | linalg::svd::svd_decompose, runtime::builtins | — | language:numeric_batch9:test_svd_* | one-sided Jacobi (Hestenes method) with Gram-Schmidt orthogonalization; 1-out and 3-out forms | complex matrices |
+| `lu(A)` | implemented | linalg::decomposition::pivoted_lu, runtime::builtins | — | language:numeric_batch9:test_lu_* | partial row pivoting; 1-out Y, 2-out [L,U], and 3-out [L,U,P] where P*A=L*U | qr, chol next |
 | `null(A)`, `orth(A)` | missing | — | — | — | — | from SVD |
 | `expm(A)` | missing | — | — | — | — | scaling-and-squaring |
 | `cross(a,b)`, `dot(a,b)`, `kron(A,B)` | missing | — | — | — | — | vector kernels |
@@ -466,3 +467,41 @@ Bitwise: bitand, bitor, bitxor, bitshift.
 Source: builtins.rs (unary map extended + 20 new match arms).
 Limitations: real-valued only (no complex); bit operations cast to i64; factorial uses saturating_mul (overflow -> max); nchoosek integer only; primes uses sieve; no dec2bin/bin2dec/dec2hex/hex2dec yet.
 REA: MATLAB target unavailable. No fabricated evidence.
+
+=== BATCH 7 STATUS (2026-10-22) — MISSING ELEMENTARY MATHEMATICS ===
+Implemented + tested:
+Base conversions: dec2bin, bin2dec, dec2hex, hex2dec (multi-row string round-trip, two's complement, width, fractional floor).
+Signum: sign (element-wise, NaN propagation).
+Degree inverse trig: asind, acosd, atand (degree outputs, [-1, 1] domain check).
+Exact degree trig: sind, cosd, tand (exact integer multiples of 90/180).
+Combinatorics / Number theory: factor (prime factorization, 1xN row vector), factorial (f64 representation up to 170, then Inf), nchoosek (symmetry, avoiding early overflow).
+Real nth root: nthroot (real odd roots of negative numbers, scalar expansion).
+Modulus & Remainder: mod, rem (sign conventions, division by zero: mod(x,0)==x, rem(x,0)==NaN).
+Bitwise & Scalar Expansion: bitshift (safe bounds check against shift overflow, 3-arg mask).
+Source: crates/runtime/src/builtins.rs + crates/linalg/src/lib.rs.
+Tests: tests/language/tests/numeric_batch7.rs (36 tests, all pass).
+Architecture: docs/architecture/complex-numbers.md specification completed.
+
+=== BATCH 8 STATUS (2026-10-22) — STATISTICS & ARRAY REDUCTIONS ===
+Implemented + tested:
+Central tendency: mean, median, mode (default dim, explicit dim, 'all' reduction, tie-breaking to smallest value).
+Measures of spread: std, var (w=0 sample, w=1 population, constant data -> 0.0), range (max - min), iqr (empirical quantile linear interpolation).
+Products & Extrema: prod (empty -> 1.0), sum (dim and 'all' reduction, empty -> 0.0), min/max (1-arg dim/'all' reduction, 2-arg pairwise element-wise, 2-output [M, I] index reporting).
+Source: crates/linalg/src/stats.rs + crates/runtime/src/builtins.rs.
+Tests: tests/language/tests/numeric_batch8.rs (18 tests, all pass).
+
+=== BATCH 9 STATUS (2026-10-22) — REA-GUIDED LINEAR ALGEBRA ===
+Implemented + tested:
+Matrix left division: X = A \ B operator and mldivide(A, B) builtin, element-wise A .\ B and ldivide(A, B). Square systems solved via pivoted LU with forward/backward substitution; overdetermined systems via Householder QR least squares; underdetermined via pseudoinverse.
+Pivoted LU decomposition: lu(A) with partial row pivoting. Supports single-output Y (compact form), 2-output [L, U] where A = L*U (L permuted), and 3-output [L, U, P] where P*A = L*U with L unit lower triangular.
+Determinant: det(A) computed via pivoted LU, correctly handling row swap parity and pivot signs.
+Matrix inverse: inv(A) computed via pivoted LU forward/backward substitution on I_n; strictly errors on singular matrices.
+Matrix trace: trace(A) summing main diagonal for square and rectangular matrices.
+Singular value decomposition: svd(A) using one-sided Jacobi (Hestenes method) with Gram-Schmidt orthonormal completion. Supports 1-output s (descending singular values) and 3-output [U, S, V] satisfying U*S*V' == A with orthonormal U and V.
+Numerical rank: rank(A, tol) counting singular values above tolerance; default tol = max(m,n)*max(s)*eps.
+Pseudoinverse: pinv(A, tol) Moore-Penrose inverse via SVD, verified against all 4 Moore-Penrose identities.
+Norms: norm(A, p) separating vector norms (1, 2, inf, -inf, custom p) and matrix norms (1, 2, inf, 'fro').
+Syntax & Interpreter: Added Backslash (\) and DotBackslash (.\) tokens, AST operators, parser infix bindings (precedence 60, 61), and desktop syntax highlighter coverage.
+Source: crates/syntax, crates/linalg/src/decomposition.rs, crates/linalg/src/svd.rs, crates/runtime/src/builtins.rs, crates/runtime/src/interp.rs, apps/desktop/src/editor.rs.
+Tests: tests/language/tests/numeric_batch9.rs (18 tests, all pass). Workspace test suite (170+ tests) passes cleanly.
+REA: Active session verified. MATLAB target contains only Network License Manager archives; native reverse engineering recorded as blocked. All algorithms implemented independently from published numerical standards.

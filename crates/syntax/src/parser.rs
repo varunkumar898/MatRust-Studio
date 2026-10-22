@@ -2,6 +2,10 @@ use crate::ast::*;
 use crate::token::{Token, TokenKind};
 use matlab_diagnostics::{Diagnostic, Span};
 
+/// Binding power of the colon operator (`a:step:b`). Colon binds below every
+/// arithmetic/comparison operator, matching MATLAB's precedence table.
+const COLON_BP: u8 = 30;
+
 pub struct Parser {
     tokens: Vec<Token>,
     pos: usize,
@@ -128,6 +132,23 @@ impl Parser {
                     });
                 }
             }
+
+            // Command syntax: `Ident Ident ...` at statement start (e.g.
+            // `grid on`, `close all`). Following identifiers are taken as
+            // (string) arguments; the runtime resolves zero-argument bare
+            // identifiers separately. Inside parentheses or after '=' this
+            // rule does not apply, matching MATLAB's scoping of command
+            // syntax to statement starts.
+            if matches!(next_kind, Some(TokenKind::Ident(_))) {
+                let call = self.parse_command_call(start_span)?;
+                let (suppress, end_span) = self.consume_stmt_terminator();
+                let span = start_span.merge(end_span);
+                return Ok(Stmt::Expr {
+                    expr: call,
+                    suppress_output: suppress,
+                    span,
+                });
+            }
         }
 
         // Otherwise, it is an expression statement
@@ -139,6 +160,47 @@ impl Parser {
             suppress_output: suppress,
             span,
         })
+    }
+
+    /// Parse a command-syntax call: `Ident Ident...` at statement start.
+    /// The first identifier is the callee; each subsequent identifier is
+    /// passed as a string-literal argument (MATLAB passes command words as
+    /// unevaluated text; identifiers/numbers cover `grid on`, `close all`,
+    /// `format long`-style usage).
+    fn parse_command_call(&mut self, start_span: Span) -> Result<Expr, Diagnostic> {
+        let callee_tok = self.advance();
+        let callee = match callee_tok.kind {
+            TokenKind::Ident(name) => name,
+            _ => {
+                return Err(Diagnostic::error(
+                    "Internal error: command call must start with an identifier.",
+                    Some(callee_tok.span),
+                ));
+            }
+        };
+        let mut args = Vec::new();
+        let mut end_span = callee_tok.span;
+        loop {
+            let (kind, span) = match self.tokens.get(self.pos) {
+                Some(t) => (t.kind.clone(), t.span),
+                None => break,
+            };
+            match kind {
+                TokenKind::Ident(word) => {
+                    self.advance();
+                    end_span = span;
+                    args.push(Expr::StringLit(word, span));
+                }
+                TokenKind::Number(v) => {
+                    self.advance();
+                    end_span = span;
+                    args.push(Expr::StringLit(format!("{}", v), span));
+                }
+                _ => break,
+            }
+        }
+        let span = start_span.merge(end_span);
+        Ok(Expr::Call { callee, args, span })
     }
 
     fn find_assignment_equals_after_paren(&self, lparen_pos: usize) -> Option<usize> {
@@ -213,6 +275,71 @@ impl Parser {
                 continue;
             }
 
+            // Colon operator: binds loosest (below comparisons), so it is only
+            // consumed when the caller allows (min_bp <= COLON_BP). MATLAB
+            // accepts exactly 2 or 3 colon operands: `a:b`, `a:step:b`.
+            if self.peek() == &TokenKind::Colon {
+                if min_bp > COLON_BP {
+                    break;
+                }
+                if matches!(lhs, Expr::Range { .. }) {
+                    return Err(Diagnostic::error(
+                        "Too many ':' in a colon expression (max a:step:b).",
+                        Some(self.peek_span()),
+                    ));
+                }
+                self.advance(); // consume ':'
+                let start_span = lhs.span();
+                if self.peek() == &TokenKind::Colon {
+                    // `a::b`— no step operand: MATLAB treats 1:0:3 as empty;
+                    // a missing middle operand is a syntax error.
+                    return Err(Diagnostic::error(
+                        "Expected an expression between ':' operators.",
+                        Some(self.peek_span()),
+                    ));
+                }
+                // Middle operand: a plain expression above colon precedence.
+                let middle = if matches!(self.peek(), TokenKind::Colon | TokenKind::Eof) {
+                    return Err(Diagnostic::error(
+                        "Missing expression for colon operand.",
+                        Some(self.peek_span()),
+                    ));
+                } else {
+                    self.parse_expression(COLON_BP + 1)?
+                };
+                if self.peek() == &TokenKind::Colon {
+                    // `a:step:b`
+                    self.advance();
+                    let stop = self.parse_expression(COLON_BP + 1)?;
+                    let span = start_span.merge(stop.span());
+                    lhs = Expr::Range {
+                        start: Box::new(lhs),
+                        step: Some(Box::new(middle)),
+                        stop: Box::new(stop),
+                        span,
+                    };
+                } else {
+                    // `a:b`
+                    let span = start_span.merge(middle.span());
+                    lhs = Expr::Range {
+                        start: Box::new(lhs),
+                        step: None,
+                        stop: Box::new(middle),
+                        span,
+                    };
+                    // Any further colon is too many (documented limitation:
+                    // MATLAB's chained `a:b:c:d` forms without a step are
+                    // rarely used; we reject them explicitly).
+                    if self.peek() == &TokenKind::Colon {
+                        return Err(Diagnostic::error(
+                            "Too many ':' in a colon expression (max a:step:b).",
+                            Some(self.peek_span()),
+                        ));
+                    }
+                }
+                continue;
+            }
+
             // Infix operators
             let (op, l_bp, r_bp) = match self.peek() {
                 TokenKind::Caret => (BinaryOp::Pow, 70, 71),
@@ -255,7 +382,14 @@ impl Parser {
         match tok.kind {
             TokenKind::Number(val) => Ok(Expr::Number(val, tok.span)),
             TokenKind::StringLit(s) => Ok(Expr::StringLit(s, tok.span)),
+            TokenKind::Colon => Ok(Expr::ColonAll(tok.span)),
             TokenKind::Ident(name) => {
+                // Reserved indexing keyword: `end` binds to the enclosing
+                // indexed array's dimension (evaluated in interp; error when
+                // used outside indexing).
+                if name == "end" {
+                    return Ok(Expr::End(tok.span));
+                }
                 // If followed by '(', function call / index expression
                 if self.match_token(&TokenKind::LParen) {
                     let mut args = Vec::new();

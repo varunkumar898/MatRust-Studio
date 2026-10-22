@@ -28,6 +28,8 @@ pub enum AssignTarget {
         indices: Vec<Expr>,
         span: Span,
     },
+    /// `[X, Y] = f(...)` multi-output assignment (each name pro-supplied).
+    Multi(Vec<(String, Span)>, Span),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -35,6 +37,17 @@ pub enum Expr {
     Number(f64, Span),
     StringLit(String, Span),
     Variable(String, Span),
+    /// `a:step:b` / `a:b` (step defaults to 1). Evaluates to a row vector.
+    Range {
+        start: Box<Expr>,
+        step: Option<Box<Expr>>,
+        stop: Box<Expr>,
+        span: Span,
+    },
+    /// The reserved `end` keyword inside indexing.
+    End(Span),
+    /// A bare `:` inside indexing (all elements along that dimension).
+    ColonAll(Span),
     MatrixLit(Vec<Vec<Expr>>, Span),
     Binary {
         op: BinaryOp,
@@ -66,10 +79,13 @@ impl Expr {
             | Expr::StringLit(_, s)
             | Expr::Variable(_, s)
             | Expr::MatrixLit(_, s)
+            | Expr::End(s)
+            | Expr::ColonAll(s)
             | Expr::Binary { span: s, .. }
             | Expr::Unary { span: s, .. }
             | Expr::Call { span: s, .. }
             | Expr::Transpose { span: s, .. } => *s,
+            Expr::Range { start, stop, .. } => start.span().merge(stop.span()),
         }
     }
 }

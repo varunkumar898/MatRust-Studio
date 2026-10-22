@@ -1,9 +1,72 @@
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use matlab_diagnostics::{Diagnostic, Span};
 use matlab_linalg as la;
 use matlab_syntax::ast::*;
 use matlab_values::{DenseMatrix, Value};
+
+use crate::graphics::FigureState;
+
+/// Persistent execution session: one environment plus graphics state.
+/// The desktop worker owns exactly one `Session`; the CLI may create
+/// sessions per invocation. Never create a new environment per command.
+#[derive(Debug, Default, Clone)]
+pub struct Session {
+    pub env: Env,
+    pub graphics: crate::graphics::GraphicsState,
+}
+
+impl Session {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Lex + parse + execute one source chunk in this session.
+    /// `cancel`, when present, is checked between statements.
+    pub fn exec(
+        &mut self,
+        source: &str,
+        cancel: Option<&AtomicBool>,
+    ) -> Result<RunResult, Diagnostic> {
+        let tokens = matlab_syntax::Lexer::new(source).tokenize()?;
+        let program = matlab_syntax::Parser::new(tokens).parse_program()?;
+        let mut stdout = Vec::new();
+        let mut io = ExecIo {
+            stdout: &mut stdout,
+            graphics: &mut self.graphics,
+            cancel,
+        };
+        let mut outputs = Vec::new();
+        let mut interrupted = false;
+        for stmt in program.statements {
+            if let Some(cancel_flag) = io.cancel {
+                if cancel_flag.load(Ordering::Relaxed) {
+                    interrupted = true;
+                    break;
+                }
+            }
+            if let Some(out) = exec_statement(&mut self.env, stmt, &mut io)? {
+                outputs.push(out);
+            }
+        }
+        Ok(RunResult {
+            env: self.env.clone(),
+            outputs,
+            stdout,
+            figures: self.graphics.figures.clone(),
+            interrupted,
+        })
+    }
+}
+
+/// I/O sinks threaded through evaluation: console output produced by
+/// builtins, graphics commands, and the optional cancellation flag.
+pub struct ExecIo<'a> {
+    pub stdout: &'a mut Vec<String>,
+    pub graphics: &'a mut crate::graphics::GraphicsState,
+    pub cancel: Option<&'a AtomicBool>,
+}
 
 /// Variable environment. MATLAB variable names are case-sensitive.
 #[derive(Debug, Default, Clone)]
@@ -41,6 +104,80 @@ impl Env {
     }
 }
 
+/// One row for a workspace summary table.
+#[derive(Debug, Clone, PartialEq)]
+pub struct VarRow {
+    pub name: String,
+    pub kind: String,
+    pub rows: usize,
+    pub cols: usize,
+    pub elements: usize,
+    pub preview: String,
+}
+
+/// Human-oriented snapshot of every variable in `env`.
+pub fn variable_rows(env: &Env) -> Vec<VarRow> {
+    let mut rows = Vec::new();
+    for name in env.variable_names() {
+        let value = &env.vars[name];
+        let row = match value {
+            Value::Matrix(m) => VarRow {
+                name: name.to_string(),
+                kind: if m.is_scalar() {
+                    "double".into()
+                } else {
+                    "matrix".into()
+                },
+                rows: m.rows,
+                cols: m.cols,
+                elements: m.rows * m.cols,
+                preview: preview_matrix(m),
+            },
+            Value::String(s) => VarRow {
+                name: name.to_string(),
+                kind: "char".into(),
+                rows: 1,
+                cols: s.chars().count(),
+                elements: s.chars().count(),
+                preview: s.chars().take(48).collect(),
+            },
+            Value::Boolean(b) => VarRow {
+                name: name.to_string(),
+                kind: "logical".into(),
+                rows: 1,
+                cols: 1,
+                elements: 1,
+                preview: if *b { "1".into() } else { "0".into() },
+            },
+        };
+        rows.push(row);
+    }
+    rows
+}
+
+fn preview_matrix(m: &DenseMatrix) -> String {
+    if m.is_scalar() {
+        return m.format_matlab();
+    }
+    let r_max = 2.min(m.rows);
+    let c_max = 4.min(m.cols);
+    let truncated = m.rows > r_max || m.cols > c_max;
+    let sub_rows: Vec<Vec<f64>> = (0..r_max)
+        .map(|r| (0..c_max).map(|c| m.data[r * m.cols + c]).collect())
+        .collect();
+    let sub = DenseMatrix::from_rows(sub_rows, None).expect("2x4 slice is valid");
+    let mut body = sub.format_matlab().replace('\n', "; ");
+    if truncated {
+        body.push_str(" …");
+    }
+    if m.cols == 1 && m.rows > 1 {
+        // column vector: show as [a; b; …] with a transposition-free hint
+        format!("[{}; …]", body.strip_suffix(" …").unwrap_or(&body))
+    } else {
+        format!("[{}]", body)
+    }
+}
+
 /// A result value produced by a statement that did not suppress output
 /// (`;` suppressed statements produce no record).
 #[derive(Debug, Clone)]
@@ -60,28 +197,34 @@ pub struct RunResult {
     pub outputs: Vec<StatementOutput>,
     /// Lines printed by side-effectful builtins (e.g. `disp`).
     pub stdout: Vec<String>,
+    /// Final graphics state (figures created/modified by this chunk and any
+    /// previously existing ones in the same session).
+    pub figures: Vec<FigureState>,
+    /// True when execution stopped early because the cancel flag was set.
+    pub interrupted: bool,
 }
 
 /// Lex + parse + execute `source` in a fresh environment.
 pub fn run_source(source: &str) -> Result<RunResult, Diagnostic> {
-    let tokens = matlab_syntax::Lexer::new(source).tokenize()?;
-    let program = matlab_syntax::Parser::new(tokens).parse_program()?;
-    let mut env = Env::new();
-    exec_program_env(&mut env, program)
+    let mut session = Session::new();
+    session.exec(source, None)
 }
 
 /// Lex + parse + execute `source` in the provided (persistent) environment.
+/// Graphics state is local to this call.
 pub fn exec_source(env: &mut Env, source: &str) -> Result<RunResult, Diagnostic> {
     let tokens = matlab_syntax::Lexer::new(source).tokenize()?;
     let program = matlab_syntax::Parser::new(tokens).parse_program()?;
-    exec_program_env(env, program)
-}
-
-pub fn exec_program_env(env: &mut Env, program: Program) -> Result<RunResult, Diagnostic> {
-    let mut outputs = Vec::new();
     let mut stdout = Vec::new();
+    let mut graphics = crate::graphics::GraphicsState::default();
+    let mut io = ExecIo {
+        stdout: &mut stdout,
+        graphics: &mut graphics,
+        cancel: None,
+    };
+    let mut outputs = Vec::new();
     for stmt in program.statements {
-        if let Some(out) = exec_statement(env, stmt, &mut stdout)? {
+        if let Some(out) = exec_statement(env, stmt, &mut io)? {
             outputs.push(out);
         }
     }
@@ -89,13 +232,38 @@ pub fn exec_program_env(env: &mut Env, program: Program) -> Result<RunResult, Di
         env: env.clone(),
         outputs,
         stdout,
+        figures: graphics.figures,
+        interrupted: false,
+    })
+}
+
+pub fn exec_program_env(env: &mut Env, program: Program) -> Result<RunResult, Diagnostic> {
+    let mut outputs = Vec::new();
+    let mut stdout = Vec::new();
+    let mut graphics = crate::graphics::GraphicsState::default();
+    let mut io = ExecIo {
+        stdout: &mut stdout,
+        graphics: &mut graphics,
+        cancel: None,
+    };
+    for stmt in program.statements {
+        if let Some(out) = exec_statement(env, stmt, &mut io)? {
+            outputs.push(out);
+        }
+    }
+    Ok(RunResult {
+        env: env.clone(),
+        outputs,
+        stdout,
+        figures: graphics.figures,
+        interrupted: false,
     })
 }
 
 fn exec_statement(
     env: &mut Env,
     stmt: Stmt,
-    stdout: &mut Vec<String>,
+    io: &mut ExecIo<'_>,
 ) -> Result<Option<StatementOutput>, Diagnostic> {
     match stmt {
         Stmt::Assignment {
@@ -104,7 +272,7 @@ fn exec_statement(
             suppress_output,
             span,
         } => {
-            let value = eval_expr(env, &value, stdout)?;
+            let value = eval_expr(env, &value, io)?;
             match &target {
                 AssignTarget::Ident(name, _) => {
                     env.set(name.clone(), value.clone());
@@ -122,7 +290,7 @@ fn exec_statement(
                     indices,
                     span: _,
                 } => {
-                    assign_index(env, name, indices.clone(), value, span, stdout)?;
+                    assign_index(env, name, indices.clone(), value, span, io)?;
                     Ok(None)
                 }
             }
@@ -132,7 +300,7 @@ fn exec_statement(
             suppress_output,
             ..
         } => {
-            let value = eval_expr(env, &expr, stdout)?;
+            let value = eval_expr(env, &expr, io)?;
             if suppress_output {
                 Ok(None)
             } else {
@@ -149,7 +317,7 @@ fn assign_index(
     indices: Vec<Expr>,
     value: Value,
     span: Span,
-    stdout: &mut Vec<String>,
+    io: &mut ExecIo<'_>,
 ) -> Result<(), Diagnostic> {
     let span = Some(span);
     let existing = env
@@ -162,7 +330,7 @@ fn assign_index(
     match indices.len() {
         1 => {
             // Linear indexing is column-major.
-            let k = index_value(&indices[0], env, stdout)?;
+            let k = index_value(&indices[0], env, io)?;
             let n = existing.rows * existing.cols;
             let grown = if k <= n {
                 let mut m = existing;
@@ -191,8 +359,8 @@ fn assign_index(
             Ok(())
         }
         2 => {
-            let i = index_value(&indices[0], env, stdout)?;
-            let j = index_value(&indices[1], env, stdout)?;
+            let i = index_value(&indices[0], env, io)?;
+            let j = index_value(&indices[1], env, io)?;
             let v = value_num.data[0];
             let mut grown = existing;
             if i > grown.rows || j > grown.cols {
@@ -230,7 +398,7 @@ fn call_or_index(
     name: &str,
     args: &[Expr],
     span: Span,
-    stdout: &mut Vec<String>,
+    io: &mut ExecIo<'_>,
 ) -> Result<Value, Diagnostic> {
     if let Some(var) = env.get(name).cloned() {
         if args.is_empty() {
@@ -239,14 +407,14 @@ fn call_or_index(
         let m = coerce_matrix(var, Some(span))?;
         match args.len() {
             1 => {
-                let k = index_value(&args[0], env, stdout)?;
+                let k = index_value(&args[0], env, io)?;
                 Ok(Value::Matrix(DenseMatrix::scalar(
                     m.get_linear(k, Some(span))?,
                 )))
             }
             2 => {
-                let i = index_value(&args[0], env, stdout)?;
-                let j = index_value(&args[1], env, stdout)?;
+                let i = index_value(&args[0], env, io)?;
+                let j = index_value(&args[1], env, io)?;
                 Ok(Value::Matrix(DenseMatrix::scalar(
                     m.get_2d(i, j, Some(span))?,
                 )))
@@ -257,14 +425,14 @@ fn call_or_index(
             )),
         }
     } else {
-        crate::builtins::call_builtin(name, args, env, span, stdout)
+        crate::builtins::call_builtin(name, args, env, span, io)
     }
 }
 
 /// Evaluate an index expression; must be a positive integer.
-fn index_value(expr: &Expr, env: &Env, stdout: &mut Vec<String>) -> Result<usize, Diagnostic> {
+fn index_value(expr: &Expr, env: &Env, io: &mut ExecIo<'_>) -> Result<usize, Diagnostic> {
     let span = Some(expr.span());
-    let v = eval_expr(env, expr, stdout)?;
+    let v = eval_expr(env, expr, io)?;
     let m = coerce_matrix(v, span)?;
     if !m.is_scalar() {
         return Err(Diagnostic::error(
@@ -293,7 +461,15 @@ fn coerce_matrix(v: Value, span: Option<Span>) -> Result<DenseMatrix, Diagnostic
     }
 }
 
-pub fn eval_expr(env: &Env, expr: &Expr, stdout: &mut Vec<String>) -> Result<Value, Diagnostic> {
+pub fn coerce_matrix_pub(v: Value, span: Option<Span>) -> Result<DenseMatrix, Diagnostic> {
+    coerce_matrix(v, span)
+}
+
+pub fn eval_expr_pub(env: &Env, expr: &Expr, io: &mut ExecIo<'_>) -> Result<Value, Diagnostic> {
+    eval_expr(env, expr, io)
+}
+
+pub fn eval_expr(env: &Env, expr: &Expr, io: &mut ExecIo<'_>) -> Result<Value, Diagnostic> {
     let span = Some(expr.span());
     match expr {
         Expr::Number(n, _) => Ok(Value::Matrix(DenseMatrix::scalar(*n))),
@@ -301,15 +477,12 @@ pub fn eval_expr(env: &Env, expr: &Expr, stdout: &mut Vec<String>) -> Result<Val
         Expr::Variable(name, _) => match env.get(name) {
             Some(v) => Ok(v.clone()),
             None => {
-                // Zero-argument constants (e.g. `pi`) work as bare identifiers.
-                if crate::builtins::is_known_constant(name) {
-                    crate::builtins::call_builtin(name, &[], env, span.unwrap_or_default(), stdout)
-                } else {
-                    Err(Diagnostic::error(
-                        format!("Unrecognized function or variable '{}'.", name),
-                        span,
-                    ))
-                }
+                // An unknown bare identifier is treated as a zero-argument
+                // builtin call (e.g. `pi`, `figure`, `clf`, `close`).
+                // Unknown names fall into the builtin dispatcher's own
+                // "Unrecognized function or variable" message, so the error
+                // text for undefined variables is unchanged.
+                crate::builtins::call_builtin(name, &[], env, expr.span(), io)
             }
         },
         Expr::MatrixLit(rows, _) => {
@@ -317,7 +490,7 @@ pub fn eval_expr(env: &Env, expr: &Expr, stdout: &mut Vec<String>) -> Result<Val
             for row in rows {
                 let mut out_row = Vec::with_capacity(row.len());
                 for element in row {
-                    match eval_expr(env, element, stdout)? {
+                    match eval_expr(env, element, io)? {
                         Value::Matrix(m) => {
                             if !m.is_scalar() {
                                 return Err(Diagnostic::error(
@@ -343,14 +516,14 @@ pub fn eval_expr(env: &Env, expr: &Expr, stdout: &mut Vec<String>) -> Result<Val
         Expr::Binary {
             op, left, right, ..
         } => {
-            let l = eval_expr(env, left, stdout)?;
-            let r = eval_expr(env, right, stdout)?;
+            let l = eval_expr(env, left, io)?;
+            let r = eval_expr(env, right, io)?;
             apply_binary(*op, &l, &r, span)
         }
         Expr::Unary {
             op, expr: inner, ..
         } => {
-            let v = eval_expr(env, inner, stdout)?;
+            let v = eval_expr(env, inner, io)?;
             let m = coerce_matrix(v, span)?;
             let result = match op {
                 UnaryOp::Pos => m,
@@ -358,25 +531,13 @@ pub fn eval_expr(env: &Env, expr: &Expr, stdout: &mut Vec<String>) -> Result<Val
             };
             Ok(Value::Matrix(result))
         }
-        Expr::Call { callee, args, .. } => call_or_index(env, callee, args, expr.span(), stdout),
+        Expr::Call { callee, args, .. } => call_or_index(env, callee, args, expr.span(), io),
         Expr::Transpose { expr: inner, .. } => {
-            let v = eval_expr(env, inner, stdout)?;
+            let v = eval_expr(env, inner, io)?;
             let m = coerce_matrix(v, span)?;
             Ok(Value::Matrix(la::transpose(&m)))
         }
     }
-}
-
-pub fn coerce_matrix_pub(v: Value, span: Option<Span>) -> Result<DenseMatrix, Diagnostic> {
-    coerce_matrix(v, span)
-}
-
-pub fn eval_expr_pub(
-    env: &Env,
-    expr: &Expr,
-    stdout: &mut Vec<String>,
-) -> Result<Value, Diagnostic> {
-    eval_expr(env, expr, stdout)
 }
 
 fn apply_binary(

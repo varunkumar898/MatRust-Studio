@@ -153,6 +153,20 @@ impl DenseMatrix {
         Ok(self.data[r0 * self.cols + c0])
     }
 
+    /// All elements in MATLAB's canonical column-major order.
+    pub fn to_col_major(&self) -> Vec<f64> {
+        if self.rows == 0 || self.cols == 0 {
+            return Vec::new();
+        }
+        let mut out = Vec::with_capacity(self.data.len());
+        for c in 0..self.cols {
+            for r in 0..self.rows {
+                out.push(self.data[r * self.cols + c]);
+            }
+        }
+        out
+    }
+
     /// Format matrix to string in MATLAB disp format
     pub fn format_matlab(&self) -> String {
         if self.rows == 0 || self.cols == 0 {

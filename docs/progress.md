@@ -258,3 +258,37 @@ validation in `crates/runtime/src/arrayfn.rs`, dispatch in `crates/runtime/src/b
   - Bitwise: bitand, bitor, bitxor, bitshift
 - **Verification**: cargo fmt clean; cargo check passes; cargo test --workspace (0 failures); CLI matrix 19 22 / 43 50; desktop builds.
 - **Remaining**: dec2bin/bin2dec/dec2hex/hex2dec, complex number support, factor (number theory), asind/acosd/atand (degree inverse trig).
+
+---
+
+## Batch 7 — Complete Missing Elementary Mathematics Functions (2026-10-22)
+
+- **REA Target Verification**: Inspected `/home/cherry/Downloads/matlab_R2026b_Linux`. Only Network License Manager archives (`Network_License_Manager262_common.zip` 4.2MB, `Network_License_Manager262_glnxa64.zip` 10.2MB) are present. The MATLAB numerical engine is missing from the system. Native reverse engineering remains recorded as blocked; no fabricated evidence IDs or reverse-engineering findings generated.
+- **Base Conversions**:
+  - `dec2bin`: converts non-negative integers to binary text; supports 32-bit two's complement for negative numbers; optional minimum width padding; validates inputs and rejects non-integers.
+  - `bin2dec`: parses binary text/char vectors to double numbers; whitespace trimming; strict radix 2 validation; rejects empty/invalid strings.
+  - `dec2hex`: converts integers to uppercase hexadecimal text; 32-bit two's complement for negative integers; optional width padding; rejects non-integers.
+  - `hex2dec`: parses hex text/char vectors to double numbers; handles optional `0x`/`0X` prefix; case-insensitive; strict validation.
+  - Round-trip tests for `dec2bin` ↔ `bin2dec` and `dec2hex` ↔ `hex2dec` all pass.
+- **Degree Inverse Trigonometry**:
+  - `asind`, `acosd`, `atand`: implemented with degree conversion and elementwise array support.
+  - Domain boundaries (`[-1, 1]` for `asind`/`acosd`), outside-domain NaN return, and infinity handling (`atand(inf) == 90`, `atand(-inf) == -90`) verified.
+- **Prime Factorization**:
+  - `factor`: prime factorization using trial division returning a 1xN row vector of factors; product reconstructs input; `factor(1) == [1]`; non-integers, `<= 0`, non-scalars correctly error.
+- **Edge-Case Fixes & Hardening**:
+  - `nthroot`: correctly computes real roots for negative real inputs with odd n (`nthroot(-8, 3) == -2`); errors on negative input with even n; supports scalar expansion via `la::map_binary`.
+  - `mod` vs `rem`: `mod(x, 0) == x`, `rem(x, 0) == NaN`; sign rules verified (`mod` follows divisor, `rem` follows dividend).
+  - Degree trigonometry: `sind`, `cosd`, `tand` yield exact zeros/ones for integer multiples of 90° and 180°.
+  - `atan2`: verified `atan2(Y, X)` argument ordering; added scalar expansion.
+  - `factorial`: computes in `f64` up to 170 then `Inf`, avoiding 64-bit integer saturation.
+  - `nchoosek`: uses symmetry `min(k, n-k)` and floating-point accumulation to avoid early overflow.
+  - `bitshift`: hardened against shift count overflow (`k >= 64` and `k <= -64` handled safely without panic); 3-arg bit masking supported.
+  - Binary operations (`mod`, `rem`, `gcd`, `lcm`, `atan2`, `hypot`, `bitand`, `bitor`, `bitxor`, `bitshift`): unified under `la::map_binary` with full MATLAB scalar expansion.
+- **Complex Number Architecture**:
+  - Created complete architectural specification in `docs/architecture/complex-numbers.md` detailing interleaved `Complex64` representation, `ComplexDenseMatrix`, scalar equivalence, BLAS/LAPACK ABI alignment, complex arithmetic, comparison rules, transpose semantics (`'` vs `.'`), and phased migration roadmap.
+- **Verification**:
+  - `cargo fmt --check` clean.
+  - `cargo check --workspace` clean (0 warnings).
+  - `cargo test --workspace` all 140+ unit and integration tests pass (33 new tests in `numeric_batch7.rs`).
+  - Desktop `matrust_studio` builds clean.
+  - CLI execution verified via `cargo run -p matlabr_cli -- -e "..."`.

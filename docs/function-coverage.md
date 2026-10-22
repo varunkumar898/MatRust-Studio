@@ -78,24 +78,25 @@ date above; Section 14 records batch updates.
 
 | Name | Status | Implementation | Dependencies | Tests | Limitations | Next action |
 |---|---|---|---|---|---|---|
-| `abs`, `sign` | partial | runtime::builtins (`abs`) | — | compatibility:scalar_math_functions | `abs` done; `sign` missing | add `sign` to same map |
-| `sqrt`, `nthroot(x,n)` | partial | runtime::builtins (`sqrt`) | — | compatibility:scalar_math_functions | `sqrt` real-only (no complex); `nthroot` missing | complex roots after complex type |
-| `exp`, `log`, `log2`, `log10` | partial | runtime::builtins (`exp`,`log`) | — | compatibility:scalar_math_functions | `log2`,`log10` missing | same unary-map path |
-| `power(a,b)` / `.^` | partial | linalg::elementwise_pow | — | matrices:elementwise_power_and_division | f64 powf semantics; no integer-pow rules | integer semantics with integer types |
-| `sin`, `cos`, `tan` | missing | — | — | — | — | unary map |
-| `sind`, `cosd`, `tand` | missing | — | — | — | — | degree wrappers |
-| `asin`, `acos`, `atan`, `atan2(y,x)` | missing | — | — | — | — | domain rules; atan2 quadrant tests |
-| `sinh`, `cosh`, `tanh` | missing | — | — | — | — | unary map |
-| `deg2rad`, `rad2deg` | missing | — | — | — | — | trivial |
-| `hypot(a,b)` | missing | — | — | — | — | IEEE hypot (no overflow) |
-| `floor`, `ceil`, `round`, `fix` | partial | runtime::builtins | — | compatibility:scalar_math_functions | floor/ceil/round done (round = half-away-from-zero); `fix` missing | add `fix` |
-| `mod(a,b)`, `rem(a,b)` | missing | — | — | — | — | sign rules incl. negative operands |
-| `gcd`, `lcm` | missing | — | — | — | — | Euclid; scalar first |
-| `factorial(n)`, `nchoosek(n,k)` | missing | — | — | — | — | overflow/rounding documented |
-| `primes(n)`, `isprime(n)`, `factor(n)` | missing | — | — | — | — | sieve |
-| `real`, `imag`, `conj`, `angle` | missing | — | — | — | needs complex type | after complex type |
-| `bitand`, `bitor`, `bitxor`, `bitshift` | missing | — | — | — | — | i64/u64 lanes |
-| `dec2bin`, `bin2dec`, `dec2hex`, `hex2dec` | missing | — | — | — | — | text round-trips |
+| `abs`, `sign` | partial | runtime::builtins (`abs`) | — | compatibility:scalar_math_functions | `abs` implemented; `sign` planned | add `sign` to unary map |
+| `sqrt`, `nthroot(x,n)` | implemented | runtime::builtins | — | compatibility:scalar_math_functions, language:numeric_batch7:nthroot_* | real-only roots; odd roots of negative numbers supported; even roots of negative numbers error | complex roots after complex type |
+| `exp`, `log`, `log2`, `log10` | implemented | runtime::builtins | — | compatibility:scalar_math_functions | real-valued IEEE-754 semantics | complex log after complex type |
+| `power(a,b)` / `.^` | implemented | linalg::elementwise_pow | — | matrices:elementwise_power_and_division | f64 powf semantics | complex power after complex type |
+| `sin`, `cos`, `tan` | implemented | runtime::builtins | — | language:numeric_batch7 | unary map | — |
+| `sind`, `cosd`, `tand` | implemented | runtime::builtins | — | language:numeric_batch7:exact_degree_trig | exact zeros for multiples of 90/180 | — |
+| `asin`, `acos`, `atan`, `atan2(y,x)` | implemented | runtime::builtins | — | language:numeric_batch7:atan2_* | real domain; atan2 supports scalar expansion | complex inverse trig after complex type |
+| `asind`, `acosd`, `atand` | implemented | runtime::builtins | — | language:numeric_batch7:asind_*, acosd_*, atand_* | degree output; domain boundaries and outside-domain NaN verified | — |
+| `sinh`, `cosh`, `tanh` | implemented | runtime::builtins | — | language:numeric_batch7 | unary map | — |
+| `deg2rad`, `rad2deg` | implemented | runtime::builtins | — | language:numeric_batch7 | unary map | — |
+| `hypot(a,b)` | implemented | runtime::builtins | — | language:numeric_batch7 | IEEE hypot without overflow; scalar expansion supported | — |
+| `floor`, `ceil`, `round`, `fix` | implemented | runtime::builtins | — | compatibility:scalar_math_functions | round = half-away-from-zero; fix = truncate | — |
+| `mod(a,b)`, `rem(a,b)` | implemented | runtime::builtins | — | language:numeric_batch7:mod_vs_rem_* | `mod(x,0)==x`, `rem(x,0)==NaN`; sign conventions preserved | — |
+| `gcd`, `lcm` | implemented | runtime::builtins | — | language:numeric_batch7 | Euclid algorithm; supports scalar expansion | — |
+| `factorial(n)`, `nchoosek(n,k)` | implemented | runtime::builtins | — | language:numeric_batch7:factorial_*, nchoosek_* | float accumulation; nchoosek symmetry min(k,n-k); overflow to Inf at 171 | — |
+| `primes(n)`, `isprime(n)`, `factor(n)` | implemented | runtime::builtins | — | language:numeric_batch7:primes_*, factor_* | sieve for primes; trial division for factor; factor(1)==[1]; product reconstructs input | large integer precision limited to flintmax |
+| `real`, `imag`, `conj`, `angle` | planned | — | — | — | needs complex type | architectural design completed in docs/architecture/complex-numbers.md |
+| `bitand`, `bitor`, `bitxor`, `bitshift` | implemented | runtime::builtins | — | language:numeric_batch7:bitwise_*, bitshift_* | safe shift logic (no panic on shift>=64 or <=-64); 3-arg bitshift width mask | integer type cast |
+| `dec2bin`, `bin2dec`, `dec2hex`, `hex2dec` | implemented | runtime::builtins | — | language:numeric_batch7:dec2bin_*, bin2dec_*, dec2hex_*, hex2dec_* | 32-bit two's complement for negative inputs; width padding; radix checking | multi-row character matrix representation |
 
 ## 4. Statistics (11)
 

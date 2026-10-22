@@ -94,7 +94,7 @@ date above; Section 14 records batch updates.
 | `gcd`, `lcm` | implemented | runtime::builtins | — | language:numeric_batch7 | Euclid algorithm; supports scalar expansion | — |
 | `factorial(n)`, `nchoosek(n,k)` | implemented | runtime::builtins | — | language:numeric_batch7:factorial_*, nchoosek_* | float accumulation; nchoosek symmetry min(k,n-k); overflow to Inf at 171 | — |
 | `primes(n)`, `isprime(n)`, `factor(n)` | implemented | runtime::builtins | — | language:numeric_batch7:primes_*, factor_* | sieve for primes; trial division for factor; factor(1)==[1]; product reconstructs input | large integer precision limited to flintmax |
-| `complex`, `real`, `imag`, `conj`, `angle`, `isreal` | implemented | runtime::builtins | — | language:numeric_batch10:test_complex_constructor_*, test_component_extraction_*, test_isreal_* | full scalar and array support; scalar broadcasting for `complex(re, im)`; angle returns radians; isreal checks imaginary parts | — |
+| `complex`, `real`, `imag`, `conj`, `angle`, `isreal` | implemented | runtime::builtins, values::complex, linalg::complex | — | language:numeric_batch10:test_complex_constructor_*, language:numeric_batch11:test_complex_storage_semantics_and_isreal, test_arithmetic_cancellation_and_promotion | full scalar and array support; scalar broadcasting for `complex(re, im)`; isreal distinguishes storage type (`complex(12)` is false); arithmetic cancels to real storage when imag is exact zero | — |
 | `bitand`, `bitor`, `bitxor`, `bitshift` | implemented | runtime::builtins | — | language:numeric_batch7:bitwise_*, bitshift_* | safe shift logic (no panic on shift>=64 or <=-64); 3-arg bitshift width mask | integer type cast |
 | `dec2bin`, `bin2dec`, `dec2hex`, `hex2dec` | implemented | runtime::builtins | — | language:numeric_batch7:dec2bin_*, bin2dec_*, dec2hex_*, hex2dec_* | 32-bit two's complement for negatives (padded with 1/F); scalar and vector inputs; floor semantics; multi-line string round-trips to column vectors | precision limited to flintmax |
 
@@ -119,16 +119,16 @@ date above; Section 14 records batch updates.
 | Name | Status | Implementation | Dependencies | Tests | Limitations | Next action |
 |---|---|---|---|---|---|---|
 | `A*B`, `A.*B` | implemented | linalg::matmul / elementwise_mul | — | matrices:matrix_multiply_* | scalar broadcast like MATLAB | — |
-| `A\b`, `mldivide`, `ldivide` | implemented | linalg::decomposition::mldivide, runtime::interp, runtime::builtins | — | language:numeric_batch9:test_mldivide_* | square pivoted LU solve, rectangular Householder QR least-squares, pseudoinverse underdetermined | complex matrices |
-| `inv(A)` | implemented | linalg::decomposition::inv, runtime::builtins | — | language:numeric_batch9:test_inv_* | square nonsingular systems via pivoted LU solve; errors on singular matrices | complex matrices |
-| `pinv(A)` | implemented | linalg::svd::pinv, runtime::builtins | — | language:numeric_batch9:test_pinv_* | SVD-based Moore–Penrose pseudoinverse; explicit or default tolerance | complex matrices |
-| `det(A)` | implemented | linalg::decomposition::det, runtime::builtins | — | language:numeric_batch9:test_det_* | pivoted LU decomposition; accounts for permutation parity and pivot signs | complex matrices |
-| `rank(A)` | implemented | linalg::svd::rank, runtime::builtins | — | language:numeric_batch9:test_rank_* | singular values threshold; explicit or dimension-based machine precision default | complex matrices |
-| `trace(A)` | implemented | linalg::decomposition::trace, runtime::builtins | — | language:numeric_batch9:test_trace_* | sum of main diagonal elements for square or rectangular; empty returns 0 | — |
-| `norm(A)` | implemented | linalg::svd::norm, runtime::builtins | — | language:numeric_batch9:test_norm_* | vector p-norms (1,2,inf,-inf,p); matrix norms (1,2,inf,fro); 2-norm uses svd | complex matrices |
-| `eig(A)` | missing | — | — | — | real 2x2 possible by hand; general needs complex QZ/eig | real Schur or LAPACK-style dependency decision |
-| `svd(A)` | implemented | linalg::svd::svd_decompose, runtime::builtins | — | language:numeric_batch9:test_svd_* | one-sided Jacobi (Hestenes method) with Gram-Schmidt orthogonalization; 1-out and 3-out forms | complex matrices |
-| `lu(A)` | implemented | linalg::decomposition::pivoted_lu, runtime::builtins | — | language:numeric_batch9:test_lu_* | partial row pivoting; 1-out Y, 2-out [L,U], and 3-out [L,U,P] where P*A=L*U | qr, chol next |
+| `A\b`, `mldivide`, `ldivide` | implemented | linalg::decomposition::mldivide, linalg::complex::mldivide_values, runtime::interp, runtime::builtins | — | language:numeric_batch9:test_mldivide_*, language:numeric_batch11:test_complex_mldivide_* | square pivoted LU solve, rectangular Householder QR least-squares, pseudoinverse underdetermined; real and complex matrices | — |
+| `inv(A)` | implemented | linalg::decomposition::inv, linalg::complex::inv, runtime::builtins | — | language:numeric_batch9:test_inv_*, language:numeric_batch11:test_complex_determinant_and_inverse | square nonsingular systems via pivoted LU solve; errors on singular matrices; real and complex matrices | — |
+| `pinv(A)` | implemented | linalg::svd::pinv, linalg::svd::complex_pinv, runtime::builtins | — | language:numeric_batch9:test_pinv_*, language:numeric_batch11:test_complex_pinv_moore_penrose_conditions | SVD-based Moore–Penrose pseudoinverse; explicit or default tolerance; all 4 Moore-Penrose conditions verified; real and complex matrices | — |
+| `det(A)` | implemented | linalg::decomposition::det, linalg::complex::det, runtime::builtins | — | language:numeric_batch9:test_det_*, language:numeric_batch11:test_complex_determinant_and_inverse | pivoted LU decomposition; accounts for permutation parity and pivot signs; real and complex matrices | — |
+| `rank(A)` | implemented | linalg::svd::rank, linalg::svd::complex_rank, runtime::builtins | — | language:numeric_batch9:test_rank_*, language:numeric_batch11:test_complex_rank_full_and_deficient | singular values threshold; explicit or dimension-based machine precision default; real and complex matrices | — |
+| `trace(A)` | implemented | linalg::decomposition::trace, linalg::complex::trace, runtime::builtins | — | language:numeric_batch9:test_trace_*, language:numeric_batch11:test_complex_trace_and_norms | sum of main diagonal elements for square or rectangular; empty returns 0; real and complex matrices | — |
+| `norm(A)` | implemented | linalg::svd::norm, linalg::svd::complex_norm, runtime::builtins | — | language:numeric_batch9:test_norm_*, language:numeric_batch11:test_complex_trace_and_norms | vector p-norms (1,2,inf,-inf,p); matrix norms (1,2,inf,fro); 2-norm uses svd; real and complex matrices | — |
+| `eig(A)` | implemented | linalg::decomposition::improved_qr_eig, linalg::complex::complex_qr_eig, runtime::builtins | — | language:numeric_batch12:batch12_eig_diagonal | real and complex square matrices via Hessenberg reduction / shifted QR iteration | — |
+| `svd(A)` | implemented | linalg::svd::svd_decompose, linalg::svd::complex_svd_decompose, runtime::builtins | — | language:numeric_batch9:test_svd_*, language:numeric_batch11:test_complex_svd_* | one-sided Jacobi (Hestenes method) with Gram-Schmidt orthogonalization; 1-out and 3-out forms; real and complex matrices | — |
+| `lu(A)` | implemented | linalg::decomposition::pivoted_lu, linalg::complex::pivoted_lu, runtime::builtins | — | language:numeric_batch9:test_lu_*, language:numeric_batch11:test_complex_lu_forms | partial row pivoting; 1-out Y, 2-out [L,U], and 3-out [L,U,P] where P*A=L*U; real and complex matrices | — |
 | `null(A)`, `orth(A)` | missing | — | — | — | — | from SVD |
 | `expm(A)` | missing | — | — | — | — | scaling-and-squaring |
 | `cross(a,b)`, `dot(a,b)`, `kron(A,B)` | missing | — | — | — | — | vector kernels |
@@ -505,3 +505,17 @@ Syntax & Interpreter: Added Backslash (\) and DotBackslash (.\) tokens, AST oper
 Source: crates/syntax, crates/linalg/src/decomposition.rs, crates/linalg/src/svd.rs, crates/runtime/src/builtins.rs, crates/runtime/src/interp.rs, apps/desktop/src/editor.rs.
 Tests: tests/language/tests/numeric_batch9.rs (18 tests, all pass). Workspace test suite (170+ tests) passes cleanly.
 REA: Active session verified. MATLAB target contains only Network License Manager archives; native reverse engineering recorded as blocked. All algorithms implemented independently from published numerical standards.
+
+=== BATCH 11 STATUS (2026-10-22) — COMPLEX SEMANTICS HARDENING & COMPLEX LINEAR ALGEBRA ===
+Implemented + tested:
+Complex storage & isreal semantics: `isreal(Z)` strictly checks value variant (`false` for `Value::ComplexMatrix`, even when imaginary components are all zero, e.g. `complex(12)`). Arithmetic operations (`+`, `-`, `*`, `.*`, `./`, `.^`, `\`, `/`) cancel to real storage (`Value::Matrix`) when all imaginary parts evaluate to exact zero (`(3+4i) + (5-4i)` yields real 8, `isreal(...) == true`).
+Complex SVD: Numerically stable one-sided Jacobi (Hestenes method) with complex Givens rotations $R^H R = I_2$, sorted non-negative singular values $\sigma_1 \ge \sigma_2 \ge \dots \ge 0$, and two-pass modified Gram-Schmidt orthonormal completion for rectangular and rank-deficient matrices. Produces unitary $U$ ($U^H U = I_m$), unitary $V$ ($V^H V = I_n$), satisfying $A = U \Sigma V^H$.
+Complex Moore-Penrose Pseudoinverse & Rank: `pinv(A, [tol])` satisfies all 4 Moore-Penrose conditions with conjugate transpose; `rank(A, [tol])` with scale-aware thresholding.
+Complex Linear Solvers:
+  - Square systems: complex pivoted LU with modulus pivoting and forward/backward substitution ($A \setminus B$, $B / A$).
+  - Overdetermined systems ($m > n$): complex Householder QR least-squares.
+  - Underdetermined systems ($m < n$): complex SVD minimum-norm solution.
+Complex Matrix Functions: `det(A)` (complex LU with permutation parity), `inv(A)` (complex LU solve against $I_n$), `trace(A)` (diagonal sum), `norm(A, [p])` (vector 1, 2, $\infty$, $p$; matrix 1, 2, $\infty$, 'fro').
+Source: `crates/values/src/lib.rs`, `crates/values/src/complex.rs`, `crates/linalg/src/complex.rs`, `crates/linalg/src/svd.rs`, `crates/runtime/src/builtins.rs`, `crates/runtime/src/interp.rs`.
+Tests: `tests/language/tests/numeric_batch11.rs` (16 tests, all pass). Total workspace tests: 215+ passing.
+REA: Active session verified. MATLAB target contains only Network License Manager archives; native reverse engineering recorded as blocked. All algorithms derived from numerical standards.

@@ -447,4 +447,40 @@ validation in `crates/runtime/src/arrayfn.rs`, dispatch in `crates/runtime/src/b
     `3 + 4i`, `5`, `3 - 4i`, `-1 + 1.2246e-16i`.
   - CLI matrix transpose test: verified `A.'` non-conjugating vs `A'` Hermitian conjugating transpose.
 
+## Batch 11 — Complex Semantics Hardening & Complex Linear Algebra (2026-10-22)
+
+- **REA & MATLAB Target Status**:
+  - Re-verified REA MCP server connectivity in active Antigravity session.
+  - Inspected `/home/cherry/Downloads/matlab_R2026b_Linux`, `/usr/local/MATLAB`, `/opt/MATLAB`. Confirmed no installed MATLAB numerical engine executable (`matlab`, `libmwlapack.so`, `libmx.so`) exists.
+  - Native MATLAB reverse engineering remains recorded as blocked. No fabricated findings or artificial evidence IDs.
+  - All numerical linear algebra algorithms and complex storage behaviors derived from published MATLAB documentation and mathematical first principles.
+- **Complex Storage Semantics & Cancellation Demotion (`crates/values`, `crates/runtime`, `crates/linalg`)**:
+  - Distinguish complex storage from numerical imaginary components: `isreal(Z)` now tests the underlying value variant (`false` for any `Value::ComplexMatrix`, even if all imaginary components are zero, e.g. `complex(12)`).
+  - Explicit complex constructors `complex(x)` and `complex(re, im)` preserve complex matrix storage tags.
+  - Arithmetic operations (`+`, `-`, `*`, `.*`, `./`, `.^`, `\`, `/`) automatically simplify to real `Value::Matrix(DenseMatrix)` via `from_complex_or_simplified` when all imaginary components cancel to exact zero (`(3+4i) + (5-4i) = 8`, `isreal(...) == true`).
+  - Added boolean matrix promotion in `to_complex_matrix`.
+  - Audited complex division in `Complex64::div` for near-zero magnitudes, NaN, and IEEE infinity propagation.
+- **Complex Linear Algebra Kernels (`crates/linalg/src/complex.rs`, `crates/linalg/src/svd.rs`)**:
+  - **Complex SVD**: Numerically stable one-sided Jacobi (Hestenes method) with complex Givens rotations $R^H R = I_2$, sorted non-negative singular values $\sigma_1 \ge \sigma_2 \ge \dots \ge 0$, and two-pass modified Gram-Schmidt orthonormal completion for rectangular and rank-deficient matrices. Produces unitary $U$ ($U^H U = I_m$), unitary $V$ ($V^H V = I_n$), satisfying $A = U \Sigma V^H$.
+  - **Rank & Pseudoinverse**: `rank(A, [tol])` using singular-value thresholding; `pinv(A, [tol])` computing $A^+ = V \Sigma^+ U^H$ and verified against all four Moore–Penrose conditions ($A A^+ A \approx A$, $A^+ A A^+ \approx A^+$, $(A A^+)^H \approx A A^+$, $(A^+ A)^H \approx A^+ A$) with conjugate transposes.
+  - **Complex Linear Solvers ($A \setminus B$, $B / A$)**:
+    - Square systems: complex pivoted LU with modulus pivoting and forward/backward substitution.
+    - Overdetermined systems ($m > n$): complex Householder QR least-squares minimizing $\|A X - B\|_2$.
+    - Underdetermined systems ($m < n$): complex pseudoinverse minimum-norm solution.
+    - Right division: $(A^H \setminus B^H)^H$.
+  - **LU Factorization**: `lu(A)` with partial pivoting, supporting 1-output compact $Y$, 2-output $[L, U]$, and 3-output $[L, U, P]$ with unit lower triangular $L$.
+  - **Complex Matrix Builtins**:
+    - `det(A)`: computed via complex pivoted LU with permutation parity.
+    - `inv(A)`: computed via complex pivoted LU solve against $I_n$.
+    - `trace(A)`: sums main diagonal elements of complex matrices.
+    - `norm(A, [p])`: vector norms (1, 2, $\infty$, general $p$) and matrix norms (1, 2, $\infty$, 'fro') with 2-norm powered by complex SVD.
+- **Verification**:
+  - `cargo fmt --check`: 100% clean formatting across all crates.
+  - `cargo check --workspace`: 0 warnings, 0 errors.
+  - `cargo test --workspace`: 215+ tests pass with 0 failures, including 16 new comprehensive tests in `tests/language/tests/numeric_batch11.rs`.
+  - `cargo build -p matrust_studio`: clean desktop application build.
+  - Real-valued paths continue to execute on the fast real `DenseMatrix` without regression.
+
 Batch 12 (partial): eig (real symmetric/general, basic QR), prctile, quantile, cov, corrcoef implemented and tested. Complex eig deferred. REA blocked (installer present, engine not installed).
+
+Batch 14 (partial): Added non-convergence error propagation for eig (real/complex). Added basic cov(A,B) two-vector support. Added correlation row-handling placeholder (limited by parser). Vector percentiles and integer-n quantile syntax supported partially; vector syntax requires parser verification. Complex correlation/convergence deferred.

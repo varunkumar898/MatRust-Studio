@@ -102,3 +102,13 @@ R2026b behavior this row tracks; this matrix makes no claim beyond that.
 | Indexing and growth | implemented | Linear and 2-D indexing on complex matrices; out-of-bounds assignment growth with zero-filled complex numbers; promotion from real to complex on element assignment |
 | Desktop & CLI integration | implemented | Complex matrix display formatting (`format_matlab`), desktop workspace viewer grid and inspector support, syntax highlighter for complex builtins |
 
+## Batch 11 additions (2026-10-22)
+| Feature | Status | Notes |
+|---|---|---|
+| Complex storage semantics (`isreal`) | implemented | `isreal(Z)` returns `false` for `Value::ComplexMatrix` regardless of whether imaginary parts are zero (`isreal(complex(12)) == false`); returns `true` for `Value::Matrix` |
+| Arithmetic demotion / cancellation | implemented | Arithmetic operations (`+`, `-`, `*`, `.*`, `./`, `.^`, `\`, `/`) cancel to real storage (`Value::Matrix`) when all imaginary parts evaluate to exact zero (`(3+4i) + (5-4i) = 8`, `isreal == true`) |
+| Complex SVD | implemented | One-sided Jacobi (Hestenes method) with complex Givens rotations $R^H R = I_2$, non-negative descending singular values, unitary $U, V$ ($U^H U = I, V^H V = I$), $A = U \Sigma V^H$; supports square, rectangular, and rank-deficient matrices |
+| Complex rank & pseudoinverse | implemented | `rank(A, [tol])` with singular-value thresholding; `pinv(A, [tol])` satisfying all 4 Moore-Penrose conditions with conjugate transpose $A A^+ A \approx A$, $A^+ A A^+ \approx A^+$, $(A A^+)^H \approx A A^+$, $(A^+ A)^H \approx A^+ A$ |
+| Complex linear solvers | implemented | Square systems solved via complex pivoted LU; overdetermined least-squares via complex Householder QR; underdetermined via complex pseudoinverse; right division via $(A^H \setminus B^H)^H$ |
+| Complex LU factorization | implemented | Partial row pivoting using element modulus; 1-output $Y$, 2-output $[L, U]$, and 3-output $[L, U, P]$ with unit lower triangular $L$ |
+| Complex det, inv, trace, norm | implemented | `det(A)` via complex LU with permutation parity; `inv(A)` via complex LU solve on $I_n$; `trace(A)` summing complex diagonal; `norm(A, [p])` for complex vector (1, 2, $\infty$, $p$) and matrix (1, 2, $\infty$, 'fro') |

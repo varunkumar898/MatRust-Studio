@@ -800,14 +800,53 @@ pub fn call_builtin(
                 ));
             }
             let v = eval_expr_pub(env, &args[0], io)?;
-            let pct = scalar_arg(&args[1..2], env, io, span, "prctile")?;
-            let d = if args.len() > 2 {
-                Some(scalar_arg(&args[2..3], env, io, span, "prctile")? as usize)
+            let a = coerce_matrix_pub(v, span_op)?;
+            let pct_vec: Option<Vec<f64>> = if args.len() >= 2 {
+                let ev = eval_expr_pub(env, &args[1], io)?;
+                match ev {
+                    Value::Matrix(m) => {
+                        if m.as_scalar().is_some() {
+                            None
+                        } else {
+                            Some(m.data.clone())
+                        }
+                    }
+                    _ => None,
+                }
             } else {
                 None
             };
-            let a = coerce_matrix_pub(v, span_op)?;
-            let res = la::stats::prctile(&a, pct, d);
+            let pct = if args.len() >= 2 {
+                let ev = eval_expr_pub(env, &args[1], io)?;
+                match ev {
+                    Value::Matrix(m) => {
+                        if let Some(s) = m.as_scalar() {
+                            s
+                        } else if !m.data.is_empty() {
+                            m.data[0]
+                        } else {
+                            50.0
+                        }
+                    }
+                    _ => scalar_arg(&args[1..2], env, io, span, "prctile")?,
+                }
+            } else {
+                50.0
+            };
+            let d = if args.len() > 2 {
+                let ev = eval_expr_pub(env, &args[2], io)?;
+                match ev {
+                    Value::Matrix(m) => Some(m.as_scalar().map(|x| x as usize).unwrap_or(1)),
+                    _ => Some(scalar_arg(&args[2..3], env, io, span, "prctile")? as usize),
+                }
+            } else {
+                None
+            };
+            let res = if let Some(vec_pct) = pct_vec {
+                la::stats::prctile_multi(&a, &vec_pct, d)
+            } else {
+                la::stats::prctile(&a, pct, d)
+            };
             Ok(Value::Matrix(res))
         }
         "quantile" => {
@@ -818,14 +857,67 @@ pub fn call_builtin(
                 ));
             }
             let v = eval_expr_pub(env, &args[0], io)?;
-            let p = scalar_arg(&args[1..2], env, io, span, "quantile")?;
+            let p = if args.len() >= 2 {
+                let ev = eval_expr_pub(env, &args[1], io)?;
+                match ev {
+                    Value::Matrix(m) => {
+                        if let Some(s) = m.as_scalar() {
+                            s
+                        } else if !m.data.is_empty() {
+                            m.data[0]
+                        } else {
+                            0.5
+                        }
+                    }
+                    _ => scalar_arg(&args[1..2], env, io, span, "quantile")?,
+                }
+            } else {
+                0.5
+            };
             let d = if args.len() > 2 {
-                Some(scalar_arg(&args[2..3], env, io, span, "quantile")? as usize)
+                let ev = eval_expr_pub(env, &args[2], io)?;
+                match ev {
+                    Value::Matrix(m) => Some(m.as_scalar().map(|x| x as usize).unwrap_or(1)),
+                    _ => Some(scalar_arg(&args[2..3], env, io, span, "quantile")? as usize),
+                }
             } else {
                 None
             };
             let a = coerce_matrix_pub(v, span_op)?;
-            let res = la::stats::quantile_matrix(&a, p, d);
+            let p_vec: Option<Vec<f64>> = if args.len() >= 2 {
+                let ev = eval_expr_pub(env, &args[1], io)?;
+                match ev {
+                    Value::Matrix(m) => {
+                        if m.as_scalar().is_some() {
+                            None
+                        } else {
+                            Some(m.data.clone())
+                        }
+                    }
+                    _ => None,
+                }
+            } else {
+                None
+            };
+            let res = if let Some(probs) = p_vec {
+                // Integer-count form check: if second arg is scalar int >1, generate probs
+                if probs.len() == 1 {
+                    let s = probs[0];
+                    if s > 1.0 && s.fract() == 0.0 {
+                        let n = s as usize;
+                        let gen = (1..=n)
+                            .map(|k| k as f64 / (n as f64 + 1.0))
+                            .collect::<Vec<f64>>();
+                        la::stats::quantile_multi(&a, &gen, d)
+                    } else {
+                        la::stats::quantile_multi(&a, &probs, d)
+                    }
+                } else {
+                    la::stats::quantile_multi(&a, &probs, d)
+                }
+            } else {
+                la::stats::quantile_matrix(&a, p, d)
+            };
             Ok(Value::Matrix(res))
         }
         "cov" => {
@@ -2593,4 +2685,43 @@ fn scalar_expr(
     m.as_scalar().ok_or_else(|| {
         Diagnostic::error(format!("{} expects a scalar argument.", name), Some(span))
     })
+}
+/// Reusable argument extraction: returns scalar if scalar matrix, else matrix data.
+#[allow(dead_code)]
+fn numeric_arg(
+    args: &[Expr],
+    env: &Env,
+    io: &mut ExecIo,
+    span: Span,
+    name: &str,
+    arg_idx: usize,
+) -> Result<(f64, Option<Vec<f64>>), Diagnostic> {
+    if args.len() <= arg_idx {
+        return Err(Diagnostic::error(
+            format!("{} expects argument at position {}.", name, arg_idx + 1),
+            Some(span),
+        ));
+    }
+    let v = eval_expr_pub(env, &args[arg_idx], io)?;
+    match v {
+        Value::Matrix(m) => {
+            if let Some(s) = m.as_scalar() {
+                Ok((s, None))
+            } else {
+                Ok((f64::NAN, Some(m.data.clone())))
+            }
+        }
+        Value::ComplexMatrix(_) => Err(Diagnostic::error(
+            format!("{}: complex arrays not supported for this argument.", name),
+            Some(span),
+        )),
+        Value::String(_) => Err(Diagnostic::error(
+            format!("{} expects a numeric argument.", name),
+            Some(span),
+        )),
+        Value::Boolean(_) => Err(Diagnostic::error(
+            format!("{} expects a numeric argument.", name),
+            Some(span),
+        )),
+    }
 }

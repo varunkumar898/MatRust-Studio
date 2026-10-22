@@ -694,8 +694,14 @@ fn hessenberg_reduce(a: &DenseMatrix) -> DenseMatrix {
             norm_sq += h.data[i * n + k].powi(2);
         }
         let norm = norm_sq.sqrt();
-        if norm < 1e-15 { continue; }
-        let sign = if h.data[(k + 1) * n + k] >= 0.0 { 1.0 } else { -1.0 };
+        if norm < 1e-15 {
+            continue;
+        }
+        let sign = if h.data[(k + 1) * n + k] >= 0.0 {
+            1.0
+        } else {
+            -1.0
+        };
         let first = h.data[(k + 1) * n + k] + sign * norm;
         let mut v = vec![0.0; n];
         for i in (k + 1)..n {
@@ -704,7 +710,9 @@ fn hessenberg_reduce(a: &DenseMatrix) -> DenseMatrix {
         v[k + 1] = first;
         let v_norm_sq = v.iter().map(|&x| x * x).sum::<f64>();
         let v_norm = v_norm_sq.sqrt();
-        if v_norm < 1e-15 { continue; }
+        if v_norm < 1e-15 {
+            continue;
+        }
         // Apply similarity transform: H = (I - 2 vv^T/vv^T) H (I - 2 vv^T/vv^T)
         // First apply from left (to rows)
         for j in k..n {
@@ -741,7 +749,10 @@ fn hessenberg_reduce(a: &DenseMatrix) -> DenseMatrix {
 }
 
 /// Shifted QR iteration on real Hessenberg matrix.
-fn qr_shift_eig(h: &DenseMatrix, span: Option<Span>) -> Result<(DenseMatrix, DenseMatrix), Diagnostic> {
+fn qr_shift_eig(
+    h: &DenseMatrix,
+    span: Option<Span>,
+) -> Result<(DenseMatrix, DenseMatrix), Diagnostic> {
     let n = h.rows;
     let mut m = h.clone();
     let mut v = DenseMatrix::eye(n);
@@ -753,7 +764,9 @@ fn qr_shift_eig(h: &DenseMatrix, span: Option<Span>) -> Result<(DenseMatrix, Den
         let a_nm = m.data[(n - 1) * n + (n - 2)];
         let a_mm = m.data[(n - 2) * n + (n - 2)];
         let delta = (a_mm - a_nn) / 2.0;
-        let shift = a_nn - (delta.signum() * delta.abs().sqrt() / (delta.abs() + (delta * delta + a_nm * a_nm).sqrt()));
+        let shift = a_nn
+            - (delta.signum() * delta.abs().sqrt()
+                / (delta.abs() + (delta * delta + a_nm * a_nm).sqrt()));
         // Subtract shift from diagonal
         for i in 0..n {
             m.data[i * n + i] -= shift;
@@ -763,7 +776,9 @@ fn qr_shift_eig(h: &DenseMatrix, span: Option<Span>) -> Result<(DenseMatrix, Den
             let a = m.data[k * n + k];
             let b = m.data[(k + 1) * n + k];
             let r = (a * a + b * b).sqrt();
-            if r < 1e-15 { continue; }
+            if r < 1e-15 {
+                continue;
+            }
             let c = a / r;
             let s = b / r;
             // Apply to rows k and k+1
@@ -802,6 +817,20 @@ fn qr_shift_eig(h: &DenseMatrix, span: Option<Span>) -> Result<(DenseMatrix, Den
             break;
         }
     }
+    // After loop, verify convergence
+    let mut final_max_sub = 0.0f64;
+    for i in 1..n {
+        let val = m.data[i * n + (i - 1)].abs();
+        if val > final_max_sub {
+            final_max_sub = val;
+        }
+    }
+    if final_max_sub > tol {
+        return Err(Diagnostic::error(
+            "Eigenvalue iteration did not converge to working precision.",
+            span,
+        ));
+    }
     // Extract eigenvalues from diagonal
     let mut ev = vec![0.0; n];
     for i in 0..n {
@@ -818,15 +847,29 @@ fn qr_shift_eig(h: &DenseMatrix, span: Option<Span>) -> Result<(DenseMatrix, Den
             sorted_v[r * n + idx] = v.data[r * n + orig];
         }
     }
-    Ok((DenseMatrix { rows: n, cols: 1, data: sorted_ev }, DenseMatrix { rows: n, cols: n, data: sorted_v }))
+    Ok((
+        DenseMatrix {
+            rows: n,
+            cols: 1,
+            data: sorted_ev,
+        },
+        DenseMatrix {
+            rows: n,
+            cols: n,
+            data: sorted_v,
+        },
+    ))
 }
 
-fn improved_qr_eig(a: &DenseMatrix, span: Option<Span>) -> Result<(DenseMatrix, DenseMatrix), Diagnostic> {
+fn improved_qr_eig(
+    a: &DenseMatrix,
+    span: Option<Span>,
+) -> Result<(DenseMatrix, DenseMatrix), Diagnostic> {
     let h = hessenberg_reduce(a);
     qr_shift_eig(&h, span)
 }
 
-/// Basic QR iteration for general real matrices (simplified; may not converge for all).
+#[allow(dead_code)]
 fn basic_qr_eig(
     a: &DenseMatrix,
     span: Option<Span>,

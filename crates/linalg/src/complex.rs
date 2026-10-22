@@ -1075,7 +1075,10 @@ pub fn eig_complex(
     let n = a.rows;
     if a.rows != a.cols {
         return Err(Diagnostic::error(
-            format!("Matrix must be square for eigenvalues: {}x{}", a.rows, a.cols),
+            format!(
+                "Matrix must be square for eigenvalues: {}x{}",
+                a.rows, a.cols
+            ),
             span,
         ));
     }
@@ -1116,14 +1119,22 @@ pub fn eig_complex(
             }
         }
         // Reconstruct Q
-        let mut q_mat = ComplexDenseMatrix { rows: n, cols: n, data: vec![Complex64::zero(); n * n] };
+        let mut q_mat = ComplexDenseMatrix {
+            rows: n,
+            cols: n,
+            data: vec![Complex64::zero(); n * n],
+        };
         for j in 0..n {
             for i in 0..n {
                 q_mat.data[i * n + j] = q[i][j];
             }
         }
         // M = R * Q
-        let mut m_next = ComplexDenseMatrix { rows: n, cols: n, data: vec![Complex64::zero(); n * n] };
+        let mut m_next = ComplexDenseMatrix {
+            rows: n,
+            cols: n,
+            data: vec![Complex64::zero(); n * n],
+        };
         for i in 0..n {
             for j in 0..n {
                 let mut s = Complex64::zero();
@@ -1145,22 +1156,40 @@ pub fn eig_complex(
                 new_v_data[i * n + j] = s;
             }
         }
-        v = ComplexDenseMatrix { rows: n, cols: n, data: new_v_data };
+        v = ComplexDenseMatrix {
+            rows: n,
+            cols: n,
+            data: new_v_data,
+        };
         m = m_next;
         // Shift: subtract lower-right diagonal element (approx)
-        let shift = m.data[(n-1)*n + (n-1)];
+        let shift = m.data[(n - 1) * n + (n - 1)];
         for i in 0..n {
-            m.data[i*n + i] = m.data[i*n + i] - shift;
+            m.data[i * n + i] = m.data[i * n + i] - shift;
         }
         // Add shift back not needed if using direct QR; skip for simplicity
         // Convergence check
         let mut max_sub = 0.0f64;
         for i in 1..n {
-            max_sub = max_sub.max(m.data[i*n + (i-1)].abs());
+            max_sub = max_sub.max(m.data[i * n + (i - 1)].abs());
         }
         if max_sub < 1e-8 {
             break;
         }
+    }
+    // Check complex convergence
+    let mut final_max_sub = 0.0f64;
+    for i in 1..n {
+        let val = m.data[i * n + (i - 1)].abs();
+        if val > final_max_sub {
+            final_max_sub = val;
+        }
+    }
+    if final_max_sub > 1e-8 {
+        return Err(Diagnostic::error(
+            "Complex eigenvalue iteration did not converge to working precision.",
+            span,
+        ));
     }
     // Extract eigenvalues (complex) from diagonal
     let mut ev = Vec::with_capacity(n);
@@ -1170,10 +1199,15 @@ pub fn eig_complex(
     // Sort by real then imag for determinism
     let mut pairs: Vec<(Complex64, usize)> = (0..n).map(|i| (ev[i], i)).collect();
     pairs.sort_by(|a, b| {
-        let ar = a.0.re();
-        let br = b.0.re();
-        ar.partial_cmp(&br).unwrap_or(std::cmp::Ordering::Equal)
-            .then_with(|| a.0.im().partial_cmp(&b.0.im()).unwrap_or(std::cmp::Ordering::Equal))
+        let ar = a.0.re;
+        let br = b.0.re;
+        ar.partial_cmp(&br)
+            .unwrap_or(std::cmp::Ordering::Equal)
+            .then_with(|| {
+                a.0.im
+                    .partial_cmp(&b.0.im)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            })
     });
     let mut sorted_ev = Vec::with_capacity(n);
     let mut sorted_v = vec![Complex64::zero(); n * n];
@@ -1184,7 +1218,15 @@ pub fn eig_complex(
         }
     }
     Ok((
-        ComplexDenseMatrix { rows: n, cols: 1, data: sorted_ev },
-        ComplexDenseMatrix { rows: n, cols: n, data: sorted_v },
+        ComplexDenseMatrix {
+            rows: n,
+            cols: 1,
+            data: sorted_ev,
+        },
+        ComplexDenseMatrix {
+            rows: n,
+            cols: n,
+            data: sorted_v,
+        },
     ))
 }

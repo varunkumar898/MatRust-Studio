@@ -222,8 +222,16 @@ fn test_complex_svd_square_reconstruction() {
     // Unitarity of U and V
     let u_orth = env_matrix(&r, "u_orth").data[0];
     let v_orth = env_matrix(&r, "v_orth").data[0];
-    assert!(u_orth < 1e-12, "U' * U must be identity: residual={}", u_orth);
-    assert!(v_orth < 1e-12, "V' * V must be identity: residual={}", v_orth);
+    assert!(
+        u_orth < 1e-12,
+        "U' * U must be identity: residual={}",
+        u_orth
+    );
+    assert!(
+        v_orth < 1e-12,
+        "V' * V must be identity: residual={}",
+        v_orth
+    );
 
     // Reconstruction A = U * S * V'
     let diff = env_matrix(&r, "diff").data[0];

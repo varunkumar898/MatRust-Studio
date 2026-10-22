@@ -494,44 +494,77 @@ pub fn quantile_slice(sorted: &[f64], p: f64) -> f64 {
 }
 
 pub fn prctile(a: &DenseMatrix, pct: f64, dim: Option<usize>) -> DenseMatrix {
+    prctile_multi(a, &[pct], dim)
+}
+
+/// Multi-percentage version.
+pub fn prctile_multi(a: &DenseMatrix, pct_vec: &[f64], dim: Option<usize>) -> DenseMatrix {
     let d = resolve_dim(a, dim);
     if a.data.is_empty() {
         return DenseMatrix::scalar(f64::NAN);
     }
+    let k = pct_vec.len();
     if d == 1 {
-        let mut res = Vec::with_capacity(a.cols);
+        // Each column -> percentiles as rows? According to MATLAB: for dim=1, result has length(pct) rows, cols = number of cols
+        let mut res = vec![0.0; k * a.cols];
         for c in 0..a.cols {
             let mut col = Vec::with_capacity(a.rows);
             for r in 0..a.rows {
                 col.push(a.data[r * a.cols + c]);
             }
             col.sort_by(|x, y| x.partial_cmp(y).unwrap_or(std::cmp::Ordering::Equal));
-            res.push(quantile_slice(&col, pct / 100.0));
+            // Remove NaNs
+            let clean: Vec<f64> = col.into_iter().filter(|&x| !x.is_nan()).collect();
+            for (i, &pct_val) in pct_vec.iter().enumerate() {
+                if clean.is_empty() {
+                    res[i * a.cols + c] = f64::NAN;
+                } else {
+                    res[i * a.cols + c] = quantile_slice(&clean, pct_val / 100.0);
+                }
+            }
         }
         DenseMatrix {
-            rows: 1,
+            rows: k,
             cols: a.cols,
             data: res,
         }
     } else if d == 2 {
-        let mut res = Vec::with_capacity(a.rows);
+        // Each row -> result has rows = a.rows, cols = k
+        let mut res = vec![0.0; a.rows * k];
         for r in 0..a.rows {
             let mut row = a.data[r * a.cols..(r + 1) * a.cols].to_vec();
             row.sort_by(|x, y| x.partial_cmp(y).unwrap_or(std::cmp::Ordering::Equal));
-            res.push(quantile_slice(&row, pct / 100.0));
+            let clean: Vec<f64> = row.into_iter().filter(|&x| !x.is_nan()).collect();
+            for (i, &pct_val) in pct_vec.iter().enumerate() {
+                res[r * k + i] = if clean.is_empty() {
+                    f64::NAN
+                } else {
+                    quantile_slice(&clean, pct_val / 100.0)
+                };
+            }
         }
         DenseMatrix {
             rows: a.rows,
-            cols: 1,
+            cols: k,
             data: res,
         }
     } else {
+        // All elements
         let mut all = a.data.clone();
         all.sort_by(|x, y| x.partial_cmp(y).unwrap_or(std::cmp::Ordering::Equal));
+        let clean: Vec<f64> = all.into_iter().filter(|&x| !x.is_nan()).collect();
+        let mut res = Vec::with_capacity(k);
+        for &pct_val in pct_vec {
+            res.push(if clean.is_empty() {
+                f64::NAN
+            } else {
+                quantile_slice(&clean, pct_val / 100.0)
+            });
+        }
         DenseMatrix {
-            rows: 1,
+            rows: k,
             cols: 1,
-            data: vec![quantile_slice(&all, pct / 100.0)],
+            data: res,
         }
     }
 }
@@ -540,7 +573,44 @@ pub fn quantile_matrix(a: &DenseMatrix, p: f64, dim: Option<usize>) -> DenseMatr
     prctile(a, p * 100.0, dim)
 }
 
-pub fn cov_matrix(a: &DenseMatrix, w: usize, _b: Option<&DenseMatrix>) -> DenseMatrix {
+pub fn quantile_multi(a: &DenseMatrix, probs: &[f64], dim: Option<usize>) -> DenseMatrix {
+    // Convert probabilities to percentiles and pass to multi-prctile
+    let pct_vec: Vec<f64> = probs.iter().map(|&p| p * 100.0).collect();
+    prctile_multi(a, &pct_vec, dim)
+}
+
+pub fn cov_matrix(a: &DenseMatrix, w: usize, b: Option<&DenseMatrix>) -> DenseMatrix {
+    if let Some(b_mat) = b {
+        if a.cols == 1 && b_mat.cols == 1 && a.rows == b_mat.rows {
+            let n = a.rows;
+            let mean_a = a.data.iter().sum::<f64>() / (n as f64);
+            let mean_b = b_mat.data.iter().sum::<f64>() / (n as f64);
+            let denom = if w == 0 {
+                if n <= 1 {
+                    1.0
+                } else {
+                    (n - 1) as f64
+                }
+            } else {
+                n as f64
+            };
+            let mut ca = Vec::with_capacity(n);
+            let mut cb = Vec::with_capacity(n);
+            for r in 0..n {
+                ca.push(a.data[r] - mean_a);
+                cb.push(b_mat.data[r] - mean_b);
+            }
+            let c00 = ca.iter().map(|&x| x * x).sum::<f64>() / denom;
+            let c11 = cb.iter().map(|&x| x * x).sum::<f64>() / denom;
+            let c01 = ca.iter().zip(cb.iter()).map(|(&x, &y)| x * y).sum::<f64>() / denom;
+            return DenseMatrix {
+                rows: 2,
+                cols: 2,
+                data: vec![c00, c01, c01, c11],
+            };
+        }
+        return DenseMatrix::empty();
+    }
     let n = a.rows;
     let p = a.cols;
     if n == 0 || p == 0 {

@@ -6,6 +6,7 @@ members = [
     "crates/linalg",
     "crates/runtime",
     "apps/cli",
+    "apps/desktop",
     "tests/language",
     "tests/matrices",
     "tests/compatibility",

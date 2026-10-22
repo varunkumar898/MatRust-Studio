@@ -1,0 +1,30 @@
+[package]
+name = "matrust_studio"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "MatRust Studio — a native desktop numerical-computing IDE (independent, MATLAB-inspired workflow)"
+
+[[bin]]
+name = "matrust-studio"
+path = "src/main.rs"
+
+[dependencies]
+matlab_diagnostics = { path = "../../crates/diagnostics" }
+matlab_runtime = { path = "../../crates/runtime" }
+matlab_syntax = { path = "../../crates/syntax" }
+matlab_values = { path = "../../crates/values" }
+
+eframe = { version = "0.37", default-features = false, features = [
+    "wgpu",
+    "persistence",
+    "default_fonts",
+    "wayland",
+    "x11",
+    "clipboard",
+    "accesskit",
+] }
+egui = "0.37"
+egui_plot = "0.38"
+serde = { version = "1", features = ["derive"] }

@@ -491,6 +491,56 @@ fn extract_string_or_chars(
     }
 }
 
+fn parse_norm_arg(
+    arg: &Expr,
+    env: &Env,
+    io: &mut ExecIo<'_>,
+    span: Span,
+) -> Result<la::NormType, Diagnostic> {
+    let v = eval_expr_pub(env, arg, io)?;
+    match v {
+        Value::String(s) => {
+            let lower = s.to_ascii_lowercase();
+            if lower == "fro" {
+                Ok(la::NormType::Fro)
+            } else if lower == "inf" {
+                Ok(la::NormType::Inf)
+            } else {
+                Err(Diagnostic::error(
+                    format!(
+                        "Unrecognized norm type '{}'. Supported string norms are 'fro' and 'inf'.",
+                        s
+                    ),
+                    Some(span),
+                ))
+            }
+        }
+        Value::Matrix(m) => {
+            let val = m.as_scalar().ok_or_else(|| {
+                Diagnostic::error(
+                    "Norm type must be a scalar number or 'fro'.",
+                    Some(span),
+                )
+            })?;
+            if val == 1.0 {
+                Ok(la::NormType::One)
+            } else if val == 2.0 {
+                Ok(la::NormType::Two)
+            } else if val.is_infinite() && val > 0.0 {
+                Ok(la::NormType::Inf)
+            } else if val.is_infinite() && val < 0.0 {
+                Ok(la::NormType::NegInf)
+            } else {
+                Ok(la::NormType::P(val))
+            }
+        }
+        _ => Err(Diagnostic::error(
+            "Second argument to norm must be a number or 'fro'.",
+            Some(span),
+        )),
+    }
+}
+
 /// Dispatch a builtin call. `io.stdout` receives any side-effecting text;
 /// `io.graphics` receives figure mutations.
 pub fn call_builtin(
@@ -539,6 +589,142 @@ pub fn call_builtin(
                 ));
             }
             Ok(Value::Matrix(DenseMatrix::eye(n as usize)))
+        }
+        "lu" => {
+            if args.len() != 1 {
+                return Err(Diagnostic::error("lu expects 1 argument: lu(A).", span_op));
+            }
+            let a = crate::arrayfn::matrix_arg(&args[0], env, io, span, "lu")?;
+            let y = la::lu_factor(&a, span_op)?;
+            Ok(Value::Matrix(y))
+        }
+        "det" => {
+            if args.len() != 1 {
+                return Err(Diagnostic::error("det expects 1 argument: det(A).", span_op));
+            }
+            let a = crate::arrayfn::matrix_arg(&args[0], env, io, span, "det")?;
+            let d = la::det(&a, span_op)?;
+            Ok(Value::Matrix(DenseMatrix::scalar(d)))
+        }
+        "inv" => {
+            if args.len() != 1 {
+                return Err(Diagnostic::error("inv expects 1 argument: inv(A).", span_op));
+            }
+            let a = crate::arrayfn::matrix_arg(&args[0], env, io, span, "inv")?;
+            let inv_m = la::inv(&a, span_op)?;
+            Ok(Value::Matrix(inv_m))
+        }
+        "trace" => {
+            if args.len() != 1 {
+                return Err(Diagnostic::error("trace expects 1 argument: trace(A).", span_op));
+            }
+            let a = crate::arrayfn::matrix_arg(&args[0], env, io, span, "trace")?;
+            let tr = la::trace(&a, span_op)?;
+            Ok(Value::Matrix(DenseMatrix::scalar(tr)))
+        }
+        "svd" => {
+            if args.len() != 1 {
+                return Err(Diagnostic::error("svd expects 1 argument: svd(A).", span_op));
+            }
+            let a = crate::arrayfn::matrix_arg(&args[0], env, io, span, "svd")?;
+            let s = la::svd_values(&a, span_op)?;
+            Ok(Value::Matrix(s))
+        }
+        "rank" => {
+            if args.is_empty() || args.len() > 2 {
+                return Err(Diagnostic::error(
+                    "rank expects 1 or 2 arguments: rank(A) or rank(A, tol).",
+                    span_op,
+                ));
+            }
+            let a = crate::arrayfn::matrix_arg(&args[0], env, io, span, "rank")?;
+            let tol = if args.len() == 2 {
+                Some(scalar_arg(&args[1..2], env, io, span, "rank")?)
+            } else {
+                None
+            };
+            let r = la::rank(&a, tol, span_op)?;
+            Ok(Value::Matrix(DenseMatrix::scalar(r as f64)))
+        }
+        "pinv" => {
+            if args.is_empty() || args.len() > 2 {
+                return Err(Diagnostic::error(
+                    "pinv expects 1 or 2 arguments: pinv(A) or pinv(A, tol).",
+                    span_op,
+                ));
+            }
+            let a = crate::arrayfn::matrix_arg(&args[0], env, io, span, "pinv")?;
+            let tol = if args.len() == 2 {
+                Some(scalar_arg(&args[1..2], env, io, span, "pinv")?)
+            } else {
+                None
+            };
+            let p = la::pinv(&a, tol, span_op)?;
+            Ok(Value::Matrix(p))
+        }
+        "norm" => {
+            if args.is_empty() || args.len() > 2 {
+                return Err(Diagnostic::error(
+                    "norm expects 1 or 2 arguments: norm(A) or norm(A, p).",
+                    span_op,
+                ));
+            }
+            let a = crate::arrayfn::matrix_arg(&args[0], env, io, span, "norm")?;
+            let norm_type = if args.len() == 1 {
+                la::NormType::Two
+            } else {
+                parse_norm_arg(&args[1], env, io, span)?
+            };
+            let res = la::norm(&a, &norm_type, span_op)?;
+            Ok(Value::Matrix(DenseMatrix::scalar(res)))
+        }
+        "mldivide" => {
+            if args.len() != 2 {
+                return Err(Diagnostic::error(
+                    "mldivide expects 2 arguments: mldivide(A, B).",
+                    span_op,
+                ));
+            }
+            let a = crate::arrayfn::matrix_arg(&args[0], env, io, span, "mldivide")?;
+            let b = crate::arrayfn::matrix_arg(&args[1], env, io, span, "mldivide")?;
+            let res = la::mldivide(&a, &b, span_op)?;
+            Ok(Value::Matrix(res))
+        }
+        "mrdivide" => {
+            if args.len() != 2 {
+                return Err(Diagnostic::error(
+                    "mrdivide expects 2 arguments: mrdivide(A, B).",
+                    span_op,
+                ));
+            }
+            let a = crate::arrayfn::matrix_arg(&args[0], env, io, span, "mrdivide")?;
+            let b = crate::arrayfn::matrix_arg(&args[1], env, io, span, "mrdivide")?;
+            let res = la::mrdivide(&a, &b, span_op)?;
+            Ok(Value::Matrix(res))
+        }
+        "ldivide" => {
+            if args.len() != 2 {
+                return Err(Diagnostic::error(
+                    "ldivide expects 2 arguments: ldivide(A, B).",
+                    span_op,
+                ));
+            }
+            let a = crate::arrayfn::matrix_arg(&args[0], env, io, span, "ldivide")?;
+            let b = crate::arrayfn::matrix_arg(&args[1], env, io, span, "ldivide")?;
+            let res = la::elementwise_ldiv(&a, &b, span_op)?;
+            Ok(Value::Matrix(res))
+        }
+        "rdivide" => {
+            if args.len() != 2 {
+                return Err(Diagnostic::error(
+                    "rdivide expects 2 arguments: rdivide(A, B).",
+                    span_op,
+                ));
+            }
+            let a = crate::arrayfn::matrix_arg(&args[0], env, io, span, "rdivide")?;
+            let b = crate::arrayfn::matrix_arg(&args[1], env, io, span, "rdivide")?;
+            let res = la::elementwise_div(&a, &b, span_op)?;
+            Ok(Value::Matrix(res))
         }
         "linspace" => crate::arrayfn::linspace(args, env, io, span),
         "diag" => crate::arrayfn::diag(args, env, io, span),
@@ -1502,6 +1688,12 @@ pub fn call_builtin(
                 return Err(Diagnostic::error("pi takes no arguments.", span_op));
             }
             Ok(Value::Matrix(DenseMatrix::scalar(std::f64::consts::PI)))
+        }
+        "inf" | "Inf" => {
+            if !args.is_empty() {
+                return Err(Diagnostic::error("Inf takes no arguments.", span_op));
+            }
+            Ok(Value::Matrix(DenseMatrix::scalar(f64::INFINITY)))
         }
         // ---- Graphics -------------------------------------------------
         "figure" => graphics_figure(args, env, io, span),

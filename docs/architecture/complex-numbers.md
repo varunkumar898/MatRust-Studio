@@ -1,6 +1,6 @@
 # Complex Number Value Model — Architectural Specification
 
-## Status: Design & Planning Milestone (Post-Batch 7)
+## Status: Fully Implemented (Batch 10 Verified)
 
 ## 1. Executive Summary
 
@@ -180,12 +180,12 @@ impl Complex64 {
 
 ## 10. Implementation Roadmap
 
-| Milestone | Deliverables | Risk Level |
+| Milestone | Deliverables | Status |
 |---|---|---|
-| **Phase 1: Foundations** | `Complex64` struct in `crates/values`; `ComplexDenseMatrix`; `Value::ComplexMatrix` variant; formatting | Low (No impact on real-valued math) |
-| **Phase 2: Linalg Kernels** | Complex addition, multiplication, elementwise ops, conjugate transpose | Low-Medium (Independent module `linalg::complex`) |
-| **Phase 3: Parser & Literals** | Support for imaginary literals (`1i`, `2.5j`, `1e-3i`) in lexer/parser | Low |
-| **Phase 4: Runtime Integration**| Dual dispatch in interpreter; automatic promotion on domain boundary | Medium |
-| **Phase 5: Matrix Decompositions** | Complex LU, QR, Cholesky, and SVD | High (Requires dedicated numerical tests) |
+| **Phase 1: Foundations** | `Complex64` struct in `crates/values`; `ComplexDenseMatrix`; `Value::ComplexMatrix` variant; formatting | **Completed & Verified (Batch 10)** |
+| **Phase 2: Linalg Kernels** | Complex addition, multiplication, elementwise ops, conjugate transpose | **Completed & Verified (Batch 10)** |
+| **Phase 3: Parser & Literals** | Support for imaginary literals (`1i`, `2.5j`, `1e-3i`) in lexer/parser | **Completed & Verified (Batch 10)** |
+| **Phase 4: Runtime Integration**| Dual dispatch in interpreter; automatic promotion on domain boundary; complex builtins | **Completed & Verified (Batch 10)** |
+| **Phase 5: Matrix Decompositions** | Complex LU, QR, Cholesky, and SVD | Planned (Future Batch) |
 
 This staged approach ensures that real-valued computations remain 100% stable, fast, and unaffected while complex capabilities are introduced progressively.

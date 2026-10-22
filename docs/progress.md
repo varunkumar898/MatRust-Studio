@@ -388,3 +388,62 @@ validation in `crates/runtime/src/arrayfn.rs`, dispatch in `crates/runtime/src/b
   - `cargo test --workspace`: 173+ tests pass (18 new comprehensive tests in `tests/language/tests/numeric_batch9.rs`).
   - `cargo build -p matrust_studio`: clean desktop application build.
   - Tested CLI execution with real expressions: `A = [0, 2; 3, 1]; b = [4; 7]; x = A \ b; [L, U, P] = lu(A); d = det(A); s = svd(A); disp(x); disp(d);` producing exact analytical solutions.
+
+## Batch 10 — Complex-Number Runtime Implementation (2026-10-22)
+
+- **REA & MATLAB Target Status**:
+  - Re-verified REA MCP server connectivity via `binary_session` in Antigravity session.
+  - Verified target `/home/cherry/Downloads/matlab_R2026b_Linux/archives`; confirmed it only contains Network License Manager archives (`Network_License_Manager262_common.zip` and `Network_License_Manager262_glnxa64.zip`).
+  - Native MATLAB numerical engine (`libmwlapack.so`, `libmx.so`, `matlab` binary) remains absent.
+  - Native MATLAB reverse engineering is documented as blocked. No fabricated findings or artificial evidence IDs.
+  - Development proceeded strictly using standard mathematical specifications, published MATLAB semantics, and executable test suites.
+- **Value Model & Type System (`crates/values/src/complex.rs`, `crates/values/src/lib.rs`)**:
+  - Implemented `Complex64` as `#[repr(C)]` struct with interleaved `re: f64` and `im: f64` components, zero-overhead ABI compatibility with C/BLAS complex structures.
+  - Implemented robust arithmetic operators on `Complex64` including Smith's method for complex division to prevent intermediate overflow/underflow.
+  - Implemented `ComplexDenseMatrix` with 2D column-major layout, 1-based indexing (`get_2d`, `set_2d`), linear column-major indexing (`get_linear`, `set_linear`), column-major extraction (`to_col_major`), and MATLAB-style matrix display formatting (`format_matlab`).
+  - Added `Value::ComplexMatrix(ComplexDenseMatrix)` to the core `Value` enum.
+  - Preserved real matrices as `Value::Matrix(DenseMatrix)` on their dedicated, optimized real-valued fast path.
+  - Added helper methods `as_complex_matrix`, `to_complex_matrix`, `is_complex`, and `type_name` ("complex double" for scalars, "complex matrix" for 2D arrays).
+- **Linear Algebra Kernels (`crates/linalg/src/complex.rs`)**:
+  - Implemented complex matrix operations: `add`, `sub`, `elementwise_mul`, `elementwise_div`, `elementwise_pow`, `matmul`, `negate`, `transpose`, `ctranspose`, `compare`.
+  - Implemented non-conjugate transpose `A.'` (swapping dimensions without conjugating elements).
+  - Implemented conjugate transpose `A'` (Hermitian transpose: conjugating elements and swapping dimensions).
+  - Implemented MATLAB complex relational comparisons: `==` and `~=` check both real and imaginary parts; `<`, `<=`, `>`, `>=` compare strictly the real parts.
+  - Created mixed-value dispatch kernels (`add_values`, `sub_values`, `mul_values`, `dotmul_values`, `dotdiv_values`, `dotpow_values`, `compare_values`) that keep real operations on the real fast path and promote to complex only when required.
+- **Lexer & Parser Support (`crates/syntax`)**:
+  - Added `TokenKind::ImaginaryNumber(f64)` to `crates/syntax/src/token.rs`.
+  - Added `Expr::Imaginary(f64, Span)` to `crates/syntax/src/ast.rs`.
+  - Updated lexer number scanner in `crates/syntax/src/lexer.rs` to detect trailing `i` and `j` suffixes (e.g. `2i`, `3.5j`, `1e-3i`) without breaking standalone variable identifiers `i` and `j`.
+  - Handled `TokenKind::ImaginaryNumber` in Pratt prefix parser in `crates/syntax/src/parser.rs`.
+- **Runtime & Builtin Dispatch (`crates/runtime/src/interp.rs`, `crates/runtime/src/builtins.rs`)**:
+  - `eval_expr`: wired `Expr::Imaginary` into `Value::ComplexMatrix` scalar.
+  - `Expr::MatrixLit`: dynamically checks for complex elements; promotes real scalars to `Complex64` and constructs `Value::ComplexMatrix` when complex elements are present.
+  - `Expr::Transpose`: routes `conjugate: true` to `ctranspose` and `conjugate: false` to `transpose`.
+  - `assign_index`: supports 1D and 2D complex indexing, array growth with zero-filled complex values, and automatic promotion of real arrays when assigning a complex value.
+  - `call_or_index`: supports linear, colon, and 2D indexing for `Value::ComplexMatrix`.
+  - Registered builtins:
+    - `complex(re)` and `complex(re, im)` with scalar broadcasting.
+    - `real(Z)`: extracts real component as `DenseMatrix`.
+    - `imag(Z)`: extracts imaginary component as `DenseMatrix`.
+    - `conj(Z)`: complex conjugation.
+    - `angle(Z)`: phase angle in radians ($[-\pi, \pi]$).
+    - `isreal(Z)`: returns logical scalar checking if all elements have zero imaginary components.
+    - Built-in constants `i` and `j` evaluating to `0 + 1i` when not shadowed by user variables.
+  - Extended built-ins:
+    - `abs(Z)`: computes complex modulus via `hypot`.
+    - `sqrt(x)`: promotes negative reals ($x < 0$) to pure imaginary values; supports complex matrices.
+    - `exp(Z)` and `log(Z)`: extended to complex matrices; `log(x)` promotes negative reals to $0 + \pi i$.
+    - `size`, `length`, `numel`, `isempty`, `ndims`: unified handling for real and complex matrices.
+- **Desktop & CLI Integration**:
+  - Desktop variable inspector (`apps/desktop/src/workspace_panel.rs`) updated with `complex_matrix_grid` supporting complex matrix tabular inspection with scrollable grids and formatting.
+  - Desktop syntax highlighter (`apps/desktop/src/editor.rs`) updated with all new built-in keywords.
+  - CLI binary (`apps/cli`) verified with complex expression evaluation and display.
+- **Verification**:
+  - `cargo fmt --check`: 100% clean formatting across all crates.
+  - `cargo check --workspace`: 0 warnings, 0 errors.
+  - `cargo test --workspace`: 193+ tests pass with 0 failures, including 20 new comprehensive tests in `tests/language/tests/numeric_batch10.rs`.
+  - `cargo build -p matrust_studio`: clean desktop application build.
+  - CLI test: `./target/debug/matlabr -e "z = 3 + 4i; disp(z); disp(abs(z)); disp(z'); disp(exp(1i*pi));"` verified output:
+    `3 + 4i`, `5`, `3 - 4i`, `-1 + 1.2246e-16i`.
+  - CLI matrix transpose test: verified `A.'` non-conjugating vs `A'` Hermitian conjugating transpose.
+

@@ -20,14 +20,14 @@ R2026b behavior this row tracks; this matrix makes no claim beyond that.
 | Element-wise `.*` `./` `.^` | implemented | never falls back to scalar broadcast |
 | Matrix `*` `/` `^` | implemented | `/` via explicit inverse (Gauss-Jordan); NOT yet a stable solve |
 | Comparisons `==` `~=` `<` `<=` `>` `>=` | implemented | result is 0/1 **double**, not logical type |
-| Transpose `'` and `.'` | implemented | real values only (no conjugate) |
-| `disp`, `size` (+dim), `zeros/ones/eye`, `length`, `numel` | implemented | |
-| `abs sqrt floor ceil round exp log sum max min pi` | implemented | `sum/max/min` reduce along columns (MATLAB default) |
+| Transpose `'` and `.'` | implemented | `'` is Hermitian conjugate transpose; `.'` is non-conjugate transpose (agree on real matrices) |
+| `disp`, `size` (+dim), `zeros/ones/eye`, `length`, `numel` | implemented | supports both real and complex matrices |
+| `abs sqrt floor ceil round exp log sum max min pi` | implemented | `abs`, `sqrt`, `exp`, `log` support complex numbers; `sqrt(-4)` yields `0 + 2i` |
 | `1./0` → `Inf`, IEEE zero division | implemented | matches MATLAB double semantics |
 | Char literals `'abc'`, `''` escape | implemented | |
 | Char arithmetic/indexing | not implemented | strings stored, ops rejected with diagnostic |
 | logical type | not implemented | represented as 0/1 doubles (divergence) |
-| Complex numbers | not implemented | `sqrt(-1)` → NaN (MATLAB: `0 + 1i`) |
+| Complex numbers | implemented | genuine `Complex64` and `ComplexDenseMatrix`; interleaved column-major storage; automatic real promotion |
 | `:` ranges, `end` keyword | not implemented | colon token reserved, no evaluation |
 | `if/else/elseif`, `for`, `while`, `switch`, `break`/`continue` | implemented | strict scalar conditions; `break`/`continue` error outside loop; `for` iterates columns; `end` block matching verified; empty/negative ranges work |
 | `:` ranges, `end` keyword | implemented | `start:step:stop`; `end` in indices reserved (context required) |

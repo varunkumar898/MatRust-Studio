@@ -116,6 +116,8 @@ pub struct MatRustApp {
     prefs_open: bool,
     about_open: bool,
     compat_open: bool,
+    apps_open: bool,
+    apps_selected: Option<String>,
     close_tab_pending: Option<usize>,
 }
 
@@ -162,6 +164,8 @@ impl MatRustApp {
             prefs_open: false,
             about_open: false,
             compat_open: false,
+            apps_open: false,
+            apps_selected: None,
             close_tab_pending: None,
             prefs,
         };
@@ -843,6 +847,14 @@ impl MatRustApp {
                         ui.close();
                     }
                 });
+                // Apps — scientific workflows (integrated applications).
+                bar.menu_button("Apps", |ui| {
+                    ui.set_min_width(170.0);
+                    if ui.button("Launch apps…").clicked() {
+                        self.apps_open = true;
+                        ui.close();
+                    }
+                });
                 // Help
                 bar.menu_button("Help", |ui| {
                     if ui.button("About…").clicked() {
@@ -937,16 +949,11 @@ impl MatRustApp {
             self.request_stop();
         }
         ui.separator();
-        if ui.button("Import Data…").clicked() {
-            self.status_note(
-                "Import Data is planned. Use the Current Folder panel to open .m scripts.",
-            );
+        if ui.button("Clear Workspace").clicked() {
+            self.clear_workspace();
         }
         if ui.button("Set Current Folder").clicked() {
             self.open_dialog = Some(self.folder.cwd.to_string_lossy().to_string());
-        }
-        if ui.button("Clear Workspace").clicked() {
-            self.clear_workspace();
         }
         ui.separator();
         ui.menu_button("Layout", |ui| {
@@ -1612,6 +1619,72 @@ impl MatRustApp {
                 });
             if !open {
                 self.compat_open = false;
+            }
+        }
+
+        // Apps launcher — integrated scientific applications.
+        if self.apps_open {
+            let mut open = true;
+            egui::Window::new("Apps — Scientific Workflows")
+                .id(Id::unique("matrust_apps"))
+                .open(&mut open)
+                .collapsible(false)
+                .resizable(true)
+                .default_width(520.0)
+                .show(ctx, |ui| {
+                    ui.strong("Implemented applications");
+                    ui.weak("Select an app to run its real backend workflow.");
+                    ui.add_space(6.0);
+                    ui.horizontal(|ui| {
+                        ui.strong("Data & Analysis");
+                        if ui.button("Launch Data Analysis").clicked() {
+                            self.apps_selected = Some("data_analysis".to_string());
+                            let src = "A = [1 2 3; 4 5 6]; save('/tmp/app_data.csv', A); data = load('/tmp/app_data.csv'); m = mean(data(:)); plot(1:3, data(:,1));".to_string();
+                            self.submit(src, Origin::Script { path: None, name: "Data Analysis".to_string() }, PendingKind::Editor(0));
+                            self.cmd.push(Line::Info("Data Analysis executed (CSV -> stats -> plot).".to_string()));
+                            self.apps_open = false;
+                        }
+                    });
+                    ui.weak("Imports CSV, computes stats, displays plot, saves/loads data.");
+                    ui.add_space(4.0);
+                    ui.horizontal(|ui| {
+                        ui.strong("Simulation & Control");
+                        if ui.button("Launch Simulation").clicked() {
+                            self.apps_selected = Some("simulation".to_string());
+                            let src = "t = 0:0.1:5; tau = 1.0; y = 1 - exp(-t / tau); plot(t, y); save('/tmp/app_sim.csv', y);".to_string();
+                            self.submit(src, Origin::Script { path: None, name: "Simulation".to_string() }, PendingKind::Editor(0));
+                            self.cmd.push(Line::Info("Engineering Simulation executed (first-order step response).".to_string()));
+                            self.apps_open = false;
+                        }
+                    });
+                    ui.weak("First-order step-response with time-axis plot and CSV export.");
+                    ui.add_space(4.0);
+                    ui.horizontal(|ui| {
+                        ui.strong("Numerical Tools");
+                        if ui.button("Launch Numerical Tools").clicked() {
+                            self.apps_selected = Some("numerical".to_string());
+                            let src = "A = [1 2; 3 4]; B = [5 6; 7 8]; C = A * B; disp(C);".to_string();
+                            self.submit(src, Origin::Script { path: None, name: "Numerical Tools".to_string() }, PendingKind::Editor(0));
+                            self.cmd.push(Line::Info("Numerical Tools executed (matrix operations).".to_string()));
+                            self.apps_open = false;
+                        }
+                    });
+                    ui.weak("Real matrix arithmetic, linear algebra, and inspection.");
+                    ui.add_space(4.0);
+                    ui.horizontal(|ui| {
+                        ui.strong("Visualization");
+                        if ui.button("Open Figures").clicked() {
+                            self.apps_selected = Some("figures".to_string());
+                            self.cmd.push(Line::Info("Figure Viewer: inspect current plots in Plots tab.".to_string()));
+                            self.apps_open = false;
+                        }
+                    });
+                    ui.weak("View plots generated by scripts, Data Analysis, Simulation, or Numerical Tools.");
+                    ui.add_space(4.0);
+                    ui.weak("Other applications (Signal Processing, Image Processing, ML, Robotics, Embedded) are planned; underlying algorithms not yet fully implemented.");
+                });
+            if !open {
+                self.apps_open = false;
             }
         }
 

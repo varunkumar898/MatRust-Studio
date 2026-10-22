@@ -5,7 +5,7 @@
 use egui::Color32;
 
 use matlab_runtime::VarRow;
-use matlab_values::{DenseMatrix, Value};
+use matlab_values::{ComplexDenseMatrix, DenseMatrix, Value};
 
 use crate::theme::{accent, error_color, text_color, text_color_faint, ThemeKind};
 
@@ -155,6 +155,7 @@ pub fn show_inspector(ui: &mut egui::Ui, name: &str, value: Option<&Value>, kind
                 ui.label(format!("Variable '{}' no longer exists.", name));
             }
             Some(Value::Matrix(m)) => matrix_grid(ui, m, kind),
+            Some(Value::ComplexMatrix(c)) => complex_matrix_grid(ui, c, kind),
             Some(Value::String(s)) => {
                 ui.monospace(format!("'{}'", s));
                 ui.weak(format!("char ({})", s.chars().count()));
@@ -211,6 +212,60 @@ fn matrix_grid(ui: &mut egui::Ui, m: &DenseMatrix, kind: ThemeKind) {
             ui.weak(format!(
                 "… showing {}x{} of {}x{} (scroll or increase view limits later)",
                 disp_rows, disp_cols, m.rows, m.cols
+            ));
+        }
+    });
+}
+
+fn complex_matrix_grid(ui: &mut egui::Ui, c: &ComplexDenseMatrix, kind: ThemeKind) {
+    ui.label(format!(
+        "complex matrix, {}x{} ({} values)",
+        c.rows,
+        c.cols,
+        c.data.len()
+    ));
+    if c.data.is_empty() {
+        ui.weak("[] (empty)");
+        return;
+    }
+    if c.is_scalar() {
+        ui.monospace(c.format_matlab());
+        return;
+    }
+    let disp_rows = c.rows.min(MAX_ROWS);
+    let disp_cols = c.cols.min(MAX_COLS);
+    egui::ScrollArea::both().show(ui, |ui| {
+        let grid_id = egui::Id::unique(("var_grid_complex", c.rows, c.cols));
+        egui::Grid::new(grid_id)
+            .striped(true)
+            .spacing([10.0, 2.0])
+            .show(ui, |grid| {
+                grid.weak("   ");
+                for col in 0..disp_cols {
+                    grid.weak(format!("{}", col + 1));
+                }
+                grid.end_row();
+                for r in 0..disp_rows {
+                    grid.weak(format!("{}", r + 1));
+                    for col in 0..disp_cols {
+                        let z = c.data[r * c.cols + col];
+                        let cell = z.to_string();
+                        let color = if !z.is_finite() {
+                            error_color(kind)
+                        } else if z.is_zero() {
+                            text_color_faint(kind)
+                        } else {
+                            text_color(kind)
+                        };
+                        grid.monospace(egui::RichText::new(cell).color(color));
+                    }
+                    grid.end_row();
+                }
+            });
+        if c.rows > disp_rows || c.cols > disp_cols {
+            ui.weak(format!(
+                "… showing {}x{} of {}x{} (scroll or increase view limits later)",
+                disp_rows, disp_cols, c.rows, c.cols
             ));
         }
     });

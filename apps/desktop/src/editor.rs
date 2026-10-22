@@ -125,6 +125,14 @@ const BUILTINS: &[&str] = &[
     "mrdivide",
     "ldivide",
     "rdivide",
+    "complex",
+    "real",
+    "imag",
+    "conj",
+    "angle",
+    "isreal",
+    "i",
+    "j",
 ];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

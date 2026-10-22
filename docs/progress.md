@@ -265,11 +265,13 @@ validation in `crates/runtime/src/arrayfn.rs`, dispatch in `crates/runtime/src/b
 
 - **REA Target Verification**: Inspected `/home/cherry/Downloads/matlab_R2026b_Linux`. Only Network License Manager archives (`Network_License_Manager262_common.zip` 4.2MB, `Network_License_Manager262_glnxa64.zip` 10.2MB) are present. The MATLAB numerical engine is missing from the system. Native reverse engineering remains recorded as blocked; no fabricated evidence IDs or reverse-engineering findings generated.
 - **Base Conversions**:
-  - `dec2bin`: converts non-negative integers to binary text; supports 32-bit two's complement for negative numbers; optional minimum width padding; validates inputs and rejects non-integers.
-  - `bin2dec`: parses binary text/char vectors to double numbers; whitespace trimming; strict radix 2 validation; rejects empty/invalid strings.
-  - `dec2hex`: converts integers to uppercase hexadecimal text; 32-bit two's complement for negative integers; optional width padding; rejects non-integers.
-  - `hex2dec`: parses hex text/char vectors to double numbers; handles optional `0x`/`0X` prefix; case-insensitive; strict validation.
-  - Round-trip tests for `dec2bin` ↔ `bin2dec` and `dec2hex` ↔ `hex2dec` all pass.
+  - `dec2bin`: converts non-negative integers or vectors to binary text; supports 32-bit two's complement for negative numbers (padded with leading ones); floor semantics for fractional inputs; optional minimum width padding; common-width padding across array elements.
+  - `bin2dec`: parses binary text/char vectors to double numbers; whitespace trimming; strict radix 2 validation; multi-row text parses into numeric column vectors; handles leading zeros safely without artificial precision limits.
+  - `dec2hex`: converts integers or vectors to uppercase hexadecimal text; 32-bit two's complement for negative integers (padded with leading Fs); floor semantics for fractional inputs; optional width padding; common-width array padding.
+  - `hex2dec`: parses hex text/char vectors to double numbers; handles optional `0x`/`0X` prefix; case-insensitive; multi-row text parses into numeric column vectors; validated against 53-bit flintmax.
+  - Round-trip tests for `dec2bin` ↔ `bin2dec` and `dec2hex` ↔ `hex2dec` all pass for scalars and multi-element arrays.
+- **Signum Builtin**:
+  - `sign`: returns -1, 0, 1, or NaN element-wise; supports scalar and matrix inputs.
 - **Degree Inverse Trigonometry**:
   - `asind`, `acosd`, `atand`: implemented with degree conversion and elementwise array support.
   - Domain boundaries (`[-1, 1]` for `asind`/`acosd`), outside-domain NaN return, and infinity handling (`atand(inf) == 90`, `atand(-inf) == -90`) verified.
@@ -289,6 +291,6 @@ validation in `crates/runtime/src/arrayfn.rs`, dispatch in `crates/runtime/src/b
 - **Verification**:
   - `cargo fmt --check` clean.
   - `cargo check --workspace` clean (0 warnings).
-  - `cargo test --workspace` all 140+ unit and integration tests pass (33 new tests in `numeric_batch7.rs`).
+  - `cargo test --workspace` all 140+ unit and integration tests pass (36 tests in `numeric_batch7.rs`).
   - Desktop `matrust_studio` builds clean.
   - CLI execution verified via `cargo run -p matlabr_cli -- -e "..."`.

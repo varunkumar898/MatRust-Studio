@@ -242,7 +242,7 @@ fn parse_dec_args(
     io: &mut ExecIo<'_>,
     span: Span,
     name: &str,
-) -> Result<(f64, Option<usize>), Diagnostic> {
+) -> Result<(DenseMatrix, Option<usize>), Diagnostic> {
     let span_op = Some(span);
     if args.is_empty() || args.len() > 2 {
         return Err(Diagnostic::error(
@@ -252,24 +252,6 @@ fn parse_dec_args(
     }
     let v0 = eval_expr_pub(env, &args[0], io)?;
     let m0 = coerce_matrix_pub(v0, span_op)?;
-    let val = m0.as_scalar().ok_or_else(|| {
-        Diagnostic::error(
-            format!("{} expects a scalar first argument.", name),
-            span_op,
-        )
-    })?;
-    if !val.is_finite() {
-        return Err(Diagnostic::error(
-            format!("{}: input must be finite.", name),
-            span_op,
-        ));
-    }
-    if val.fract() != 0.0 {
-        return Err(Diagnostic::error(
-            format!("{}: input must be an integer.", name),
-            span_op,
-        ));
-    }
     let width = if args.len() == 2 {
         let v1 = eval_expr_pub(env, &args[1], io)?;
         let m1 = coerce_matrix_pub(v1, span_op)?;
@@ -289,7 +271,7 @@ fn parse_dec_args(
     } else {
         None
     };
-    Ok((val, width))
+    Ok((m0, width))
 }
 
 fn extract_string_or_chars(
@@ -478,7 +460,8 @@ pub fn call_builtin(
         }
         "abs" | "sqrt" | "floor" | "ceil" | "round" | "fix" | "exp" | "log" | "log2" | "log10"
         | "sin" | "cos" | "tan" | "asin" | "acos" | "atan" | "sinh" | "cosh" | "tanh"
-        | "deg2rad" | "rad2deg" | "sind" | "cosd" | "tand" | "asind" | "acosd" | "atand" => {
+        | "deg2rad" | "rad2deg" | "sind" | "cosd" | "tand" | "asind" | "acosd" | "atand"
+        | "sign" => {
             if args.len() != 1 {
                 return Err(Diagnostic::error(
                     format!("{} expects 1 argument.", name),
@@ -515,6 +498,17 @@ pub fn call_builtin(
                 "asind" => asind_deg,
                 "acosd" => acosd_deg,
                 "atand" => atand_deg,
+                "sign" => |x| {
+                    if x.is_nan() {
+                        f64::NAN
+                    } else if x > 0.0 {
+                        1.0
+                    } else if x < 0.0 {
+                        -1.0
+                    } else {
+                        0.0
+                    }
+                },
                 _ => unreachable!(),
             };
             Ok(Value::Matrix(la::map_unary(&m, f)))
@@ -914,30 +908,57 @@ pub fn call_builtin(
             Ok(Value::Matrix(res))
         }
         "dec2bin" => {
-            let (val, width) = parse_dec_args(args, env, io, span, "dec2bin")?;
-            let mut s = if val < 0.0 {
-                if val < -2147483648.0 {
-                    return Err(Diagnostic::error(
-                        "dec2bin: negative value exceeds 32-bit range.",
-                        span_op,
-                    ));
-                }
-                format!("{:b}", (val as i32) as u32)
-            } else {
-                if val > 9007199254740991.0 {
-                    return Err(Diagnostic::error(
-                        "dec2bin: value exceeds maximum supported integer 2^53 - 1.",
-                        span_op,
-                    ));
-                }
-                format!("{:b}", val as u64)
-            };
-            if let Some(w) = width {
-                if s.len() < w {
-                    s = format!("{:0>width$}", s, width = w);
-                }
+            let (m0, width) = parse_dec_args(args, env, io, span, "dec2bin")?;
+            if m0.data.is_empty() {
+                return Ok(Value::String(String::new()));
             }
-            Ok(Value::String(s))
+            let mut formatted = Vec::with_capacity(m0.data.len());
+            let mut max_len = width.unwrap_or(0);
+            for &raw_val in &m0.data {
+                if !raw_val.is_finite() {
+                    return Err(Diagnostic::error("dec2bin: input must be finite.", span_op));
+                }
+                let val = raw_val.floor();
+                let (is_neg, s) = if val < 0.0 {
+                    if val < -2147483648.0 {
+                        return Err(Diagnostic::error(
+                            "dec2bin: negative value exceeds 32-bit range.",
+                            span_op,
+                        ));
+                    }
+                    (true, format!("{:b}", (val as i32) as u32))
+                } else {
+                    if val > 9007199254740991.0 {
+                        return Err(Diagnostic::error(
+                            "dec2bin: value exceeds maximum supported integer 2^53 - 1.",
+                            span_op,
+                        ));
+                    }
+                    (false, format!("{:b}", val as u64))
+                };
+                max_len = max_len.max(s.len());
+                formatted.push((is_neg, s));
+            }
+            let rows: Vec<String> = formatted
+                .into_iter()
+                .map(|(is_neg, s)| {
+                    if s.len() < max_len {
+                        if is_neg {
+                            format!("{:1>width$}", s, width = max_len)
+                        } else {
+                            format!("{:0>width$}", s, width = max_len)
+                        }
+                    } else {
+                        s
+                    }
+                })
+                .collect();
+            let result = if m0.rows == 1 && m0.cols == 1 {
+                rows.into_iter().next().unwrap()
+            } else {
+                rows.join("\n")
+            };
+            Ok(Value::String(result))
         }
         "bin2dec" => {
             if args.len() != 1 {
@@ -945,56 +966,109 @@ pub fn call_builtin(
             }
             let v = eval_expr_pub(env, &args[0], io)?;
             let s = extract_string_or_chars(&v, span_op, "bin2dec")?;
-            let trimmed = s.trim();
-            if trimmed.is_empty() {
+            let lines: Vec<&str> = s.lines().collect();
+            if lines.is_empty() {
                 return Err(Diagnostic::error(
                     "bin2dec: input must be a non-empty binary string.",
                     span_op,
                 ));
             }
-            for c in trimmed.chars() {
-                if c != '0' && c != '1' {
+            let mut results = Vec::with_capacity(lines.len());
+            for line in lines {
+                let trimmed = line.trim();
+                if trimmed.is_empty() {
                     return Err(Diagnostic::error(
-                        "bin2dec: invalid binary string.",
+                        "bin2dec: input must be a non-empty binary string.",
                         span_op,
                     ));
                 }
+                for c in trimmed.chars() {
+                    if c != '0' && c != '1' {
+                        return Err(Diagnostic::error(
+                            "bin2dec: invalid binary string.",
+                            span_op,
+                        ));
+                    }
+                }
+                let unpadded = trimmed.trim_start_matches('0');
+                if unpadded.len() > 53 {
+                    return Err(Diagnostic::error(
+                        "bin2dec: binary string exceeds maximum precision of 53 bits.",
+                        span_op,
+                    ));
+                }
+                let val = if unpadded.is_empty() {
+                    0u64
+                } else {
+                    u64::from_str_radix(unpadded, 2).map_err(|_| {
+                        Diagnostic::error("bin2dec: invalid binary string.", span_op)
+                    })?
+                };
+                results.push(val as f64);
             }
-            if trimmed.len() > 53 {
-                return Err(Diagnostic::error(
-                    "bin2dec: binary string exceeds maximum precision of 53 bits.",
-                    span_op,
-                ));
+            if results.len() == 1 {
+                Ok(Value::Matrix(DenseMatrix::scalar(results[0])))
+            } else {
+                let rows = results.len();
+                Ok(Value::Matrix(DenseMatrix {
+                    rows,
+                    cols: 1,
+                    data: results,
+                }))
             }
-            let val = u64::from_str_radix(trimmed, 2)
-                .map_err(|_| Diagnostic::error("bin2dec: invalid binary string.", span_op))?;
-            Ok(Value::Matrix(DenseMatrix::scalar(val as f64)))
         }
         "dec2hex" => {
-            let (val, width) = parse_dec_args(args, env, io, span, "dec2hex")?;
-            let mut s = if val < 0.0 {
-                if val < -2147483648.0 {
-                    return Err(Diagnostic::error(
-                        "dec2hex: negative value exceeds 32-bit range.",
-                        span_op,
-                    ));
-                }
-                format!("{:X}", (val as i32) as u32)
-            } else {
-                if val > 9007199254740991.0 {
-                    return Err(Diagnostic::error(
-                        "dec2hex: value exceeds maximum supported integer 2^53 - 1.",
-                        span_op,
-                    ));
-                }
-                format!("{:X}", val as u64)
-            };
-            if let Some(w) = width {
-                if s.len() < w {
-                    s = format!("{:0>width$}", s, width = w);
-                }
+            let (m0, width) = parse_dec_args(args, env, io, span, "dec2hex")?;
+            if m0.data.is_empty() {
+                return Ok(Value::String(String::new()));
             }
-            Ok(Value::String(s))
+            let mut formatted = Vec::with_capacity(m0.data.len());
+            let mut max_len = width.unwrap_or(0);
+            for &raw_val in &m0.data {
+                if !raw_val.is_finite() {
+                    return Err(Diagnostic::error("dec2hex: input must be finite.", span_op));
+                }
+                let val = raw_val.floor();
+                let (is_neg, s) = if val < 0.0 {
+                    if val < -2147483648.0 {
+                        return Err(Diagnostic::error(
+                            "dec2hex: negative value exceeds 32-bit range.",
+                            span_op,
+                        ));
+                    }
+                    (true, format!("{:X}", (val as i32) as u32))
+                } else {
+                    if val > 9007199254740991.0 {
+                        return Err(Diagnostic::error(
+                            "dec2hex: value exceeds maximum supported integer 2^53 - 1.",
+                            span_op,
+                        ));
+                    }
+                    (false, format!("{:X}", val as u64))
+                };
+                max_len = max_len.max(s.len());
+                formatted.push((is_neg, s));
+            }
+            let rows: Vec<String> = formatted
+                .into_iter()
+                .map(|(is_neg, s)| {
+                    if s.len() < max_len {
+                        if is_neg {
+                            format!("{:F>width$}", s, width = max_len)
+                        } else {
+                            format!("{:0>width$}", s, width = max_len)
+                        }
+                    } else {
+                        s
+                    }
+                })
+                .collect();
+            let result = if m0.rows == 1 && m0.cols == 1 {
+                rows.into_iter().next().unwrap()
+            } else {
+                rows.join("\n")
+            };
+            Ok(Value::String(result))
         }
         "hex2dec" => {
             if args.len() != 1 {
@@ -1002,35 +1076,68 @@ pub fn call_builtin(
             }
             let v = eval_expr_pub(env, &args[0], io)?;
             let s = extract_string_or_chars(&v, span_op, "hex2dec")?;
-            let trimmed = s.trim();
-            let clean = if trimmed.starts_with("0x") || trimmed.starts_with("0X") {
-                &trimmed[2..]
-            } else {
-                trimmed
-            };
-            if clean.is_empty() {
+            let lines: Vec<&str> = s.lines().collect();
+            if lines.is_empty() {
                 return Err(Diagnostic::error(
                     "hex2dec: input must be a non-empty hexadecimal string.",
                     span_op,
                 ));
             }
-            for c in clean.chars() {
-                if !c.is_ascii_hexdigit() {
+            let mut results = Vec::with_capacity(lines.len());
+            for line in lines {
+                let trimmed = line.trim();
+                let clean = if trimmed.starts_with("0x") || trimmed.starts_with("0X") {
+                    &trimmed[2..]
+                } else {
+                    trimmed
+                };
+                if clean.is_empty() {
                     return Err(Diagnostic::error(
-                        "hex2dec: invalid hexadecimal string.",
+                        "hex2dec: input must be a non-empty hexadecimal string.",
                         span_op,
                     ));
                 }
+                for c in clean.chars() {
+                    if !c.is_ascii_hexdigit() {
+                        return Err(Diagnostic::error(
+                            "hex2dec: invalid hexadecimal string.",
+                            span_op,
+                        ));
+                    }
+                }
+                let unpadded = clean.trim_start_matches('0');
+                let val = if unpadded.is_empty() {
+                    0u64
+                } else {
+                    if unpadded.len() > 16 {
+                        return Err(Diagnostic::error(
+                            "hex2dec: hexadecimal string exceeds maximum precision of 52 bits.",
+                            span_op,
+                        ));
+                    }
+                    let parsed = u64::from_str_radix(unpadded, 16).map_err(|_| {
+                        Diagnostic::error("hex2dec: invalid hexadecimal string.", span_op)
+                    })?;
+                    if parsed > 9007199254740991 {
+                        return Err(Diagnostic::error(
+                            "hex2dec: hexadecimal string exceeds maximum precision of 52 bits.",
+                            span_op,
+                        ));
+                    }
+                    parsed
+                };
+                results.push(val as f64);
             }
-            if clean.len() > 13 {
-                return Err(Diagnostic::error(
-                    "hex2dec: hexadecimal string exceeds maximum precision of 52 bits.",
-                    span_op,
-                ));
+            if results.len() == 1 {
+                Ok(Value::Matrix(DenseMatrix::scalar(results[0])))
+            } else {
+                let rows = results.len();
+                Ok(Value::Matrix(DenseMatrix {
+                    rows,
+                    cols: 1,
+                    data: results,
+                }))
             }
-            let val = u64::from_str_radix(clean, 16)
-                .map_err(|_| Diagnostic::error("hex2dec: invalid hexadecimal string.", span_op))?;
-            Ok(Value::Matrix(DenseMatrix::scalar(val as f64)))
         }
         "atan2" => {
             if args.len() != 2 {

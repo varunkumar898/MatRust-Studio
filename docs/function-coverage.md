@@ -78,7 +78,7 @@ date above; Section 14 records batch updates.
 
 | Name | Status | Implementation | Dependencies | Tests | Limitations | Next action |
 |---|---|---|---|---|---|---|
-| `abs`, `sign` | partial | runtime::builtins (`abs`) | — | compatibility:scalar_math_functions | `abs` implemented; `sign` planned | add `sign` to unary map |
+| `abs`, `sign` | implemented | runtime::builtins | — | compatibility:scalar_math_functions, language:numeric_batch7:sign_* | `abs` IEEE-754; `sign` returns -1, 0, 1, or NaN | — |
 | `sqrt`, `nthroot(x,n)` | implemented | runtime::builtins | — | compatibility:scalar_math_functions, language:numeric_batch7:nthroot_* | real-only roots; odd roots of negative numbers supported; even roots of negative numbers error | complex roots after complex type |
 | `exp`, `log`, `log2`, `log10` | implemented | runtime::builtins | — | compatibility:scalar_math_functions | real-valued IEEE-754 semantics | complex log after complex type |
 | `power(a,b)` / `.^` | implemented | linalg::elementwise_pow | — | matrices:elementwise_power_and_division | f64 powf semantics | complex power after complex type |
@@ -96,7 +96,7 @@ date above; Section 14 records batch updates.
 | `primes(n)`, `isprime(n)`, `factor(n)` | implemented | runtime::builtins | — | language:numeric_batch7:primes_*, factor_* | sieve for primes; trial division for factor; factor(1)==[1]; product reconstructs input | large integer precision limited to flintmax |
 | `real`, `imag`, `conj`, `angle` | planned | — | — | — | needs complex type | architectural design completed in docs/architecture/complex-numbers.md |
 | `bitand`, `bitor`, `bitxor`, `bitshift` | implemented | runtime::builtins | — | language:numeric_batch7:bitwise_*, bitshift_* | safe shift logic (no panic on shift>=64 or <=-64); 3-arg bitshift width mask | integer type cast |
-| `dec2bin`, `bin2dec`, `dec2hex`, `hex2dec` | implemented | runtime::builtins | — | language:numeric_batch7:dec2bin_*, bin2dec_*, dec2hex_*, hex2dec_* | 32-bit two's complement for negative inputs; width padding; radix checking | multi-row character matrix representation |
+| `dec2bin`, `bin2dec`, `dec2hex`, `hex2dec` | implemented | runtime::builtins | — | language:numeric_batch7:dec2bin_*, bin2dec_*, dec2hex_*, hex2dec_* | 32-bit two's complement for negatives (padded with 1/F); scalar and vector inputs; floor semantics; multi-line string round-trips to column vectors | precision limited to flintmax |
 
 ## 4. Statistics (11)
 

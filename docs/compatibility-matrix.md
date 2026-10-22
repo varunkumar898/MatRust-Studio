@@ -51,7 +51,8 @@ R2026b behavior this row tracks; this matrix makes no claim beyond that.
 ## Batch 6 & 7 additions (2026-10-22)
 | Feature | Status | Notes |
 |---|---|---|
-| Base conversions: `dec2bin`, `bin2dec`, `dec2hex`, `hex2dec` | implemented | string/char vectors; 32-bit two's complement for negative integers; width padding; radix validation |
+| Base conversions: `dec2bin`, `bin2dec`, `dec2hex`, `hex2dec` | implemented | scalar and array inputs; 32-bit two's complement for negative integers (padded with 1/F); floor semantics for fractional inputs; width padding; multi-row text round-trips to numeric column vectors |
+| Signum: `sign` | implemented | element-wise sign extraction returning -1, 0, 1, or NaN; scalar and array inputs |
 | Degree inverse trigonometry: `asind`, `acosd`, `atand` | implemented | degree outputs; domain boundaries `[-1, 1]`; out-of-domain produces NaN; scalar and array inputs |
 | Exact degree trigonometry: `sind`, `cosd`, `tand` | implemented | exact zeros for multiples of 90/180 degrees; standard IEEE-754 for other angles |
 | Prime factorization: `factor` | implemented | returns 1xN row vector of prime factors; reconstructs input via multiplication; `factor(1)==[1]`; invalid/non-integer/non-positive inputs rejected |
@@ -60,3 +61,4 @@ R2026b behavior this row tracks; this matrix makes no claim beyond that.
 | Combinatorics: `factorial`, `nchoosek` | implemented | float accumulation avoiding early integer overflow; `nchoosek` uses symmetry; `factorial(171)==Inf` |
 | Bitwise operations: `bitand`, `bitor`, `bitxor`, `bitshift` | implemented | safe shift logic preventing overflow panics; 3-arg `bitshift(A,k,n)` mask; scalar expansion; integer validation |
 | Complex number model | designed | architectural design specification in `docs/architecture/complex-numbers.md` |
+

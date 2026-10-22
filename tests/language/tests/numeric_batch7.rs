@@ -17,47 +17,79 @@ fn dec2bin_basic() {
 
 #[test]
 fn dec2bin_with_width() {
-    let r = run_source("s1 = dec2bin(10, 8); s2 = dec2bin(255, 4)").unwrap();
+    let r = run_source(
+        "s1 = dec2bin(10, 8); s2 = dec2bin(255, 4); s3 = dec2bin(23, 8); s4 = dec2bin(23)",
+    )
+    .unwrap();
     // width 8 pads with leading zeros
     assert_eq!(r.env.get("s1").unwrap(), &Value::String("00001010".into()));
     // width 4 is smaller than 8 bits, so it does not truncate
     assert_eq!(r.env.get("s2").unwrap(), &Value::String("11111111".into()));
+    assert_eq!(r.env.get("s3").unwrap(), &Value::String("00010111".into()));
+    assert_eq!(r.env.get("s4").unwrap(), &Value::String("10111".into()));
 }
 
 #[test]
 fn dec2bin_negative_twos_complement() {
-    let r = run_source("s = dec2bin(-1)").unwrap();
+    let r = run_source("s1 = dec2bin(-1); s2 = dec2bin(-1, 36)").unwrap();
     // 32-bit two's complement
     assert_eq!(
-        r.env.get("s").unwrap(),
+        r.env.get("s1").unwrap(),
         &Value::String("11111111111111111111111111111111".into())
+    );
+    // Negative padding with leading ones
+    assert_eq!(
+        r.env.get("s2").unwrap(),
+        &Value::String("111111111111111111111111111111111111".into())
     );
 }
 
 #[test]
+fn dec2bin_floor_and_arrays() {
+    // Floor semantics for fractional parts
+    let r = run_source("s1 = dec2bin(10.9); s2 = dec2bin(23.2)").unwrap();
+    assert_eq!(r.env.get("s1").unwrap(), &Value::String("1010".into()));
+    assert_eq!(r.env.get("s2").unwrap(), &Value::String("10111".into()));
+
+    // Array conversion with common padding
+    let r_arr = run_source("s_arr = dec2bin([10; 255]); d_arr = bin2dec(s_arr)").unwrap();
+    assert_eq!(
+        r_arr.env.get("s_arr").unwrap(),
+        &Value::String("00001010\n11111111".into())
+    );
+    let d = r_arr.env.get("d_arr").unwrap().as_matrix().unwrap();
+    assert_eq!(d.rows, 2);
+    assert_eq!(d.cols, 1);
+    assert_eq!(d.data, vec![10.0, 255.0]);
+}
+
+#[test]
 fn dec2bin_invalid_inputs() {
-    assert!(run_source("dec2bin(10.5)").is_err());
     assert!(run_source("dec2bin()").is_err());
     assert!(run_source("dec2bin(1, 2, 3)").is_err());
+    assert!(run_source("dec2bin(10, -2)").is_err());
+    assert!(run_source("dec2bin(10, 2.5)").is_err());
 }
 
 #[test]
 fn bin2dec_basic() {
     let r = run_source(
-        "n1 = bin2dec('0'); n2 = bin2dec('1'); n3 = bin2dec('1010'); n4 = bin2dec('11111111')",
+        "n1 = bin2dec('0'); n2 = bin2dec('1'); n3 = bin2dec('1010'); n4 = bin2dec('11111111'); n5 = bin2dec('10111')",
     )
     .unwrap();
     assert_eq!(r.env.get("n1").unwrap().as_matrix().unwrap().data[0], 0.0);
     assert_eq!(r.env.get("n2").unwrap().as_matrix().unwrap().data[0], 1.0);
     assert_eq!(r.env.get("n3").unwrap().as_matrix().unwrap().data[0], 10.0);
     assert_eq!(r.env.get("n4").unwrap().as_matrix().unwrap().data[0], 255.0);
+    assert_eq!(r.env.get("n5").unwrap().as_matrix().unwrap().data[0], 23.0);
 }
 
 #[test]
 fn bin2dec_padded_and_trimmed() {
-    let r = run_source("n1 = bin2dec('00001010'); n2 = bin2dec('  1010  ')").unwrap();
+    let r = run_source("n1 = bin2dec('00001010'); n2 = bin2dec('  1010  '); n3 = bin2dec('00000000000000000000000000000000000000000000000000000001')").unwrap();
     assert_eq!(r.env.get("n1").unwrap().as_matrix().unwrap().data[0], 10.0);
     assert_eq!(r.env.get("n2").unwrap().as_matrix().unwrap().data[0], 10.0);
+    assert_eq!(r.env.get("n3").unwrap().as_matrix().unwrap().data[0], 1.0);
 }
 
 #[test]
@@ -88,42 +120,71 @@ fn roundtrip_dec2bin_bin2dec() {
 
 #[test]
 fn dec2hex_basic() {
-    let r = run_source("h1 = dec2hex(0); h2 = dec2hex(10); h3 = dec2hex(255); h4 = dec2hex(4095)")
+    let r = run_source("h1 = dec2hex(0); h2 = dec2hex(10); h3 = dec2hex(255); h4 = dec2hex(4095); h5 = dec2hex(1023)")
         .unwrap();
     assert_eq!(r.env.get("h1").unwrap(), &Value::String("0".into()));
     assert_eq!(r.env.get("h2").unwrap(), &Value::String("A".into()));
     assert_eq!(r.env.get("h3").unwrap(), &Value::String("FF".into()));
     assert_eq!(r.env.get("h4").unwrap(), &Value::String("FFF".into()));
+    assert_eq!(r.env.get("h5").unwrap(), &Value::String("3FF".into()));
 }
 
 #[test]
 fn dec2hex_with_width() {
-    let r = run_source("h1 = dec2hex(255, 4); h2 = dec2hex(255, 1)").unwrap();
+    let r =
+        run_source("h1 = dec2hex(255, 4); h2 = dec2hex(255, 1); h3 = dec2hex(1023, 6)").unwrap();
     assert_eq!(r.env.get("h1").unwrap(), &Value::String("00FF".into()));
     assert_eq!(r.env.get("h2").unwrap(), &Value::String("FF".into()));
+    assert_eq!(r.env.get("h3").unwrap(), &Value::String("0003FF".into()));
 }
 
 #[test]
 fn dec2hex_negative_twos_complement() {
-    let r = run_source("h = dec2hex(-1)").unwrap();
-    assert_eq!(r.env.get("h").unwrap(), &Value::String("FFFFFFFF".into()));
+    let r = run_source("h1 = dec2hex(-1); h2 = dec2hex(-1, 10)").unwrap();
+    assert_eq!(r.env.get("h1").unwrap(), &Value::String("FFFFFFFF".into()));
+    assert_eq!(
+        r.env.get("h2").unwrap(),
+        &Value::String("FFFFFFFFFF".into())
+    );
+}
+
+#[test]
+fn dec2hex_floor_and_arrays() {
+    let r = run_source("h1 = dec2hex(10.9); h2 = dec2hex(1023.7)").unwrap();
+    assert_eq!(r.env.get("h1").unwrap(), &Value::String("A".into()));
+    assert_eq!(r.env.get("h2").unwrap(), &Value::String("3FF".into()));
+
+    let r_arr = run_source("h_arr = dec2hex([15; 255; 4095]); d_arr = hex2dec(h_arr)").unwrap();
+    assert_eq!(
+        r_arr.env.get("h_arr").unwrap(),
+        &Value::String("00F\n0FF\nFFF".into())
+    );
+    let d = r_arr.env.get("d_arr").unwrap().as_matrix().unwrap();
+    assert_eq!(d.rows, 3);
+    assert_eq!(d.cols, 1);
+    assert_eq!(d.data, vec![15.0, 255.0, 4095.0]);
 }
 
 #[test]
 fn dec2hex_invalid_inputs() {
-    assert!(run_source("dec2hex(10.5)").is_err());
     assert!(run_source("dec2hex()").is_err());
+    assert!(run_source("dec2hex(10, -1)").is_err());
+    assert!(run_source("dec2hex(10, 1.5)").is_err());
 }
 
 #[test]
 fn hex2dec_basic() {
-    let r = run_source("n1 = hex2dec('0'); n2 = hex2dec('A'); n3 = hex2dec('a'); n4 = hex2dec('FF'); n5 = hex2dec('0x10'); n6 = hex2dec('0XFF')").unwrap();
+    let r = run_source("n1 = hex2dec('0'); n2 = hex2dec('A'); n3 = hex2dec('a'); n4 = hex2dec('FF'); n5 = hex2dec('0x10'); n6 = hex2dec('0XFF'); n7 = hex2dec('3FF')").unwrap();
     assert_eq!(r.env.get("n1").unwrap().as_matrix().unwrap().data[0], 0.0);
     assert_eq!(r.env.get("n2").unwrap().as_matrix().unwrap().data[0], 10.0);
     assert_eq!(r.env.get("n3").unwrap().as_matrix().unwrap().data[0], 10.0);
     assert_eq!(r.env.get("n4").unwrap().as_matrix().unwrap().data[0], 255.0);
     assert_eq!(r.env.get("n5").unwrap().as_matrix().unwrap().data[0], 16.0);
     assert_eq!(r.env.get("n6").unwrap().as_matrix().unwrap().data[0], 255.0);
+    assert_eq!(
+        r.env.get("n7").unwrap().as_matrix().unwrap().data[0],
+        1023.0
+    );
 }
 
 #[test]
@@ -487,4 +548,13 @@ fn primes_and_isprime() {
     let p0 = r_empty.env.get("p0").unwrap().as_matrix().unwrap();
     assert_eq!(p0.rows, 1);
     assert_eq!(p0.cols, 0);
+}
+
+#[test]
+fn sign_values_and_arrays() {
+    let r = run_source("s = sign([-10, -0.5, 0, 0.5, 10]); snan = sign(0./0)").unwrap();
+    let s = r.env.get("s").unwrap().as_matrix().unwrap();
+    assert_eq!(s.data, vec![-1.0, -1.0, 0.0, 1.0, 1.0]);
+    let snan = r.env.get("snan").unwrap().as_matrix().unwrap();
+    assert!(snan.data[0].is_nan());
 }

@@ -105,6 +105,14 @@ const BUILTINS: &[&str] = &[
     "bin2dec",
     "dec2hex",
     "hex2dec",
+    "mean",
+    "median",
+    "mode",
+    "std",
+    "var",
+    "range",
+    "iqr",
+    "prod",
 ];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

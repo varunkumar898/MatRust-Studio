@@ -102,17 +102,17 @@ date above; Section 14 records batch updates.
 
 | Name | Status | Implementation | Dependencies | Tests | Limitations | Next action |
 |---|---|---|---|---|---|---|
-| `sum`, `prod` | partial | linalg::reduce_cols (`sum`) | — | compatibility:column_reductions_match_matlab_defaults | `sum` only; `prod` missing | add prod reduction |
-| `mean`, `median`, `mode` | missing | — | — | — | — | mean then median/mode (mode multi-modal note) |
-| `std`, `var` | missing | — | — | — | — | Welford; note normalization choice |
-| `min`, `max` | partial | linalg::reduce_cols | — | compatibility:column_reductions_match_matlab_defaults | values only; no index output; 2-arg elementwise max/min missing | add index + elementwise overloads |
-| `range`, `iqr` | missing | — | — | — | — | range = max-min; iqr needs quantiles |
-| `prctile`, `quantile` | missing | — | — | — | — | linear interpolation method |
-| `corrcoef`, `corr`, `cov` | missing | — | — | — | — | cov matrix then correlations |
-| `movmean`, `movmedian`, `movsum` | missing | — | — | — | — | window handling (edges) |
-| `normalize` | missing | — | — | — | — | methods: data/z/scale/range |
-| `rescale` | missing | — | — | — | — | trivial |
-| `cummax`, `cummin` | missing | — | — | — | — | running extrema |
+| `sum`, `prod` | implemented | linalg::stats | — | language:numeric_batch8:sum_*, prod_* | supports dim, 'all', empty (0.0 for sum, 1.0 for prod) | — |
+| `mean`, `median`, `mode` | implemented | linalg::stats | — | language:numeric_batch8:mean_*, median_*, mode_* | supports dim, 'all'; mode resolves ties to smallest value; empty returns NaN | — |
+| `std`, `var` | implemented | linalg::stats | — | language:numeric_batch8:std_*, var_* | supports w=0 (N-1) and w=1 (N), dim, 'all'; constant data returns 0.0; empty returns NaN | — |
+| `min`, `max` | implemented | linalg::stats | — | language:numeric_batch8:min_max_* | reduction along dim/all; element-wise binary min(A,B)/max(A,B) with scalar expansion; 2-output [M,I] returning 1-based column-major indices | — |
+| `range`, `iqr` | implemented | linalg::stats | — | language:numeric_batch8:range_*, iqr_* | range = max-min; iqr uses empirical quantile linear interpolation (r = 0.5 + N*p) matching MATLAB; empty returns NaN | — |
+| `prctile`, `quantile` | missing | — | — | — | linear interpolation method | — |
+| `corrcoef`, `corr`, `cov` | missing | — | — | — | cov matrix then correlations | — |
+| `movmean`, `movmedian`, `movsum` | missing | — | — | — | window handling (edges) | — |
+| `normalize` | missing | — | — | — | methods: data/z/scale/range | — |
+| `rescale` | missing | — | — | — | trivial | — |
+| `cummax`, `cummin` | missing | — | — | — | running extrema | — |
 
 ## 5. Linear algebra (14)
 

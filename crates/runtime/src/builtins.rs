@@ -77,10 +77,10 @@ pub fn call_builtin_multi(
                 let dim = parse_dim_arg(&args[2], env, io, span, "min")?;
                 match dim {
                     DimArg::All => {
-                        let (val, idx0) = la::stats::min_slice(&m0.data);
+                        let (val, idx1) = la::stats::min_all_with_idx(&m0);
                         Ok(vec![
                             Value::Matrix(DenseMatrix::scalar(val)),
-                            Value::Matrix(DenseMatrix::scalar((idx0 + 1) as f64)),
+                            Value::Matrix(DenseMatrix::scalar(idx1 as f64)),
                         ])
                     }
                     DimArg::Dim(d) => {
@@ -112,10 +112,10 @@ pub fn call_builtin_multi(
                 let dim = parse_dim_arg(&args[2], env, io, span, "max")?;
                 match dim {
                     DimArg::All => {
-                        let (val, idx0) = la::stats::max_slice(&m0.data);
+                        let (val, idx1) = la::stats::max_all_with_idx(&m0);
                         Ok(vec![
                             Value::Matrix(DenseMatrix::scalar(val)),
-                            Value::Matrix(DenseMatrix::scalar((idx0 + 1) as f64)),
+                            Value::Matrix(DenseMatrix::scalar(idx1 as f64)),
                         ])
                     }
                     DimArg::Dim(d) => {
@@ -668,35 +668,159 @@ pub fn call_builtin(
             };
             Ok(Value::Matrix(la::map_unary(&m, f)))
         }
-        "sum" => {
-            if args.len() != 1 {
-                return Err(Diagnostic::error("sum expects 1 argument.", span_op));
-            }
-            let v = eval_expr_pub(env, &args[0], io)?;
-            let m = coerce_matrix_pub(v, span_op)?;
-            Ok(Value::Matrix(la::reduce_cols(&m, 0.0, |a, b| a + b)))
-        }
-        "max" | "min" => {
-            if args.len() != 1 {
+        "mean" | "median" | "mode" | "range" | "iqr" | "prod" | "sum" => {
+            if args.is_empty() || args.len() > 2 {
                 return Err(Diagnostic::error(
-                    format!("{} expects 1 argument.", name),
+                    format!("{} expects 1 or 2 arguments.", name),
                     span_op,
                 ));
             }
-            let v = eval_expr_pub(env, &args[0], io)?;
-            let m = coerce_matrix_pub(v, span_op)?;
-            let init = if name == "max" {
-                f64::NEG_INFINITY
+            let v0 = eval_expr_pub(env, &args[0], io)?;
+            let m0 = coerce_matrix_pub(v0, span_op)?;
+            let dim = if args.len() == 2 {
+                parse_dim_arg(&args[1], env, io, span, name)?
             } else {
-                f64::INFINITY
+                DimArg::Default
             };
-            Ok(Value::Matrix(la::reduce_cols(&m, init, |a, b| {
-                if name == "max" {
-                    a.max(b)
-                } else {
-                    a.min(b)
+            let res = match dim {
+                DimArg::All => {
+                    let scalar_val = match name {
+                        "mean" => la::stats::mean_slice(&m0.data),
+                        "median" => la::stats::median_slice(&m0.data),
+                        "mode" => la::stats::mode_slice(&m0.data),
+                        "range" => la::stats::range_slice(&m0.data),
+                        "iqr" => la::stats::iqr_slice(&m0.data),
+                        "prod" => la::stats::prod_slice(&m0.data),
+                        "sum" => la::stats::sum_slice(&m0.data),
+                        _ => unreachable!(),
+                    };
+                    DenseMatrix::scalar(scalar_val)
                 }
-            })))
+                DimArg::Dim(d) => match name {
+                    "mean" => la::stats::mean(&m0, Some(d)),
+                    "median" => la::stats::median(&m0, Some(d)),
+                    "mode" => la::stats::mode(&m0, Some(d)),
+                    "range" => la::stats::range(&m0, Some(d)),
+                    "iqr" => la::stats::iqr(&m0, Some(d)),
+                    "prod" => la::stats::prod(&m0, Some(d)),
+                    "sum" => la::stats::sum(&m0, Some(d)),
+                    _ => unreachable!(),
+                },
+                DimArg::Default => match name {
+                    "mean" => la::stats::mean(&m0, None),
+                    "median" => la::stats::median(&m0, None),
+                    "mode" => la::stats::mode(&m0, None),
+                    "range" => la::stats::range(&m0, None),
+                    "iqr" => la::stats::iqr(&m0, None),
+                    "prod" => la::stats::prod(&m0, None),
+                    "sum" => la::stats::sum(&m0, None),
+                    _ => unreachable!(),
+                },
+            };
+            Ok(Value::Matrix(res))
+        }
+        "std" | "var" => {
+            if args.is_empty() || args.len() > 3 {
+                return Err(Diagnostic::error(
+                    format!("{} expects 1, 2, or 3 arguments.", name),
+                    span_op,
+                ));
+            }
+            let v0 = eval_expr_pub(env, &args[0], io)?;
+            let m0 = coerce_matrix_pub(v0, span_op)?;
+            let w = if args.len() >= 2 {
+                let vw = eval_expr_pub(env, &args[1], io)?;
+                parse_w_from_value(&vw, span_op, name)?
+            } else {
+                0
+            };
+            let dim = if args.len() == 3 {
+                parse_dim_arg(&args[2], env, io, span, name)?
+            } else {
+                DimArg::Default
+            };
+            let res = match dim {
+                DimArg::All => {
+                    let scalar_val = if name == "std" {
+                        la::stats::std_slice(&m0.data, w)
+                    } else {
+                        la::stats::var_slice(&m0.data, w)
+                    };
+                    DenseMatrix::scalar(scalar_val)
+                }
+                DimArg::Dim(d) => {
+                    if name == "std" {
+                        la::stats::std(&m0, w, Some(d))
+                    } else {
+                        la::stats::var(&m0, w, Some(d))
+                    }
+                }
+                DimArg::Default => {
+                    if name == "std" {
+                        la::stats::std(&m0, w, None)
+                    } else {
+                        la::stats::var(&m0, w, None)
+                    }
+                }
+            };
+            Ok(Value::Matrix(res))
+        }
+        "min" | "max" => {
+            if args.is_empty() || args.len() > 3 {
+                return Err(Diagnostic::error(
+                    format!("{} expects 1, 2, or 3 arguments.", name),
+                    span_op,
+                ));
+            }
+            let v0 = eval_expr_pub(env, &args[0], io)?;
+            let m0 = coerce_matrix_pub(v0, span_op)?;
+            if args.len() == 1 {
+                let (vals, _) = if name == "min" {
+                    la::stats::min_reduction(&m0, None)
+                } else {
+                    la::stats::max_reduction(&m0, None)
+                };
+                Ok(Value::Matrix(vals))
+            } else if args.len() == 2 {
+                let v1 = eval_expr_pub(env, &args[1], io)?;
+                let m1 = coerce_matrix_pub(v1, span_op)?;
+                let res = if name == "min" {
+                    la::stats::min_elementwise(&m0, &m1, span_op)?
+                } else {
+                    la::stats::max_elementwise(&m0, &m1, span_op)?
+                };
+                Ok(Value::Matrix(res))
+            } else {
+                let _ = eval_expr_pub(env, &args[1], io)?;
+                let dim = parse_dim_arg(&args[2], env, io, span, name)?;
+                let res = match dim {
+                    DimArg::All => {
+                        let (val, _) = if name == "min" {
+                            la::stats::min_all_with_idx(&m0)
+                        } else {
+                            la::stats::max_all_with_idx(&m0)
+                        };
+                        DenseMatrix::scalar(val)
+                    }
+                    DimArg::Dim(d) => {
+                        let (vals, _) = if name == "min" {
+                            la::stats::min_reduction(&m0, Some(d))
+                        } else {
+                            la::stats::max_reduction(&m0, Some(d))
+                        };
+                        vals
+                    }
+                    DimArg::Default => {
+                        let (vals, _) = if name == "min" {
+                            la::stats::min_reduction(&m0, None)
+                        } else {
+                            la::stats::max_reduction(&m0, None)
+                        };
+                        vals
+                    }
+                };
+                Ok(Value::Matrix(res))
+            }
         }
         "nthroot" => {
             if args.len() != 2 {

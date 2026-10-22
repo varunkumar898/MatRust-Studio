@@ -62,3 +62,11 @@ R2026b behavior this row tracks; this matrix makes no claim beyond that.
 | Bitwise operations: `bitand`, `bitor`, `bitxor`, `bitshift` | implemented | safe shift logic preventing overflow panics; 3-arg `bitshift(A,k,n)` mask; scalar expansion; integer validation |
 | Complex number model | designed | architectural design specification in `docs/architecture/complex-numbers.md` |
 
+## Batch 8 additions (2026-10-22)
+| Feature | Status | Notes |
+|---|---|---|
+| Central tendency: `mean`, `median`, `mode` | implemented | default dimension reduction (dim 1 for matrices, dim 2 for row vectors); explicit dimension argument; `'all'` global reduction; `mode` resolves ties to smallest value; empty inputs return NaN |
+| Measures of spread: `std`, `var` | implemented | normalization weights `w=0` (sample, $N-1$) and `w=1` (population, $N$); dimension and `'all'` options; constant data returns 0.0; singletons return 0.0; empty arrays return NaN |
+| Measures of spread: `range`, `iqr` | implemented | `range = max - min`; `iqr` uses empirical quantile linear interpolation ($r = 0.5 + N \times p$) matching MATLAB; dimension and `'all'` support; empty inputs return NaN |
+| Products and Sums: `prod`, `sum` | implemented | default, explicit dim, and `'all'` reduction; empty `sum([]) == 0.0`; empty `prod([]) == 1.0` |
+| Minima and Maxima: `min`, `max` | implemented | 1-arg reduction along dim or `'all'`; 2-arg element-wise pairwise `min(A,B)` / `max(A,B)` with scalar expansion; 2-output `[M, I] = min/max(...)` returning 1-based column-major indices |

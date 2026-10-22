@@ -294,3 +294,44 @@ validation in `crates/runtime/src/arrayfn.rs`, dispatch in `crates/runtime/src/b
   - `cargo test --workspace` all 140+ unit and integration tests pass (36 tests in `numeric_batch7.rs`).
   - Desktop `matrust_studio` builds clean.
   - CLI execution verified via `cargo run -p matlabr_cli -- -e "..."`.
+
+---
+
+## Batch 8 — Statistics and Array Reductions (2026-10-22)
+
+- **REA MCP Setup & Live Verification in Antigravity**:
+  - Environment: Node.js `v26.8.1`, npm `12.0.2`.
+  - Preserved OpenCode configuration (`~/.config/opencode/opencode.json`).
+  - Antigravity MCP configuration verified at `/home/cherry/.gemini/config/mcp_config.json` registering `rea` command `npx -y rea-agents@6.7.0 mcp`.
+  - Skill verified at `/home/cherry/.gemini/config/skills/reverse-engineer-anything/SKILL.md` (version 42 aligned).
+  - `npx -y rea-agents@latest doctor --client antigravity --json` returned `antigravity` registration state `aligned` with all checks passing.
+  - Live tool invocation tested and confirmed working in active Antigravity session using `binary_session` on server `"rea"`.
+- **MATLAB Target Verification**:
+  - Inspected `/home/cherry/Downloads/matlab_R2026b_Linux/archives`. Contains only `Network_License_Manager262_common.zip` (4.2 MB) and `Network_License_Manager262_glnxa64.zip` (10.2 MB).
+  - No MATLAB numerical engine or executable is present on the host system.
+  - Native MATLAB reverse engineering is honestly recorded as blocked; no fabricated evidence IDs, fake findings, or surrogate binaries used.
+- **Group A — Central Tendency**:
+  - `mean`: supports vector default (reduces along row or column to scalar), matrix default (dim 1 column reduction), explicit dimension argument `dim`, and `'all'` scalar reduction across entire matrix; empty returns NaN.
+  - `median`: odd and even length vector support (averaging two middle values for even), matrix dimension reductions, `'all'` scalar reduction; empty returns NaN.
+  - `mode`: computes sample mode; in multi-modal distributions with ties, picks the smallest tied value according to MATLAB compatibility; matrix dimension and `'all'` reduction supported.
+- **Group B — Measures of Spread**:
+  - `std`, `var`: implements normalization flags `w = 0` (unbiased sample variance, $N-1$ divisor) and `w = 1` (population variance, $N$ divisor); handles constant data returning `0.0`, singletons returning `0.0`, empty arrays returning `NaN`; supports `dim` and `'all'` reductions.
+  - `range`: computes `max(A) - min(A)` along specified dimension or `'all'`; empty returns `NaN`.
+  - `iqr`: computes interquartile range using MATLAB's exact empirical cumulative distribution with linear interpolation ($r = 0.5 + N \times p$); dimension and `'all'` supported; empty returns `NaN`.
+- **Group C — Products, Minima, Maxima, and Sums**:
+  - `prod`: reduction along dimension or `'all'`; empty product returns scalar `1.0` matching MATLAB.
+  - `sum`: updated to support explicit dimension and `'all'`; empty sum returns scalar `0.0`.
+  - `min`, `max`:
+    - 1-argument reduction along default dimension (dim 1 for matrices, dim 2 for row vectors) or explicit `dim` or `'all'`.
+    - 2-argument element-wise pairwise `min(A, B)` and `max(A, B)` with MATLAB scalar expansion.
+    - 3-argument dimension reduction `min(A, [], dim)` and `max(A, [], dim)` including `'all'`.
+    - Multiple-output support: `[M, I] = min(...)` and `[M, I] = max(...)` returning both extrema values and 1-based column-major indices for vectors, matrix columns/rows, and global `'all'` queries.
+- **Desktop & IDE Integration**:
+  - Synchronized syntax highlighter in `apps/desktop/src/editor.rs` by adding `mean`, `median`, `mode`, `std`, `var`, `range`, `iqr`, `prod` to `BUILTINS`.
+  - Shared runtime ensures all functions work equivalently across the CLI, interactive REPL, editor script execution, and Workspace inspector.
+- **Verification**:
+  - `cargo fmt --check`: 100% clean formatting.
+  - `cargo check --workspace`: 0 warnings, 0 errors.
+  - `cargo test --workspace`: all 148+ tests pass, including 18 new comprehensive integration tests in `tests/language/tests/numeric_batch8.rs`.
+  - `cargo build -p matrust_studio`: clean desktop application build.
+  - Verified representative commands in CLI: `M = [1, 2; 3, 4]; disp(mean(M)); disp(std(M)); [m, idx] = min(M); disp(m); disp(idx);`.

@@ -333,6 +333,58 @@ pub fn max_slice(slice: &[f64]) -> (f64, usize) {
     (best_val, best_idx)
 }
 
+pub fn min_all_with_idx(a: &DenseMatrix) -> (f64, usize) {
+    if a.data.is_empty() {
+        return (f64::NAN, 0);
+    }
+    let mut best_val = f64::NAN;
+    let mut best_idx = 1;
+    for c in 0..a.cols {
+        for r in 0..a.rows {
+            let v = a.data[r * a.cols + c];
+            let col_major_1based = c * a.rows + r + 1;
+            if v.is_nan() {
+                continue;
+            }
+            if best_val.is_nan() || v < best_val {
+                best_val = v;
+                best_idx = col_major_1based;
+            }
+        }
+    }
+    if best_val.is_nan() {
+        (f64::NAN, 1)
+    } else {
+        (best_val, best_idx)
+    }
+}
+
+pub fn max_all_with_idx(a: &DenseMatrix) -> (f64, usize) {
+    if a.data.is_empty() {
+        return (f64::NAN, 0);
+    }
+    let mut best_val = f64::NAN;
+    let mut best_idx = 1;
+    for c in 0..a.cols {
+        for r in 0..a.rows {
+            let v = a.data[r * a.cols + c];
+            let col_major_1based = c * a.rows + r + 1;
+            if v.is_nan() {
+                continue;
+            }
+            if best_val.is_nan() || v > best_val {
+                best_val = v;
+                best_idx = col_major_1based;
+            }
+        }
+    }
+    if best_val.is_nan() {
+        (f64::NAN, 1)
+    } else {
+        (best_val, best_idx)
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Matrix-Level Operations
 // ---------------------------------------------------------------------------

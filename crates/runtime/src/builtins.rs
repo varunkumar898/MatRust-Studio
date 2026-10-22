@@ -11,7 +11,7 @@
 use matlab_diagnostics::{Diagnostic, Span};
 use matlab_linalg as la;
 use matlab_syntax::ast::Expr;
-use matlab_values::{DenseMatrix, Value};
+use matlab_values::{Complex64, ComplexDenseMatrix, DenseMatrix, Value};
 
 use crate::graphics::{vector_from_matrix, PlotItem};
 use crate::interp::{coerce_matrix_pub, eval_expr_pub, Env, ExecIo};
@@ -44,10 +44,17 @@ pub fn call_builtin_multi(
         }
         "size" if nargout > 1 => {
             let v = eval_expr_pub(env, &args[0], io)?;
-            let m = coerce_matrix_pub(v, Some(span))?;
+            let (rows, cols) = match &v {
+                Value::Matrix(m) => (m.rows, m.cols),
+                Value::ComplexMatrix(c) => (c.rows, c.cols),
+                _ => {
+                    let m = coerce_matrix_pub(v, Some(span))?;
+                    (m.rows, m.cols)
+                }
+            };
             Ok(vec![
-                Value::Matrix(DenseMatrix::scalar(m.rows as f64)),
-                Value::Matrix(DenseMatrix::scalar(m.cols as f64)),
+                Value::Matrix(DenseMatrix::scalar(rows as f64)),
+                Value::Matrix(DenseMatrix::scalar(cols as f64)),
             ])
         }
         "find" if nargout > 1 => {
@@ -165,6 +172,7 @@ pub fn call_builtin_multi(
 pub fn format_value(value: &Value) -> String {
     match value {
         Value::Matrix(m) => m.format_matlab(),
+        Value::ComplexMatrix(c) => c.format_matlab(),
         Value::String(s) => s.clone(),
         Value::Boolean(b) => {
             if *b {
@@ -198,7 +206,7 @@ fn scalar_arg(
 
 /// Names that resolve as bare identifiers when not shadowed by a variable.
 pub fn is_known_constant(name: &str) -> bool {
-    matches!(name, "pi" | "inf" | "Inf")
+    matches!(name, "pi" | "inf" | "Inf" | "i" | "j")
 }
 
 fn sind_deg(x: f64) -> f64 {

@@ -152,6 +152,18 @@ pub fn variable_rows(env: &Env) -> Vec<VarRow> {
                 elements: m.rows * m.cols,
                 preview: preview_matrix(m),
             },
+            Value::ComplexMatrix(c) => VarRow {
+                name: name.to_string(),
+                kind: if c.is_scalar() {
+                    "complex double".into()
+                } else {
+                    "complex matrix".into()
+                },
+                rows: c.rows,
+                cols: c.cols,
+                elements: c.rows * c.cols,
+                preview: preview_complex_matrix(c),
+            },
             Value::String(s) => VarRow {
                 name: name.to_string(),
                 kind: "char".into(),
@@ -172,6 +184,28 @@ pub fn variable_rows(env: &Env) -> Vec<VarRow> {
         rows.push(row);
     }
     rows
+}
+
+fn preview_complex_matrix(c: &ComplexDenseMatrix) -> String {
+    if c.is_scalar() {
+        return c.format_matlab();
+    }
+    let r_max = 2.min(c.rows);
+    let c_max = 4.min(c.cols);
+    let truncated = c.rows > r_max || c.cols > c_max;
+    let sub_rows: Vec<Vec<Complex64>> = (0..r_max)
+        .map(|r| (0..c_max).map(|col| c.data[r * c.cols + col]).collect())
+        .collect();
+    let sub = ComplexDenseMatrix::from_rows(sub_rows, None).expect("2x4 slice is valid");
+    let mut body = sub.format_matlab().replace('\n', "; ");
+    if truncated {
+        body.push_str(" …");
+    }
+    if c.cols == 1 && c.rows > 1 {
+        format!("[{}; …]", body.strip_suffix(" …").unwrap_or(&body))
+    } else {
+        format!("[{}]", body)
+    }
 }
 
 fn preview_matrix(m: &DenseMatrix) -> String {
@@ -595,6 +629,20 @@ fn condition_is_true(val: &Value, _span: Option<Span>) -> Result<bool, Diagnosti
                 Ok(m.data[0] != 0.0)
             } else {
                 // For arrays, MATLAB requires scalar logical; error for non-scalar.
+                Err(Diagnostic::error(
+                    "Condition must be a scalar logical value.",
+                    None,
+                ))
+            }
+        }
+        Value::ComplexMatrix(c) => {
+            if c.data.is_empty() {
+                return Ok(false);
+            }
+            if c.data.len() == 1 {
+                let z = c.data[0];
+                Ok(z.re != 0.0 || z.im != 0.0)
+            } else {
                 Err(Diagnostic::error(
                     "Condition must be a scalar logical value.",
                     None,
@@ -1116,6 +1164,16 @@ fn index_value(
 fn coerce_matrix(v: Value, span: Option<Span>) -> Result<DenseMatrix, Diagnostic> {
     match v {
         Value::Matrix(m) => Ok(m),
+        Value::ComplexMatrix(c) => {
+            if c.is_all_real() {
+                Ok(c.to_real_matrix())
+            } else {
+                Err(Diagnostic::error(
+                    "Operation expects a real array or scalar, but a complex value with non-zero imaginary component was provided.",
+                    span,
+                ))
+            }
+        }
         Value::Boolean(b) => Ok(DenseMatrix::scalar(if b { 1.0 } else { 0.0 })),
         Value::String(_) => Err(Diagnostic::error(
             "Conversion to double from char is not possible.",

@@ -11,7 +11,10 @@ use matlab_diagnostics::Diagnostic;
 use matlab_runtime::{Env, RunResult};
 use matlabr_apps::curve_fitter::FitResult;
 use matlabr_apps::data_analysis::{ColumnKind, ColumnStats, CsvTable, PlotKind, PlotRequest};
+use matlabr_apps::simulation::{InputSignal, SimulationParams, SimulationResult, SystemModel};
+
 use matlabr_apps::{Status, REGISTRY};
+
 
 use crate::command_window::{CommandWindowState, Line, Submitted};
 use crate::current_folder::{FolderAction, FolderState};
@@ -249,7 +252,325 @@ impl CurveFitterApp {
     }
 }
 
+fn parse_matrix_text(text: &str, name: &str) -> Result<matlab_values::DenseMatrix, Diagnostic> {
+    let mut rows_data: Vec<Vec<f64>> = Vec::new();
+    for row_str in text.split(';') {
+        let trimmed = row_str.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+        let mut row = Vec::new();
+        for token in trimmed.split(|c: char| c.is_whitespace() || c == ',') {
+            let t = token.trim();
+            if t.is_empty() {
+                continue;
+            }
+            let val: f64 = t.parse().map_err(|_| {
+                Diagnostic::error(
+                    format!("Invalid number '{t}' in matrix {name}."),
+                    None,
+                )
+            })?;
+            row.push(val);
+        }
+        if !row.is_empty() {
+            rows_data.push(row);
+        }
+    }
+    if rows_data.is_empty() {
+        return Err(Diagnostic::error(
+            format!("Matrix {name} cannot be empty."),
+            None,
+        ));
+    }
+    let cols = rows_data[0].len();
+    for row in &rows_data {
+        if row.len() != cols {
+            return Err(Diagnostic::error(
+                format!("Matrix {name} has inconsistent row lengths."),
+                None,
+            ));
+        }
+    }
+    let rows = rows_data.len();
+    let mut data = Vec::with_capacity(rows * cols);
+    for row in rows_data {
+        data.extend(row);
+    }
+    Ok(matlab_values::DenseMatrix { rows, cols, data })
+}
+
+fn parse_vector_text(text: &str, name: &str) -> Result<Vec<f64>, Diagnostic> {
+    let mut vec = Vec::new();
+    for token in text.split(|c: char| c.is_whitespace() || c == ';' || c == ',') {
+        let trimmed = token.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+        let val: f64 = trimmed.parse().map_err(|_| {
+            Diagnostic::error(
+                format!("Invalid number '{trimmed}' in vector {name}."),
+                None,
+            )
+        })?;
+        vec.push(val);
+    }
+    if vec.is_empty() {
+        return Err(Diagnostic::error(
+            format!("Vector {name} cannot be empty."),
+            None,
+        ));
+    }
+    Ok(vec)
+}
+
+/// Which Simulation worker request is currently outstanding.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum SimulationPending {
+    Run,
+    Export,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum SimModelKind {
+    FirstOrder,
+    SecondOrder,
+    StateSpace,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum SimSignalKind {
+    Step,
+    Impulse,
+    Ramp,
+    Sine,
+    Zero,
+}
+
+/// UI state for the Simulation and Control app. Kept alive when the window is closed.
+struct SimulationApp {
+    model_kind: SimModelKind,
+    // First-order
+    tau: f64,
+    first_order_gain: f64,
+    first_order_y0: f64,
+    // Second-order
+    omega_n: f64,
+    zeta: f64,
+    second_order_gain: f64,
+    second_order_y0: f64,
+    second_order_v0: f64,
+    // State-Space (text matrix entry)
+    ss_a: String,
+    ss_b: String,
+    ss_c: String,
+    ss_d: f64,
+    ss_x0: String,
+    // Input signal
+    signal_kind: SimSignalKind,
+    step_amplitude: f64,
+    step_t0: f64,
+    impulse_magnitude: f64,
+    ramp_slope: f64,
+    sine_amplitude: f64,
+    sine_frequency: f64,
+    sine_phase_deg: f64,
+    // Simulation parameters
+    t_final: f64,
+    dt: f64,
+    // Preset index
+    preset_idx: usize,
+    // Results
+    result: Option<SimulationResult>,
+    export_path: String,
+    export_message: Option<(bool, String)>,
+    confirm_overwrite: bool,
+    error: Option<String>,
+}
+
+impl SimulationApp {
+    fn new(cwd: &Path) -> Self {
+        Self {
+            model_kind: SimModelKind::SecondOrder,
+            tau: 1.0,
+            first_order_gain: 1.0,
+            first_order_y0: 0.0,
+            omega_n: 5.0,
+            zeta: 0.3,
+            second_order_gain: 1.0,
+            second_order_y0: 0.0,
+            second_order_v0: 0.0,
+            ss_a: "0 1; -25 -3".to_string(),
+            ss_b: "0; 25".to_string(),
+            ss_c: "1 0".to_string(),
+            ss_d: 0.0,
+            ss_x0: "0 0".to_string(),
+            signal_kind: SimSignalKind::Step,
+            step_amplitude: 1.0,
+            step_t0: 0.0,
+            impulse_magnitude: 1.0,
+            ramp_slope: 1.0,
+            sine_amplitude: 1.0,
+            sine_frequency: 1.0,
+            sine_phase_deg: 0.0,
+            t_final: 5.0,
+            dt: 0.01,
+            preset_idx: 1, // Underdamped 2nd-Order
+            result: None,
+            export_path: cwd
+                .join("simulation_response.csv")
+                .to_string_lossy()
+                .to_string(),
+            export_message: None,
+            confirm_overwrite: false,
+            error: None,
+        }
+    }
+
+    fn apply_preset(&mut self, idx: usize) {
+        self.preset_idx = idx;
+        match idx {
+            0 => {
+                self.model_kind = SimModelKind::FirstOrder;
+                self.tau = 1.0;
+                self.first_order_gain = 1.0;
+                self.first_order_y0 = 0.0;
+                self.signal_kind = SimSignalKind::Step;
+                self.step_amplitude = 1.0;
+                self.step_t0 = 0.0;
+                self.t_final = 5.0;
+                self.dt = 0.01;
+            }
+            1 => {
+                self.model_kind = SimModelKind::SecondOrder;
+                self.omega_n = 5.0;
+                self.zeta = 0.3;
+                self.second_order_gain = 1.0;
+                self.second_order_y0 = 0.0;
+                self.second_order_v0 = 0.0;
+                self.signal_kind = SimSignalKind::Step;
+                self.step_amplitude = 1.0;
+                self.step_t0 = 0.0;
+                self.t_final = 4.0;
+                self.dt = 0.005;
+            }
+            2 => {
+                self.model_kind = SimModelKind::SecondOrder;
+                self.omega_n = 4.0;
+                self.zeta = 1.0;
+                self.second_order_gain = 1.0;
+                self.second_order_y0 = 0.0;
+                self.second_order_v0 = 0.0;
+                self.signal_kind = SimSignalKind::Step;
+                self.step_amplitude = 1.0;
+                self.step_t0 = 0.0;
+                self.t_final = 5.0;
+                self.dt = 0.01;
+            }
+            3 => {
+                self.model_kind = SimModelKind::SecondOrder;
+                self.omega_n = 3.0;
+                self.zeta = 2.0;
+                self.second_order_gain = 1.0;
+                self.second_order_y0 = 0.0;
+                self.second_order_v0 = 0.0;
+                self.signal_kind = SimSignalKind::Step;
+                self.step_amplitude = 1.0;
+                self.step_t0 = 0.0;
+                self.t_final = 6.0;
+                self.dt = 0.01;
+            }
+            4 => {
+                self.model_kind = SimModelKind::SecondOrder;
+                self.omega_n = 2.0 * std::f64::consts::PI;
+                self.zeta = 0.0;
+                self.second_order_gain = 1.0;
+                self.second_order_y0 = 1.0;
+                self.second_order_v0 = 0.0;
+                self.signal_kind = SimSignalKind::Zero;
+                self.t_final = 3.0;
+                self.dt = 0.005;
+            }
+            5 => {
+                self.model_kind = SimModelKind::StateSpace;
+                self.ss_a = "0 1; -9 -4".to_string();
+                self.ss_b = "0; 9".to_string();
+                self.ss_c = "1 0".to_string();
+                self.ss_d = 0.0;
+                self.ss_x0 = "0 0".to_string();
+                self.signal_kind = SimSignalKind::Step;
+                self.step_amplitude = 1.0;
+                self.step_t0 = 0.0;
+                self.t_final = 5.0;
+                self.dt = 0.01;
+            }
+            _ => {}
+        }
+    }
+
+    fn build_model(&self) -> Result<SystemModel, Diagnostic> {
+        match self.model_kind {
+            SimModelKind::FirstOrder => Ok(SystemModel::FirstOrder {
+                tau: self.tau,
+                gain: self.first_order_gain,
+                y0: self.first_order_y0,
+            }),
+            SimModelKind::SecondOrder => Ok(SystemModel::SecondOrder {
+                omega_n: self.omega_n,
+                zeta: self.zeta,
+                gain: self.second_order_gain,
+                y0: self.second_order_y0,
+                v0: self.second_order_v0,
+            }),
+            SimModelKind::StateSpace => {
+                let a = parse_matrix_text(&self.ss_a, "A")?;
+                let b = parse_matrix_text(&self.ss_b, "B")?;
+                let c = parse_matrix_text(&self.ss_c, "C")?;
+                let x0 = parse_vector_text(&self.ss_x0, "x0")?;
+                Ok(SystemModel::StateSpace {
+                    a,
+                    b,
+                    c,
+                    d: self.ss_d,
+                    x0,
+                })
+            }
+        }
+    }
+
+    fn build_input(&self) -> InputSignal {
+        match self.signal_kind {
+            SimSignalKind::Step => InputSignal::Step {
+                amplitude: self.step_amplitude,
+                t_start: self.step_t0,
+            },
+            SimSignalKind::Impulse => InputSignal::Impulse {
+                magnitude: self.impulse_magnitude,
+                t_start: self.step_t0,
+            },
+            SimSignalKind::Ramp => InputSignal::Ramp {
+                slope: self.ramp_slope,
+                t_start: self.step_t0,
+            },
+            SimSignalKind::Sine => InputSignal::Sine {
+                amplitude: self.sine_amplitude,
+                frequency: self.sine_frequency,
+                phase_rad: self.sine_phase_deg.to_radians(),
+            },
+            SimSignalKind::Zero => InputSignal::Zero,
+        }
+    }
+
+    fn build_params(&self) -> SimulationParams {
+        SimulationParams {
+            t_final: self.t_final,
+            dt: self.dt,
+        }
+    }
+}
+
 // ---------------------------------------------------------------- app
+
 
 pub struct MatRustApp {
     pub prefs: Prefs,
@@ -300,11 +621,15 @@ pub struct MatRustApp {
     curve_app: Option<CurveFitterApp>,
     curve_app_open: bool,
     curve_pending: Option<(u64, CurvePending)>,
+    sim_app: Option<SimulationApp>,
+    sim_app_open: bool,
+    sim_pending: Option<(u64, SimulationPending)>,
     /// Scripted Curve Fitter smoke hook: fit through the worker after the
     /// CSV preview arrives (`MATRUST_OPEN_APP=curve_fitter`).
     auto_curve_run: bool,
     close_tab_pending: Option<usize>,
 }
+
 
 impl MatRustApp {
     pub fn new(cc: &eframe::CreationContext<'_>, prefs: Prefs) -> Self {
@@ -365,6 +690,9 @@ impl MatRustApp {
             curve_app: None,
             curve_app_open: false,
             curve_pending: None,
+            sim_app: None,
+            sim_app_open: false,
+            sim_pending: None,
             auto_curve_run: false,
             close_tab_pending: None,
             prefs,
@@ -389,8 +717,14 @@ impl MatRustApp {
                 app.curve_app = Some(curve);
                 app.curve_app_open = true;
             }
+            Some("simulation") => {
+                let sim = SimulationApp::new(&cwd);
+                app.sim_app = Some(sim);
+                app.sim_app_open = true;
+            }
             _ => {}
         }
+
 
         app.cmd.push(Line::Info(format!(
             "{APP_NAME} {APP_VERSION} — independent MATLAB-inspired numerical IDE"
@@ -782,7 +1116,50 @@ impl MatRustApp {
                         }
                     }
                 }
+                Reply::SimulationDone {
+                    id,
+                    result,
+                    snapshot,
+                } => {
+                    if !matches!(self.sim_pending, Some((pid, SimulationPending::Run)) if pid == id) {
+                        continue;
+                    }
+                    self.sim_pending = None;
+                    self.running = false;
+                    self.apply_session_snapshot(&snapshot);
+                    if let Some(app) = self.sim_app.as_mut() {
+                        match result {
+                            Ok(res) => {
+                                app.result = Some(res);
+                                app.error = None;
+                                app.confirm_overwrite = false;
+                                app.export_message = None;
+                            }
+                            Err(diag) => app.error = Some(diag_text(&diag)),
+                        }
+                    }
+                }
+                Reply::SimulationExport { id, result } => {
+                    if !matches!(self.sim_pending, Some((pid, SimulationPending::Export)) if pid == id) {
+                        continue;
+                    }
+                    self.sim_pending = None;
+                    self.running = false;
+                    if let Some(app) = self.sim_app.as_mut() {
+                        match result {
+                            Ok(path) => {
+                                app.confirm_overwrite = false;
+                                app.export_message =
+                                    Some((true, format!("Exported {}", path.display())));
+                            }
+                            Err(diag) => {
+                                app.export_message = Some((false, diag_text(&diag)));
+                            }
+                        }
+                    }
+                }
             }
+
         }
         if self.running {
             ctx.request_repaint();
@@ -818,6 +1195,15 @@ impl MatRustApp {
         self.curve_app_open = true;
         self.apps_open = false;
     }
+
+    fn open_simulation(&mut self) {
+        if self.sim_app.is_none() {
+            self.sim_app = Some(SimulationApp::new(&self.folder.cwd));
+        }
+        self.sim_app_open = true;
+        self.apps_open = false;
+    }
+
 
     /// The fitted-values export path implied by a coefficients export path
     /// (`<stem>_fitted.csv` next to `<stem>.csv`).
@@ -980,7 +1366,60 @@ impl MatRustApp {
         });
     }
 
+    fn sim_submit_run(
+        &mut self,
+        model: SystemModel,
+        input: InputSignal,
+        params: SimulationParams,
+    ) {
+        if self.running {
+            return;
+        }
+        let id = self.next_request_id;
+        self.next_request_id += 1;
+        self.sim_pending = Some((id, SimulationPending::Run));
+        self.running = true;
+        self.last_error = false;
+        if let Some(app) = self.sim_app.as_mut() {
+            app.error = None;
+            app.export_message = None;
+        }
+        let _ = self.worker.request_tx.send(Request::SimulationRun {
+            id,
+            model,
+            input,
+            params,
+        });
+    }
+
+    fn sim_submit_export(
+        &mut self,
+        path: PathBuf,
+        result: SimulationResult,
+        overwrite: bool,
+    ) {
+        if self.running {
+            return;
+        }
+        let id = self.next_request_id;
+        self.next_request_id += 1;
+        self.sim_pending = Some((id, SimulationPending::Export));
+        self.running = true;
+        self.last_error = false;
+        if let Some(app) = self.sim_app.as_mut() {
+            app.error = None;
+            app.export_message = None;
+        }
+        let _ = self.worker.request_tx.send(Request::SimulationExport {
+            id,
+            path,
+            result,
+            overwrite,
+        });
+    }
+
     fn run_source_now(&mut self, source: &str) {
+
         if self.running {
             self.cmd.push(Line::Err(
                 "Busy: an execution is already running.".to_string(),
@@ -2279,7 +2718,11 @@ impl MatRustApp {
                                     if app.id == "curve_fitter" {
                                         self.open_curve_fitter();
                                     }
+                                    if app.id == "simulation" {
+                                        self.open_simulation();
+                                    }
                                 }
+
                             } else {
                                 ui.add_enabled(false, egui::Button::new("Unavailable"));
                                 ui.weak("not yet implemented");
@@ -2984,7 +3427,310 @@ impl MatRustApp {
             }
         }
 
+        // Simulation and Control app window.
+        if self.sim_app_open {
+            let mut open = true;
+            let mut run_request: Option<(SystemModel, InputSignal, SimulationParams)> = None;
+            let mut export_request: Option<(PathBuf, SimulationResult, bool)> = None;
+            let busy_here = self.running && self.sim_pending.is_some();
+            let cancel_flag = std::sync::Arc::clone(&self.worker.cancel);
+
+            if let Some(app) = self.sim_app.as_mut() {
+                egui::Window::new("Simulation and Control — Ready · Unit-tested · Not reference-verified")
+                    .id(Id::unique("matrust_simulation"))
+                    .open(&mut open)
+                    .collapsible(false)
+                    .resizable(true)
+                    .default_width(920.0)
+                    .default_height(680.0)
+                    .show(ctx, |ui| {
+                        // Presets bar
+                        ui.horizontal_wrapped(|ui| {
+                            ui.strong("Presets:");
+                            if ui.button("1st-Order (tau=1)").clicked() {
+                                app.apply_preset(0);
+                            }
+                            if ui.button("Underdamped 2nd-Order").clicked() {
+                                app.apply_preset(1);
+                            }
+                            if ui.button("Critically Damped").clicked() {
+                                app.apply_preset(2);
+                            }
+                            if ui.button("Overdamped").clicked() {
+                                app.apply_preset(3);
+                            }
+                            if ui.button("Harmonic Oscillator").clicked() {
+                                app.apply_preset(4);
+                            }
+                            if ui.button("State-Space Double Int").clicked() {
+                                app.apply_preset(5);
+                            }
+                        });
+                        ui.separator();
+
+                        // Model selection
+                        ui.horizontal(|ui| {
+                            ui.strong("Model Type:");
+                            ui.radio_value(&mut app.model_kind, SimModelKind::FirstOrder, "First-Order ODE");
+                            ui.radio_value(&mut app.model_kind, SimModelKind::SecondOrder, "Second-Order Canonical");
+                            ui.radio_value(&mut app.model_kind, SimModelKind::StateSpace, "Linear State-Space");
+                        });
+
+                        // Model parameters
+                        ui.group(|ui| {
+                            match app.model_kind {
+                                SimModelKind::FirstOrder => {
+                                    ui.weak("tau * dy/dt + y(t) = K * u(t)");
+                                    ui.horizontal(|ui| {
+                                        ui.label("Time constant tau:");
+                                        ui.add(egui::DragValue::new(&mut app.tau).speed(0.05).range(0.001..=100.0).prefix("tau = "));
+                                        ui.label("DC Gain K:");
+                                        ui.add(egui::DragValue::new(&mut app.first_order_gain).speed(0.1).prefix("K = "));
+                                        ui.label("Initial y(0):");
+                                        ui.add(egui::DragValue::new(&mut app.first_order_y0).speed(0.1).prefix("y0 = "));
+                                    });
+                                }
+                                SimModelKind::SecondOrder => {
+                                    ui.weak("d²y/dt² + 2*zeta*omega_n*dy/dt + omega_n²*y = omega_n²*K*u(t)");
+                                    ui.horizontal(|ui| {
+                                        ui.label("Natural freq wn:");
+                                        ui.add(egui::DragValue::new(&mut app.omega_n).speed(0.1).range(0.001..=1000.0).suffix(" rad/s"));
+                                        ui.label("Damping ratio zeta:");
+                                        ui.add(egui::DragValue::new(&mut app.zeta).speed(0.02).range(0.0..=50.0));
+                                        ui.label("Gain K:");
+                                        ui.add(egui::DragValue::new(&mut app.second_order_gain).speed(0.1));
+                                    });
+                                    ui.horizontal(|ui| {
+                                        ui.label("Initial displacement y(0):");
+                                        ui.add(egui::DragValue::new(&mut app.second_order_y0).speed(0.1));
+                                        ui.label("Initial velocity v(0):");
+                                        ui.add(egui::DragValue::new(&mut app.second_order_v0).speed(0.1));
+                                    });
+                                }
+                                SimModelKind::StateSpace => {
+                                    ui.weak("dx/dt = A x + B u,   y = C x + D u (matrices separated by semicolons/spaces)");
+                                    ui.horizontal(|ui| {
+                                        ui.label("A matrix:");
+                                        ui.add(egui::TextEdit::singleline(&mut app.ss_a).desired_width(180.0));
+                                        ui.label("B vector:");
+                                        ui.add(egui::TextEdit::singleline(&mut app.ss_b).desired_width(80.0));
+                                    });
+                                    ui.horizontal(|ui| {
+                                        ui.label("C vector:");
+                                        ui.add(egui::TextEdit::singleline(&mut app.ss_c).desired_width(120.0));
+                                        ui.label("D feedthrough:");
+                                        ui.add(egui::DragValue::new(&mut app.ss_d).speed(0.1));
+                                        ui.label("x0 state:");
+                                        ui.add(egui::TextEdit::singleline(&mut app.ss_x0).desired_width(100.0));
+                                    });
+                                }
+                            }
+                        });
+
+                        // Input Signal selection
+                        ui.horizontal(|ui| {
+                            ui.strong("Input Signal u(t):");
+                            ui.radio_value(&mut app.signal_kind, SimSignalKind::Step, "Step");
+                            ui.radio_value(&mut app.signal_kind, SimSignalKind::Impulse, "Impulse");
+                            ui.radio_value(&mut app.signal_kind, SimSignalKind::Ramp, "Ramp");
+                            ui.radio_value(&mut app.signal_kind, SimSignalKind::Sine, "Sine");
+                            ui.radio_value(&mut app.signal_kind, SimSignalKind::Zero, "Zero / Free");
+                        });
+
+                        // Input parameters
+                        ui.horizontal(|ui| {
+                            match app.signal_kind {
+                                SimSignalKind::Step => {
+                                    ui.label("Amplitude:");
+                                    ui.add(egui::DragValue::new(&mut app.step_amplitude).speed(0.1));
+                                    ui.label("Step time t0:");
+                                    ui.add(egui::DragValue::new(&mut app.step_t0).speed(0.1).range(0.0..=100.0).suffix(" s"));
+                                }
+                                SimSignalKind::Impulse => {
+                                    ui.label("Magnitude (area):");
+                                    ui.add(egui::DragValue::new(&mut app.impulse_magnitude).speed(0.1));
+                                    ui.label("Pulse time t0:");
+                                    ui.add(egui::DragValue::new(&mut app.step_t0).speed(0.1).range(0.0..=100.0).suffix(" s"));
+                                }
+                                SimSignalKind::Ramp => {
+                                    ui.label("Slope:");
+                                    ui.add(egui::DragValue::new(&mut app.ramp_slope).speed(0.1));
+                                    ui.label("Start time t0:");
+                                    ui.add(egui::DragValue::new(&mut app.step_t0).speed(0.1).range(0.0..=100.0).suffix(" s"));
+                                }
+                                SimSignalKind::Sine => {
+                                    ui.label("Amplitude:");
+                                    ui.add(egui::DragValue::new(&mut app.sine_amplitude).speed(0.1));
+                                    ui.label("Frequency:");
+                                    ui.add(egui::DragValue::new(&mut app.sine_frequency).speed(0.1).range(0.01..=1000.0).suffix(" Hz"));
+                                    ui.label("Phase:");
+                                    ui.add(egui::DragValue::new(&mut app.sine_phase_deg).speed(5.0).suffix("°"));
+                                }
+                                SimSignalKind::Zero => {
+                                    ui.weak("Autonomous response driven entirely by initial conditions (x0).");
+                                }
+                            }
+                        });
+
+                        // Simulation parameters and Run button
+                        ui.separator();
+                        ui.horizontal(|ui| {
+                            ui.strong("Simulation:");
+                            ui.label("Duration:");
+                            ui.add(egui::DragValue::new(&mut app.t_final).speed(0.5).range(0.05..=1000.0).suffix(" s"));
+                            ui.label("Step size dt:");
+                            ui.add(egui::DragValue::new(&mut app.dt).speed(0.001).range(0.0001..=1.0).suffix(" s"));
+
+                            let can_run = !busy_here;
+                            if ui.add_enabled(can_run, egui::Button::new("Simulate (RK4)")).clicked() {
+                                app.error = None;
+                                match app.build_model() {
+                                    Ok(model) => {
+                                        let input = app.build_input();
+                                        let params = app.build_params();
+                                        run_request = Some((model, input, params));
+                                    }
+                                    Err(diag) => {
+                                        app.error = Some(diag_text(&diag));
+                                    }
+                                }
+                            }
+
+                            if busy_here {
+                                ui.spinner();
+                                ui.weak("simulating on worker…");
+                                if ui.button("Stop").clicked() {
+                                    cancel_flag.store(true, std::sync::atomic::Ordering::Relaxed);
+                                }
+                            }
+                        });
+
+                        if let Some(err) = &app.error {
+                            ui.colored_label(egui::Color32::from_rgb(215, 58, 73), err);
+                        }
+
+                        // Simulation results
+                        if let Some(res) = &app.result {
+                            ui.add_space(4.0);
+                            ui.separator();
+                            ui.strong(format!("Results: {} — {}", res.model_name, res.input_label));
+                            ui.horizontal(|ui| {
+                                let m = &res.metrics;
+                                let stab_color = if m.is_stable {
+                                    egui::Color32::from_rgb(46, 160, 67)
+                                } else {
+                                    egui::Color32::from_rgb(215, 58, 73)
+                                };
+                                ui.label(egui::RichText::new(if m.is_stable { "STABLE" } else { "UNSTABLE / MARGINAL" }).strong().color(stab_color));
+                                ui.weak(format!("({} steps, dt = {}s)", res.time.len(), app.dt));
+                            });
+
+                            egui::Grid::new("sim_metrics_grid").striped(true).show(ui, |ui| {
+                                ui.strong("Metric");
+                                ui.strong("Value");
+                                ui.strong("Details");
+                                ui.end_row();
+
+                                ui.label("Poles (eigenvalues of A)");
+                                let pole_strs: Vec<String> = res.metrics.poles.iter().map(|(re, im)| {
+                                    if im.abs() < 1e-6 {
+                                        format!("{re:.4}")
+                                    } else if *im > 0.0 {
+                                        format!("{re:.4} + {im:.4}i")
+                                    } else {
+                                        format!("{re:.4} - {:.4}i", im.abs())
+                                    }
+                                }).collect();
+                                ui.label(pole_strs.join(", "));
+                                ui.label(if res.metrics.is_stable { "Re(lambda) < 0" } else { "Re(lambda) >= 0" });
+                                ui.end_row();
+
+                                ui.label("Steady-State Value (y_ss)");
+                                ui.label(format!("{:.6}", res.metrics.steady_state));
+                                ui.label("mean of final 5% trajectory");
+                                ui.end_row();
+
+                                ui.label("Peak Output (y_peak)");
+                                ui.label(format!("{:.6}", res.metrics.peak_value));
+                                ui.label(format!("at t = {:.4}s", res.metrics.peak_time));
+                                ui.end_row();
+
+                                ui.label("Percent Overshoot (Mp)");
+                                match res.metrics.overshoot_percent {
+                                    Some(ov) => { ui.label(format!("{ov:.2}%")); ui.label("(y_peak - y_ss) / delta"); }
+                                    None => { ui.label("N/A"); ui.label("not a step or no steady state"); }
+                                }
+                                ui.end_row();
+
+                                ui.label("Rise Time (tr, 10%-90%)");
+                                match res.metrics.rise_time {
+                                    Some(tr) => { ui.label(format!("{tr:.4}s")); ui.label("time from 10% to 90% change"); }
+                                    None => { ui.label("N/A"); ui.label("non-monotonic or non-step"); }
+                                }
+                                ui.end_row();
+
+                                ui.label("Settling Time (ts, 2% band)");
+                                match res.metrics.settling_time {
+                                    Some(ts) => { ui.label(format!("{ts:.4}s")); ui.label("remains within 2% of steady state"); }
+                                    None => { ui.label("N/A"); ui.label("never entered 2% band"); }
+                                }
+                                ui.end_row();
+                            });
+
+                            ui.weak("Variables sim_t, sim_y, sim_u, sim_x written to workspace; Time Response and Phase Portrait plots pushed to Figures panel.");
+
+                            // Export section
+                            ui.add_space(4.0);
+                            ui.horizontal(|ui| {
+                                ui.label("Export CSV:");
+                                ui.add(egui::TextEdit::singleline(&mut app.export_path).desired_width(320.0));
+
+                                let can_export = !busy_here;
+                                let overwrite = app.confirm_overwrite;
+                                let btn_text = if overwrite { "Overwrite and export" } else { "Export CSV" };
+
+                                if ui.add_enabled(can_export, egui::Button::new(btn_text)).clicked() {
+                                    let path = PathBuf::from(app.export_path.trim());
+                                    if path.exists() && !overwrite {
+                                        app.confirm_overwrite = true;
+                                        app.export_message = Some((
+                                            false,
+                                            "Target file exists. Click again to confirm overwrite.".to_string(),
+                                        ));
+                                    } else {
+                                        export_request = Some((path, res.clone(), overwrite));
+                                        app.confirm_overwrite = false;
+                                    }
+                                }
+                            });
+
+                            if let Some((ok, message)) = &app.export_message {
+                                let color = if *ok {
+                                    egui::Color32::from_rgb(46, 160, 67)
+                                } else {
+                                    egui::Color32::from_rgb(215, 58, 73)
+                                };
+                                ui.colored_label(color, message);
+                            }
+                        } else {
+                            ui.add_space(10.0);
+                            ui.weak("Choose a preset or configure the system dynamics and input signal, then click 'Simulate (RK4)'.");
+                        }
+                    });
+            }
+            if !open {
+                self.sim_app_open = false;
+            }
+            if let Some((model, input, params)) = run_request {
+                self.sim_submit_run(model, input, params);
+            }
+            if let Some((path, res, overwrite)) = export_request {
+                self.sim_submit_export(path, res, overwrite);
+            }
+        }
+
         // Confirm closing a modified tab.
+
         if let Some(idx) = self.close_tab_pending {
             if idx < self.docs.len() {
                 let doc = &mut self.docs[idx];

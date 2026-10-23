@@ -76,9 +76,9 @@ pub const REGISTRY: &[AppInfo] = &[
     AppInfo {
         id: "simulation",
         name: "Simulation and Control",
-        description: "RK4 first/second-order and state-space responses",
-        status: Status::Planned,
-        verification: Verification::NotReferenceVerified,
+        description: "RK4 first/second-order and state-space responses, phase portraits, export",
+        status: Status::Ready,
+        verification: Verification::Unit,
         needs_file_input: false,
     },
     AppInfo {
@@ -129,3 +129,5 @@ pub fn find_by_id(id: &str) -> Option<&'static AppInfo> {
 
 pub mod curve_fitter;
 pub mod data_analysis;
+pub mod simulation;
+

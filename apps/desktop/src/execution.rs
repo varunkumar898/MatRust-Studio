@@ -14,6 +14,7 @@ use matlab_runtime::{RunResult, Session};
 
 use matlabr_apps::curve_fitter::{self, FitResult};
 use matlabr_apps::data_analysis::{self, AnalysisOutcome, ColumnStats, CsvTable, PlotRequest};
+use matlabr_apps::simulation::{self, InputSignal, SimulationParams, SimulationResult, SystemModel};
 
 /// Where a piece of executed source came from (for status messages and
 /// focus handling).
@@ -80,6 +81,21 @@ pub enum Request {
         xs: Vec<f64>,
         overwrite: bool,
     },
+    /// Run an RK4 continuous-time simulation: writes workspace variables,
+    /// pushes time-response and phase-portrait figures into the session.
+    SimulationRun {
+        id: u64,
+        model: SystemModel,
+        input: InputSignal,
+        params: SimulationParams,
+    },
+    /// Export simulation results and state trajectories to a CSV file.
+    SimulationExport {
+        id: u64,
+        path: std::path::PathBuf,
+        result: SimulationResult,
+        overwrite: bool,
+    },
 }
 
 #[derive(Debug)]
@@ -119,7 +135,17 @@ pub enum Reply {
         id: u64,
         result: Result<(std::path::PathBuf, std::path::PathBuf), Diagnostic>,
     },
+    SimulationDone {
+        id: u64,
+        result: Result<SimulationResult, Diagnostic>,
+        snapshot: RunResult,
+    },
+    SimulationExport {
+        id: u64,
+        result: Result<std::path::PathBuf, Diagnostic>,
+    },
 }
+
 
 pub struct Worker {
     pub request_tx: Sender<Request>,
@@ -289,9 +315,54 @@ impl Worker {
                             .map(|()| (coeff_path, fitted_path));
                             reply_tx.send(Reply::CurveFitExport { id, result }).ok();
                         }
+                        Request::SimulationRun {
+                            id,
+                            model,
+                            input,
+                            params,
+                        } => {
+                            let result = simulation::run_simulation(
+                                &mut session,
+                                &model,
+                                &input,
+                                &params,
+                                Some(&cancel_thread),
+                            );
+                            let snapshot = RunResult {
+                                env: session.env.clone(),
+                                outputs: Vec::new(),
+                                stdout: Vec::new(),
+                                figures: session.graphics.figures.clone(),
+                                interrupted: cancel_thread.load(Ordering::Relaxed),
+                            };
+                            reply_tx
+                                .send(Reply::SimulationDone {
+                                    id,
+                                    result,
+                                    snapshot,
+                                })
+                                .ok();
+                        }
+                        Request::SimulationExport {
+                            id,
+                            path,
+                            result,
+                            overwrite,
+                        } => {
+                            let export_res =
+                                simulation::export_simulation_csv(&path, &result, overwrite)
+                                    .map(|()| path);
+                            reply_tx
+                                .send(Reply::SimulationExport {
+                                    id,
+                                    result: export_res,
+                                })
+                                .ok();
+                        }
                     }
                 }
             })
+
             .expect("failed to spawn execution worker");
 
         Self {

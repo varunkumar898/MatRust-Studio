@@ -9,6 +9,9 @@ use egui::Id;
 
 use matlab_diagnostics::Diagnostic;
 use matlab_runtime::{Env, RunResult};
+use matlabr_apps::curve_fitter::FitResult;
+use matlabr_apps::data_analysis::{ColumnKind, ColumnStats, CsvTable, PlotKind, PlotRequest};
+use matlabr_apps::{Status, REGISTRY};
 
 use crate::command_window::{CommandWindowState, Line, Submitted};
 use crate::current_folder::{FolderAction, FolderState};
@@ -75,6 +78,175 @@ struct KeyFlags {
     open: bool,
     close_tab: bool,
     toggle_cmd: bool,
+    apps: bool,
+}
+
+/// Which Data Analysis worker request is currently outstanding.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum DataPending {
+    Preview,
+    Run,
+    Export,
+}
+
+/// UI state for the Data Analysis app. Kept alive when the window is closed so
+/// switching apps never discards the loaded table or computed results.
+struct DataApp {
+    path: String,
+    table: Option<CsvTable>,
+    selected: Vec<usize>,
+    stats: Vec<ColumnStats>,
+    correlation: Option<f64>,
+    plot_kind: PlotKind,
+    x_col: usize,
+    y_col: usize,
+    export_path: String,
+    export_message: Option<(bool, String)>,
+    error: Option<String>,
+    picker_open: bool,
+    picker_dir: PathBuf,
+    confirm_overwrite: bool,
+}
+
+impl DataApp {
+    fn new(cwd: &Path) -> Self {
+        Self {
+            path: String::new(),
+            table: None,
+            selected: Vec::new(),
+            stats: Vec::new(),
+            correlation: None,
+            plot_kind: PlotKind::Column,
+            x_col: 0,
+            y_col: 0,
+            export_path: cwd
+                .join("data_analysis_stats.csv")
+                .to_string_lossy()
+                .to_string(),
+            export_message: None,
+            error: None,
+            picker_open: false,
+            picker_dir: cwd.to_path_buf(),
+            confirm_overwrite: false,
+        }
+    }
+
+    fn configure_table(&mut self, table: CsvTable) {
+        let numeric: Vec<usize> = table
+            .columns
+            .iter()
+            .enumerate()
+            .filter(|(_, c)| c.kind == ColumnKind::Numeric)
+            .map(|(i, _)| i)
+            .collect();
+        self.selected = numeric.clone();
+        self.x_col = numeric.first().copied().unwrap_or(0);
+        self.y_col = numeric.get(1).copied().unwrap_or(self.x_col);
+        self.stats.clear();
+        self.correlation = None;
+        self.error = None;
+        self.confirm_overwrite = false;
+        self.export_message = None;
+        let stem = table
+            .path
+            .file_stem()
+            .map(|s| s.to_string_lossy().to_string())
+            .unwrap_or_else(|| "data_analysis".to_string());
+        self.export_path = self
+            .picker_dir
+            .join(format!("{stem}_stats.csv"))
+            .to_string_lossy()
+            .to_string();
+        self.table = Some(table);
+    }
+}
+
+/// Which Curve Fitter worker request is currently outstanding.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum CurvePending {
+    Preview,
+    Fit,
+    Export,
+}
+
+/// UI state for the Curve Fitter app. Kept alive when the window is closed so
+/// switching apps never discards the fitted results.
+struct CurveFitterApp {
+    path: String,
+    table: Option<CsvTable>,
+    x_col: usize,
+    y_col: usize,
+    degree: usize,
+    fit: Option<FitResult>,
+    /// x values of the fitted rows, for the fitted-values export.
+    xs: Vec<f64>,
+    export_path: String,
+    fitted_export_path: String,
+    export_message: Option<(bool, String)>,
+    error: Option<String>,
+    picker_open: bool,
+    picker_dir: PathBuf,
+    confirm_overwrite: bool,
+}
+
+impl CurveFitterApp {
+    fn new(cwd: &Path) -> Self {
+        Self {
+            path: String::new(),
+            table: None,
+            x_col: 0,
+            y_col: 1,
+            degree: 1,
+            fit: None,
+            xs: Vec::new(),
+            export_path: cwd
+                .join("curve_fit_coefficients.csv")
+                .to_string_lossy()
+                .to_string(),
+            fitted_export_path: cwd
+                .join("curve_fit_fitted.csv")
+                .to_string_lossy()
+                .to_string(),
+            export_message: None,
+            error: None,
+            picker_open: false,
+            picker_dir: cwd.to_path_buf(),
+            confirm_overwrite: false,
+        }
+    }
+
+    fn configure_table(&mut self, table: CsvTable) {
+        let numeric: Vec<usize> = table
+            .columns
+            .iter()
+            .enumerate()
+            .filter(|(_, c)| c.kind == ColumnKind::Numeric)
+            .map(|(i, _)| i)
+            .collect();
+        self.x_col = numeric.first().copied().unwrap_or(0);
+        self.y_col = numeric.get(1).copied().unwrap_or(self.x_col);
+        self.fit = None;
+        self.xs.clear();
+        self.error = None;
+        self.confirm_overwrite = false;
+        self.export_message = None;
+        let stem = table
+            .path
+            .file_stem()
+            .map(|s| s.to_string_lossy().to_string())
+            .unwrap_or_else(|| "curve_fit".to_string());
+        self.export_path = self
+            .picker_dir
+            .join(format!("{stem}_coefficients.csv"))
+            .to_string_lossy()
+            .to_string();
+        self.fitted_export_path = self
+            .picker_dir
+            .join(format!("{stem}_fitted.csv"))
+            .to_string_lossy()
+            .to_string();
+        self.table = Some(table);
+    }
 }
 
 // ---------------------------------------------------------------- app
@@ -100,6 +272,11 @@ pub struct MatRustApp {
     /// Smoke-test hook: run this source through the real worker once on
     /// startup (set via MATRUST_AUTORUN; used by scripted UI verification).
     auto_run: Option<String>,
+    /// Scripted Data Analysis smoke hook: file to open on startup
+    /// (`MATRUST_OPEN_APP=data_analysis`, `MATRUST_APP_CSV=...`).
+    auto_app_csv: Option<PathBuf>,
+    auto_app_export: Option<PathBuf>,
+    auto_app_run: bool,
     running: bool,
     last_error: bool,
     last_duration: Option<Duration>,
@@ -117,7 +294,15 @@ pub struct MatRustApp {
     about_open: bool,
     compat_open: bool,
     apps_open: bool,
-    apps_selected: Option<String>,
+    data_app: Option<DataApp>,
+    data_app_open: bool,
+    data_pending: Option<(u64, DataPending)>,
+    curve_app: Option<CurveFitterApp>,
+    curve_app_open: bool,
+    curve_pending: Option<(u64, CurvePending)>,
+    /// Scripted Curve Fitter smoke hook: fit through the worker after the
+    /// CSV preview arrives (`MATRUST_OPEN_APP=curve_fitter`).
+    auto_curve_run: bool,
     close_tab_pending: Option<usize>,
 }
 
@@ -156,6 +341,15 @@ impl MatRustApp {
             auto_run: std::env::var("MATRUST_AUTORUN")
                 .ok()
                 .filter(|s| !s.is_empty()),
+            auto_app_csv: std::env::var("MATRUST_APP_CSV")
+                .ok()
+                .filter(|s| !s.is_empty())
+                .map(PathBuf::from),
+            auto_app_export: std::env::var("MATRUST_APP_EXPORT")
+                .ok()
+                .filter(|s| !s.is_empty())
+                .map(PathBuf::from),
+            auto_app_run: false,
             figures_seen: 0,
             find_open: false,
             find_query: String::new(),
@@ -165,10 +359,38 @@ impl MatRustApp {
             about_open: false,
             compat_open: false,
             apps_open: false,
-            apps_selected: None,
+            data_app: None,
+            data_app_open: false,
+            data_pending: None,
+            curve_app: None,
+            curve_app_open: false,
+            curve_pending: None,
+            auto_curve_run: false,
             close_tab_pending: None,
             prefs,
         };
+
+        // Scripted Data Analysis smoke hook (used for live-GUI verification in
+        // a non-interactive harness). The normal app always starts closed.
+        match std::env::var("MATRUST_OPEN_APP").ok().as_deref() {
+            Some("data_analysis") => {
+                let mut data = DataApp::new(&cwd);
+                if let Some(path) = &app.auto_app_csv {
+                    data.path = path.to_string_lossy().to_string();
+                }
+                app.data_app = Some(data);
+                app.data_app_open = true;
+            }
+            Some("curve_fitter") => {
+                let mut curve = CurveFitterApp::new(&cwd);
+                if let Some(path) = &app.auto_app_csv {
+                    curve.path = path.to_string_lossy().to_string();
+                }
+                app.curve_app = Some(curve);
+                app.curve_app_open = true;
+            }
+            _ => {}
+        }
 
         app.cmd.push(Line::Info(format!(
             "{APP_NAME} {APP_VERSION} — independent MATLAB-inspired numerical IDE"
@@ -233,6 +455,7 @@ impl MatRustApp {
                 open: ctrl && i.key_pressed(egui::Key::O),
                 close_tab: ctrl && i.key_pressed(egui::Key::W),
                 toggle_cmd: ctrl && i.key_pressed(egui::Key::Backtick),
+                apps: ctrl && i.modifiers.shift && i.key_pressed(egui::Key::A),
             }
         })
     }
@@ -271,6 +494,9 @@ impl MatRustApp {
                 "Command Window hidden (Ctrl+`)."
             });
         }
+        if keys.apps {
+            self.apps_open = true;
+        }
 
         self.drain_worker(&ctx);
         // Smoke-test hook (MATRUST_AUTORUN): echo + submit through the real
@@ -284,6 +510,76 @@ impl MatRustApp {
                 },
                 PendingKind::Editor(usize::MAX),
             );
+        }
+        // Scripted app smoke path: open -> preview -> compute -> export, all
+        // through the same worker and backend calls the UI uses. The target
+        // app is whichever smoke window is open.
+        if let Some(path) = self.auto_app_csv.take() {
+            if self.curve_app_open {
+                self.auto_curve_run = true;
+                self.curve_submit_preview(path);
+            } else {
+                self.auto_app_run = true;
+                self.data_submit_preview(path);
+            }
+        }
+        if self.auto_app_run && !self.running {
+            if let Some(app) = self.data_app.as_ref() {
+                if let Some(table) = &app.table {
+                    let selected = app.selected.clone();
+                    let plot = PlotRequest {
+                        kind: app.plot_kind,
+                        x: if app.plot_kind == PlotKind::Scatter {
+                            app.x_col
+                        } else {
+                            app.y_col
+                        },
+                        y: app.y_col,
+                    };
+                    let path = table.path.clone();
+                    self.auto_app_run = false;
+                    self.data_submit_run(path, selected, plot);
+                }
+            }
+        }
+        if self.auto_curve_run && !self.running {
+            if let Some(app) = self.curve_app.as_ref() {
+                if let Some(table) = &app.table {
+                    let path = table.path.clone();
+                    let x_col = app.x_col;
+                    let y_col = app.y_col;
+                    let degree = app.degree;
+                    self.auto_curve_run = false;
+                    self.curve_submit_fit(path, x_col, y_col, degree);
+                }
+            }
+        }
+        if let Some(export) = self.auto_app_export.clone() {
+            if !self.running {
+                if self.curve_app_open {
+                    if let Some(app) = self.curve_app.as_ref() {
+                        if let Some(fit) = &app.fit {
+                            let fitted = Self::derive_fitted_path(&export);
+                            let xs = app.xs.clone();
+                            let fit = fit.clone();
+                            self.auto_app_export = None;
+                            self.curve_submit_export(export, fitted, fit, xs, true);
+                        }
+                    }
+                } else if let Some(app) = self.data_app.as_ref() {
+                    if !app.stats.is_empty() {
+                        let corr = app.correlation.and_then(|r| {
+                            let table = app.table.as_ref()?;
+                            let x = table.columns.get(app.x_col)?.name.clone();
+                            let y = table.columns.get(app.y_col)?.name.clone();
+                            Some((x, y, r))
+                        });
+                        let stats = app.stats.clone();
+                        self.auto_app_export = None;
+                        self.data_submit_export(export, stats, corr, true);
+                    }
+                }
+            }
         }
 
         // Starting panel proportions, scaled to the current screen. They act
@@ -343,6 +639,149 @@ impl MatRustApp {
                     self.apply_session_snapshot(&result);
                     self.cmd.push(Line::Info("Workspace cleared.".to_string()));
                 }
+                Reply::DataAnalysisPreview { id, result } => {
+                    if !matches!(self.data_pending, Some((pid, DataPending::Preview)) if pid == id)
+                    {
+                        continue;
+                    }
+                    self.data_pending = None;
+                    self.running = false;
+                    let mut info = None;
+                    if let Some(app) = self.data_app.as_mut() {
+                        match result {
+                            Ok(table) => {
+                                app.configure_table(table);
+                                info = Some("CSV parsed for preview.".to_string());
+                            }
+                            Err(diag) => {
+                                app.table = None;
+                                app.error = Some(diag_text(&diag));
+                            }
+                        }
+                    }
+                    if let Some(info) = info {
+                        self.cmd.push(Line::Info(info));
+                    }
+                }
+                Reply::DataAnalysisRun {
+                    id,
+                    result,
+                    snapshot,
+                } => {
+                    if !matches!(self.data_pending, Some((pid, DataPending::Run)) if pid == id) {
+                        continue;
+                    }
+                    self.data_pending = None;
+                    self.running = false;
+                    self.apply_session_snapshot(&snapshot);
+                    if let Some(app) = self.data_app.as_mut() {
+                        match result {
+                            Ok(outcome) => {
+                                app.table = Some(outcome.table);
+                                app.stats = outcome.stats;
+                                app.correlation = outcome.correlation;
+                                app.error = None;
+                                app.confirm_overwrite = false;
+                                app.export_message = None;
+                            }
+                            Err(diag) => app.error = Some(diag_text(&diag)),
+                        }
+                    }
+                }
+                Reply::DataAnalysisExport { id, result } => {
+                    if !matches!(self.data_pending, Some((pid, DataPending::Export)) if pid == id) {
+                        continue;
+                    }
+                    self.data_pending = None;
+                    self.running = false;
+                    if let Some(app) = self.data_app.as_mut() {
+                        match result {
+                            Ok(path) => {
+                                app.confirm_overwrite = false;
+                                app.export_message =
+                                    Some((true, format!("Exported {}", path.display())));
+                            }
+                            Err(diag) => {
+                                app.export_message = Some((false, diag_text(&diag)));
+                            }
+                        }
+                    }
+                }
+                Reply::CurveFitDone {
+                    id,
+                    result,
+                    snapshot,
+                } => {
+                    if !matches!(self.curve_pending, Some((pid, CurvePending::Fit)) if pid == id) {
+                        continue;
+                    }
+                    self.curve_pending = None;
+                    self.running = false;
+                    self.apply_session_snapshot(&snapshot);
+                    if let Some(app) = self.curve_app.as_mut() {
+                        match result {
+                            Ok((fit, xs, _ys, table)) => {
+                                app.table = Some(table);
+                                app.xs = xs;
+                                app.fit = Some(fit);
+                                app.error = None;
+                                app.confirm_overwrite = false;
+                                app.export_message = None;
+                            }
+                            Err(diag) => app.error = Some(diag_text(&diag)),
+                        }
+                    }
+                }
+                Reply::CurvePreview { id, result } => {
+                    if !matches!(self.curve_pending, Some((pid, CurvePending::Preview)) if pid == id)
+                    {
+                        continue;
+                    }
+                    self.curve_pending = None;
+                    self.running = false;
+                    let mut info = None;
+                    if let Some(app) = self.curve_app.as_mut() {
+                        match result {
+                            Ok(table) => {
+                                app.configure_table(table);
+                                info = Some("CSV parsed for Curve Fitter.".to_string());
+                            }
+                            Err(diag) => {
+                                app.table = None;
+                                app.error = Some(diag_text(&diag));
+                            }
+                        }
+                    }
+                    if let Some(info) = info {
+                        self.cmd.push(Line::Info(info));
+                    }
+                }
+                Reply::CurveFitExport { id, result } => {
+                    if !matches!(self.curve_pending, Some((pid, CurvePending::Export)) if pid == id)
+                    {
+                        continue;
+                    }
+                    self.curve_pending = None;
+                    self.running = false;
+                    if let Some(app) = self.curve_app.as_mut() {
+                        match result {
+                            Ok((coeff, fitted)) => {
+                                app.confirm_overwrite = false;
+                                app.export_message = Some((
+                                    true,
+                                    format!(
+                                        "Exported {} and {}",
+                                        coeff.display(),
+                                        fitted.display()
+                                    ),
+                                ));
+                            }
+                            Err(diag) => {
+                                app.export_message = Some((false, diag_text(&diag)));
+                            }
+                        }
+                    }
+                }
             }
         }
         if self.running {
@@ -362,6 +801,183 @@ impl MatRustApp {
             .worker
             .request_tx
             .send(Request::Exec { id, source, origin });
+    }
+
+    fn open_data_analysis(&mut self) {
+        if self.data_app.is_none() {
+            self.data_app = Some(DataApp::new(&self.folder.cwd));
+        }
+        self.data_app_open = true;
+        self.apps_open = false;
+    }
+
+    fn open_curve_fitter(&mut self) {
+        if self.curve_app.is_none() {
+            self.curve_app = Some(CurveFitterApp::new(&self.folder.cwd));
+        }
+        self.curve_app_open = true;
+        self.apps_open = false;
+    }
+
+    /// The fitted-values export path implied by a coefficients export path
+    /// (`<stem>_fitted.csv` next to `<stem>.csv`).
+    fn derive_fitted_path(coeff_path: &Path) -> PathBuf {
+        let fitted = coeff_path
+            .file_stem()
+            .map(|stem| {
+                let mut name = stem.to_string_lossy().to_string();
+                name.push_str("_fitted");
+                let ext = coeff_path
+                    .extension()
+                    .map(|e| e.to_string_lossy().to_string())
+                    .unwrap_or_else(|| "csv".to_string());
+                coeff_path.with_file_name(format!("{name}.{ext}"))
+            })
+            .unwrap_or_else(|| coeff_path.with_file_name("curve_fit_fitted.csv"));
+        fitted
+    }
+
+    fn data_submit_preview(&mut self, path: PathBuf) {
+        if self.running {
+            return;
+        }
+        let id = self.next_request_id;
+        self.next_request_id += 1;
+        self.data_pending = Some((id, DataPending::Preview));
+        self.running = true;
+        self.last_error = false;
+        if let Some(app) = self.data_app.as_mut() {
+            app.error = None;
+            app.stats.clear();
+            app.correlation = None;
+            app.export_message = None;
+        }
+        let _ = self
+            .worker
+            .request_tx
+            .send(Request::DataAnalysisPreview { id, path });
+    }
+
+    fn data_submit_run(&mut self, path: PathBuf, selected: Vec<usize>, plot: PlotRequest) {
+        if self.running {
+            return;
+        }
+        let id = self.next_request_id;
+        self.next_request_id += 1;
+        self.data_pending = Some((id, DataPending::Run));
+        self.running = true;
+        self.last_error = false;
+        if let Some(app) = self.data_app.as_mut() {
+            app.error = None;
+            app.export_message = None;
+        }
+        let _ = self.worker.request_tx.send(Request::DataAnalysisRun {
+            id,
+            path,
+            selected,
+            plot,
+        });
+    }
+
+    fn data_submit_export(
+        &mut self,
+        path: PathBuf,
+        stats: Vec<ColumnStats>,
+        correlation: Option<(String, String, f64)>,
+        overwrite: bool,
+    ) {
+        if self.running {
+            return;
+        }
+        let id = self.next_request_id;
+        self.next_request_id += 1;
+        self.data_pending = Some((id, DataPending::Export));
+        self.running = true;
+        self.last_error = false;
+        if let Some(app) = self.data_app.as_mut() {
+            app.error = None;
+            app.export_message = None;
+        }
+        let _ = self.worker.request_tx.send(Request::DataAnalysisExport {
+            id,
+            path,
+            stats,
+            correlation,
+            overwrite,
+        });
+    }
+
+    fn curve_submit_preview(&mut self, path: PathBuf) {
+        if self.running {
+            return;
+        }
+        let id = self.next_request_id;
+        self.next_request_id += 1;
+        self.curve_pending = Some((id, CurvePending::Preview));
+        self.running = true;
+        self.last_error = false;
+        if let Some(app) = self.curve_app.as_mut() {
+            app.error = None;
+            app.fit = None;
+            app.xs.clear();
+            app.export_message = None;
+        }
+        let _ = self
+            .worker
+            .request_tx
+            .send(Request::CurvePreview { id, path });
+    }
+
+    fn curve_submit_fit(&mut self, path: PathBuf, x_col: usize, y_col: usize, degree: usize) {
+        if self.running {
+            return;
+        }
+        let id = self.next_request_id;
+        self.next_request_id += 1;
+        self.curve_pending = Some((id, CurvePending::Fit));
+        self.running = true;
+        self.last_error = false;
+        if let Some(app) = self.curve_app.as_mut() {
+            app.error = None;
+            app.export_message = None;
+        }
+        let _ = self.worker.request_tx.send(Request::CurveFit {
+            id,
+            path,
+            x_col,
+            y_col,
+            degree,
+        });
+    }
+
+    fn curve_submit_export(
+        &mut self,
+        coeff_path: PathBuf,
+        fitted_path: PathBuf,
+        fit: FitResult,
+        xs: Vec<f64>,
+        overwrite: bool,
+    ) {
+        if self.running {
+            return;
+        }
+        let id = self.next_request_id;
+        self.next_request_id += 1;
+        self.curve_pending = Some((id, CurvePending::Export));
+        self.running = true;
+        self.last_error = false;
+        if let Some(app) = self.curve_app.as_mut() {
+            app.error = None;
+            app.export_message = None;
+        }
+        let _ = self.worker.request_tx.send(Request::CurveFitExport {
+            id,
+            coeff_path,
+            fitted_path,
+            fit,
+            xs,
+            overwrite,
+        });
     }
 
     fn run_source_now(&mut self, source: &str) {
@@ -850,7 +1466,7 @@ impl MatRustApp {
                 // Apps — scientific workflows (integrated applications).
                 bar.menu_button("Apps", |ui| {
                     ui.set_min_width(170.0);
-                    if ui.button("Launch apps…").clicked() {
+                    if ui.button("Launch apps…  (Ctrl+Shift+A)").clicked() {
                         self.apps_open = true;
                         ui.close();
                     }
@@ -1622,7 +2238,7 @@ impl MatRustApp {
             }
         }
 
-        // Apps launcher — integrated scientific applications.
+        // Apps launcher — registry-driven, truthful status, disabled when not Ready.
         if self.apps_open {
             let mut open = true;
             egui::Window::new("Apps — Scientific Workflows")
@@ -1630,61 +2246,741 @@ impl MatRustApp {
                 .open(&mut open)
                 .collapsible(false)
                 .resizable(true)
-                .default_width(520.0)
+                .default_width(600.0)
                 .show(ctx, |ui| {
-                    ui.strong("Implemented applications");
-                    ui.weak("Select an app to run its real backend workflow.");
+                    ui.strong("Application registry");
+                    ui.weak(
+                        "Status and verification come from matlabr_apps::REGISTRY. Only Ready apps can launch.",
+                    );
                     ui.add_space(6.0);
-                    ui.horizontal(|ui| {
-                        ui.strong("Data & Analysis");
-                        if ui.button("Launch Data Analysis").clicked() {
-                            self.apps_selected = Some("data_analysis".to_string());
-                            let src = "A = [1 2 3; 4 5 6]; save('/tmp/app_data.csv', A); data = load('/tmp/app_data.csv'); m = mean(data(:)); plot(1:3, data(:,1));".to_string();
-                            self.submit(src, Origin::Script { path: None, name: "Data Analysis".to_string() }, PendingKind::Editor(0));
-                            self.cmd.push(Line::Info("Data Analysis executed (CSV -> stats -> plot).".to_string()));
-                            self.apps_open = false;
-                        }
-                    });
-                    ui.weak("Imports CSV, computes stats, displays plot, saves/loads data.");
-                    ui.add_space(4.0);
-                    ui.horizontal(|ui| {
-                        ui.strong("Simulation & Control");
-                        if ui.button("Launch Simulation").clicked() {
-                            self.apps_selected = Some("simulation".to_string());
-                            let src = "t = 0:0.1:5; tau = 1.0; y = 1 - exp(-t / tau); plot(t, y); save('/tmp/app_sim.csv', y);".to_string();
-                            self.submit(src, Origin::Script { path: None, name: "Simulation".to_string() }, PendingKind::Editor(0));
-                            self.cmd.push(Line::Info("Engineering Simulation executed (first-order step response).".to_string()));
-                            self.apps_open = false;
-                        }
-                    });
-                    ui.weak("First-order step-response with time-axis plot and CSV export.");
-                    ui.add_space(4.0);
-                    ui.horizontal(|ui| {
-                        ui.strong("Numerical Tools");
-                        if ui.button("Launch Numerical Tools").clicked() {
-                            self.apps_selected = Some("numerical".to_string());
-                            let src = "A = [1 2; 3 4]; B = [5 6; 7 8]; C = A * B; disp(C);".to_string();
-                            self.submit(src, Origin::Script { path: None, name: "Numerical Tools".to_string() }, PendingKind::Editor(0));
-                            self.cmd.push(Line::Info("Numerical Tools executed (matrix operations).".to_string()));
-                            self.apps_open = false;
-                        }
-                    });
-                    ui.weak("Real matrix arithmetic, linear algebra, and inspection.");
-                    ui.add_space(4.0);
-                    ui.horizontal(|ui| {
-                        ui.strong("Visualization");
-                        if ui.button("Open Figures").clicked() {
-                            self.apps_selected = Some("figures".to_string());
-                            self.cmd.push(Line::Info("Figure Viewer: inspect current plots in Plots tab.".to_string()));
-                            self.apps_open = false;
-                        }
-                    });
-                    ui.weak("View plots generated by scripts, Data Analysis, Simulation, or Numerical Tools.");
-                    ui.add_space(4.0);
-                    ui.weak("Other applications (Signal Processing, Image Processing, ML, Robotics, Embedded) are planned; underlying algorithms not yet fully implemented.");
+                    for app in REGISTRY {
+                        let color = match app.status {
+                            Status::Ready => egui::Color32::from_rgb(46, 160, 67),
+                            Status::Partial => egui::Color32::from_rgb(210, 153, 34),
+                            Status::Planned => egui::Color32::GRAY,
+                            Status::Blocked => egui::Color32::from_rgb(215, 58, 73),
+                        };
+                        ui.horizontal(|ui| {
+                            ui.label(
+                                egui::RichText::new(app.status_text())
+                                    .strong()
+                                    .color(color),
+                            );
+                            ui.strong(app.name);
+                            ui.weak(app.verification_text());
+                        });
+                        ui.weak(app.description);
+                        ui.horizontal(|ui| {
+                            if app.launchable() {
+                                if ui.button("Launch").clicked() {
+                                    if app.id == "data_analysis" {
+                                        self.open_data_analysis();
+                                    }
+                                    if app.id == "curve_fitter" {
+                                        self.open_curve_fitter();
+                                    }
+                                }
+                            } else {
+                                ui.add_enabled(false, egui::Button::new("Unavailable"));
+                                ui.weak("not yet implemented");
+                            }
+                        });
+                        ui.separator();
+                    }
+                    ui.weak(
+                        "Planned/Blocked apps are disabled and never run placeholder computations.",
+                    );
                 });
             if !open {
                 self.apps_open = false;
+            }
+        }
+
+        // Data Analysis app window.
+        if self.data_app_open {
+            let mut open = true;
+            let mut preview_path: Option<PathBuf> = None;
+            let mut run_request: Option<(PathBuf, Vec<usize>, PlotRequest)> = None;
+            let mut export_request: Option<(
+                PathBuf,
+                Vec<ColumnStats>,
+                Option<(String, String, f64)>,
+                bool,
+            )> = None;
+            let busy_here = self.running && self.data_pending.is_some();
+            let cancel_flag = std::sync::Arc::clone(&self.worker.cancel);
+
+            if let Some(app) = self.data_app.as_mut() {
+                egui::Window::new("Data Analysis — Ready · Unit-tested · Not reference-verified")
+                    .id(Id::unique("matrust_data_analysis"))
+                    .open(&mut open)
+                    .collapsible(false)
+                    .resizable(true)
+                    .default_width(920.0)
+                    .default_height(680.0)
+                    .show(ctx, |ui| {
+                        ui.horizontal(|ui| {
+                            ui.label("CSV file:");
+                            ui.add(
+                                egui::TextEdit::singleline(&mut app.path)
+                                    .desired_width(420.0)
+                                    .hint_text("path to a .csv file"),
+                            );
+                            if ui.button("Browse…").clicked() {
+                                app.picker_open = !app.picker_open;
+                            }
+                            let can_open = !app.path.trim().is_empty() && !busy_here;
+                            if ui
+                                .add_enabled(can_open, egui::Button::new("Open"))
+                                .clicked()
+                            {
+                                preview_path = Some(PathBuf::from(app.path.trim()));
+                            }
+                            if busy_here {
+                                ui.spinner();
+                                ui.weak("worker running…");
+                                if ui.button("Stop").clicked() {
+                                    cancel_flag
+                                        .store(true, std::sync::atomic::Ordering::Relaxed);
+                                }
+                            }
+                        });
+
+                        if app.picker_open {
+                            ui.group(|ui| {
+                                ui.horizontal(|ui| {
+                                    if ui.button("Up").clicked() {
+                                        if let Some(parent) = app.picker_dir.parent() {
+                                            app.picker_dir = parent.to_path_buf();
+                                        }
+                                    }
+                                    ui.weak(app.picker_dir.display().to_string());
+                                });
+                                let mut entries: Vec<(PathBuf, bool)> = Vec::new();
+                                if let Ok(read_dir) = std::fs::read_dir(&app.picker_dir) {
+                                    for entry in read_dir.flatten() {
+                                        let path = entry.path();
+                                        let is_dir = path.is_dir();
+                                        let is_csv = path
+                                            .extension()
+                                            .map(|e| e.eq_ignore_ascii_case("csv"))
+                                            .unwrap_or(false);
+                                        if is_dir || is_csv {
+                                            entries.push((path, is_dir));
+                                        }
+                                    }
+                                }
+                                entries.sort_by(|a, b| {
+                                    b.1.cmp(&a.1).then_with(|| a.0.file_name().cmp(&b.0.file_name()))
+                                });
+                                egui::ScrollArea::vertical().max_height(150.0).show(ui, |ui| {
+                                    for (path, is_dir) in entries {
+                                        let label = if is_dir {
+                                            format!("[dir] {}", path.display())
+                                        } else {
+                                            path.display().to_string()
+                                        };
+                                        if ui.small_button(label).clicked() {
+                                            if is_dir {
+                                                app.picker_dir = path;
+                                            } else {
+                                                app.path = path.to_string_lossy().to_string();
+                                                app.picker_open = false;
+                                                preview_path = Some(path);
+                                            }
+                                        }
+                                    }
+                                });
+                            });
+                        }
+
+                        if let Some(err) = &app.error {
+                            ui.colored_label(egui::Color32::from_rgb(215, 58, 73), err);
+                        }
+
+                        if let Some(table) = &app.table {
+                            ui.add_space(6.0);
+                            ui.horizontal(|ui| {
+                                ui.strong(format!(
+                                    "{} rows × {} columns",
+                                    table.row_count, table.col_count
+                                ));
+                                ui.weak(format!(
+                                    "delimiter '{}', header: {}, ragged: {}",
+                                    table.delimiter,
+                                    if table.has_header { "yes" } else { "no" },
+                                    if table.ragged { "yes" } else { "no" }
+                                ));
+                            });
+                            egui::CollapsingHeader::new("Preview (first 20 rows)")
+                                .default_open(true)
+                                .show(ui, |ui| {
+                                    egui::ScrollArea::both().max_height(220.0).show(ui, |ui| {
+                                        egui::Grid::new("data_preview_grid")
+                                            .striped(true)
+                                            .show(ui, |ui| {
+                                                for col in &table.columns {
+                                                    ui.strong(&col.name);
+                                                }
+                                                ui.end_row();
+                                                for col in &table.columns {
+                                                    let kind = match col.kind {
+                                                        ColumnKind::Numeric => "numeric",
+                                                        ColumnKind::Text => "text",
+                                                    };
+                                                    ui.weak(format!(
+                                                        "{kind}, missing {}",
+                                                        col.missing
+                                                    ));
+                                                }
+                                                ui.end_row();
+                                                for row in table.rows.iter().take(20) {
+                                                    for cell in row {
+                                                        let shown = if cell.chars().count() > 40 {
+                                                            format!(
+                                                                "{}…",
+                                                                cell.chars().take(40).collect::<String>()
+                                                            )
+                                                        } else if cell.is_empty() {
+                                                            "∅".to_string()
+                                                        } else {
+                                                            cell.clone()
+                                                        };
+                                                        ui.label(shown);
+                                                    }
+                                                    ui.end_row();
+                                                }
+                                            });
+                                    });
+                                });
+
+                            ui.add_space(4.0);
+                            ui.strong("Columns to analyze");
+                            let columns = table.columns.clone();
+                            ui.horizontal_wrapped(|ui| {
+                                for (idx, col) in columns.iter().enumerate() {
+                                    let mut checked = app.selected.contains(&idx);
+                                    let numeric = col.kind == ColumnKind::Numeric;
+                                    let response = ui.add_enabled(
+                                        numeric,
+                                        egui::Checkbox::new(
+                                            &mut checked,
+                                            format!("{} ({})", col.name, col.missing),
+                                        ),
+                                    );
+                                    if response.changed() {
+                                        if checked {
+                                            if !app.selected.contains(&idx) {
+                                                app.selected.push(idx);
+                                            }
+                                        } else {
+                                            app.selected.retain(|&c| c != idx);
+                                        }
+                                        app.selected.sort_unstable();
+                                    }
+                                }
+                            });
+
+                            ui.add_space(4.0);
+                            ui.horizontal(|ui| {
+                                ui.strong("Plot:");
+                                ui.selectable_value(
+                                    &mut app.plot_kind,
+                                    PlotKind::Column,
+                                    "column vs row",
+                                );
+                                ui.selectable_value(
+                                    &mut app.plot_kind,
+                                    PlotKind::Scatter,
+                                    "scatter",
+                                );
+                                if app.plot_kind == PlotKind::Scatter {
+                                    ui.label("x:");
+                                    egui::ComboBox::from_id_salt("data_x_col")
+                                        .selected_text(
+                                            columns
+                                                .get(app.x_col)
+                                                .map(|c| c.name.clone())
+                                                .unwrap_or_default(),
+                                        )
+                                        .show_ui(ui, |ui| {
+                                            for (idx, col) in columns.iter().enumerate() {
+                                                if col.kind == ColumnKind::Numeric {
+                                                    ui.selectable_value(
+                                                        &mut app.x_col,
+                                                        idx,
+                                                        &col.name,
+                                                    );
+                                                }
+                                            }
+                                        });
+                                }
+                                ui.label("y:");
+                                egui::ComboBox::from_id_salt("data_y_col")
+                                    .selected_text(
+                                        columns
+                                            .get(app.y_col)
+                                            .map(|c| c.name.clone())
+                                            .unwrap_or_default(),
+                                    )
+                                    .show_ui(ui, |ui| {
+                                        for (idx, col) in columns.iter().enumerate() {
+                                            if col.kind == ColumnKind::Numeric {
+                                                ui.selectable_value(&mut app.y_col, idx, &col.name);
+                                            }
+                                        }
+                                    });
+                                let can_run = !busy_here && !app.selected.is_empty();
+                                if ui
+                                    .add_enabled(
+                                        can_run,
+                                        egui::Button::new("Compute statistics and plot"),
+                                    )
+                                    .clicked()
+                                {
+                                    app.error = None;
+                                    let path = PathBuf::from(app.path.trim());
+                                    let x = if app.plot_kind == PlotKind::Scatter {
+                                        app.x_col
+                                    } else {
+                                        app.y_col
+                                    };
+                                    run_request = Some((
+                                        path,
+                                        app.selected.clone(),
+                                        PlotRequest {
+                                            kind: app.plot_kind,
+                                            x,
+                                            y: app.y_col,
+                                        },
+                                    ));
+                                }
+                            });
+
+                            if !app.stats.is_empty() {
+                                ui.add_space(4.0);
+                                ui.strong("Statistics");
+                                egui::ScrollArea::horizontal().show(ui, |ui| {
+                                    egui::Grid::new("data_stats_grid")
+                                        .striped(true)
+                                        .show(ui, |ui| {
+                                            for label in [
+                                                "column", "count", "missing", "mean", "median",
+                                                "std", "min", "max", "q25", "q50", "q75",
+                                            ] {
+                                                ui.strong(label);
+                                            }
+                                            ui.end_row();
+                                            for s in &app.stats {
+                                                ui.label(&s.name);
+                                                ui.label(s.count.to_string());
+                                                ui.label(s.missing.to_string());
+                                                ui.label(format!("{:.6}", s.mean));
+                                                ui.label(format!("{:.6}", s.median));
+                                                ui.label(format!("{:.6}", s.std_dev));
+                                                ui.label(format!("{:.6}", s.min));
+                                                ui.label(format!("{:.6}", s.max));
+                                                ui.label(format!("{:.6}", s.q25));
+                                                ui.label(format!("{:.6}", s.q50));
+                                                ui.label(format!("{:.6}", s.q75));
+                                                ui.end_row();
+                                            }
+                                        });
+                                });
+                                if let Some(r) = app.correlation {
+                                    ui.label(format!("Pearson correlation: {:.9}", r));
+                                }
+                                ui.weak(
+                                    "Results were written to data_analysis_* workspace variables and a figure was pushed to the Plots panel.",
+                                );
+                            }
+
+                            ui.add_space(6.0);
+                            ui.horizontal(|ui| {
+                                ui.label("Export results:");
+                                ui.add(
+                                    egui::TextEdit::singleline(&mut app.export_path)
+                                        .desired_width(360.0),
+                                );
+                                let can_export = !busy_here && !app.stats.is_empty();
+                                let overwrite = app.confirm_overwrite;
+                                let button = if overwrite {
+                                    "Overwrite and export"
+                                } else {
+                                    "Export results"
+                                };
+                                if ui
+                                    .add_enabled(can_export, egui::Button::new(button))
+                                    .clicked()
+                                {
+                                    let path = PathBuf::from(app.export_path.trim());
+                                    if path.exists() && !overwrite {
+                                        app.confirm_overwrite = true;
+                                        app.export_message = Some((
+                                            false,
+                                            format!(
+                                                "{} exists. Click again to confirm overwrite.",
+                                                path.display()
+                                            ),
+                                        ));
+                                    } else {
+                                        let corr = app.correlation.map(|r| {
+                                            let x = columns
+                                                .get(app.x_col)
+                                                .map(|c| c.name.clone())
+                                                .unwrap_or_default();
+                                            let y = columns
+                                                .get(app.y_col)
+                                                .map(|c| c.name.clone())
+                                                .unwrap_or_default();
+                                            (x, y, r)
+                                        });
+                                        export_request = Some((
+                                            path,
+                                            app.stats.clone(),
+                                            corr,
+                                            overwrite,
+                                        ));
+                                        app.confirm_overwrite = false;
+                                    }
+                                }
+                            });
+                            if let Some((ok, message)) = &app.export_message {
+                                let color = if *ok {
+                                    egui::Color32::from_rgb(46, 160, 67)
+                                } else {
+                                    egui::Color32::from_rgb(215, 58, 73)
+                                };
+                                ui.colored_label(color, message);
+                            }
+                        } else {
+                            ui.add_space(8.0);
+                            ui.weak("Open a CSV file to preview columns, types, and missing counts.");
+                        }
+                    });
+            }
+            if !open {
+                self.data_app_open = false;
+            }
+            if let Some(path) = preview_path {
+                self.data_submit_preview(path);
+            }
+            if let Some((path, selected, plot)) = run_request {
+                self.data_submit_run(path, selected, plot);
+            }
+            if let Some((path, stats, corr, overwrite)) = export_request {
+                self.data_submit_export(path, stats, corr, overwrite);
+            }
+        }
+
+        // Curve Fitter app window.
+        if self.curve_app_open {
+            let mut open = true;
+            let mut preview_path: Option<PathBuf> = None;
+            let mut fit_request: Option<(PathBuf, usize, usize, usize)> = None;
+            let mut export_request: Option<(PathBuf, PathBuf, FitResult, Vec<f64>, bool)> = None;
+            let busy_here = self.running && self.curve_pending.is_some();
+            let cancel_flag = std::sync::Arc::clone(&self.worker.cancel);
+
+            if let Some(app) = self.curve_app.as_mut() {
+                egui::Window::new("Curve Fitter — Ready · Unit-tested · Not reference-verified")
+                    .id(Id::unique("matrust_curve_fitter"))
+                    .open(&mut open)
+                    .collapsible(false)
+                    .resizable(true)
+                    .default_width(880.0)
+                    .default_height(640.0)
+                    .show(ctx, |ui| {
+                        ui.horizontal(|ui| {
+                            ui.label("CSV file:");
+                            ui.add(
+                                egui::TextEdit::singleline(&mut app.path)
+                                    .desired_width(420.0)
+                                    .hint_text("path to a .csv file"),
+                            );
+                            if ui.button("Browse…").clicked() {
+                                app.picker_open = !app.picker_open;
+                            }
+                            let can_open = !app.path.trim().is_empty() && !busy_here;
+                            if ui
+                                .add_enabled(can_open, egui::Button::new("Open"))
+                                .clicked()
+                            {
+                                preview_path = Some(PathBuf::from(app.path.trim()));
+                            }
+                            if busy_here {
+                                ui.spinner();
+                                ui.weak("worker running…");
+                                if ui.button("Stop").clicked() {
+                                    cancel_flag
+                                        .store(true, std::sync::atomic::Ordering::Relaxed);
+                                }
+                            }
+                        });
+
+                        if app.picker_open {
+                            ui.group(|ui| {
+                                ui.horizontal(|ui| {
+                                    if ui.button("Up").clicked() {
+                                        if let Some(parent) = app.picker_dir.parent() {
+                                            app.picker_dir = parent.to_path_buf();
+                                        }
+                                    }
+                                    ui.weak(app.picker_dir.display().to_string());
+                                });
+                                let mut entries: Vec<(PathBuf, bool)> = Vec::new();
+                                if let Ok(read_dir) = std::fs::read_dir(&app.picker_dir) {
+                                    for entry in read_dir.flatten() {
+                                        let path = entry.path();
+                                        let is_dir = path.is_dir();
+                                        let is_csv = path
+                                            .extension()
+                                            .map(|e| e.eq_ignore_ascii_case("csv"))
+                                            .unwrap_or(false);
+                                        if is_dir || is_csv {
+                                            entries.push((path, is_dir));
+                                        }
+                                    }
+                                }
+                                entries.sort_by(|a, b| {
+                                    b.1.cmp(&a.1).then_with(|| a.0.file_name().cmp(&b.0.file_name()))
+                                });
+                                egui::ScrollArea::vertical().max_height(150.0).show(ui, |ui| {
+                                    for (path, is_dir) in entries {
+                                        let label = if is_dir {
+                                            format!("[dir] {}", path.display())
+                                        } else {
+                                            path.display().to_string()
+                                        };
+                                        if ui.small_button(label).clicked() {
+                                            if is_dir {
+                                                app.picker_dir = path;
+                                            } else {
+                                                app.path = path.to_string_lossy().to_string();
+                                                app.picker_open = false;
+                                                preview_path = Some(path);
+                                            }
+                                        }
+                                    }
+                                });
+                            });
+                        }
+
+                        if let Some(err) = &app.error {
+                            ui.colored_label(egui::Color32::from_rgb(215, 58, 73), err);
+                        }
+
+                        if let Some(table) = &app.table {
+                            ui.add_space(6.0);
+                            ui.horizontal(|ui| {
+                                ui.strong(format!(
+                                    "{} rows × {} columns",
+                                    table.row_count, table.col_count
+                                ));
+                                ui.weak(format!(
+                                    "delimiter '{}', header: {}, ragged: {}",
+                                    table.delimiter,
+                                    if table.has_header { "yes" } else { "no" },
+                                    if table.ragged { "yes" } else { "no" }
+                                ));
+                            });
+                            egui::CollapsingHeader::new("Preview (first 20 rows)")
+                                .default_open(false)
+                                .show(ui, |ui| {
+                                    egui::ScrollArea::both().max_height(180.0).show(ui, |ui| {
+                                        egui::Grid::new("curve_preview_grid")
+                                            .striped(true)
+                                            .show(ui, |ui| {
+                                                for col in &table.columns {
+                                                    ui.strong(&col.name);
+                                                }
+                                                ui.end_row();
+                                                for col in &table.columns {
+                                                    let kind = match col.kind {
+                                                        ColumnKind::Numeric => "numeric",
+                                                        ColumnKind::Text => "text",
+                                                    };
+                                                    ui.weak(format!(
+                                                        "{kind}, missing {}",
+                                                        col.missing
+                                                    ));
+                                                }
+                                                ui.end_row();
+                                                for row in table.rows.iter().take(20) {
+                                                    for cell in row {
+                                                        ui.label(cell.clone());
+                                                    }
+                                                    ui.end_row();
+                                                }
+                                            });
+                                    });
+                                });
+
+                            ui.add_space(4.0);
+                            ui.strong("Fit variables");
+                            let columns = table.columns.clone();
+                            ui.horizontal(|ui| {
+                                ui.label("x:");
+                                egui::ComboBox::from_id_salt("curve_x_col")
+                                    .selected_text(
+                                        columns
+                                            .get(app.x_col)
+                                            .map(|c| c.name.clone())
+                                            .unwrap_or_default(),
+                                    )
+                                    .show_ui(ui, |ui| {
+                                        for (idx, col) in columns.iter().enumerate() {
+                                            if col.kind == ColumnKind::Numeric {
+                                                ui.selectable_value(&mut app.x_col, idx, &col.name);
+                                            }
+                                        }
+                                    });
+                                ui.label("y:");
+                                egui::ComboBox::from_id_salt("curve_y_col")
+                                    .selected_text(
+                                        columns
+                                            .get(app.y_col)
+                                            .map(|c| c.name.clone())
+                                            .unwrap_or_default(),
+                                    )
+                                    .show_ui(ui, |ui| {
+                                        for (idx, col) in columns.iter().enumerate() {
+                                            if col.kind == ColumnKind::Numeric {
+                                                ui.selectable_value(&mut app.y_col, idx, &col.name);
+                                            }
+                                        }
+                                    });
+                                ui.label("Degree:");
+                                ui.add(
+                                    egui::DragValue::new(&mut app.degree)
+                                        .range(0..=12)
+                                        .prefix("d = "),
+                                );
+                                let can_fit = !busy_here && app.x_col != app.y_col;
+                                if ui
+                                    .add_enabled(can_fit, egui::Button::new("Fit"))
+                                    .clicked()
+                                {
+                                    app.error = None;
+                                    fit_request = Some((
+                                        PathBuf::from(app.path.trim()),
+                                        app.x_col,
+                                        app.y_col,
+                                        app.degree,
+                                    ));
+                                }
+                            });
+                            if app.x_col == app.y_col {
+                                ui.colored_label(
+                                    egui::Color32::from_rgb(210, 153, 34),
+                                    "x and y must be different columns.",
+                                );
+                            }
+
+                            if let Some(fit) = &app.fit {
+                                ui.add_space(4.0);
+                                ui.strong("Fit result");
+                                egui::ScrollArea::horizontal().show(ui, |ui| {
+                                    egui::Grid::new("curve_coeff_grid")
+                                        .striped(true)
+                                        .show(ui, |ui| {
+                                            for label in
+                                                ["coefficient", "value", "power of x"]
+                                            {
+                                                ui.strong(label);
+                                            }
+                                            ui.end_row();
+                                            for (i, c) in fit.coefficients.iter().enumerate() {
+                                                ui.label(format!("c{i}"));
+                                                ui.label(format!("{c:.10}"));
+                                                ui.label(if i == 0 {
+                                                    "0 (constant)".to_string()
+                                                } else {
+                                                    format!("x^{i}")
+                                                });
+                                                ui.end_row();
+                                            }
+                                        });
+                                });
+                                ui.label(format!(
+                                    "R² = {:.10}, RMSE = {:.10}, points = {}",
+                                    fit.r2, fit.rmse, fit.points
+                                ));
+                                ui.weak(
+                                    "Results were written to the curve_fit_* workspace variables; a data+fit figure and a residuals figure were pushed to the Plots panel.",
+                                );
+                            }
+
+                            ui.add_space(6.0);
+                            ui.horizontal(|ui| {
+                                ui.label("Export coefficients:");
+                                ui.add(
+                                    egui::TextEdit::singleline(&mut app.export_path)
+                                        .desired_width(300.0),
+                                );
+                            });
+                            ui.horizontal(|ui| {
+                                ui.label("Export fitted values:");
+                                ui.add(
+                                    egui::TextEdit::singleline(&mut app.fitted_export_path)
+                                        .desired_width(300.0),
+                                );
+                                let can_export = !busy_here && app.fit.is_some();
+                                let overwrite = app.confirm_overwrite;
+                                let button = if overwrite {
+                                    "Overwrite and export"
+                                } else {
+                                    "Export fit"
+                                };
+                                if ui
+                                    .add_enabled(can_export, egui::Button::new(button))
+                                    .clicked()
+                                {
+                                    if let Some(fit) = app.fit.clone() {
+                                        let coeff = PathBuf::from(app.export_path.trim());
+                                        let fitted =
+                                            PathBuf::from(app.fitted_export_path.trim());
+                                        if (coeff.exists() || fitted.exists()) && !overwrite {
+                                            app.confirm_overwrite = true;
+                                            app.export_message = Some((
+                                                false,
+                                                "Output file(s) exist. Click again to confirm overwrite.".to_string(),
+                                            ));
+                                        } else {
+                                            export_request =
+                                                Some((coeff, fitted, fit, app.xs.clone(), overwrite));
+                                            app.confirm_overwrite = false;
+                                        }
+                                    }
+                                }
+                            });
+                            if let Some((ok, message)) = &app.export_message {
+                                let color = if *ok {
+                                    egui::Color32::from_rgb(46, 160, 67)
+                                } else {
+                                    egui::Color32::from_rgb(215, 58, 73)
+                                };
+                                ui.colored_label(color, message);
+                            }
+                        } else {
+                            ui.add_space(8.0);
+                            ui.weak(
+                                "Open a CSV, pick two numeric columns and a degree, then Fit.",
+                            );
+                        }
+                    });
+            }
+            if !open {
+                self.curve_app_open = false;
+            }
+            if let Some(path) = preview_path {
+                self.curve_submit_preview(path);
+            }
+            if let Some((path, x, y, degree)) = fit_request {
+                self.curve_submit_fit(path, x, y, degree);
+            }
+            if let Some((coeff, fitted, fit, xs, overwrite)) = export_request {
+                self.curve_submit_export(coeff, fitted, fit, xs, overwrite);
             }
         }
 

@@ -55,4 +55,56 @@ fn debug_raw_residuals() {
         bound,
         total2.sqrt() / bound
     );
+
+    let mut rng = Rng(0x2545_F491_4F6C_DD1D);
+    let mut entries_18 = Vec::new();
+    for case in 0..20 {
+        let entries: Vec<f64> = (0..16).map(|_| rng.next_f64()).collect();
+        if case == 18 {
+            entries_18 = entries;
+            break;
+        }
+    }
+    let a18 = DenseMatrix {
+        rows: 4,
+        cols: 4,
+        data: entries_18.clone(),
+    };
+    let frob18 = entries_18.iter().map(|x| x * x).sum::<f64>().sqrt();
+    let bound18 = 100.0 * f64::EPSILON * 4.0 * frob18;
+    let (d18, v18) = eig_general(&a18, None).unwrap();
+    let mut total18 = 0.0f64;
+    for j in 0..4 {
+        let mut acc = 0.0f64;
+        for i in 0..4 {
+            let mut s = Complex64::new(0.0, 0.0);
+            for k in 0..4 {
+                s = s + Complex64::real(a18.data[i * 4 + k]) * v18.data[k * 4 + j];
+            }
+            s = s - d18.data[j] * v18.data[i * 4 + j];
+            acc += s.re * s.re + s.im * s.im;
+        }
+        total18 += acc;
+        println!(
+            "case 18 col{j}: |r|2={:.3e} d={:.13e}+{:.3e}i",
+            acc.sqrt(),
+            d18.data[j].re,
+            d18.data[j].im
+        );
+        let mut a_shifted = ComplexDenseMatrix::from_real(&a18);
+        for k in 0..4 {
+            a_shifted.data[k * 4 + k] -= d18.data[j];
+        }
+        let det_shifted = matlab_linalg::complex::det(&a_shifted, None).unwrap();
+        println!(
+            "         det(A - lambda*I) = {:.3e} + {:.3e}i",
+            det_shifted.re, det_shifted.im
+        );
+    }
+    println!(
+        "case 18: |A V - V D|_F = {:.3e}; c=100 bound = {:.3e}; ratio = {:.2e}",
+        total18.sqrt(),
+        bound18,
+        total18.sqrt() / bound18
+    );
 }

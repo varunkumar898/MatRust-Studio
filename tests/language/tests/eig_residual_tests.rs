@@ -10,6 +10,9 @@
 //! the matrix from the old complex-pair probe, and the last case is the
 //! companion matrix of (x-1)(x-2)(x-3)(x-4)(x-5).
 
+use matlab_linalg::complex::{
+    eig_complex, inverse_iteration_eigenvectors, refine_complex_eigenpairs,
+};
 use matlab_linalg::decomposition::{det, trace};
 use matlab_runtime::run_source;
 use matlab_values::{Complex64, ComplexDenseMatrix, DenseMatrix, Value};
@@ -236,4 +239,73 @@ fn eig_residual_companion_of_x_minus_1_to_5() {
         ],
     };
     assert_eig_residual("companion-(x-1)..(x-5)", &a);
+}
+
+#[test]
+fn eig_eigenvector_only_refinement_seeded_4x4_18() {
+    let mut rng = Rng(0x2545_F491_4F6C_DD1D);
+    let mut entries_18 = Vec::new();
+    for case in 0..20 {
+        let entries: Vec<f64> = (0..16).map(|_| rng.next_f64()).collect();
+        if case == 18 {
+            entries_18 = entries;
+            break;
+        }
+    }
+    let a = DenseMatrix {
+        rows: 4,
+        cols: 4,
+        data: entries_18,
+    };
+    let ca = ComplexDenseMatrix::from_real(&a);
+
+    // Compute raw eigenvalues and initial eigenvectors before refinement.
+    let (d, _) = eig_complex(&ca, None).expect("eig_complex converges");
+    let v_before = inverse_iteration_eigenvectors(&ca, &d.data);
+
+    // Eigenvector-only refinement: eigenvalues must be returned unchanged.
+    let (d_refined, v_after) = refine_complex_eigenpairs(&ca, d.data.clone(), v_before.clone());
+    assert_eq!(
+        d_refined, d.data,
+        "eigenvector-only refinement must return eigenvalues unchanged"
+    );
+
+    let dmat = diagonalize(&d, 4);
+
+    let av_before = naive_complex_mul(&ca, &v_before);
+    let vd_before = naive_complex_mul(&v_before, &dmat);
+    let residual_before = frobenius(&ComplexDenseMatrix {
+        rows: 4,
+        cols: 4,
+        data: av_before
+            .data
+            .iter()
+            .zip(vd_before.data.iter())
+            .map(|(x, y)| *x - *y)
+            .collect(),
+    });
+
+    let av_after = naive_complex_mul(&ca, &v_after);
+    let vd_after = naive_complex_mul(&v_after, &dmat);
+    let residual_after = frobenius(&ComplexDenseMatrix {
+        rows: 4,
+        cols: 4,
+        data: av_after
+            .data
+            .iter()
+            .zip(vd_after.data.iter())
+            .map(|(x, y)| *x - *y)
+            .collect(),
+    });
+
+    println!(
+        "seeded-4x4-#18 residual before refinement = {residual_before:.6e}, after = {residual_after:.6e}"
+    );
+
+    const C: f64 = 100.0;
+    let bound = C * f64::EPSILON * 4.0 * frobenius(&ca);
+    assert!(
+        residual_after <= bound,
+        "seeded-4x4-#18: after refinement residual {residual_after:.6e} exceeds c*eps*n*||A||_F = {bound:.6e} (c = {C})"
+    );
 }

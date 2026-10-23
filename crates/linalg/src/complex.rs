@@ -1124,7 +1124,7 @@ pub fn eig_complex(
         while l > 0 {
             let sub = h.data[l * n + (l - 1)].abs();
             let diag_scale = h.data[(l - 1) * n + (l - 1)].abs() + h.data[l * n + l].abs();
-            let threshold = 1e-13 * diag_scale + 1e-15 * norm.max(1.0);
+            let threshold = f64::EPSILON * diag_scale + 1e-15 * norm.max(1.0);
             if sub <= threshold {
                 h.data[l * n + (l - 1)] = Complex64::zero();
                 break;
@@ -1320,13 +1320,13 @@ fn qr_step_complex(h: &mut ComplexDenseMatrix, l: usize, hi: usize) {
 /// Compute right eigenvectors by inverse iteration with a small diagonal
 /// shift. The shift keeps `A - lambda I` nonsingular; the resulting vector
 /// residual is on the order of the shift rather than the eigenvalue error.
-fn inverse_iteration_eigenvectors(
+pub fn inverse_iteration_eigenvectors(
     a: &ComplexDenseMatrix,
     eigenvalues: &[Complex64],
 ) -> ComplexDenseMatrix {
     let n = a.rows;
     let norm = a.data.iter().map(|z| z.abs()).fold(0.0f64, f64::max);
-    let base_shift = 1e-10 * norm.max(1.0);
+    let base_shift = 1e-13 * norm.max(1.0);
     let mut result = vec![Complex64::zero(); n * n];
 
     for (col, &lambda) in eigenvalues.iter().enumerate() {
@@ -1448,7 +1448,7 @@ fn eigenpair_residual_norm(a: &ComplexDenseMatrix, x: &[Complex64], lambda: Comp
 /// ||A*x - lambda*x||_2 at the original lambda.  A refined vector can
 /// therefore improve the A*V = V*D residual without moving the spectrum.
 /// Pairs at or below the gate are left untouched.
-fn refine_complex_eigenpairs(
+pub fn refine_complex_eigenpairs(
     a: &ComplexDenseMatrix,
     eigenvalues: Vec<Complex64>,
     mut eigenvectors: ComplexDenseMatrix,
@@ -1458,7 +1458,7 @@ fn refine_complex_eigenpairs(
         return (eigenvalues, eigenvectors);
     }
     let norm = a.data.iter().map(|z| z.abs()).fold(0.0f64, f64::max);
-    let base_shift = 1e-10 * norm.max(1.0);
+    let base_shift = 1e-13 * norm.max(1.0);
     let frob_a = a
         .data
         .iter()

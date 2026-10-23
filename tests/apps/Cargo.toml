@@ -1,0 +1,11 @@
+[package]
+name = "apps_tests"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+matlabr_apps = { path = "../../crates/apps" }
+matlab_runtime = { path = "../../crates/runtime" }
+matlab_values = { path = "../../crates/values" }
+matlab_diagnostics = { path = "../../crates/diagnostics" }

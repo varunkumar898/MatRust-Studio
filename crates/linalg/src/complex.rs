@@ -1425,7 +1425,6 @@ fn complex_matvec(a: &ComplexDenseMatrix, x: &[Complex64]) -> Vec<Complex64> {
         .collect()
 }
 
-
 /// 2-norm of the eigenvector-equation residual ||A*x - lambda*x||_2.
 fn eigenpair_residual_norm(a: &ComplexDenseMatrix, x: &[Complex64], lambda: Complex64) -> f64 {
     let ax = complex_matvec(a, x);
@@ -1471,8 +1470,7 @@ fn refine_complex_eigenpairs(
     for col in 0..n {
         let lambda = eigenvalues[col];
         let x0: Vec<Complex64> = (0..n).map(|i| eigenvectors.data[i * n + col]).collect();
-        if x0.iter().all(|z| z.abs() == 0.0) || eigenpair_residual_norm(a, &x0, lambda) <= gate
-        {
+        if x0.iter().all(|z| z.abs() == 0.0) || eigenpair_residual_norm(a, &x0, lambda) <= gate {
             continue;
         }
 

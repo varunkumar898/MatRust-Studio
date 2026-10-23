@@ -43,14 +43,15 @@ fn plot_scatter() {
     let r = run_source("scatter([1 2 3], [3 2 1]);").unwrap();
     assert!(!r.figures.is_empty());
     match &r.figures[0].items[0] {
-        matlab_runtime::graphics::PlotItem::Scatter { .. } => {},
+        matlab_runtime::graphics::PlotItem::Scatter { .. } => {}
         _ => panic!("expected Scatter"),
     }
 }
 
 #[test]
 fn plot_with_title_axis() {
-    let r = run_source("plot([1 2],[2 4]); title('A'); xlabel('X'); ylabel('Y'); grid on;").unwrap();
+    let r =
+        run_source("plot([1 2],[2 4]); title('A'); xlabel('X'); ylabel('Y'); grid on;").unwrap();
     assert!(!r.figures.is_empty());
     let fig = &r.figures[0];
     assert!(fig.title.as_ref().unwrap().contains("A"));

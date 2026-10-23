@@ -132,12 +132,9 @@ fn simulation_harmonic_oscillator_conserves_energy() {
     };
     let canonical = model.to_state_space().expect("canonical state space");
     let input = InputSignal::Zero; // autonomous response
-    // Discretisation step size: dt = 0.001 s (1 millisecond)
+                                   // Discretisation step size: dt = 0.001 s (1 millisecond)
     let dt = 0.001;
-    let params = SimulationParams {
-        t_final: 3.0,
-        dt,
-    };
+    let params = SimulationParams { t_final: 3.0, dt };
 
     let res = simulate_rk4(&canonical, &input, &params, None).expect("simulation converges");
 

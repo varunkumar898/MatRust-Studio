@@ -668,7 +668,7 @@ Status: PASS.
 
 --- Phase D — Engineering Simulation Kernel (Completed 2026-10-23) ---
 Objective: coherent simulation kernel with continuous-time dynamics and integration.
-Implementation: `crates/apps/src/simulation.rs` implementing Runge-Kutta 4th-order (RK4) integration for first-order transfer functions, second-order canonical systems, and linear continuous-time state-space models. System poles and asymptotic stability computed using `matlab_linalg::decomposition::eig_general`. Dynamic response metrics (steady-state, peak value and time, percent overshoot, rise time, settling time). Verified via `tests/apps/tests/simulation_tests.rs` (11 tests).
+Implementation: `crates/apps/src/simulation.rs` implementing Runge-Kutta 4th-order (RK4) integration for first-order transfer functions, second-order canonical systems, and linear continuous-time state-space models. System poles and asymptotic stability computed using `matlab_linalg::decomposition::eig_general`. Dynamic response metrics (steady-state, peak value and time, percent overshoot, rise time, settling time). Verified via `tests/apps/tests/simulation_tests.rs` (12 tests).
 Path verified: model definition -> RK4 time-stepping -> workspace variables (`sim_t`, `sim_y`, `sim_u`, `sim_x`) -> time response & phase portrait figures -> CSV export round trip -> overwrite guard.
 Status: PASS.
 
@@ -739,8 +739,8 @@ UI (`apps/desktop/src/app.rs`, `apps/desktop/src/execution.rs`):
 - Worker: `SimulationRun` and `SimulationExport` requests run on worker thread; session snapshots update workspace panel and Plots panel.
 - Launcher: Simulation and Control launch button enabled (registry status Ready); disabled apps remain Planned.
 Tests:
-- `tests/apps/tests/simulation_tests.rs`: 11 tests (analytical first-order step match within 1e-6, harmonic oscillator energy conservation within 2e-4, underdamped peak overshoot Mp matching analytical formula within 0.5%, canonical state-space equivalence with second-order model within 1e-12, RK4 convergence rate with step halving, parameter validation errors, divergence guard for unstable systems, cancellation stopping early, session workspace variables & figures, CSV export and overwrite guard, registry Ready reflection).
-- Full workspace test suite: 460 passed, 0 failed across all targets.
+- `tests/apps/tests/simulation_tests.rs`: 12 tests (analytical first-order step match within 1e-6, rise and settling times against closed forms tau*ln(9) and tau*ln(50) within 2*dt, harmonic oscillator energy conservation within 1e-6 with dt=0.001s, underdamped peak overshoot Mp within 0.5% and y(t) trajectory at 6 time points against closed form within 1e-6, canonical state-space equivalence within 1e-12, RK4 convergence rate with error ratio in [14, 18] and observed order ~ 4, first-order impulse response against (K/tau)*exp(-t/tau) with documented discretization, parameter validation errors, divergence guard for unstable systems, cancellation stopping early, session workspace variables & figures, CSV export and overwrite guard, registry Ready reflection).
+- Full workspace test suite: 461 passed, 0 failed across all targets.
 Labels: Unit-tested; Math-validated against analytical ODE solutions and control theory; Not reference-verified (no MATLAB engine/REA available). Live GUI: NOT TESTED (non-interactive session).
 Status: READY for Simulation and Control (backend + UI + export tested at backend/integration layers; live GUI verification pending).
 

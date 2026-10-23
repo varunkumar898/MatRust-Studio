@@ -524,7 +524,21 @@ REA: Active session verified. MATLAB target contains only Network License Manage
 - Definition syntax: `function [out] = name(in1, in2) ... end` — parsed, registered in `Env.function_table`, persistent across `Session::exec` calls.
 - Call routing: `call_or_index` checks `env.function_table` before builtins; expressions can contain user calls (arithmetic, nested, conditional, loop contexts supported by `eval_expr_pub`).
 - Scope: isolated local `Env`; inputs bound by evaluated expressions; outputs transferred by collecting declared names from local env after execution.
-- `nargin` / `nargout`: injected as scalar variables (`nargin = args.len()`, `nargout = outputs.lTests: `tests/apps/tests/data_analysis_tests.rs` (14), `tests/apps/tests/backend_tests.rs` (8), `tests/apps/tests/curve_fitter_tests.rs` (10), `tests/apps/tests/simulation_tests.rs` (12). Live GUI: NOT TESTED (no screenshot artifact in the repository).
+- `nargin` / `nargout`: injected as scalar variables (`nargin = args.len()`, `nargout = outputs.len().max(1)`) inside local env.
+- `return`: propagates via `Flow::Return` through `exec_statement`; exits current function, caller receives assigned outputs.
+- Multiple outputs: `[a, b] = f(...)` assignment wired through the multi-output call machinery (see `multi_output.rs` and `stage3_multi_output_assigned`).
+- Recursion limit / depth guard: implemented — deep recursion returns an explicit diagnostic instead of overflowing (`stage3_recursion_limit_returns_error`).
+- CLI: binary launches; full interactive session persistence across commands not yet fully verified.
+- Tests: `user_functions_stage3.rs` 11 pass; no existing tests weakened.
+
+## Apps backend — Data Analysis (2026-10-23)
+Source: `crates/apps/src/data_analysis.rs`, `crates/apps/src/lib.rs`, `apps/desktop/src/app.rs`, `apps/desktop/src/execution.rs`.
+- CSV parsing: delimiter detection (`,`, tab, `;`), quoted fields with `""` escapes, header heuristic, missing tokens (`""`, `NA`, `NaN`, `null`, `N/A`), ragged-row detection and padding, numeric/text column classification, per-column missing counts.
+- Statistics: `count`, `missing`, `mean`, `median`, sample `std`, `min`, `max`, `q25`, `q50`, `q75`; Pearson correlation on complete pairs; explicit errors for text columns, constant columns, and out-of-range selection.
+- Session integration: writes `data_analysis_data` (rows × selected numeric columns, NaN for missing) and `data_analysis_*` statistic vectors; pushes a `FigureState` with line/scatter items.
+- Export: `column,statistic,value` CSV; refuses overwrite unless confirmed.
+- Registry: 8 apps; Data Analysis Ready (Unit, not reference-verified; live GUI NOT TESTED); Curve Fitter Ready (Unit, not reference-verified; live GUI NOT TESTED); Simulation and Control Ready (Unit, not reference-verified; live GUI NOT TESTED); Signal Analyzer, Image Processing, Machine Learning, Robotics, Embedded Planned and disabled.
+Tests: `tests/apps/tests/data_analysis_tests.rs` (14), `tests/apps/tests/backend_tests.rs` (8), `tests/apps/tests/curve_fitter_tests.rs` (10), `tests/apps/tests/simulation_tests.rs` (12). Live GUI: NOT TESTED (no screenshot artifact in the repository).
 
 ## Part 1 layout / parser / eig verification (2026-10-23)
 - Storage contract: `DenseMatrix` stores row-major (documented on the struct); MATLAB column-major order exists only via `get_linear`/`to_col_major`. New lock-in tests `tests/language/tests/layout_stage11.rs` verify A=[1 2 3;4 5 6]: `A(:)' = [1 4 2 5 3 6]`, `reshape(1:6,2,3) = [1 3 5;2 4 6]`, and hand-computed `prctile` dim1/dim2.
@@ -563,14 +577,6 @@ Desktop (`apps/desktop/src/app.rs`, `apps/desktop/src/execution.rs`):
 - `SimulationApp` window: Presets (1st-Order, Underdamped 2nd-Order, Critically Damped, Overdamped, Harmonic Oscillator, State-Space Double Integrator), model type selector, model parameters, input signal selector & parameters, simulation duration and step size dt, Simulate (RK4) button with worker execution and Stop button, STABLE / UNSTABLE badge, metrics table, export CSV with click-again overwrite confirmation.
 - Requests `SimulationRun` / `SimulationExport` handled on worker thread; snapshot updates workspace and Plots panel.
 Tests: `simulation_tests.rs` 12 (first-order step analytical match y(t) = K(1-exp(-t/tau)) within 1e-6, rise and settling times against closed forms tau*ln(9) and tau*ln(50) within 2*dt, harmonic oscillator energy conservation within 1e-6 with dt=0.001s justified by RK4 theta^6/72 dissipation bound, underdamped step overshoot Mp within 0.5% and y(t) trajectory at 6 time points against closed form within 1e-6, canonical state-space equivalence within 1e-12, RK4 convergence rate with error ratio in [14, 18] and observed order ~ 4, first-order impulse response against (K/tau)*exp(-t/tau) with documented discretization, parameter validation errors, divergence guard for unstable systems, cancellation stopping early, session workspace variables & figures, CSV export and overwrite guard, registry Ready reflection).
-Labels: Unit-tested; Math-validated against analytical ODE solutions and control theory; Not reference-verified (no MATLAB engine/REA). Live GUI: NOT TESTED (non-interactive session).
-Status: READY (backend + UI + export tested at backend/integration layers; live GUI verification pending).2% band).
-- Session integration (`run_simulation`): writes `sim_t`, `sim_y`, `sim_u`, `sim_x` (N x n state trajectory), `sim_steady_state`, `sim_peak`, `sim_overshoot`, `sim_rise_time`, `sim_settling_time` to workspace; pushes Figure 1 (Time Response: y(t) and u(t)) and Figure 2 (Phase Portrait: x2 vs x1 for n >= 2).
-- Export: `export_simulation_csv` writes `time,y,u,x1,x2,...` CSV rows; refuses to overwrite existing file without confirmation (`confirm_overwrite`).
-Desktop (`apps/desktop/src/app.rs`, `apps/desktop/src/execution.rs`):
-- `SimulationApp` window: Presets (1st-Order, Underdamped 2nd-Order, Critically Damped, Overdamped, Harmonic Oscillator, State-Space Double Integrator), model type selector, model parameters, input signal selector & parameters, simulation duration and step size dt, Simulate (RK4) button with worker execution and Stop button, STABLE / UNSTABLE badge, metrics table, export CSV with click-again overwrite confirmation.
-- Requests `SimulationRun` / `SimulationExport` handled on worker thread; snapshot updates workspace and Plots panel.
-Tests: `simulation_tests.rs` 11 (first-order step analytical match y(t) = K(1-exp(-t/tau)) within 1e-6, harmonic oscillator energy conservation within 2e-4, underdamped step overshoot Mp matching analytical formula within 0.5%, canonical state-space equivalence with second-order model within 1e-12, RK4 convergence rate with step halving > 10x error reduction, parameter validation errors, divergence guard for unstable systems, cancellation stopping early, session workspace variables & figures, CSV export and overwrite guard, registry Ready reflection).
 Labels: Unit-tested; Math-validated against analytical ODE solutions and control theory; Not reference-verified (no MATLAB engine/REA). Live GUI: NOT TESTED (non-interactive session).
 Status: READY (backend + UI + export tested at backend/integration layers; live GUI verification pending).
 

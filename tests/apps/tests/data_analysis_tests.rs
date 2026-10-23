@@ -40,10 +40,14 @@ fn registry_marks_app2_ready_after_ui() {
     // wired; it is still Unit-verified and not reference-verified.
     assert_eq!(REGISTRY[1].status, Status::Ready);
     assert_eq!(REGISTRY[1].verification, Verification::Unit);
-    for app in &REGISTRY[2..] {
+    assert_eq!(REGISTRY[2].id, "simulation");
+    assert_eq!(REGISTRY[2].status, Status::Ready);
+    assert_eq!(REGISTRY[2].verification, Verification::Unit);
+    for app in &REGISTRY[3..] {
         assert_eq!(app.status, Status::Planned, "{} must be Planned", app.name);
         assert!(!app.launchable(), "{} must be disabled", app.name);
     }
+
     assert_eq!(
         find_by_id("curve_fitter").map(|a| a.name),
         Some("Curve Fitter")

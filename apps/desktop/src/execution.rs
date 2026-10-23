@@ -14,7 +14,9 @@ use matlab_runtime::{RunResult, Session};
 
 use matlabr_apps::curve_fitter::{self, FitResult};
 use matlabr_apps::data_analysis::{self, AnalysisOutcome, ColumnStats, CsvTable, PlotRequest};
-use matlabr_apps::simulation::{self, InputSignal, SimulationParams, SimulationResult, SystemModel};
+use matlabr_apps::simulation::{
+    self, InputSignal, SimulationParams, SimulationResult, SystemModel,
+};
 
 /// Where a piece of executed source came from (for status messages and
 /// focus handling).
@@ -145,7 +147,6 @@ pub enum Reply {
         result: Result<std::path::PathBuf, Diagnostic>,
     },
 }
-
 
 pub struct Worker {
     pub request_tx: Sender<Request>,
@@ -362,7 +363,6 @@ impl Worker {
                     }
                 }
             })
-
             .expect("failed to spawn execution worker");
 
         Self {

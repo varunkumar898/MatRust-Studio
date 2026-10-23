@@ -666,10 +666,12 @@ Path verified: dataset creation -> save (`save`) -> load (`load`) -> mean/std ->
 No new numerical algorithms required; existing runtime, builtins, graphics state used.
 Status: PASS.
 
---- Phase D — Engineering Simulation Kernel (Partial / Started) ---
-Objective: coherent simulation kernel with basic continuous-time dynamics.
-Next step (not completed in this session): implement/time-step first-order/state-space model with plot result verification. Blocked only by decision of what minimal model to include; architecture supports it via existing array/math/plot path.
-Status: PARTIAL — framework verified (array math + plot + session); specific simulation module not yet added.
+--- Phase D — Engineering Simulation Kernel (Completed 2026-10-23) ---
+Objective: coherent simulation kernel with continuous-time dynamics and integration.
+Implementation: `crates/apps/src/simulation.rs` implementing Runge-Kutta 4th-order (RK4) integration for first-order transfer functions, second-order canonical systems, and linear continuous-time state-space models. System poles and asymptotic stability computed using `matlab_linalg::decomposition::eig_general`. Dynamic response metrics (steady-state, peak value and time, percent overshoot, rise time, settling time). Verified via `tests/apps/tests/simulation_tests.rs` (11 tests).
+Path verified: model definition -> RK4 time-stepping -> workspace variables (`sim_t`, `sim_y`, `sim_u`, `sim_x`) -> time response & phase portrait figures -> CSV export round trip -> overwrite guard.
+Status: PASS.
+
 
 --- Apps Framework — Application 1: Data Analysis (2026-10-23) ---
 Objective: implement the first application on the shared runtime with real inputs, real backend computation, tested results, and export.
@@ -722,3 +724,23 @@ UI (`apps/desktop/src/app.rs`, `apps/desktop/src/execution.rs`):
 - Launcher opens via registry; worker request/reply plumbing is covered by the integration tests and workspace build. The live desktop GUI was not exercised in this non-interactive session (NOT TESTED).
 Labels: Unit-tested; Math-validated; Not reference-verified (no MATLAB engine/REA). Live GUI: NOT TESTED at pixel level (no screenshot in the repository).
 Status: READY for Curve Fitter (backend + UI + export tested at backend/integration layers; live GUI verification pending).
+
+--- Part 3 — Application 3: Simulation and Control (2026-10-23) ---
+Objective: implement a launchable Simulation and Control application on the shared runtime: 4th-order Runge-Kutta continuous-time solver, first/second-order and state-space systems, stability & pole analysis, desktop UI on the worker thread, figures and workspace variables, and CSV trajectory export.
+Backend (`crates/apps/src/simulation.rs`):
+- Models: First-Order (`tau*dy/dt + y = K*u`), Second-Order (`d²y/dt² + 2*zeta*wn*dy/dt + wn²*y = wn²*K*u`), and continuous Linear State-Space (`dx/dt = A*x + B*u`, `y = C*x + D*u`). Models convert cleanly to canonical state-space (`to_state_space`).
+- Numerical solver: Runge-Kutta 4th-order (RK4) integration with cooperative cancellation checks (`cancel: Option<&AtomicBool>`) and divergence/non-finite guards.
+- Stability & Pole analysis: system poles and asymptotic stability computed using `matlab_linalg::decomposition::eig_general(&a, None)`.
+- Control metrics: steady-state value, peak output and peak time, percentage overshoot Mp, rise time (10% to 90%), settling time (2% band).
+- Session integration (`run_simulation`): writes `sim_t`, `sim_y`, `sim_u`, `sim_x` (matrix of state trajectories), `sim_steady_state`, `sim_peak`, `sim_overshoot`, `sim_rise_time`, `sim_settling_time` into `session.env`; generates Figure 1 (Time Response) and Figure 2 (Phase Portrait: x2 vs x1 for order >= 2).
+- Export: `export_simulation_csv` writes full time, output, input, and state vector history; refuses overwrite without explicit confirmation.
+UI (`apps/desktop/src/app.rs`, `apps/desktop/src/execution.rs`):
+- `SimulationApp` window: Presets (1st-Order, Underdamped 2nd-Order, Critically Damped, Overdamped, Harmonic Oscillator, State-Space Double Integrator), model type selector, parameter fields, input signal selection (Step, Impulse, Ramp, Sine, Zero/Autonomous), duration and step size dt, Simulate (RK4) button with Stop via shared cancel flag, STABLE/UNSTABLE status badge, poles listing, metrics table, CSV export with overwrite click-again confirmation; results persist when window is closed.
+- Worker: `SimulationRun` and `SimulationExport` requests run on worker thread; session snapshots update workspace panel and Plots panel.
+- Launcher: Simulation and Control launch button enabled (registry status Ready); disabled apps remain Planned.
+Tests:
+- `tests/apps/tests/simulation_tests.rs`: 11 tests (analytical first-order step match within 1e-6, harmonic oscillator energy conservation within 2e-4, underdamped peak overshoot Mp matching analytical formula within 0.5%, canonical state-space equivalence with second-order model within 1e-12, RK4 convergence rate with step halving, parameter validation errors, divergence guard for unstable systems, cancellation stopping early, session workspace variables & figures, CSV export and overwrite guard, registry Ready reflection).
+- Full workspace test suite: 460 passed, 0 failed across all targets.
+Labels: Unit-tested; Math-validated against analytical ODE solutions and control theory; Not reference-verified (no MATLAB engine/REA available). Live GUI: NOT TESTED (non-interactive session).
+Status: READY for Simulation and Control (backend + UI + export tested at backend/integration layers; live GUI verification pending).
+

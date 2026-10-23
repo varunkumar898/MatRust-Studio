@@ -15,7 +15,6 @@ use matlabr_apps::simulation::{InputSignal, SimulationParams, SimulationResult, 
 
 use matlabr_apps::{Status, REGISTRY};
 
-
 use crate::command_window::{CommandWindowState, Line, Submitted};
 use crate::current_folder::{FolderAction, FolderState};
 use crate::editor::CodeEditor;
@@ -266,10 +265,7 @@ fn parse_matrix_text(text: &str, name: &str) -> Result<matlab_values::DenseMatri
                 continue;
             }
             let val: f64 = t.parse().map_err(|_| {
-                Diagnostic::error(
-                    format!("Invalid number '{t}' in matrix {name}."),
-                    None,
-                )
+                Diagnostic::error(format!("Invalid number '{t}' in matrix {name}."), None)
             })?;
             row.push(val);
         }
@@ -571,7 +567,6 @@ impl SimulationApp {
 
 // ---------------------------------------------------------------- app
 
-
 pub struct MatRustApp {
     pub prefs: Prefs,
     applied_theme: Option<(ThemeKind, f32)>,
@@ -629,7 +624,6 @@ pub struct MatRustApp {
     auto_curve_run: bool,
     close_tab_pending: Option<usize>,
 }
-
 
 impl MatRustApp {
     pub fn new(cc: &eframe::CreationContext<'_>, prefs: Prefs) -> Self {
@@ -724,7 +718,6 @@ impl MatRustApp {
             }
             _ => {}
         }
-
 
         app.cmd.push(Line::Info(format!(
             "{APP_NAME} {APP_VERSION} — independent MATLAB-inspired numerical IDE"
@@ -1121,7 +1114,8 @@ impl MatRustApp {
                     result,
                     snapshot,
                 } => {
-                    if !matches!(self.sim_pending, Some((pid, SimulationPending::Run)) if pid == id) {
+                    if !matches!(self.sim_pending, Some((pid, SimulationPending::Run)) if pid == id)
+                    {
                         continue;
                     }
                     self.sim_pending = None;
@@ -1140,7 +1134,8 @@ impl MatRustApp {
                     }
                 }
                 Reply::SimulationExport { id, result } => {
-                    if !matches!(self.sim_pending, Some((pid, SimulationPending::Export)) if pid == id) {
+                    if !matches!(self.sim_pending, Some((pid, SimulationPending::Export)) if pid == id)
+                    {
                         continue;
                     }
                     self.sim_pending = None;
@@ -1159,7 +1154,6 @@ impl MatRustApp {
                     }
                 }
             }
-
         }
         if self.running {
             ctx.request_repaint();
@@ -1203,7 +1197,6 @@ impl MatRustApp {
         self.sim_app_open = true;
         self.apps_open = false;
     }
-
 
     /// The fitted-values export path implied by a coefficients export path
     /// (`<stem>_fitted.csv` next to `<stem>.csv`).
@@ -1366,12 +1359,7 @@ impl MatRustApp {
         });
     }
 
-    fn sim_submit_run(
-        &mut self,
-        model: SystemModel,
-        input: InputSignal,
-        params: SimulationParams,
-    ) {
+    fn sim_submit_run(&mut self, model: SystemModel, input: InputSignal, params: SimulationParams) {
         if self.running {
             return;
         }
@@ -1392,12 +1380,7 @@ impl MatRustApp {
         });
     }
 
-    fn sim_submit_export(
-        &mut self,
-        path: PathBuf,
-        result: SimulationResult,
-        overwrite: bool,
-    ) {
+    fn sim_submit_export(&mut self, path: PathBuf, result: SimulationResult, overwrite: bool) {
         if self.running {
             return;
         }
@@ -1419,7 +1402,6 @@ impl MatRustApp {
     }
 
     fn run_source_now(&mut self, source: &str) {
-
         if self.running {
             self.cmd.push(Line::Err(
                 "Busy: an execution is already running.".to_string(),

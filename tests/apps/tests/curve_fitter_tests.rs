@@ -324,8 +324,10 @@ fn registry_marks_curve_fitter_ready_once_ui_exists() {
     );
     let data = matlabr_apps::find_by_id("data_analysis").expect("registry entry");
     assert!(data.launchable(), "data analysis stays Ready");
+    let sim = matlabr_apps::find_by_id("simulation").expect("registry entry");
+    assert!(sim.launchable(), "simulation stays Ready");
     for app in matlabr_apps::REGISTRY {
-        if app.id != "data_analysis" && app.id != "curve_fitter" {
+        if app.id != "data_analysis" && app.id != "curve_fitter" && app.id != "simulation" {
             assert!(!app.launchable(), "{} must not be launchable", app.id);
         }
     }

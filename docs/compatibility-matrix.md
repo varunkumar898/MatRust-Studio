@@ -119,8 +119,9 @@ R2026b behavior this row tracks; this matrix makes no claim beyond that.
 |---|---|---|---|
 | Data Analysis | Ready | Unit-tested; Not reference-verified; live GUI NOT TESTED | CSV open (header/delimiter detection, quoted fields, missing/ragged rows), preview, column selection, mean/median/std/min/max/quantiles/correlation, line/scatter plot, statistics CSV export with overwrite confirmation |
 | Curve Fitter | Ready | Unit-tested; Not reference-verified; live GUI NOT TESTED | CSV open and column selection, polynomial/linear least squares solved through matlab_linalg QR (mldivide), coefficient table, R²/RMSE/residuals, data+fit and residuals figures, curve_fit_* workspace variables, coefficients+fitted CSV export with overwrite confirmation |
-| Simulation and Control | Planned | — | Disabled in launcher |
+| Simulation and Control | Ready | Unit-tested; Not reference-verified; live GUI NOT TESTED | RK4 ODE/state-space solver, canonical 1st/2nd-order and state-space models, step/impulse/ramp/sine/zero inputs, poles via eig_general, stability, overshoot/rise/settling time, time response & phase portrait plots, sim_* workspace variables, CSV export with overwrite confirmation |
 | Signal Analyzer | Planned | — | Disabled in launcher |
+
 | Image Processing | Planned | — | Disabled in launcher |
 | Machine Learning | Planned | — | Disabled in launcher |
 | Robotics Math | Planned | — | Disabled in launcher |

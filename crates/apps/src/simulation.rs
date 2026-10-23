@@ -54,7 +54,12 @@ impl SystemModel {
             Self::FirstOrder { tau, gain, .. } => {
                 format!("First-Order (tau={tau:.3}, K={gain:.3})")
             }
-            Self::SecondOrder { omega_n, zeta, gain, .. } => {
+            Self::SecondOrder {
+                omega_n,
+                zeta,
+                gain,
+                ..
+            } => {
                 format!("Second-Order (omega_n={omega_n:.3}, zeta={zeta:.3}, K={gain:.3})")
             }
             Self::StateSpace { a, .. } => {
@@ -160,7 +165,10 @@ impl SystemModel {
                     c,
                     d: 0.0,
                     x0: vec![*y0, *v0],
-                    state_names: vec!["y (displacement)".to_string(), "dy/dt (velocity)".to_string()],
+                    state_names: vec![
+                        "y (displacement)".to_string(),
+                        "dy/dt (velocity)".to_string(),
+                    ],
                 })
             }
             Self::StateSpace { a, b, c, d, x0 } => {
@@ -172,7 +180,10 @@ impl SystemModel {
                 }
                 let n = a.rows;
                 if n == 0 {
-                    return Err(Diagnostic::error("State dimension n must be at least 1.", None));
+                    return Err(Diagnostic::error(
+                        "State dimension n must be at least 1.",
+                        None,
+                    ));
                 }
                 if b.rows != n || b.cols != 1 {
                     return Err(Diagnostic::error(
@@ -182,13 +193,20 @@ impl SystemModel {
                 }
                 if c.rows != 1 || c.cols != n {
                     return Err(Diagnostic::error(
-                        format!("Output matrix C must be 1x{}, got {}x{}.", n, c.rows, c.cols),
+                        format!(
+                            "Output matrix C must be 1x{}, got {}x{}.",
+                            n, c.rows, c.cols
+                        ),
                         None,
                     ));
                 }
                 if x0.len() != n {
                     return Err(Diagnostic::error(
-                        format!("Initial state vector x0 must have length {}, got {}.", n, x0.len()),
+                        format!(
+                            "Initial state vector x0 must have length {}, got {}.",
+                            n,
+                            x0.len()
+                        ),
                         None,
                     ));
                 }
@@ -276,9 +294,7 @@ impl InputSignal {
                 amplitude,
                 frequency,
                 phase_rad,
-            } => {
-                amplitude * (2.0 * std::f64::consts::PI * frequency * t + phase_rad).sin()
-            }
+            } => amplitude * (2.0 * std::f64::consts::PI * frequency * t + phase_rad).sin(),
             Self::Zero => 0.0,
         }
     }
@@ -318,7 +334,10 @@ impl SimulationParams {
     pub fn validate(&self) -> Result<usize, Diagnostic> {
         if !self.t_final.is_finite() || self.t_final <= 0.0 {
             return Err(Diagnostic::error(
-                format!("Simulation duration t_final must be positive, got {}.", self.t_final),
+                format!(
+                    "Simulation duration t_final must be positive, got {}.",
+                    self.t_final
+                ),
                 None,
             ));
         }
@@ -387,7 +406,9 @@ pub struct SimulationResult {
 }
 
 fn cancelled(cancel: Option<&AtomicBool>) -> bool {
-    cancel.map(|flag| flag.load(Ordering::Relaxed)).unwrap_or(false)
+    cancel
+        .map(|flag| flag.load(Ordering::Relaxed))
+        .unwrap_or(false)
 }
 
 /// Evaluate state derivative dx/dt = A*x + B*u.
@@ -499,7 +520,6 @@ pub fn analyze_response(
     let mut settling_time = None;
 
     if delta.abs() > 1e-6 {
-
         // Overshoot
         if delta > 0.0 && peak_val > steady_state {
             overshoot_percent = Some(((peak_val - steady_state) / delta.abs()) * 100.0);

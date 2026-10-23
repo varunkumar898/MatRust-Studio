@@ -130,4 +130,3 @@ pub fn find_by_id(id: &str) -> Option<&'static AppInfo> {
 pub mod curve_fitter;
 pub mod data_analysis;
 pub mod simulation;
-

@@ -12,6 +12,9 @@ use std::time::{Duration, Instant};
 use matlab_diagnostics::Diagnostic;
 use matlab_runtime::{RunResult, Session};
 
+use matlabr_apps::curve_fitter::{self, FitResult};
+use matlabr_apps::data_analysis::{self, AnalysisOutcome, ColumnStats, CsvTable, PlotRequest};
+
 /// Where a piece of executed source came from (for status messages and
 /// focus handling).
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -34,6 +37,49 @@ pub enum Request {
     ClearWorkspace {
         id: u64,
     },
+    /// Parse a CSV for the Data Analysis preview (runs on the worker thread).
+    DataAnalysisPreview {
+        id: u64,
+        path: std::path::PathBuf,
+    },
+    /// Parse a CSV for the Curve Fitter preview (runs on the worker thread).
+    CurvePreview {
+        id: u64,
+        path: std::path::PathBuf,
+    },
+    /// Compute statistics, write workspace variables, and push a figure.
+    DataAnalysisRun {
+        id: u64,
+        path: std::path::PathBuf,
+        selected: Vec<usize>,
+        plot: PlotRequest,
+    },
+    /// Export previously computed statistics to a CSV.
+    DataAnalysisExport {
+        id: u64,
+        path: std::path::PathBuf,
+        stats: Vec<ColumnStats>,
+        correlation: Option<(String, String, f64)>,
+        overwrite: bool,
+    },
+    /// Fit a polynomial on two CSV columns: parse, QR least-squares solve,
+    /// write workspace variables, and push data+fit and residual figures.
+    CurveFit {
+        id: u64,
+        path: std::path::PathBuf,
+        x_col: usize,
+        y_col: usize,
+        degree: usize,
+    },
+    /// Export a completed fit's coefficients and fitted values.
+    CurveFitExport {
+        id: u64,
+        coeff_path: std::path::PathBuf,
+        fitted_path: std::path::PathBuf,
+        fit: FitResult,
+        xs: Vec<f64>,
+        overwrite: bool,
+    },
 }
 
 #[derive(Debug)]
@@ -46,6 +92,32 @@ pub enum Reply {
     },
     WorkspaceCleared {
         result: RunResult,
+    },
+    DataAnalysisPreview {
+        id: u64,
+        result: Result<CsvTable, Diagnostic>,
+    },
+    CurvePreview {
+        id: u64,
+        result: Result<CsvTable, Diagnostic>,
+    },
+    DataAnalysisRun {
+        id: u64,
+        result: Result<AnalysisOutcome, Diagnostic>,
+        snapshot: RunResult,
+    },
+    DataAnalysisExport {
+        id: u64,
+        result: Result<std::path::PathBuf, Diagnostic>,
+    },
+    CurveFitDone {
+        id: u64,
+        result: Result<(FitResult, Vec<f64>, Vec<f64>, CsvTable), Diagnostic>,
+        snapshot: RunResult,
+    },
+    CurveFitExport {
+        id: u64,
+        result: Result<(std::path::PathBuf, std::path::PathBuf), Diagnostic>,
     },
 }
 
@@ -99,6 +171,123 @@ impl Worker {
                                     },
                                 })
                                 .ok();
+                        }
+                        Request::DataAnalysisPreview { id, path } => {
+                            let result = data_analysis::parse_csv(&path, Some(&cancel_thread));
+                            reply_tx
+                                .send(Reply::DataAnalysisPreview { id, result })
+                                .ok();
+                        }
+                        Request::CurvePreview { id, path } => {
+                            let result = data_analysis::parse_csv(&path, Some(&cancel_thread));
+                            reply_tx.send(Reply::CurvePreview { id, result }).ok();
+                        }
+                        Request::DataAnalysisRun {
+                            id,
+                            path,
+                            selected,
+                            plot,
+                        } => {
+                            let result = data_analysis::analyze(
+                                &mut session,
+                                &path,
+                                &selected,
+                                plot,
+                                Some(&cancel_thread),
+                            );
+                            let snapshot = RunResult {
+                                env: session.env.clone(),
+                                outputs: Vec::new(),
+                                stdout: Vec::new(),
+                                figures: session.graphics.figures.clone(),
+                                interrupted: cancel_thread.load(Ordering::Relaxed),
+                            };
+                            reply_tx
+                                .send(Reply::DataAnalysisRun {
+                                    id,
+                                    result,
+                                    snapshot,
+                                })
+                                .ok();
+                        }
+                        Request::DataAnalysisExport {
+                            id,
+                            path,
+                            stats,
+                            correlation,
+                            overwrite,
+                        } => {
+                            let corr = correlation
+                                .as_ref()
+                                .map(|(x, y, r)| (x.as_str(), y.as_str(), *r));
+                            let result =
+                                data_analysis::export_stats_csv(&path, &stats, corr, overwrite)
+                                    .map(|()| path);
+                            reply_tx.send(Reply::DataAnalysisExport { id, result }).ok();
+                        }
+                        Request::CurveFit {
+                            id,
+                            path,
+                            x_col,
+                            y_col,
+                            degree,
+                        } => {
+                            let result = data_analysis::parse_csv(&path, Some(&cancel_thread))
+                                .and_then(|table| {
+                                    curve_fitter::run_fit(
+                                        &mut session,
+                                        &table,
+                                        x_col,
+                                        y_col,
+                                        degree,
+                                        Some(&cancel_thread),
+                                    )
+                                    .map(|fit| {
+                                        let xs: Vec<f64> = table
+                                            .numeric
+                                            .iter()
+                                            .map(|row| row[x_col].unwrap_or(f64::NAN))
+                                            .collect();
+                                        let ys: Vec<f64> = table
+                                            .numeric
+                                            .iter()
+                                            .map(|row| row[y_col].unwrap_or(f64::NAN))
+                                            .collect();
+                                        (fit, xs, ys, table)
+                                    })
+                                });
+                            let snapshot = RunResult {
+                                env: session.env.clone(),
+                                outputs: Vec::new(),
+                                stdout: Vec::new(),
+                                figures: session.graphics.figures.clone(),
+                                interrupted: cancel_thread.load(Ordering::Relaxed),
+                            };
+                            reply_tx
+                                .send(Reply::CurveFitDone {
+                                    id,
+                                    result,
+                                    snapshot,
+                                })
+                                .ok();
+                        }
+                        Request::CurveFitExport {
+                            id,
+                            coeff_path,
+                            fitted_path,
+                            fit,
+                            xs,
+                            overwrite,
+                        } => {
+                            let result = curve_fitter::export_fit_csv(
+                                &coeff_path,
+                                &fitted_path,
+                                &fit,
+                                &xs,
+                                overwrite,
+                            )
+                            .map(|()| (coeff_path, fitted_path));
+                            reply_tx.send(Reply::CurveFitExport { id, result }).ok();
                         }
                     }
                 }

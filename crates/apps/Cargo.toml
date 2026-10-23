@@ -1,0 +1,11 @@
+[package]
+name = "matlabr_apps"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+matlab_runtime = { path = "../runtime" }
+matlab_linalg = { path = "../linalg" }
+matlab_values = { path = "../values" }
+matlab_diagnostics = { path = "../diagnostics" }

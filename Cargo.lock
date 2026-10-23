@@ -173,6 +173,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "apps_tests"
+version = "0.1.0"
+dependencies = [
+ "matlab_diagnostics",
+ "matlab_runtime",
+ "matlab_values",
+ "matlabr_apps",
+]
+
+[[package]]
 name = "arboard"
 version = "3.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1676,6 +1686,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "matlabr_apps"
+version = "0.1.0"
+dependencies = [
+ "matlab_diagnostics",
+ "matlab_linalg",
+ "matlab_runtime",
+ "matlab_values",
+]
+
+[[package]]
 name = "matlabr_cli"
 version = "0.1.0"
 dependencies = [
@@ -1704,6 +1724,7 @@ dependencies = [
  "matlab_runtime",
  "matlab_syntax",
  "matlab_values",
+ "matlabr_apps",
  "serde",
 ]
 

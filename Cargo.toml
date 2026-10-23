@@ -10,6 +10,8 @@ members = [
     "tests/language",
     "tests/matrices",
     "tests/compatibility",
+    "tests/apps",
+    "crates/apps",
 ]
 resolver = "2"
 

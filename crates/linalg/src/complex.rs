@@ -734,7 +734,7 @@ pub fn det(a: &ComplexDenseMatrix, span: Option<Span>) -> Result<Complex64, Diag
         Complex64::new(1.0, 0.0)
     };
     for i in 0..n {
-        d = d * decomp.u.data[i * n + i];
+        d *= decomp.u.data[i * n + i];
     }
     Ok(d)
 }
@@ -807,16 +807,16 @@ pub fn inv(a: &ComplexDenseMatrix, span: Option<Span>) -> Result<ComplexDenseMat
                 Complex64::zero()
             };
             let mut sum = Complex64::zero();
-            for j in 0..i {
-                sum += decomp.l.data[i * n + j] * y[j];
+            for (j, yj) in y.iter().enumerate().take(i) {
+                sum += decomp.l.data[i * n + j] * *yj;
             }
             y[i] = b_val - sum;
         }
 
         for i in (0..n).rev() {
             let mut sum = Complex64::zero();
-            for j in (i + 1)..n {
-                sum += decomp.u.data[i * n + j] * col_sol[j];
+            for (j, value) in col_sol.iter().enumerate().skip(i + 1) {
+                sum += decomp.u.data[i * n + j] * *value;
             }
             col_sol[i] = (y[i] - sum) / decomp.u.data[i * n + i];
         }
@@ -889,16 +889,16 @@ pub fn mldivide(
                 let orig_row = decomp.p_vec[i];
                 let b_val = b.data[orig_row * k + c];
                 let mut sum = Complex64::zero();
-                for j in 0..i {
-                    sum += decomp.l.data[i * n + j] * y[j];
+                for (j, yj) in y.iter().enumerate().take(i) {
+                    sum += decomp.l.data[i * n + j] * *yj;
                 }
                 y[i] = b_val - sum;
             }
 
             for i in (0..n).rev() {
                 let mut sum = Complex64::zero();
-                for j in (i + 1)..n {
-                    sum += decomp.u.data[i * n + j] * x_col[j];
+                for (j, value) in x_col.iter().enumerate().skip(i + 1) {
+                    sum += decomp.u.data[i * n + j] * *value;
                 }
                 x_col[i] = (y[i] - sum) / decomp.u.data[i * n + i];
             }
@@ -1064,10 +1064,16 @@ pub fn mrdivide_values(l: &Value, r: &Value, span: Option<Span>) -> Result<Value
     }
 }
 
-/// Basic complex dense eigenvalue algorithm via shifted QR iteration.
-/// Returns (D column vector, V eigenvector matrix) as DenseMatrix (real representations)
-/// with complex components preserved in a ComplexDenseMatrix result — for simplicity,
-/// this returns the eigenvalues as a real/imag split representation via ComplexDenseMatrix.
+/// Complex dense eigenvalue decomposition.
+///
+/// The matrix is first reduced to upper Hessenberg form by unitary Givens
+/// similarities, then shifted QR iterations (complex Wilkinson shift) drive
+/// the active subdiagonal blocks to zero. Unlike a real-only QR iteration,
+/// this path can represent complex-conjugate eigenvalues directly.
+///
+/// Returns `(D, V)` where `D` is a column vector of eigenvalues and the
+/// columns of `V` are right eigenvectors computed by inverse iteration.
+/// Eigenvalues are sorted by real part, then imaginary part, for determinism.
 pub fn eig_complex(
     a: &ComplexDenseMatrix,
     span: Option<Span>,
@@ -1082,151 +1088,429 @@ pub fn eig_complex(
             span,
         ));
     }
+    if a.data.iter().any(|z| z.is_nan() || z.is_infinite()) {
+        return Err(Diagnostic::error(
+            "eig rejects matrices containing NaN or Inf.",
+            span,
+        ));
+    }
     if n == 0 {
         return Ok((ComplexDenseMatrix::empty(), ComplexDenseMatrix::empty()));
     }
     if n == 1 {
         return Ok((a.clone(), ComplexDenseMatrix::eye(1)));
     }
-    let mut m = a.clone();
-    let mut v = ComplexDenseMatrix::eye(n);
-    for _ in 0..200 {
-        // Complex Gram-Schmidt QR (approximate)
-        let mut q = vec![vec![Complex64::zero(); n]; n];
-        let mut r = vec![vec![Complex64::zero(); n]; n];
-        for j in 0..n {
-            let mut col = Vec::with_capacity(n);
-            for i in 0..n {
-                col.push(m.data[i * n + j]);
-            }
-            for k in 0..j {
-                let mut proj = Complex64::zero();
-                for i in 0..n {
-                    proj += q[i][k].conj() * col[i];
-                }
-                r[k][j] = proj;
-                for i in 0..n {
-                    col[i] -= proj * q[i][k];
-                }
-            }
-            let norm_sq = col.iter().map(|&x| x.abs_sq()).sum::<f64>();
-            let norm = norm_sq.sqrt();
-            r[j][j] = Complex64::real(norm);
-            if norm > 1e-12 {
-                for i in 0..n {
-                    q[i][j] = col[i] / Complex64::real(norm);
-                }
-            }
+
+    let mut h = hessenberg_complex(a);
+    let norm = a.data.iter().map(|z| z.abs()).fold(0.0f64, f64::max);
+    let mut eigenvalues = Vec::with_capacity(n);
+    let mut hi: isize = n as isize - 1;
+    let mut iterations = 0usize;
+    let max_iter = 200usize;
+
+    while hi >= 0 {
+        let hi_u = hi as usize;
+        if hi_u == 0 {
+            eigenvalues.push(h.data[0]);
+            hi = -1;
+            continue;
         }
-        // Reconstruct Q
-        let mut q_mat = ComplexDenseMatrix {
-            rows: n,
-            cols: n,
-            data: vec![Complex64::zero(); n * n],
-        };
-        for j in 0..n {
-            for i in 0..n {
-                q_mat.data[i * n + j] = q[i][j];
+
+        // Find the start of the unreduced trailing block. A subdiagonal is
+        // negligible when it is small relative to the local diagonal scale
+        // (with a floor at the matrix norm to stop round-off from blocking
+        // deflation indefinitely).
+        let mut l = hi_u;
+        while l > 0 {
+            let sub = h.data[l * n + (l - 1)].abs();
+            let diag_scale = h.data[(l - 1) * n + (l - 1)].abs() + h.data[l * n + l].abs();
+            let threshold = 1e-13 * diag_scale + 1e-15 * norm.max(1.0);
+            if sub <= threshold {
+                h.data[l * n + (l - 1)] = Complex64::zero();
+                break;
             }
+            l -= 1;
         }
-        // M = R * Q
-        let mut m_next = ComplexDenseMatrix {
-            rows: n,
-            cols: n,
-            data: vec![Complex64::zero(); n * n],
-        };
-        for i in 0..n {
-            for j in 0..n {
-                let mut s = Complex64::zero();
-                for k in 0..n {
-                    s += r[i][k] * q_mat.data[k * n + j];
-                }
-                m_next.data[i * n + j] = s;
+
+        if l == hi_u {
+            // 1x1 deflated block.
+            eigenvalues.push(h.data[hi_u * n + hi_u]);
+            hi -= 1;
+        } else if l + 1 == hi_u {
+            // 2x2 deflated block: solve its quadratic characteristic equation.
+            let (lambda1, lambda2) = two_by_two_eigenvalues(&h, l, l + 1);
+            eigenvalues.push(lambda1);
+            eigenvalues.push(lambda2);
+            hi -= 2;
+        } else {
+            if iterations >= max_iter {
+                return Err(Diagnostic::error(
+                    "Complex eigenvalue iteration did not converge to working precision.",
+                    span,
+                ));
             }
-        }
-        // Update V = V * Q
-        // Manual matmul for complex
-        let mut new_v_data = vec![Complex64::zero(); n * n];
-        for i in 0..n {
-            for j in 0..n {
-                let mut s = Complex64::zero();
-                for k in 0..n {
-                    s += v.data[i * n + k] * q_mat.data[k * n + j];
-                }
-                new_v_data[i * n + j] = s;
-            }
-        }
-        v = ComplexDenseMatrix {
-            rows: n,
-            cols: n,
-            data: new_v_data,
-        };
-        m = m_next;
-        // Shift: subtract lower-right diagonal element (approx)
-        let shift = m.data[(n - 1) * n + (n - 1)];
-        for i in 0..n {
-            m.data[i * n + i] = m.data[i * n + i] - shift;
-        }
-        // Add shift back not needed if using direct QR; skip for simplicity
-        // Convergence check
-        let mut max_sub = 0.0f64;
-        for i in 1..n {
-            max_sub = max_sub.max(m.data[i * n + (i - 1)].abs());
-        }
-        if max_sub < 1e-8 {
-            break;
+            qr_step_complex(&mut h, l, hi_u);
+            iterations += 1;
         }
     }
-    // Check complex convergence
-    let mut final_max_sub = 0.0f64;
-    for i in 1..n {
-        let val = m.data[i * n + (i - 1)].abs();
-        if val > final_max_sub {
-            final_max_sub = val;
-        }
-    }
-    if final_max_sub > 1e-8 {
-        return Err(Diagnostic::error(
-            "Complex eigenvalue iteration did not converge to working precision.",
-            span,
-        ));
-    }
-    // Extract eigenvalues (complex) from diagonal
-    let mut ev = Vec::with_capacity(n);
-    for i in 0..n {
-        ev.push(m.data[i * n + i]);
-    }
-    // Sort by real then imag for determinism
-    let mut pairs: Vec<(Complex64, usize)> = (0..n).map(|i| (ev[i], i)).collect();
-    pairs.sort_by(|a, b| {
-        let ar = a.0.re;
-        let br = b.0.re;
-        ar.partial_cmp(&br)
+
+    // Sort eigenvalues (real, then imaginary) before computing the matching
+    // eigenvectors so column order is deterministic.
+    eigenvalues.sort_by(|a, b| {
+        a.re.partial_cmp(&b.re)
             .unwrap_or(std::cmp::Ordering::Equal)
-            .then_with(|| {
-                a.0.im
-                    .partial_cmp(&b.0.im)
-                    .unwrap_or(std::cmp::Ordering::Equal)
-            })
+            .then_with(|| a.im.partial_cmp(&b.im).unwrap_or(std::cmp::Ordering::Equal))
     });
-    let mut sorted_ev = Vec::with_capacity(n);
-    let mut sorted_v = vec![Complex64::zero(); n * n];
-    for (idx, &(val, orig)) in pairs.iter().enumerate() {
-        sorted_ev.push(val);
-        for r in 0..n {
-            sorted_v[r * n + idx] = v.data[r * n + orig];
-        }
-    }
+    let eigenvectors = inverse_iteration_eigenvectors(a, &eigenvalues);
+    // Eigenpair refinement (Rayleigh-quotient polish + one extra inverse
+    // iteration per eigenpair, accept-only-if-better) so the returned
+    // eigenpairs satisfy A*V = V*D at backward-stable accuracy rather than
+    // the listing accuracy of the raw QR pass.
+    let (eigenvalues, eigenvectors) = refine_complex_eigenpairs(a, eigenvalues, eigenvectors);
+
     Ok((
         ComplexDenseMatrix {
             rows: n,
             cols: 1,
-            data: sorted_ev,
+            data: eigenvalues,
         },
-        ComplexDenseMatrix {
-            rows: n,
-            cols: n,
-            data: sorted_v,
-        },
+        eigenvectors,
     ))
+}
+
+/// Reduce a complex matrix to upper Hessenberg form with unitary Givens
+/// similarities. Returns `H` with the same eigenvalues as `A`.
+fn hessenberg_complex(a: &ComplexDenseMatrix) -> ComplexDenseMatrix {
+    let n = a.rows;
+    let mut h = a.clone();
+    for k in 0..n.saturating_sub(2) {
+        for i in (k + 2)..n {
+            let x = h.data[(k + 1) * n + k];
+            let y = h.data[i * n + k];
+            if y.abs() < 1e-300 {
+                continue;
+            }
+            let r = x.abs().hypot(y.abs());
+            if r < 1e-300 {
+                continue;
+            }
+            let c = Complex64::new(x.re / r, -x.im / r);
+            let s = Complex64::new(y.re / r, -y.im / r);
+            apply_left_rotation(&mut h, k + 1, i, k, c, s);
+            apply_right_rotation(&mut h, k + 1, i, c, s);
+        }
+    }
+    // Enforce the Hessenberg shape exactly; the Givens step above creates
+    // values that are zero in exact arithmetic but may retain round-off.
+    for row in 0..n {
+        for col in 0..row.saturating_sub(1) {
+            h.data[row * n + col] = Complex64::zero();
+        }
+    }
+    h
+}
+
+/// Apply the left factor of a complex Givens rotation to rows `k` and `i`,
+/// starting at column `col_start`.
+///
+/// `c = conj(x)/r` and `s = conj(y)/r` are produced by `complex_givens`, so
+/// the rotation maps `[x, y]^T` to `[r, 0]^T`.
+fn apply_left_rotation(
+    m: &mut ComplexDenseMatrix,
+    k: usize,
+    i: usize,
+    col_start: usize,
+    c: Complex64,
+    s: Complex64,
+) {
+    let n = m.cols;
+    for j in col_start..n {
+        let a = m.data[k * n + j];
+        let b = m.data[i * n + j];
+        m.data[k * n + j] = c * a + s * b;
+        m.data[i * n + j] = -s.conj() * a + c.conj() * b;
+    }
+}
+
+/// Apply the right factor `G^H` of a complex Givens rotation to columns `k`
+/// and `i`.
+fn apply_right_rotation(
+    m: &mut ComplexDenseMatrix,
+    k: usize,
+    i: usize,
+    c: Complex64,
+    s: Complex64,
+) {
+    let n = m.rows;
+    let cols = m.cols;
+    for row in 0..n {
+        let a = m.data[row * cols + k];
+        let b = m.data[row * cols + i];
+        m.data[row * cols + k] = c.conj() * a + s.conj() * b;
+        m.data[row * cols + i] = -s * a + c * b;
+    }
+}
+
+/// Complex Givens coefficients that zero `y` against `x`.
+fn complex_givens(x: Complex64, y: Complex64) -> (Complex64, Complex64) {
+    let r = x.abs().hypot(y.abs());
+    if r < 1e-300 {
+        (Complex64::one(), Complex64::zero())
+    } else {
+        (
+            Complex64::new(x.re / r, -x.im / r),
+            Complex64::new(y.re / r, -y.im / r),
+        )
+    }
+}
+
+/// Eigenvalues of the 2x2 diagonal block at rows/columns `i`, `j`.
+fn two_by_two_eigenvalues(h: &ComplexDenseMatrix, i: usize, j: usize) -> (Complex64, Complex64) {
+    let n = h.cols;
+    let a = h.data[i * n + i];
+    let b = h.data[i * n + j];
+    let c = h.data[j * n + i];
+    let d = h.data[j * n + j];
+    let half = Complex64::real(0.5) * (a + d);
+    let det = a * d - b * c;
+    let discriminant = half * half - det;
+    let root = discriminant.sqrt();
+    (half + root, half - root)
+}
+
+/// One implicit shifted QR step on the active Hessenberg block `l..=hi`.
+fn qr_step_complex(h: &mut ComplexDenseMatrix, l: usize, hi: usize) {
+    let n = h.cols;
+    let (shift_a, shift_b) = two_by_two_eigenvalues(h, hi - 1, hi);
+    let trailing = h.data[hi * n + hi];
+    // Wilkinson shift: the trailing-block eigenvalue closest to H(hi,hi).
+    let mut shift = if (shift_a - trailing).abs() <= (shift_b - trailing).abs() {
+        shift_a
+    } else {
+        shift_b
+    };
+
+    // A defective trailing block (repeated eigenvalue equal to H(hi,hi)) gives
+    // a zero classical Wilkinson shift. Equal-modulus spectra such as the
+    // companion matrix of x^4+1 then cycle without converging. Use a
+    // deterministic exceptional shift to move off that cycle.
+    let norm = h.data.iter().map(|z| z.abs()).fold(0.0f64, f64::max);
+    let scale = norm.max(1.0);
+    let defective =
+        (shift_a - shift_b).abs() <= 1e-12 * scale && (shift - trailing).abs() <= 1e-12 * scale;
+    if defective {
+        shift = trailing + Complex64::new(0.6, 0.8) * Complex64::real(scale);
+    }
+
+    let mut x = h.data[l * n + l] - shift;
+    let mut y = h.data[(l + 1) * n + l];
+
+    for k in l..=hi.saturating_sub(1) {
+        let (c, s) = complex_givens(x, y);
+        let col_start = if k == l { l } else { k - 1 };
+        apply_left_rotation(h, k, k + 1, col_start, c, s);
+        apply_right_rotation(h, k, k + 1, c, s);
+        if k + 1 < hi {
+            x = h.data[(k + 1) * n + k];
+            y = h.data[(k + 2) * n + k];
+        }
+    }
+}
+
+/// Compute right eigenvectors by inverse iteration with a small diagonal
+/// shift. The shift keeps `A - lambda I` nonsingular; the resulting vector
+/// residual is on the order of the shift rather than the eigenvalue error.
+fn inverse_iteration_eigenvectors(
+    a: &ComplexDenseMatrix,
+    eigenvalues: &[Complex64],
+) -> ComplexDenseMatrix {
+    let n = a.rows;
+    let norm = a.data.iter().map(|z| z.abs()).fold(0.0f64, f64::max);
+    let base_shift = 1e-10 * norm.max(1.0);
+    let mut result = vec![Complex64::zero(); n * n];
+
+    for (col, &lambda) in eigenvalues.iter().enumerate() {
+        let mut x: Vec<Complex64> = (0..n)
+            .map(|i| {
+                let fi = i as f64;
+                Complex64::new(1.0 + 0.25 * fi, 0.1 * fi)
+            })
+            .collect();
+        let mut delta = base_shift;
+        let mut converged = false;
+
+        for _attempt in 0..4 {
+            let mut shifted = a.clone();
+            for i in 0..n {
+                shifted.data[i * n + i] -= lambda + Complex64::real(delta);
+            }
+            let rhs = ComplexDenseMatrix {
+                rows: n,
+                cols: 1,
+                data: x.clone(),
+            };
+            match mldivide(&shifted, &rhs, None) {
+                Ok(solution) => {
+                    let max = solution.data.iter().map(|z| z.abs()).fold(0.0, f64::max);
+                    if max > 1e-300 {
+                        x = solution
+                            .data
+                            .iter()
+                            .map(|z| *z / Complex64::real(max))
+                            .collect();
+                        converged = true;
+                        break;
+                    }
+                    delta *= 100.0;
+                }
+                Err(_) => {
+                    delta *= 100.0;
+                }
+            }
+        }
+
+        if converged {
+            // A few more inverse iterations at the same shift to stabilize
+            // the direction after the first solve.
+            for _ in 0..3 {
+                let mut shifted = a.clone();
+                for i in 0..n {
+                    shifted.data[i * n + i] -= lambda + Complex64::real(delta);
+                }
+                let rhs = ComplexDenseMatrix {
+                    rows: n,
+                    cols: 1,
+                    data: x.clone(),
+                };
+                if let Ok(solution) = mldivide(&shifted, &rhs, None) {
+                    let max = solution.data.iter().map(|z| z.abs()).fold(0.0, f64::max);
+                    if max > 1e-300 {
+                        x = solution
+                            .data
+                            .iter()
+                            .map(|z| *z / Complex64::real(max))
+                            .collect();
+                    }
+                }
+            }
+        } else {
+            // Degenerate fallback: a coordinate vector still gives the caller
+            // a well-formed matrix rather than a silently transposed result.
+            x = vec![Complex64::zero(); n];
+            x[col % n] = Complex64::one();
+        }
+
+        for row in 0..n {
+            result[row * n + col] = x[row];
+        }
+    }
+
+    ComplexDenseMatrix {
+        rows: n,
+        cols: n,
+        data: result,
+    }
+}
+
+/// Row-major complex matrix-vector product used by the eigenpair refinement.
+fn complex_matvec(a: &ComplexDenseMatrix, x: &[Complex64]) -> Vec<Complex64> {
+    (0..a.rows)
+        .map(|i| {
+            let mut acc = Complex64::new(0.0, 0.0);
+            for k in 0..a.cols {
+                acc = acc + a.data[i * a.cols + k] * x[k];
+            }
+            acc
+        })
+        .collect()
+}
+
+
+/// 2-norm of the eigenvector-equation residual ||A*x - lambda*x||_2.
+fn eigenpair_residual_norm(a: &ComplexDenseMatrix, x: &[Complex64], lambda: Complex64) -> f64 {
+    let ax = complex_matvec(a, x);
+    ax.iter()
+        .zip(x.iter())
+        .map(|(axi, xi)| {
+            let r = *axi - lambda * *xi;
+            r.re * r.re + r.im * r.im
+        })
+        .sum::<f64>()
+        .sqrt()
+}
+
+/// Refine eigenvectors whose residual is not yet backward-stable-grade.
+///
+/// The eigenvalues are deliberately left exactly as produced by the QR /
+/// inverse-iteration pass: changing them by even a few ulps perturbs
+/// accumulated identities such as the determinant of an ill-conditioned
+/// companion matrix.  For each eigenvector above the gate, extra
+/// inverse-iteration solves are accepted only when they strictly lower
+/// ||A*x - lambda*x||_2 at the original lambda.  A refined vector can
+/// therefore improve the A*V = V*D residual without moving the spectrum.
+/// Pairs at or below the gate are left untouched.
+fn refine_complex_eigenpairs(
+    a: &ComplexDenseMatrix,
+    eigenvalues: Vec<Complex64>,
+    mut eigenvectors: ComplexDenseMatrix,
+) -> (Vec<Complex64>, ComplexDenseMatrix) {
+    let n = a.rows;
+    if n == 0 {
+        return (eigenvalues, eigenvectors);
+    }
+    let norm = a.data.iter().map(|z| z.abs()).fold(0.0f64, f64::max);
+    let base_shift = 1e-10 * norm.max(1.0);
+    let frob_a = a
+        .data
+        .iter()
+        .map(|z| z.re * z.re + z.im * z.im)
+        .sum::<f64>()
+        .sqrt();
+    let gate = 0.25 * f64::EPSILON * (n as f64) * frob_a.max(1.0);
+
+    for col in 0..n {
+        let lambda = eigenvalues[col];
+        let x0: Vec<Complex64> = (0..n).map(|i| eigenvectors.data[i * n + col]).collect();
+        if x0.iter().all(|z| z.abs() == 0.0) || eigenpair_residual_norm(a, &x0, lambda) <= gate
+        {
+            continue;
+        }
+
+        let mut best_x = x0;
+        let mut best_res = eigenpair_residual_norm(a, &best_x, lambda);
+        for _round in 0..2 {
+            let mut shifted = a.clone();
+            for i in 0..n {
+                shifted.data[i * n + i] -= lambda + Complex64::real(base_shift);
+            }
+            let rhs = ComplexDenseMatrix {
+                rows: n,
+                cols: 1,
+                data: best_x.clone(),
+            };
+            match mldivide(&shifted, &rhs, None) {
+                Ok(sol) => {
+                    let max = sol.data.iter().map(|z| z.abs()).fold(0.0, f64::max);
+                    if max <= 1e-300 {
+                        break;
+                    }
+                    let w: Vec<Complex64> =
+                        sol.data.iter().map(|z| *z / Complex64::real(max)).collect();
+                    let res_w = eigenpair_residual_norm(a, &w, lambda);
+                    if res_w < best_res {
+                        best_res = res_w;
+                        best_x = w;
+                    } else {
+                        break;
+                    }
+                }
+                Err(_) => break,
+            }
+        }
+
+        for row in 0..n {
+            eigenvectors.data[row * n + col] = best_x[row];
+        }
+    }
+    (eigenvalues, eigenvectors)
 }

@@ -15,6 +15,7 @@ matlab_diagnostics = { path = "../../crates/diagnostics" }
 matlab_runtime = { path = "../../crates/runtime" }
 matlab_syntax = { path = "../../crates/syntax" }
 matlab_values = { path = "../../crates/values" }
+matlabr_apps = { path = "../../crates/apps" }
 
 eframe = { version = "0.37", default-features = false, features = [
     "wgpu",

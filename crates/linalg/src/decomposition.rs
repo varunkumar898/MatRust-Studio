@@ -1,5 +1,5 @@
 use matlab_diagnostics::{Diagnostic, Span};
-use matlab_values::DenseMatrix;
+use matlab_values::{ComplexDenseMatrix, DenseMatrix};
 
 /// Result of an LU factorization with partial pivoting: P * A = L * U.
 #[derive(Debug, Clone, PartialEq)]
@@ -558,15 +558,68 @@ pub fn elementwise_ldiv(
 // Eigenvalues / Eigenvectors (Batch 12)
 // ---------------------------------------------------------------------------
 
-/// Documented Stage 2 decision (2026-10-22):
-/// - Scale-aware tolerance applied (not fixed 1e-8).
-/// - Residual tests required: A*V ≈ V*D for general complex path.
-/// - Non-convergence error path verified (exists at line 831-834).
-/// - Hermitian-specialized complex eig path deferred.
-/// - Complex correlation statistics deferred.
+/// Eigenvalue-path design notes:
+/// - Symmetric real matrices use Jacobi rotations (real eigenvalues).
+/// - General real and complex matrices use Hessenberg reduction plus shifted
+///   complex QR so conjugate pairs are representable.
+/// - Eigenvalues-only and `[V,D]` calls share the same path; residuals are
+///   tested with `A*V = V*D`.
+/// - NaN/Inf inputs and non-convergence produce explicit diagnostics.
+///
+/// True when `a` is square and symmetric within a scale-aware tolerance.
+///
+/// This is the same predicate used by [`eig`] to choose the Jacobi path.
+pub fn is_symmetric(a: &DenseMatrix) -> bool {
+    if a.rows != a.cols {
+        return false;
+    }
+    let n = a.rows;
+    let norm = a.data.iter().map(|v| v.abs()).fold(0.0, f64::max);
+    let tol = 1e-8 * norm.max(1.0);
+    for i in 0..n {
+        for j in (i + 1)..n {
+            if (a.data[i * n + j] - a.data[j * n + i]).abs() > tol {
+                return false;
+            }
+        }
+    }
+    true
+}
+
+/// Complex-capable eigenvalues and eigenvectors for a real dense matrix.
+///
+/// The real-only [`eig`] path returns a real `DenseMatrix` and therefore cannot
+/// represent complex-conjugate eigenvalues. This wrapper promotes the input to
+/// complex arithmetic and uses [`crate::complex::eig_complex`], which returns
+/// both members of a conjugate pair. A caller that needs real output (for
+/// example the `eig` builtin) can simplify the result when every imaginary
+/// part is negligible.
+pub fn eig_general(
+    a: &DenseMatrix,
+    span: Option<Span>,
+) -> Result<(ComplexDenseMatrix, ComplexDenseMatrix), Diagnostic> {
+    if a.rows != a.cols {
+        return Err(Diagnostic::error(
+            format!(
+                "Matrix must be square to compute eigenvalues: {}x{}",
+                a.rows, a.cols
+            ),
+            span,
+        ));
+    }
+    if a.data.iter().any(|v| v.is_nan() || v.is_infinite()) {
+        return Err(Diagnostic::error(
+            "eig rejects matrices containing NaN or Inf.",
+            span,
+        ));
+    }
+    crate::complex::eig_complex(&ComplexDenseMatrix::from_real(a), span)
+}
+
 /// Compute eigenvalues and eigenvectors for a real dense matrix using
-/// Jacobi rotation for symmetric matrices, and a basic QR iteration for
-/// general matrices (limited to moderate sizes with convergence check).
+/// Jacobi rotation for symmetric matrices, and a real shifted-QR iteration for
+/// general matrices. The general real path can only return real eigenvalues;
+/// use [`eig_general`] when complex-conjugate eigenvalues are possible.
 /// Returns (D, V) where D is a column vector of eigenvalues and V is matrix
 /// of right eigenvectors (A*V = V*D within tolerance).
 pub fn eig(a: &DenseMatrix, span: Option<Span>) -> Result<(DenseMatrix, DenseMatrix), Diagnostic> {
@@ -606,18 +659,7 @@ pub fn eig_with(
     if n == 1 {
         return Ok((DenseMatrix::scalar(a.data[0]), DenseMatrix::eye(1)));
     }
-    // Check symmetry within tolerance
-    let mut sym = true;
-    for i in 0..n {
-        for j in (i + 1)..n {
-            let norm = a.data.iter().map(|v| v.abs()).fold(0.0, f64::max);
-            let tol = 1e-8 * (norm.max(1.0));
-            if (a.data[i * n + j] - a.data[j * n + i]).abs() > tol {
-                sym = false;
-            }
-        }
-    }
-    if sym {
+    if is_symmetric(a) {
         return jacobi_eigen(a, span);
     }
     // General real (non-symmetric): use improved QR-based path for eigenvalues.
@@ -656,9 +698,13 @@ fn jacobi_eigen(
         let app = d.data[p * n + p];
         let aqq = d.data[q * n + q];
         let apq = d.data[p * n + q];
-        let phi = 0.5 * (aqq - app).atan2(apq);
-        let c = phi.cos();
-        let s = phi.sin();
+        // With G = [[c, -s], [s, c]] applied as G*A*G^T, the off-diagonal
+        // element (p,q) is b*cos(2θ) + (app-aqq)/2*sin(2θ). Zeroing it gives
+        // tan(2θ) = 2*b/(aqq-app) (the opposite sign of the usual row-vector
+        // Jacobi form).
+        let theta = 0.5 * (2.0 * apq).atan2(aqq - app);
+        let c = theta.cos();
+        let s = theta.sin();
         // Update D via rotation in p,q plane
         for i in 0..n {
             let dip = d.data[i * n + p];
@@ -787,49 +833,81 @@ fn qr_shift_eig(
     let n = h.rows;
     let mut m = h.clone();
     let mut v = DenseMatrix::eye(n);
-    let max_iter = 200;
     let tol = 1e-10;
     for _ in 0..max_iter {
-        // Wilkinson shift based on lower-right 2x2
+        // Wilkinson shift: the eigenvalue of the trailing 2x2 block closest
+        // to its bottom-right entry. This is more stable than the previous
+        // expression, which produced NaN for repeated bottom eigenvalues.
         let a_nn = m.data[(n - 1) * n + (n - 1)];
-        let a_nm = m.data[(n - 1) * n + (n - 2)];
         let a_mm = m.data[(n - 2) * n + (n - 2)];
-        let delta = (a_mm - a_nn) / 2.0;
-        let shift = a_nn
-            - (delta.signum() * delta.abs().sqrt()
-                / (delta.abs() + (delta * delta + a_nm * a_nm).sqrt()));
+        let a_nm = m.data[(n - 1) * n + (n - 2)];
+        let trace = a_mm + a_nn;
+        let det = a_mm * a_nn - a_nm * a_nm;
+        let disc = (trace * trace - 4.0 * det).max(0.0).sqrt();
+        let root_a = 0.5 * (trace + disc);
+        let root_b = 0.5 * (trace - disc);
+        let shift = if (root_a - a_nn).abs() <= (root_b - a_nn).abs() {
+            root_a
+        } else {
+            root_b
+        };
         // Subtract shift from diagonal
         for i in 0..n {
             m.data[i * n + i] -= shift;
         }
-        // QR via Givens rotations (simplified for Hessenberg)
+        // QR factorization of the shifted Hessenberg matrix via Givens
+        // rotations. `m` becomes R. Store the rotations so they can be applied
+        // from the right afterwards to form R*Q.
+        let mut rotations = Vec::with_capacity(n.saturating_sub(1));
         for k in 0..(n - 1) {
             let a = m.data[k * n + k];
             let b = m.data[(k + 1) * n + k];
             let r = (a * a + b * b).sqrt();
             if r < 1e-15 {
+                rotations.push((1.0, 0.0));
                 continue;
             }
             let c = a / r;
             let s = b / r;
-            // Apply to rows k and k+1
+            // Left-multiply by G = [[c, s], [-s, c]] to zero the subdiagonal.
             for j in k..n {
                 let vk = m.data[k * n + j];
                 let vkp1 = m.data[(k + 1) * n + j];
                 m.data[k * n + j] = c * vk + s * vkp1;
                 m.data[(k + 1) * n + j] = -s * vk + c * vkp1;
             }
-            // Apply to V
+            // A = Q R with Q = G^T, so the eigenvector accumulator picks up
+            // V <- V * G^T. Right multiplication by G^T maps a row pair
+            // [x, y] to [c*x + s*y, -s*x + c*y].
             for i in 0..n {
                 let vk = v.data[i * n + k];
                 let vkp1 = v.data[i * n + (k + 1)];
                 v.data[i * n + k] = c * vk + s * vkp1;
                 v.data[i * n + (k + 1)] = -s * vk + c * vkp1;
             }
+            rotations.push((c, s));
+        }
+        // RQ: apply G^T on the right to R, in the same order the rotations
+        // were generated. This is the actual QR iteration step; without it the
+        // routine merely triangularizes once and falsely reports convergence.
+        for k in 0..(n - 1) {
+            let (c, s) = rotations[k];
+            for i in 0..n {
+                let vk = m.data[i * n + k];
+                let vkp1 = m.data[i * n + (k + 1)];
+                m.data[i * n + k] = c * vk + s * vkp1;
+                m.data[i * n + (k + 1)] = -s * vk + c * vkp1;
+            }
         }
         // Add shift back
         for i in 0..n {
             m.data[i * n + i] += shift;
+        }
+        // Suppress round-off below the first subdiagonal introduced by RQ.
+        for i in 0..n {
+            for j in 0..i.saturating_sub(1) {
+                m.data[i * n + j] = 0.0;
+            }
         }
         // Deflate: check sub-diagonal
         for i in 0..(n - 1) {

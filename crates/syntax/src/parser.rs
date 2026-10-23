@@ -9,11 +9,21 @@ const COLON_BP: u8 = 30;
 pub struct Parser {
     tokens: Vec<Token>,
     pos: usize,
+    /// True while an element is being parsed inside `[ ]` matrix brackets.
+    /// MATLAB's concatenation rules apply there: a `+`/`-` separated from the
+    /// previous element by whitespace but attached to its operand (e.g. the
+    /// `-1` in `[0 -1]`) starts a NEW element instead of continuing as
+    /// subtraction. Outside brackets (`y = 1 -2`) the sign stays binary.
+    in_bracket_literal: bool,
 }
 
 impl Parser {
     pub fn new(tokens: Vec<Token>) -> Self {
-        Self { tokens, pos: 0 }
+        Self {
+            tokens,
+            pos: 0,
+            in_bracket_literal: false,
+        }
     }
 
     fn peek(&self) -> &TokenKind {
@@ -284,6 +294,27 @@ impl Parser {
                 continue;
             }
 
+            // MATLAB bracket-concatenation rule: inside `[ ]`, a `+`/`-` with
+            // a whitespace gap to its left and no gap to its right (e.g. the
+            // `-1` in `[0 -1; 1 0]`) ends this element and starts the next
+            // one with a unary sign. Parentheses and call arguments reset the
+            // bracket mode, so `y = 1 -2` and `foo(1 -2)` stay subtraction.
+            if self.in_bracket_literal
+                && matches!(self.peek(), TokenKind::Plus | TokenKind::Minus)
+                && self.pos > 0
+            {
+                let op_tok = &self.tokens[self.pos];
+                let detached_left = self.tokens[self.pos - 1].span.end < op_tok.span.start;
+                let attached_right = self
+                    .tokens
+                    .get(self.pos + 1)
+                    .map(|next| next.span.start == op_tok.span.end)
+                    .unwrap_or(false);
+                if detached_left && attached_right {
+                    break;
+                }
+            }
+
             // Infix operators
             let (op, l_bp, r_bp) = match self.peek() {
                 TokenKind::Caret => (BinaryOp::Pow, 70, 71),
@@ -340,12 +371,17 @@ impl Parser {
                 // If followed by '(', function call / index expression
                 if self.match_token(&TokenKind::LParen) {
                     let mut args = Vec::new();
+                    // Call arguments are NOT bracket-concatenation context:
+                    // `foo(1 -2)` is subtraction in MATLAB.
+                    let saved_mode = self.in_bracket_literal;
+                    self.in_bracket_literal = false;
                     while self.peek() != &TokenKind::RParen && self.peek() != &TokenKind::Eof {
                         args.push(self.parse_expression(0)?);
                         if !self.match_token(&TokenKind::Comma) {
                             break;
                         }
                     }
+                    self.in_bracket_literal = saved_mode;
                     let end_span = self.peek_span();
                     if !self.match_token(&TokenKind::RParen) {
                         return Err(Diagnostic::error(
@@ -382,7 +418,12 @@ impl Parser {
                 })
             }
             TokenKind::LParen => {
+                // Grouped parentheses are NOT bracket-concatenation context:
+                // `(1 -2)` is subtraction in MATLAB.
+                let saved_mode = self.in_bracket_literal;
+                self.in_bracket_literal = false;
                 let inner = self.parse_expression(0)?;
+                self.in_bracket_literal = saved_mode;
                 if !self.match_token(&TokenKind::RParen) {
                     return Err(Diagnostic::error(
                         "Expected ')' closing parenthesized expression",
@@ -426,6 +467,7 @@ impl Parser {
                 "while" => return self.parse_while(start_span),
                 "for" => return self.parse_for(start_span),
                 "switch" => return self.parse_switch(start_span),
+                "function" => return self.parse_function(start_span),
                 "break" => {
                     let tok = self.advance();
                     self.consume_stmt_terminator();
@@ -646,18 +688,12 @@ impl Parser {
                 if n == "case" {
                     self.advance();
                     let mut labels = Vec::new();
-                    loop {
-                        labels.push(self.parse_expression(0)?);
-                        if self.peek() == &TokenKind::Comma {
-                            self.advance();
-                            if self.peek() == &TokenKind::Newline
-                                || matches!(self.peek(), TokenKind::Ident(x) if ["case","otherwise","end"].contains(&x.as_str()))
-                            {
-                                break;
-                            }
-                        } else {
-                            break;
-                        }
+                    labels.push(self.parse_expression(0)?);
+                    // In MATLAB a comma after the case expression separates
+                    // the label from the first body statement (`case 1, x=2`).
+                    // It does not introduce another label.
+                    if self.peek() == &TokenKind::Comma {
+                        self.advance();
                     }
                     self.consume_stmt_terminator();
                     cases.push((labels, self.parse_block(&["case", "otherwise", "end"])?));
@@ -705,7 +741,169 @@ impl Parser {
             span: start_span.merge(end_span),
         })
     }
+    /// Parse `function [out1, out2] = name(in1, in2) ... end`.
+    ///
+    /// Both the outputless form (`function name(x)`) and the single-output
+    /// form (`function y = name(x)`) are accepted. Function bodies may contain
+    /// any block statement; nested `if`/`for`/`while` blocks consume their own
+    /// `end`, so the body terminates at the first `end` belonging to the
+    /// function itself.
+    fn parse_function(&mut self, start_span: Span) -> Result<Stmt, Diagnostic> {
+        self.advance(); // consume `function`
+        self.skip_newlines();
+
+        let mut outputs: Vec<(String, Span)> = Vec::new();
+        let name: String;
+        let name_span: Span;
+
+        match self.peek().clone() {
+            TokenKind::LBracket => {
+                self.advance(); // consume '['
+                loop {
+                    self.skip_newlines();
+                    match self.peek().clone() {
+                        TokenKind::Ident(out_name) => {
+                            let tok = self.advance();
+                            outputs.push((out_name, tok.span));
+                        }
+                        TokenKind::Comma => {
+                            self.advance();
+                        }
+                        TokenKind::RBracket => {
+                            self.advance();
+                            break;
+                        }
+                        _ => {
+                            return Err(Diagnostic::error(
+                                "Expected an output name or ']' in function declaration.",
+                                Some(self.peek_span()),
+                            ));
+                        }
+                    }
+                }
+                if !self.match_token(&TokenKind::Equal) {
+                    return Err(Diagnostic::error(
+                        "Expected '=' after function outputs.",
+                        Some(self.peek_span()),
+                    ));
+                }
+                self.skip_newlines();
+                let name_tok = self.advance();
+                match name_tok.kind {
+                    TokenKind::Ident(n) => {
+                        name = n;
+                        name_span = name_tok.span;
+                    }
+                    _ => {
+                        return Err(Diagnostic::error(
+                            "Expected a function name after '='.",
+                            Some(name_tok.span),
+                        ));
+                    }
+                }
+            }
+            TokenKind::Ident(first) => {
+                let first_tok = self.advance();
+                if self.match_token(&TokenKind::Equal) {
+                    // `function y = name(...)`
+                    outputs.push((first, first_tok.span));
+                    self.skip_newlines();
+                    let name_tok = self.advance();
+                    match name_tok.kind {
+                        TokenKind::Ident(n) => {
+                            name = n;
+                            name_span = name_tok.span;
+                        }
+                        _ => {
+                            return Err(Diagnostic::error(
+                                "Expected a function name after '='.",
+                                Some(name_tok.span),
+                            ));
+                        }
+                    }
+                } else {
+                    // `function name(...)` (no declared outputs)
+                    name = first;
+                    name_span = first_tok.span;
+                }
+            }
+            _ => {
+                return Err(Diagnostic::error(
+                    "Expected a function name or output list after 'function'.",
+                    Some(self.peek_span()),
+                ));
+            }
+        }
+
+        if !self.match_token(&TokenKind::LParen) {
+            return Err(Diagnostic::error(
+                "Expected '(' after function name.",
+                Some(self.peek_span()),
+            ));
+        }
+        let mut params: Vec<(String, Span)> = Vec::new();
+        loop {
+            self.skip_newlines();
+            match self.peek().clone() {
+                TokenKind::RParen => {
+                    self.advance();
+                    break;
+                }
+                TokenKind::Comma => {
+                    self.advance();
+                }
+                TokenKind::Ident(param) => {
+                    let tok = self.advance();
+                    params.push((param, tok.span));
+                }
+                _ => {
+                    return Err(Diagnostic::error(
+                        "Expected a parameter name or ')' in function declaration.",
+                        Some(self.peek_span()),
+                    ));
+                }
+            }
+        }
+
+        self.consume_stmt_terminator();
+        let body = self.parse_block(&["end"])?;
+        if let TokenKind::Ident(end) = self.peek().clone() {
+            if end != "end" {
+                return Err(Diagnostic::error(
+                    "Expected 'end' to close function definition.",
+                    Some(self.peek_span()),
+                ));
+            }
+            self.advance();
+        } else {
+            return Err(Diagnostic::error(
+                "Expected 'end' to close function definition.",
+                Some(self.peek_span()),
+            ));
+        }
+        let (_, end_span) = self.consume_stmt_terminator();
+        Ok(Stmt::FunctionDef {
+            outputs,
+            name,
+            name_span,
+            params,
+            body,
+            span: start_span.merge(end_span),
+        })
+    }
+
     fn parse_matrix_literal(&mut self, start_span: Span) -> Result<Expr, Diagnostic> {
+        // Enable MATLAB's whitespace-sensitive element separation only inside
+        // the brackets themselves. Call arguments and grouped parentheses
+        // inside the literal revert to ordinary expression parsing.
+        let saved_mode = self.in_bracket_literal;
+        self.in_bracket_literal = true;
+        let result = self.parse_matrix_literal_body(start_span);
+        self.in_bracket_literal = saved_mode;
+        result
+    }
+
+    fn parse_matrix_literal_body(&mut self, start_span: Span) -> Result<Expr, Diagnostic> {
         let mut rows: Vec<Vec<Expr>> = Vec::new();
         let mut current_row: Vec<Expr> = Vec::new();
 

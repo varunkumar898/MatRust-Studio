@@ -505,7 +505,9 @@ pub fn prctile_multi(a: &DenseMatrix, pct_vec: &[f64], dim: Option<usize>) -> De
     }
     let k = pct_vec.len();
     if d == 1 {
-        // Each column -> percentiles as rows? According to MATLAB: for dim=1, result has length(pct) rows, cols = number of cols
+        // Each column -> percentiles as rows: MATLAB returns a k-by-ncols matrix
+        // whose row i holds the pct_vec(i) percentile of every column.
+        // DenseMatrix stores row-major, so element (i, c) lives at i * a.cols + c.
         let mut res = vec![0.0; k * a.cols];
         for c in 0..a.cols {
             let mut col = Vec::with_capacity(a.rows);
@@ -529,7 +531,8 @@ pub fn prctile_multi(a: &DenseMatrix, pct_vec: &[f64], dim: Option<usize>) -> De
             data: res,
         }
     } else if d == 2 {
-        // Each row -> result has rows = a.rows, cols = k
+        // Each row -> result has rows = a.rows, cols = k.
+        // Element (r, i) lives at r * k + i in the row-major layout.
         let mut res = vec![0.0; a.rows * k];
         for r in 0..a.rows {
             let mut row = a.data[r * a.cols..(r + 1) * a.cols].to_vec();

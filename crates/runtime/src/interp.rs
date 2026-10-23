@@ -9,6 +9,17 @@ use matlab_values::{Complex64, ComplexDenseMatrix, DenseMatrix, Value};
 use crate::graphics::FigureState;
 use crate::rng::Rng;
 
+/// Maximum user-function recursion depth. The interpreter runs on a dedicated
+/// thread with [`INTERPRETER_STACK_SIZE`] so this limit (rather than the native
+/// stack) is what stops runaway recursion.
+pub const MAX_RECURSION_DEPTH: usize = 256;
+
+/// Stack size for the dedicated interpreter thread. A debug-build tree-walking
+/// interpreter uses several native frames per interpreted call; 64 MiB keeps
+/// 256 nested calls comfortably inside the allocation on every supported
+/// platform while still allowing the recursion guard to fire first.
+pub const INTERPRETER_STACK_SIZE: usize = 64 * 1024 * 1024;
+
 /// Persistent execution session: one environment plus graphics state.
 /// The desktop worker owns exactly one `Session`; the CLI may create
 /// sessions per invocation. Never create a new environment per command.
@@ -39,7 +50,27 @@ impl Session {
 
     /// Lex + parse + execute one source chunk in this session.
     /// `cancel`, when present, is checked between statements.
+    ///
+    /// Execution runs on a dedicated thread with a large stack so that deep
+    /// (but allowed) user-function recursion cannot overflow the caller's
+    /// native stack before [`MAX_RECURSION_DEPTH`] produces a Diagnostic.
     pub fn exec(
+        &mut self,
+        source: &str,
+        cancel: Option<&AtomicBool>,
+    ) -> Result<RunResult, Diagnostic> {
+        std::thread::scope(|scope| {
+            std::thread::Builder::new()
+                .name("matrust-interpreter".to_string())
+                .stack_size(INTERPRETER_STACK_SIZE)
+                .spawn_scoped(scope, || self.exec_inner(source, cancel))
+                .expect("failed to spawn interpreter thread")
+                .join()
+                .unwrap_or_else(|payload| std::panic::resume_unwind(payload))
+        })
+    }
+
+    fn exec_inner(
         &mut self,
         source: &str,
         cancel: Option<&AtomicBool>,
@@ -102,13 +133,15 @@ pub struct StmtResult {
 
 /// Variable environment. MATLAB variable names are case-sensitive.
 #[derive(Debug, Clone)]
-/// Persistent environment tracking variables, user-defined function definitions, and 
+/// Persistent environment tracking variables, user-defined function definitions, and
 /// multi-output call results. Recursion depth and session persistence tracked here.
 pub struct Env {
     vars: HashMap<String, Value>,
     /// User-defined functions registered in this environment/session.
     pub function_table: HashMap<String, Stmt>,
-    /// Recursion depth for user-defined function calls (limit 256).
+    /// Recursion depth for user-defined function calls
+    /// (`MAX_RECURSION_DEPTH`). Kept well below the native stack limit so a
+    /// runaway recursive script gets a Diagnostic instead of aborting.
     pub recursion_depth: usize,
 }
 
@@ -583,7 +616,14 @@ fn exec_statement(
                 flow: Flow::Normal,
             })
         }
-        Stmt::FunctionDef { outputs, name, name_span, params, body, span } => {
+        Stmt::FunctionDef {
+            outputs,
+            name,
+            name_span,
+            params,
+            body,
+            span,
+        } => {
             env.function_table.insert(
                 name.clone(),
                 Stmt::FunctionDef {
@@ -595,7 +635,10 @@ fn exec_statement(
                     span: span.clone(),
                 },
             );
-            Ok(StmtResult { outputs: Vec::new(), flow: Flow::Normal })
+            Ok(StmtResult {
+                outputs: Vec::new(),
+                flow: Flow::Normal,
+            })
         }
     }
 }
@@ -612,55 +655,23 @@ fn exec_user_function(
     span: Span,
     io: &mut ExecIo<'_>,
 ) -> Result<Value, Diagnostic> {
-    if let Stmt::FunctionDef { outputs, params, body, .. } = func {
-        if parent_env.recursion_depth >= 256 {
-            return Err(Diagnostic::error(
-                "Maximum recursion limit (256) exceeded.",
-                Some(span),
-            ));
-        }
-        let mut local_env = Env::new();
-        local_env.recursion_depth = parent_env.recursion_depth + 1;
-        // Bind parameters by evaluating arguments against caller environment.
-        for (i, (param_name, _)) in params.iter().enumerate() {
-            let value = if i < args.len() {
-                eval_expr_pub(parent_env, &args[i], io)?
-            } else {
-                Value::Matrix(DenseMatrix::scalar(0.0))
-            };
-            local_env.set(param_name.clone(), value);
-        }
-        // Inject nargin / nargout for basic test coverage.
-        local_env.set("nargin".to_string(), Value::Matrix(DenseMatrix::scalar(args.len() as f64)));
-        local_env.set("nargout".to_string(), Value::Matrix(DenseMatrix::scalar(outputs.len().max(1) as f64)));
-        // Execute body statements.
-        let mut collected = Vec::new();
-        for stmt in body {
-            let res = exec_statement(&mut local_env, stmt.clone(), io, 0)?;
-            if res.flow == Flow::Return {
-                collected = res.outputs;
-                break;
-            }
-            collected = res.outputs;
-        }
-        if outputs.is_empty() {
-            return Ok(Value::Matrix(DenseMatrix::scalar(0.0)));
-        }
-        // Return the first declared output if present.
-        let out_name = outputs[0].0.clone();
-        if let Some(val) = local_env.get(&out_name) {
-            return Ok(val.clone());
-        } else {
-            return Err(Diagnostic::error(
-                format!("Output argument '{}' not assigned.", out_name),
-                Some(span),
-            ));
-        }
-    } else {
-        Err(Diagnostic::error("User-defined function definition expected.", Some(span)))
-    }
+    // A function declared without outputs is normally invoked as a statement.
+    // Treat that as nargout = 0; otherwise a plain expression/assignment asks
+    // for the first output.
+    let nargout = match &func {
+        Stmt::FunctionDef { outputs, .. } if outputs.is_empty() => 0,
+        _ => 1,
+    };
+    let values = exec_user_function_nargout(parent_env, func, args, span, io, nargout)?;
+    Ok(values
+        .into_iter()
+        .next()
+        .unwrap_or_else(|| Value::Matrix(DenseMatrix::empty())))
 }
 
+/// Public multi-output entry point retained for compatibility. The desktop
+/// and builtin dispatcher use the `_nargout` variant so a function can observe
+/// the number of outputs its caller requested.
 pub fn exec_user_function_multi(
     parent_env: &Env,
     func: Stmt,
@@ -668,46 +679,93 @@ pub fn exec_user_function_multi(
     span: Span,
     io: &mut ExecIo<'_>,
 ) -> Result<Vec<Value>, Diagnostic> {
-    if let Stmt::FunctionDef { outputs, params, body, .. } = func {
-        if parent_env.recursion_depth >= 256 {
+    let nargout = match &func {
+        Stmt::FunctionDef { outputs, .. } => outputs.len(),
+        _ => 1,
+    };
+    exec_user_function_nargout(parent_env, func, args, span, io, nargout)
+}
+
+/// Execute a user-defined function with an explicit caller-requested nargout.
+pub fn exec_user_function_nargout(
+    parent_env: &Env,
+    func: Stmt,
+    args: &[Expr],
+    span: Span,
+    io: &mut ExecIo<'_>,
+    nargout: usize,
+) -> Result<Vec<Value>, Diagnostic> {
+    let Stmt::FunctionDef {
+        outputs,
+        params,
+        body,
+        ..
+    } = func
+    else {
+        return Err(Diagnostic::error(
+            "User-defined function definition expected.",
+            Some(span),
+        ));
+    };
+
+    if parent_env.recursion_depth >= MAX_RECURSION_DEPTH {
+        return Err(Diagnostic::error(
+            format!(
+                "Maximum recursion limit ({}) exceeded.",
+                MAX_RECURSION_DEPTH
+            ),
+            Some(span),
+        ));
+    }
+    if args.len() < params.len() {
+        return Err(Diagnostic::error("Not enough input arguments.", Some(span)));
+    }
+    if args.len() > params.len() {
+        return Err(Diagnostic::error("Too many input arguments.", Some(span)));
+    }
+    if nargout > outputs.len() {
+        return Err(Diagnostic::error("Too many output arguments.", Some(span)));
+    }
+
+    let mut local_env = Env::new();
+    local_env.recursion_depth = parent_env.recursion_depth + 1;
+    // Callees must see every function defined in the session (including the
+    // currently executing one, which is what makes recursion work). Variable
+    // scope remains isolated: only functions are inherited.
+    local_env.function_table = parent_env.function_table.clone();
+
+    for (i, (param_name, _)) in params.iter().enumerate() {
+        let value = eval_expr_pub(parent_env, &args[i], io)?;
+        local_env.set(param_name.clone(), value);
+    }
+    local_env.set(
+        "nargin".to_string(),
+        Value::Matrix(DenseMatrix::scalar(args.len() as f64)),
+    );
+    local_env.set(
+        "nargout".to_string(),
+        Value::Matrix(DenseMatrix::scalar(nargout as f64)),
+    );
+
+    for stmt in body {
+        let res = exec_statement(&mut local_env, stmt.clone(), io, 0)?;
+        if res.flow == Flow::Return {
+            break;
+        }
+    }
+
+    let mut out_vals = Vec::with_capacity(nargout);
+    for (out_name, _) in outputs.iter().take(nargout) {
+        if let Some(val) = local_env.get(out_name) {
+            out_vals.push(val.clone());
+        } else {
             return Err(Diagnostic::error(
-                "Maximum recursion limit (256) exceeded.",
+                format!("Output argument '{}' not assigned.", out_name),
                 Some(span),
             ));
         }
-        let mut local_env = Env::new();
-        local_env.recursion_depth = parent_env.recursion_depth + 1;
-        for (i, (param_name, _)) in params.iter().enumerate() {
-            let value = if i < args.len() {
-                eval_expr_pub(parent_env, &args[i], io)?
-            } else {
-                Value::Matrix(DenseMatrix::scalar(0.0))
-            };
-            local_env.set(param_name.clone(), value);
-        }
-        local_env.set("nargin".to_string(), Value::Matrix(DenseMatrix::scalar(args.len() as f64)));
-        local_env.set("nargout".to_string(), Value::Matrix(DenseMatrix::scalar(outputs.len() as f64)));
-        for stmt in body {
-            let res = exec_statement(&mut local_env, stmt.clone(), io, 0)?;
-            if res.flow == Flow::Return {
-                break;
-            }
-        }
-        let mut out_vals = Vec::with_capacity(outputs.len());
-        for (out_name, _) in outputs {
-            if let Some(val) = local_env.get(&out_name) {
-                out_vals.push(val.clone());
-            } else {
-                return Err(Diagnostic::error(
-                    format!("Output argument '{}' not assigned.", out_name),
-                    Some(span),
-                ));
-            }
-        }
-        Ok(out_vals)
-    } else {
-        Err(Diagnostic::error("User-defined function definition expected.", Some(span)))
     }
+    Ok(out_vals)
 }
 
 /// Execute a block of statements, propagating flow signals.
@@ -995,10 +1053,12 @@ fn call_or_index(
                 match args.len() {
                     1 => match &args[0] {
                         Expr::ColonAll(_) => {
+                            // MATLAB `C(:)` is a column vector (N x 1) holding the
+                            // linear (column-major) element order of the matrix.
                             let data = c.to_col_major();
                             Ok(Value::ComplexMatrix(ComplexDenseMatrix {
-                                rows: 1,
-                                cols: data.len(),
+                                rows: data.len(),
+                                cols: 1,
                                 data,
                             }))
                         }
@@ -1008,6 +1068,8 @@ fn call_or_index(
                             for &k in &indices {
                                 data.push(c.get_linear(k, Some(span))?);
                             }
+                            // MATLAB shapes a linear range read like the index
+                            // matrix itself (a 1 x N range reads into a row).
                             Ok(Value::ComplexMatrix(ComplexDenseMatrix {
                                 rows: 1,
                                 cols: data.len(),
@@ -1081,10 +1143,12 @@ fn call_or_index(
                 match args.len() {
                     1 => match &args[0] {
                         Expr::ColonAll(_) => {
+                            // MATLAB `A(:)` is a column vector (N x 1) holding the
+                            // linear (column-major) element order of the matrix.
                             let data = m.to_col_major();
                             Ok(Value::Matrix(DenseMatrix {
-                                rows: 1,
-                                cols: data.len(),
+                                rows: data.len(),
+                                cols: 1,
                                 data,
                             }))
                         }
@@ -1094,6 +1158,8 @@ fn call_or_index(
                             for &k in &indices {
                                 data.push(m.get_linear(k, Some(span))?);
                             }
+                            // MATLAB shapes a linear range read like the index
+                            // matrix itself (a 1 x N range reads into a row).
                             Ok(Value::Matrix(DenseMatrix {
                                 rows: 1,
                                 cols: data.len(),
@@ -1359,17 +1425,17 @@ pub fn eval_expr(env: &Env, expr: &Expr, io: &mut ExecIo<'_>) -> Result<Value, D
                 return Ok(Value::Boolean(false));
             }
             match env.get(name) {
-            Some(v) => Ok(v.clone()),
-            None => {
-                // An unknown bare identifier is treated as a zero-argument
-                // builtin call (e.g. `pi`, `figure`, `clf`, `close`, `i`, `j`).
-                // Unknown names fall into the builtin dispatcher's own
-                // "Unrecognized function or variable" message, so the error
-                // text for undefined variables is unchanged.
-                crate::builtins::call_builtin(name, &[], env, expr.span(), io)
+                Some(v) => Ok(v.clone()),
+                None => {
+                    // An unknown bare identifier is treated as a zero-argument
+                    // builtin call (e.g. `pi`, `figure`, `clf`, `close`, `i`, `j`).
+                    // Unknown names fall into the builtin dispatcher's own
+                    // "Unrecognized function or variable" message, so the error
+                    // text for undefined variables is unchanged.
+                    crate::builtins::call_builtin(name, &[], env, expr.span(), io)
+                }
             }
-            }
-        },
+        }
         Expr::MatrixLit(rows, _) => {
             let mut evaled_rows: Vec<Vec<Value>> = Vec::with_capacity(rows.len());
             let mut has_complex = false;

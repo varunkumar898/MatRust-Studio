@@ -110,5 +110,20 @@ R2026b behavior this row tracks; this matrix makes no claim beyond that.
 | Complex SVD | implemented | One-sided Jacobi (Hestenes method) with complex Givens rotations $R^H R = I_2$, non-negative descending singular values, unitary $U, V$ ($U^H U = I, V^H V = I$), $A = U \Sigma V^H$; supports square, rectangular, and rank-deficient matrices |
 | Complex rank & pseudoinverse | implemented | `rank(A, [tol])` with singular-value thresholding; `pinv(A, [tol])` satisfying all 4 Moore-Penrose conditions with conjugate transpose $A A^+ A \approx A$, $A^+ A A^+ \approx A^+$, $(A A^+)^H \approx A A^+$, $(A^+ A)^H \approx A^+ A$ |
 | Complex linear solvers | implemented | Square systems solved via complex pivoted LU; overdetermined least-squares via complex Householder QR; underdetermined via complex pseudoinverse; right division via $(A^H \setminus B^H)^H$ |
+| Eigenvalues: `eig(A)` | implemented | Symmetric real matrices use Jacobi rotations; general real and complex matrices use Hessenberg reduction plus shifted complex QR; complex-conjugate pairs are returned as a complex column vector and real spectra are simplified back to a real matrix; right eigenvectors use inverse iteration; NaN/Inf and non-convergence produce explicit diagnostics; `eig([0 -1; 1 0])` = 0±1i asserted; seeded probe over 20 random 4x4 real matrices: 20/20 converged, sum(λ)=trace and prod(λ)=det held |
 | Complex LU factorization | implemented | Partial row pivoting using element modulus; 1-output $Y$, 2-output $[L, U]$, and 3-output $[L, U, P]$ with unit lower triangular $L$ |
 | Complex det, inv, trace, norm | implemented | `det(A)` via complex LU with permutation parity; `inv(A)` via complex LU solve on $I_n$; `trace(A)` summing complex diagonal; `norm(A, [p])` for complex vector (1, 2, $\infty$, $p$) and matrix (1, 2, $\infty$, 'fro') |
+
+## Apps framework (2026-10-23)
+| Application | Status | Verification | Notes |
+|---|---|---|---|
+| Data Analysis | Ready | Unit-tested; Not reference-verified; live GUI NOT TESTED | CSV open (header/delimiter detection, quoted fields, missing/ragged rows), preview, column selection, mean/median/std/min/max/quantiles/correlation, line/scatter plot, statistics CSV export with overwrite confirmation |
+| Curve Fitter | Ready | Unit-tested; Not reference-verified; live GUI NOT TESTED | CSV open and column selection, polynomial/linear least squares solved through matlab_linalg QR (mldivide), coefficient table, R²/RMSE/residuals, data+fit and residuals figures, curve_fit_* workspace variables, coefficients+fitted CSV export with overwrite confirmation |
+| Simulation and Control | Planned | — | Disabled in launcher |
+| Signal Analyzer | Planned | — | Disabled in launcher |
+| Image Processing | Planned | — | Disabled in launcher |
+| Machine Learning | Planned | — | Disabled in launcher |
+| Robotics Math | Planned | — | Disabled in launcher |
+| Embedded and Sensor Data | Planned | — | Disabled in launcher |
+
+Desktop live GUI verification: NOT TESTED (no screenshot artifact is in the repository; app behaviour is covered by backend/integration tests only).

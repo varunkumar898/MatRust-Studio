@@ -1,0 +1,31 @@
+[package]
+name = "rustlab-stdlib"
+version = "0.1.0"
+edition = "2021"
+description = "MATLAB-compatible standard library for RustLab (linear algebra, statistics, transforms, generators)"
+
+[dependencies]
+rustlab-parse = { path = "../rustlab-parse" }
+rustlab-math = { path = "../rustlab-math" }
+rustlab-eval = { path = "../rustlab-eval" }
+rustlab-matio = { path = "../rustlab-matio" }
+num-complex = "0.4"
+regex = "1.10"
+rustfft = "6.4.1"
+faer = { version = "0.24.4", default-features = false, features = ["std"], optional = true }
+
+[dev-dependencies]
+tempfile = "3.10"
+criterion = "0.5"
+
+[[bench]]
+name = "a312"
+harness = false
+
+[[bench]]
+name = "flamegraph_ab_1e6"
+harness = false
+
+[features]
+default = ["faer"]
+faer = ["dep:faer"]

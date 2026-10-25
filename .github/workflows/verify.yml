@@ -1,0 +1,38 @@
+name: RustLab Verification
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  verify:
+    name: Formatting, Clippy, and Comprehensive Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Verify code formatting
+        run: cargo fmt --all -- --check
+
+      - name: Clippy (--all-targets --all-features)
+        run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+
+      - name: Clippy (--all-targets --no-default-features)
+        run: cargo clippy --workspace --all-targets --no-default-features -- -D warnings
+
+      - name: Cargo test (default features)
+        run: cargo test --workspace
+
+      - name: Cargo test (--all-features)
+        run: cargo test --workspace --all-features
+
+      - name: Cargo test (--no-default-features)
+        run: cargo test --workspace --no-default-features

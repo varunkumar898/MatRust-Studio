@@ -1,0 +1,6 @@
+root;eval_pipeline;parse_rustlab_syntax 0.0010
+root;eval_pipeline;identifier_fastpath_get_local 0.0001
+root;eval_pipeline;Value_add;alloc_8MB_output_buffer 0.0798
+root;eval_pipeline;Value_add;elementwise_shape_match_vector_loop 0.4402
+root;eval_pipeline;environment_set_store 0.3575
+root;eval_pipeline;statement_dispatch_overhead 0.0000

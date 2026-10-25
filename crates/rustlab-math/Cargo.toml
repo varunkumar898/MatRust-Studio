@@ -1,0 +1,20 @@
+[package]
+name = "rustlab-math"
+version = "0.1.0"
+edition = "2021"
+description = "High-performance column-major N-D tensor, broadcasting, and numerical core for rustlab"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+rustlab-parse = { path = "../rustlab-parse" }
+thiserror = "2.0"
+num-complex = "0.4"
+num-traits = "0.2"
+matrixmultiply = { version = "0.3", optional = true }
+
+[features]
+default = ["matrixmultiply"]
+matrixmultiply = ["dep:matrixmultiply"]
+
+[dev-dependencies]
+proptest = "1.6"

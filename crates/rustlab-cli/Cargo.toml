@@ -1,0 +1,27 @@
+[package]
+name = "rustlab-cli"
+version = "0.1.0"
+edition = "2021"
+description = "Interactive REPL, CLI runner, diagnostic printer, and benchmark suite for RustLab"
+
+[lib]
+name = "rustlab_cli"
+path = "src/lib.rs"
+
+[[bin]]
+name = "rustlab"
+path = "src/main.rs"
+
+[dependencies]
+rustlab-parse = { path = "../rustlab-parse" }
+rustlab-math = { path = "../rustlab-math" }
+rustlab-eval = { path = "../rustlab-eval" }
+rustlab-stdlib = { path = "../rustlab-stdlib", default-features = false }
+rustlab-matio = { path = "../rustlab-matio" }
+rustyline = "15.0"
+clap = { version = "4.5", features = ["derive"] }
+num-complex = "0.4"
+
+[features]
+default = ["faer"]
+faer = ["rustlab-stdlib/faer"]

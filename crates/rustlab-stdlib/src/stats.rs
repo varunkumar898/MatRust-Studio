@@ -99,7 +99,44 @@ where
     DenseArray::from_vec_unchecked(in_shape.to_vec(), out_data)
 }
 
-/// `sum(A [, dim])` calculates sum along dimension `dim`.
+fn as_string(v: &Value) -> Option<String> {
+    match v {
+        Value::Char(ca) => Some(ca.as_slice().iter().collect()),
+        Value::String(sa) => Some(sa.as_slice().first().cloned().unwrap_or_default()),
+        _ => None,
+    }
+}
+
+fn parse_dim_and_nan_flag(args: &[Value], default_dim: usize) -> Result<(usize, bool), EvalError> {
+    let mut dim = default_dim;
+    let mut omitnan = false;
+
+    for arg in &args[1..] {
+        if let Some(s) = as_string(arg) {
+            if s.eq_ignore_ascii_case("omitnan") {
+                omitnan = true;
+            } else if s.eq_ignore_ascii_case("includenan") {
+                omitnan = false;
+            } else {
+                return Err(user_err(
+                    "MATLAB:data:badOption",
+                    &format!("Unsupported option '{}'", s),
+                ));
+            }
+        } else {
+            dim = arg.as_scalar_f64().map_err(math_err)? as usize;
+            if dim == 0 {
+                return Err(user_err(
+                    "MATLAB:badsubscript",
+                    "Dimension argument must be a positive integer scalar.",
+                ));
+            }
+        }
+    }
+    Ok((dim, omitnan))
+}
+
+/// `sum(A [, dim] [, 'omitnan'])` calculates sum along dimension `dim`.
 /// Preserves integer class with saturating addition.
 pub fn sum_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError> {
     if args.is_empty() {
@@ -110,11 +147,7 @@ pub fn sum_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError> 
         return Ok(vec![Value::scalar(0.0)]);
     }
 
-    let dim = if args.len() >= 2 {
-        args[1].as_scalar_f64().map_err(math_err)? as usize
-    } else {
-        first_non_singleton_dim(val.shape())
-    };
+    let (dim, omitnan) = parse_dim_and_nan_flag(args, first_non_singleton_dim(val.shape()))?;
 
     match val {
         Value::Int8(a) => {
@@ -166,17 +199,35 @@ pub fn sum_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError> 
             Ok(vec![Value::UInt64(res)])
         }
         Value::Single(a) => {
-            let res = reduce_nd(a, dim, |slice| slice.iter().sum::<f32>());
+            let res = reduce_nd(a, dim, |slice| {
+                if omitnan {
+                    slice.iter().filter(|x| !x.is_nan()).sum::<f32>()
+                } else {
+                    slice.iter().sum::<f32>()
+                }
+            });
             Ok(vec![Value::Single(res)])
         }
         Value::Sparse(s) => {
             let da = s.to_dense();
-            let res = reduce_nd(&da, dim, |slice| slice.iter().sum::<f64>());
+            let res = reduce_nd(&da, dim, |slice| {
+                if omitnan {
+                    slice.iter().filter(|x| !x.is_nan()).sum::<f64>()
+                } else {
+                    slice.iter().sum::<f64>()
+                }
+            });
             Ok(vec![Value::Double(res)])
         }
         other => {
             let da = other.to_double_array().map_err(math_err)?;
-            let res = reduce_nd(&da, dim, |slice| slice.iter().sum::<f64>());
+            let res = reduce_nd(&da, dim, |slice| {
+                if omitnan {
+                    slice.iter().filter(|x| !x.is_nan()).sum::<f64>()
+                } else {
+                    slice.iter().sum::<f64>()
+                }
+            });
             Ok(vec![Value::Double(res)])
         }
     }
@@ -378,7 +429,7 @@ pub fn diff_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError>
     Ok(vec![Value::Double(arr)])
 }
 
-/// `mean(A [, dim])` calculates mean along dimension `dim`.
+/// `mean(A [, dim] [, 'omitnan'])` calculates mean along dimension `dim`.
 /// According to MathWorks MATLAB Documentation on 'mean':
 /// "mean(A) returns double floating-point numbers even if the input A is single or integer."
 pub fn mean_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError> {
@@ -390,16 +441,28 @@ pub fn mean_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError>
         return Ok(vec![Value::scalar(f64::NAN)]);
     }
 
-    let dim = if args.len() >= 2 {
-        args[1].as_scalar_f64().map_err(math_err)? as usize
-    } else {
-        first_non_singleton_dim(da.shape())
-    };
+    let (dim, omitnan) = parse_dim_and_nan_flag(args, first_non_singleton_dim(da.shape()))?;
 
     let res = reduce_nd(&da, dim, |slice| {
-        let count = slice.len() as f64;
-        let total: f64 = slice.iter().sum();
-        total / count
+        if omitnan {
+            let mut count = 0usize;
+            let mut total = 0.0f64;
+            for &x in slice {
+                if !x.is_nan() {
+                    total += x;
+                    count += 1;
+                }
+            }
+            if count == 0 {
+                f64::NAN
+            } else {
+                total / count as f64
+            }
+        } else {
+            let count = slice.len() as f64;
+            let total: f64 = slice.iter().sum();
+            total / count
+        }
     });
     Ok(vec![Value::Double(res)])
 }
@@ -444,7 +507,7 @@ pub fn std_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError> 
     Ok(vec![Value::Double(da.map(|&x| x.sqrt()))])
 }
 
-/// `min(A [, dim])` minimum along dimension `dim`.
+/// `min(A [, dim] [, 'omitnan'])` minimum along dimension `dim`.
 pub fn min_fn(args: &[Value], nargout: usize) -> Result<Vec<Value>, EvalError> {
     if args.is_empty() {
         return Err(user_err("MATLAB:minrhs", "min requires at least 1 input."));
@@ -454,33 +517,51 @@ pub fn min_fn(args: &[Value], nargout: usize) -> Result<Vec<Value>, EvalError> {
         return Ok(vec![Value::Double(DenseArray::empty())]);
     }
 
-    let dim = if args.len() >= 2 {
-        args[1].as_scalar_f64().map_err(math_err)? as usize
-    } else {
-        first_non_singleton_dim(da.shape())
-    };
+    let (dim, omitnan) = parse_dim_and_nan_flag(args, first_non_singleton_dim(da.shape()))?;
 
     let val_arr = reduce_nd(&da, dim, |slice| {
-        let mut best = slice[0];
-        for &x in &slice[1..] {
-            if x < best || best.is_nan() {
-                best = x;
+        if omitnan {
+            let mut best = f64::NAN;
+            for &x in slice {
+                if !x.is_nan() && (best.is_nan() || x < best) {
+                    best = x;
+                }
             }
+            best
+        } else {
+            let mut best = slice[0];
+            for &x in &slice[1..] {
+                if x < best || best.is_nan() {
+                    best = x;
+                }
+            }
+            best
         }
-        best
     });
 
     if nargout > 1 {
         let idx_arr = reduce_nd(&da, dim, |slice| {
-            let mut best = slice[0];
-            let mut best_idx = 1;
-            for (i, &x) in slice.iter().enumerate().skip(1) {
-                if x < best || best.is_nan() {
-                    best = x;
-                    best_idx = i + 1;
+            if omitnan {
+                let mut best = f64::NAN;
+                let mut best_idx = 1;
+                for (i, &x) in slice.iter().enumerate() {
+                    if !x.is_nan() && (best.is_nan() || x < best) {
+                        best = x;
+                        best_idx = i + 1;
+                    }
                 }
+                best_idx as f64
+            } else {
+                let mut best = slice[0];
+                let mut best_idx = 1;
+                for (i, &x) in slice.iter().enumerate().skip(1) {
+                    if x < best || best.is_nan() {
+                        best = x;
+                        best_idx = i + 1;
+                    }
+                }
+                best_idx as f64
             }
-            best_idx as f64
         });
         Ok(vec![Value::Double(val_arr), Value::Double(idx_arr)])
     } else {
@@ -488,7 +569,7 @@ pub fn min_fn(args: &[Value], nargout: usize) -> Result<Vec<Value>, EvalError> {
     }
 }
 
-/// `max(A [, dim])` maximum along dimension `dim`.
+/// `max(A [, dim] [, 'omitnan'])` maximum along dimension `dim`.
 pub fn max_fn(args: &[Value], nargout: usize) -> Result<Vec<Value>, EvalError> {
     if args.is_empty() {
         return Err(user_err("MATLAB:minrhs", "max requires at least 1 input."));
@@ -498,33 +579,51 @@ pub fn max_fn(args: &[Value], nargout: usize) -> Result<Vec<Value>, EvalError> {
         return Ok(vec![Value::Double(DenseArray::empty())]);
     }
 
-    let dim = if args.len() >= 2 {
-        args[1].as_scalar_f64().map_err(math_err)? as usize
-    } else {
-        first_non_singleton_dim(da.shape())
-    };
+    let (dim, omitnan) = parse_dim_and_nan_flag(args, first_non_singleton_dim(da.shape()))?;
 
     let val_arr = reduce_nd(&da, dim, |slice| {
-        let mut best = slice[0];
-        for &x in &slice[1..] {
-            if x > best || best.is_nan() {
-                best = x;
+        if omitnan {
+            let mut best = f64::NAN;
+            for &x in slice {
+                if !x.is_nan() && (best.is_nan() || x > best) {
+                    best = x;
+                }
             }
+            best
+        } else {
+            let mut best = slice[0];
+            for &x in &slice[1..] {
+                if x > best || best.is_nan() {
+                    best = x;
+                }
+            }
+            best
         }
-        best
     });
 
     if nargout > 1 {
         let idx_arr = reduce_nd(&da, dim, |slice| {
-            let mut best = slice[0];
-            let mut best_idx = 1;
-            for (i, &x) in slice.iter().enumerate().skip(1) {
-                if x > best || best.is_nan() {
-                    best = x;
-                    best_idx = i + 1;
+            if omitnan {
+                let mut best = f64::NAN;
+                let mut best_idx = 1;
+                for (i, &x) in slice.iter().enumerate() {
+                    if !x.is_nan() && (best.is_nan() || x > best) {
+                        best = x;
+                        best_idx = i + 1;
+                    }
                 }
+                best_idx as f64
+            } else {
+                let mut best = slice[0];
+                let mut best_idx = 1;
+                for (i, &x) in slice.iter().enumerate().skip(1) {
+                    if x > best || best.is_nan() {
+                        best = x;
+                        best_idx = i + 1;
+                    }
+                }
+                best_idx as f64
             }
-            best_idx as f64
         });
         Ok(vec![Value::Double(val_arr), Value::Double(idx_arr)])
     } else {

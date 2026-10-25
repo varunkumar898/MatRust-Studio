@@ -2,8 +2,11 @@
 
 **Target Binary**: `rustlab/target/release/rustlab.exe`  
 **Host Architecture**: Windows ARM64 (`aarch64-pc-windows-gnullvm`)  
+**Compiler**: `rustc 1.99.1 (stable)` with LLVM 23.1.1  
+**Build Profile**: `[profile.release]` (`opt-level = 3`, `lto = "fat"`, `codegen-units = 1`, `panic = "abort"`)  
 **Disassembly Tool**: `llvm-objdump.exe` (LLVM 23.1.1-rust-1.99.1-stable)  
 **Inspection Date**: 2026-10-25  
+**Current Binary (G0)**: Size 5,400,064 bytes; SHA-256 `683ea9cbc8bd2b025d93f1ead5281e3a36fbae0c01eae57365ff0681ed6be770`  
 
 ---
 
@@ -264,8 +267,14 @@ In previous verification logs and notes, two release binary hashes were recorded
 2. `rustlab.exe` (A3.1.4 intermediate build before final doc-sync):
    - File Size: `5,177,856` bytes (difference of exactly +512 bytes = 1 PE section page)
    - SHA-256: `5F12F38994E80D2BC910CD8D36D611DE78CF4CD9004B2EC6DF759A11BFED0288`
+3. `rustlab.exe` (B2.1 release build with `rustlab-data` and `csv = "1.4.0"`):
+   - File Size: `5,393,408` bytes
+   - SHA-256: `8fd8d28df96d1f36e9dfbd82c4566a26ee00cfee05add359cfb31fe191ff58d3`
+4. `rustlab.exe` (G0 closeout build with LU back-substitution and core omitnan):
+   - File Size: `5,400,064` bytes
+   - SHA-256: `683ea9cbc8bd2b025d93f1ead5281e3a36fbae0c01eae57365ff0681ed6be770`
 
-The 512-byte difference represents a single PE section alignment boundary (`0x200` = 512 bytes) caused by compiler metadata changes during the A3.1.4 doc-sync commit. Both binaries were compiled with identical rustc compiler flags (`opt-level=3`, `lto="fat"`, `codegen-units=1`, `panic="abort"`).
+The 512-byte difference between builds (1) and (2) represents a single PE section alignment boundary (`0x200` = 512 bytes) caused by compiler string metadata changes during the A3.1.4 doc-sync commit. Builds (3) and (4) include the new `rustlab-data` crate and optimized LU back-substitution solver. All release binaries were compiled with identical rustc compiler flags (`opt-level=3`, `lto="fat"`, `codegen-units=1`, `panic="abort"`).
 
 ### 7.2 Resolution of `Value::add` Public Path Discrepancy
 In B2.1.1, the public path `Value::add` (and `Value::sub`, `Value::dot_mul`) was refactored:

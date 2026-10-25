@@ -209,3 +209,29 @@ Captured on 2026-10-25 using `rustlab.exe bench` built under `[profile.release]`
 | **B2.1 zscore** | $10^6$ doubles | Latency | N/A | **60.953 ms** | Standardization $(X - \mu)/\sigma$ |
 | **B2.1 writematrix** | $10^6$ floats ($250k \times 4$) | Latency | N/A | **158.783 ms** | Shortest round-trip via `ryu` |
 | **B2.1 readmatrix** | $10^6$ floats ($250k \times 4$) | Latency | N/A | **144.724 ms** | RFC 4180 streaming parse |
+
+---
+
+## 7. Milestone G0 Closeout Benchmark Run (Unedited Output)
+
+Captured on 2026-10-25 using `rustlab.exe bench` built under `[profile.release]` (`opt-level = 3`, `lto = "fat"`, `codegen-units = 1`, `panic = "abort"`):
+
+| Domain | Workload | Benchmark Metric | Milestone 7 Baseline | G0 Target Contract | G0 Measured | Status vs Target |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **GEMM** | $384 \times 384$ doubles (1 thread) | Throughput | 11.8 GFLOPS | $\ge 11.8$ GFLOPS | **25.23 GFLOPS** | **2.14x baseline** (Exceeds contract) |
+| **Linear Solve ($A \backslash b$)** | $50 \times 50$ LU | Latency | N/A | Monotonic | **0.027 ms** | Monotonic scaling |
+| **Linear Solve ($A \backslash b$)** | $100 \times 100$ LU | Latency | 0.487 ms | $\le 0.600$ ms | **0.203 ms** | **Target Met** (2.4x margin vs 0.6 ms) |
+| **Linear Solve ($A \backslash b$)** | $200 \times 200$ LU | Latency | N/A | Monotonic | **1.760 ms** | Strictly monotonic (0.027 / 0.203 / 1.760 ms) |
+| **Elementwise Add ($A+B$)** | $10^6$ doubles | Latency | 22.0 ms | $\le 3.0$ ms | **0.493 ms** (API) / **0.731 ms** (Interp) | **Target Met** (3-4x margin vs 3.0 ms) |
+| **Elementwise Mul ($A .* B$)**| $10^6$ doubles | Latency | ~22.0 ms | $\le 3.0$ ms | **0.497 ms** (API) / **0.748 ms** (Interp) | **2013.3 MEl/s** |
+| **Trigonometric ($\sin(A)$)** | $10^6$ doubles | Latency | N/A | Vectorized | **16.896 ms** | 59.2 MEl/s |
+| **Symmetric Eig ($100 \times 100$)**| Native Householder+QL | Latency | N/A | Teaching ref | **3.109 ms** | Clean-room fallback reference |
+| **Symmetric Eig ($100 \times 100$)**| Faer `self_adjoint_eigen` | Latency | N/A | Faster than native | **1.133 ms** | **2.74x faster** than native QL |
+| **Sparse Matvec ($S \cdot b$)** | $N=1000$, 1% CSC | Latency | N/A | O(nnz) | **0.027 ms** | **306.73x speedup** vs dense (8.251 ms) |
+| **Sparse Matrix Add ($S + S$)** | $N=1000$, 1% CSC | Latency | N/A | O(nnz) | **0.112 ms** | **65.49x speedup** vs dense (7.328 ms) |
+| **G0 movmean** | $10^6$ doubles, $k=3$ | Latency | N/A | Steady state $O(n)$ | **13.139 ms** | 8.9x faster than B2.1 (sliding window) |
+| **G0 cummax** | $10^6$ doubles | Latency | N/A | Steady state $O(n)$ | **8.773 ms** | 6.5x faster than B2.1 ($\le 10$ ms) |
+| **G0 zscore** | $10^6$ doubles | Latency | N/A | Steady state $O(n)$ | **9.597 ms** | 6.3x faster than B2.1 ($\le 10$ ms) |
+| **G0 writematrix** | $10^6$ floats ($250k \times 4$) | Latency | N/A | Streaming | **199.693 ms** | Shortest round-trip via `ryu` |
+| **G0 readmatrix** | $10^6$ floats ($250k \times 4$) | Latency | N/A | RFC 4180 | **84.735 ms** | Streaming zero-copy parser |
+

@@ -71,11 +71,11 @@ integer-arithmetic rule below; the exact identifier string itself is **unverifie
 | `MATLAB:save:ioError` | `Cannot write to MAT-file: {err}` | [MathWorks: save](https://www.mathworks.com/help/matlab/ref/save.html) | unverified |
 | `MATLAB:badFID` | `Invalid file identifier. Use fopen to generate a valid file identifier.` | [MathWorks: fclose](https://www.mathworks.com/help/matlab/ref/fclose.html) | unverified |
 | `MATLAB:mat2str:invalidInput` | `mat2str input must be a numeric matrix.` | [MathWorks: mat2str](https://www.mathworks.com/help/matlab/ref/mat2str.html) | unverified |
-| `MATLAB:readmatrix:fileNotFound` | `Failed to open file '{filename}': {err}` | [MathWorks: readmatrix](https://www.mathworks.com/help/matlab/ref/readmatrix.html) | unverified |
-| `MATLAB:readmatrix:raggedData` | `Row {line} has {found} fields, expected {expected}.` | [MathWorks: readmatrix](https://www.mathworks.com/help/matlab/ref/readmatrix.html) | unverified |
-| `MATLAB:readmatrix:badPath` | `Filename must be a character vector or string scalar.` | [MathWorks: readmatrix](https://www.mathworks.com/help/matlab/ref/readmatrix.html) | unverified |
-| `MATLAB:data:badInput` | `{fn_name} requires a 2-D numeric array.` / `Percentile/quantile values must be finite.` | [MathWorks: Statistics](https://www.mathworks.com/help/matlab/statistics.html) | unverified |
-| `MATLAB:data:badOption` | `Unsupported option '{name}'.` | [MathWorks: Statistics Options](https://www.mathworks.com/help/matlab/statistics.html) | unverified |
+| `RUSTLAB:readmatrix:fileNotFound` | `Failed to open file '{filename}': {err}` | RustLab-specific file error | unverified |
+| `RUSTLAB:readmatrix:raggedData` | `Row {line} has {found} fields, expected {expected}.` | RustLab-specific ragged line error | unverified |
+| `RUSTLAB:readmatrix:badPath` | `Filename must be a character vector or string scalar.` | RustLab-specific path error | unverified |
+| `RUSTLAB:data:badInput` | `{fn_name} requires a 2-D numeric array.` / `Percentile/quantile values must be finite.` | RustLab-specific data error | unverified |
+| `RUSTLAB:data:badOption` | `Unsupported option '{name}'.` | RustLab-specific option error | unverified |
 | `MATLAB:error` | `{user_message}` | [MathWorks: error](https://www.mathworks.com/help/matlab/ref/error.html) | unverified |
 
 ---

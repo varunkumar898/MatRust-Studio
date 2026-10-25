@@ -23,9 +23,9 @@ fn extract_path(v: &Value) -> Result<String, EvalError> {
             .as_slice()
             .first()
             .cloned()
-            .ok_or_else(|| user_err("MATLAB:readmatrix:badPath", "Empty filename.")),
+            .ok_or_else(|| user_err("RUSTLAB:readmatrix:badPath", "Empty filename.")),
         _ => Err(user_err(
-            "MATLAB:readmatrix:badPath",
+            "RUSTLAB:readmatrix:badPath",
             "Filename must be a character vector or string scalar.",
         )),
     }
@@ -38,9 +38,9 @@ fn extract_string_opt(v: &Value) -> Result<String, EvalError> {
             .as_slice()
             .first()
             .cloned()
-            .ok_or_else(|| user_err("MATLAB:data:badOption", "Option value cannot be empty.")),
+            .ok_or_else(|| user_err("RUSTLAB:data:badOption", "Option value cannot be empty.")),
         _ => Err(user_err(
-            "MATLAB:data:badOption",
+            "RUSTLAB:data:badOption",
             "Option value must be a character vector or string scalar.",
         )),
     }
@@ -61,13 +61,13 @@ fn parse_delimiter(s: &str) -> Result<u8, EvalError> {
             Ok(byte)
         } else {
             Err(user_err(
-                "MATLAB:data:badDelimiter",
+                "RUSTLAB:data:badDelimiter",
                 "Empty delimiter specified.",
             ))
         }
     } else {
         Err(user_err(
-            "MATLAB:data:badDelimiter",
+            "RUSTLAB:data:badDelimiter",
             &format!("Unsupported delimiter '{s}'."),
         ))
     }
@@ -105,7 +105,7 @@ pub fn readmatrix(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalErr
         let opt_name = extract_string_opt(&args[i])?;
         if i + 1 >= args.len() {
             return Err(user_err(
-                "MATLAB:data:missingOptionValue",
+                "RUSTLAB:data:missingOptionValue",
                 &format!("Missing value for option '{opt_name}'."),
             ));
         }
@@ -116,20 +116,20 @@ pub fn readmatrix(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalErr
         } else if opt_name.eq_ignore_ascii_case("numheaderlines") {
             let n = opt_val.as_scalar_f64().map_err(|e| {
                 user_err(
-                    "MATLAB:data:badNumHeaderLines",
+                    "RUSTLAB:data:badNumHeaderLines",
                     &format!("NumHeaderLines must be a nonnegative integer: {e}"),
                 )
             })?;
             if !n.is_finite() || n < 0.0 || n.fract() != 0.0 {
                 return Err(user_err(
-                    "MATLAB:data:badNumHeaderLines",
+                    "RUSTLAB:data:badNumHeaderLines",
                     "NumHeaderLines must be a nonnegative integer scalar.",
                 ));
             }
             num_header_lines = n as usize;
         } else {
             return Err(user_err(
-                "MATLAB:data:badOption",
+                "RUSTLAB:data:badOption",
                 &format!("Unsupported readmatrix option '{opt_name}'."),
             ));
         }
@@ -139,7 +139,7 @@ pub fn readmatrix(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalErr
     let path = Path::new(&filename);
     let file = File::open(path).map_err(|e| {
         user_err(
-            "MATLAB:readmatrix:fileNotFound",
+            "RUSTLAB:readmatrix:fileNotFound",
             &format!("Failed to open file '{filename}': {e}"),
         )
     })?;
@@ -149,7 +149,7 @@ pub fn readmatrix(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalErr
     let mut head = [0u8; 3];
     let bytes_read = reader.read(&mut head).map_err(|e| {
         user_err(
-            "MATLAB:readmatrix:readError",
+            "RUSTLAB:readmatrix:readError",
             &format!("Failed reading file header: {e}"),
         )
     })?;
@@ -175,7 +175,7 @@ pub fn readmatrix(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalErr
             line_buf.clear();
             let n = buf_rdr.read_until(b'\n', &mut line_buf).map_err(|e| {
                 user_err(
-                    "MATLAB:readmatrix:readError",
+                    "RUSTLAB:readmatrix:readError",
                     &format!("Error skipping header lines: {e}"),
                 )
             })?;
@@ -200,7 +200,7 @@ pub fn readmatrix(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalErr
         current_line += 1;
         let record = result.map_err(|e| {
             user_err(
-                "MATLAB:readmatrix:parseError",
+                "RUSTLAB:readmatrix:parseError",
                 &format!("Line {current_line}: CSV parse error: {e}"),
             )
         })?;
@@ -213,7 +213,7 @@ pub fn readmatrix(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalErr
         if let Some(expected) = expected_cols {
             if num_fields != expected {
                 return Err(user_err(
-                    "MATLAB:readmatrix:raggedData",
+                    "RUSTLAB:readmatrix:raggedData",
                     &format!("Row {current_line} has {num_fields} fields, expected {expected}."),
                 ));
             }
@@ -256,7 +256,7 @@ pub fn writematrix(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalEr
     }
     let da = args[0]
         .to_double_array()
-        .map_err(|e| user_err("MATLAB:data:badInput", &format!("{e}")))?;
+        .map_err(|e| user_err("RUSTLAB:data:badInput", &format!("{e}")))?;
     let filename = extract_path(&args[1])?;
 
     let mut delimiter: u8 = b',';
@@ -265,7 +265,7 @@ pub fn writematrix(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalEr
         let opt_name = extract_string_opt(&args[i])?;
         if i + 1 >= args.len() {
             return Err(user_err(
-                "MATLAB:data:missingOptionValue",
+                "RUSTLAB:data:missingOptionValue",
                 &format!("Missing value for option '{opt_name}'."),
             ));
         }
@@ -275,7 +275,7 @@ pub fn writematrix(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalEr
             delimiter = parse_delimiter(&delim_str)?;
         } else {
             return Err(user_err(
-                "MATLAB:data:badOption",
+                "RUSTLAB:data:badOption",
                 &format!("Unsupported writematrix option '{opt_name}'."),
             ));
         }
@@ -285,7 +285,7 @@ pub fn writematrix(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalEr
     let shape = da.shape();
     if shape.len() > 2 {
         return Err(user_err(
-            "MATLAB:writematrix:badDimension",
+            "RUSTLAB:writematrix:badDimension",
             "writematrix only supports 2-D arrays.",
         ));
     }
@@ -297,7 +297,7 @@ pub fn writematrix(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalEr
 
     let file = File::create(&filename).map_err(|e| {
         user_err(
-            "MATLAB:writematrix:createFailed",
+            "RUSTLAB:writematrix:createFailed",
             &format!("Failed creating file '{filename}': {e}"),
         )
     })?;
@@ -311,7 +311,7 @@ pub fn writematrix(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalEr
             if c > 0 {
                 write!(writer, "{delim_char}").map_err(|e| {
                     user_err(
-                        "MATLAB:writematrix:writeFailed",
+                        "RUSTLAB:writematrix:writeFailed",
                         &format!("Write error: {e}"),
                     )
                 })?;
@@ -320,7 +320,7 @@ pub fn writematrix(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalEr
             if val.is_nan() {
                 write!(writer, "NaN").map_err(|e| {
                     user_err(
-                        "MATLAB:writematrix:writeFailed",
+                        "RUSTLAB:writematrix:writeFailed",
                         &format!("Write error: {e}"),
                     )
                 })?;
@@ -328,14 +328,14 @@ pub fn writematrix(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalEr
                 if val.is_sign_positive() {
                     write!(writer, "Inf").map_err(|e| {
                         user_err(
-                            "MATLAB:writematrix:writeFailed",
+                            "RUSTLAB:writematrix:writeFailed",
                             &format!("Write error: {e}"),
                         )
                     })?;
                 } else {
                     write!(writer, "-Inf").map_err(|e| {
                         user_err(
-                            "MATLAB:writematrix:writeFailed",
+                            "RUSTLAB:writematrix:writeFailed",
                             &format!("Write error: {e}"),
                         )
                     })?;
@@ -344,7 +344,7 @@ pub fn writematrix(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalEr
                 let formatted = ryu_buf.format(val);
                 write!(writer, "{formatted}").map_err(|e| {
                     user_err(
-                        "MATLAB:writematrix:writeFailed",
+                        "RUSTLAB:writematrix:writeFailed",
                         &format!("Write error: {e}"),
                     )
                 })?;
@@ -352,7 +352,7 @@ pub fn writematrix(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalEr
         }
         writeln!(writer).map_err(|e| {
             user_err(
-                "MATLAB:writematrix:writeFailed",
+                "RUSTLAB:writematrix:writeFailed",
                 &format!("Write error: {e}"),
             )
         })?;
@@ -360,7 +360,7 @@ pub fn writematrix(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalEr
 
     writer.flush().map_err(|e| {
         user_err(
-            "MATLAB:writematrix:flushFailed",
+            "RUSTLAB:writematrix:flushFailed",
             &format!("Flush error: {e}"),
         )
     })?;

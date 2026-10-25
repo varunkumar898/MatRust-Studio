@@ -15,7 +15,7 @@ use rustlab_math::{coords_to_offset, normalize_shape, offset_to_coords, DenseArr
 
 fn get_da(v: &Value) -> Result<DenseArray<f64>, EvalError> {
     v.to_double_array()
-        .map_err(|e| user_err("MATLAB:data:badInput", &format!("{e}")))
+        .map_err(|e| user_err("RUSTLAB:data:badInput", &format!("{e}")))
 }
 
 fn as_string(v: &Value) -> Option<String> {
@@ -29,13 +29,13 @@ fn as_string(v: &Value) -> Option<String> {
 fn parse_dim_value(v: &Value) -> Result<usize, EvalError> {
     let x = v.as_scalar_f64().map_err(|e| {
         user_err(
-            "MATLAB:data:badDim",
+            "RUSTLAB:data:badDim",
             &format!("Dimension argument must be a positive integer scalar: {e}"),
         )
     })?;
     if !x.is_finite() || x < 1.0 || x.fract() != 0.0 {
         return Err(user_err(
-            "MATLAB:data:badDim",
+            "RUSTLAB:data:badDim",
             "Dimension argument must be a positive integer scalar.",
         ));
     }
@@ -64,7 +64,7 @@ fn dim_and_omit(
                 omit = true;
             } else {
                 return Err(user_err(
-                    "MATLAB:data:badOption",
+                    "RUSTLAB:data:badOption",
                     &format!("Unsupported option '{s}'."),
                 ));
             }
@@ -301,14 +301,14 @@ fn percentile_impl(args: &[Value], divide_by_100: bool) -> Result<Vec<Value>, Ev
     for &pv in p.as_slice() {
         if !pv.is_finite() {
             return Err(user_err(
-                "MATLAB:data:badInput",
+                "RUSTLAB:data:badInput",
                 "Percentile/quantile values must be finite.",
             ));
         }
         let q = if divide_by_100 {
             if !(0.0..=100.0).contains(&pv) {
                 return Err(user_err(
-                    "MATLAB:data:badInput",
+                    "RUSTLAB:data:badInput",
                     "Percentile values must be in [0, 100].",
                 ));
             }
@@ -316,7 +316,7 @@ fn percentile_impl(args: &[Value], divide_by_100: bool) -> Result<Vec<Value>, Ev
         } else {
             if !(0.0..=1.0).contains(&pv) {
                 return Err(user_err(
-                    "MATLAB:data:badInput",
+                    "RUSTLAB:data:badInput",
                     "Quantile values must be in [0, 1].",
                 ));
             }
@@ -367,7 +367,7 @@ fn covariance(da: &DenseArray<f64>) -> Result<Value, EvalError> {
     let shape = da.shape();
     if shape.len() != 2 {
         return Err(user_err(
-            "MATLAB:data:badInput",
+            "RUSTLAB:data:badInput",
             "cov requires a 2-D numeric array.",
         ));
     }
@@ -423,7 +423,7 @@ pub fn cov(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError> {
         let y = get_da(&args[1])?;
         if x.numel() != y.numel() {
             return Err(user_err(
-                "MATLAB:data:badInput",
+                "RUSTLAB:data:badInput",
                 "cov(X,Y) requires X and Y to have the same number of elements.",
             ));
         }
@@ -473,7 +473,12 @@ pub fn corrcoef(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError
     let cov_val = covariance(&da)?;
     let cov_arr = match cov_val {
         Value::Double(a) => a,
-        _ => return Err(user_err("MATLAB:data:badInput", "cov returned non-numeric")),
+        _ => {
+            return Err(user_err(
+                "RUSTLAB:data:badInput",
+                "cov returned non-numeric",
+            ))
+        }
     };
     let n = shape[1];
     let mut r = vec![0.0; n * n];
@@ -533,7 +538,7 @@ pub fn histcounts(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalErr
     };
     if edges.len() < 2 {
         return Err(user_err(
-            "MATLAB:data:badInput",
+            "RUSTLAB:data:badInput",
             "histcounts edges must contain at least two values.",
         ));
     }
@@ -542,7 +547,7 @@ pub fn histcounts(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalErr
         .any(|w| w[0] >= w[1] || w[0].is_nan() || w[1].is_nan())
     {
         return Err(user_err(
-            "MATLAB:data:badInput",
+            "RUSTLAB:data:badInput",
             "histcounts edges must be strictly increasing.",
         ));
     }
@@ -570,13 +575,13 @@ pub fn histcounts(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalErr
 fn parse_window(v: &Value) -> Result<usize, EvalError> {
     let x = v.as_scalar_f64().map_err(|e| {
         user_err(
-            "MATLAB:data:badInput",
+            "RUSTLAB:data:badInput",
             &format!("Window length must be a positive integer scalar: {e}"),
         )
     })?;
     if !x.is_finite() || x < 1.0 || x.fract() != 0.0 {
         return Err(user_err(
-            "MATLAB:data:badInput",
+            "RUSTLAB:data:badInput",
             "Window length must be a positive integer scalar.",
         ));
     }
@@ -594,13 +599,39 @@ fn movmean_slice(vals: &[f64], k: usize, omit: bool) -> Vec<f64> {
     if len == 0 {
         return Vec::new();
     }
+    let left = (k - 1) / 2;
+    let right = k.saturating_sub(1) - left;
     let mut out = Vec::with_capacity(len);
-    let (first_a, first_b) = window_bounds(0, len, k);
+
+    let has_nan = vals.iter().any(|x| x.is_nan());
+    if !has_nan && len >= k {
+        let (mut cur_a, mut cur_b) = (0, right);
+        let mut running_sum: f64 = vals[..=right].iter().sum();
+        out.push(running_sum / (cur_b + 1) as f64);
+
+        for i in 1..len {
+            let new_a = i.saturating_sub(left);
+            let new_b = (i + right).min(len - 1);
+            while cur_a < new_a {
+                running_sum -= vals[cur_a];
+                cur_a += 1;
+            }
+            while cur_b < new_b {
+                cur_b += 1;
+                running_sum += vals[cur_b];
+            }
+            let count = (cur_b - cur_a + 1) as f64;
+            out.push(running_sum / count);
+        }
+        return out;
+    }
+
+    let (mut cur_a, mut cur_b) = window_bounds(0, len, k);
     let mut running_sum = 0.0f64;
     let mut valid_count = 0usize;
     let mut nan_count = 0usize;
 
-    for &v in &vals[first_a..=first_b] {
+    for &v in &vals[cur_a..=cur_b] {
         if v.is_nan() {
             nan_count += 1;
         } else {
@@ -608,8 +639,6 @@ fn movmean_slice(vals: &[f64], k: usize, omit: bool) -> Vec<f64> {
             valid_count += 1;
         }
     }
-    let mut cur_a = first_a;
-    let mut cur_b = first_b;
 
     let res0 = if (!omit && nan_count > 0) || valid_count == 0 {
         f64::NAN
@@ -619,7 +648,8 @@ fn movmean_slice(vals: &[f64], k: usize, omit: bool) -> Vec<f64> {
     out.push(res0);
 
     for i in 1..len {
-        let (new_a, new_b) = window_bounds(i, len, k);
+        let new_a = i.saturating_sub(left);
+        let new_b = (i + right).min(len - 1);
         while cur_a < new_a {
             let v = vals[cur_a];
             if v.is_nan() {
@@ -804,7 +834,7 @@ pub fn sortrows(args: &[Value], nargout: usize) -> Result<Vec<Value>, EvalError>
     let shape = da.shape();
     if shape.len() != 2 {
         return Err(user_err(
-            "MATLAB:data:badInput",
+            "RUSTLAB:data:badInput",
             "sortrows requires a 2-D numeric array.",
         ));
     }
@@ -818,14 +848,14 @@ pub fn sortrows(args: &[Value], nargout: usize) -> Result<Vec<Value>, EvalError>
         for &c in k.as_slice() {
             if c == 0.0 || c.fract() != 0.0 {
                 return Err(user_err(
-                    "MATLAB:data:badInput",
+                    "RUSTLAB:data:badInput",
                     "sortrows column indices must be nonzero integers.",
                 ));
             }
             let idx = c.abs() as usize;
             if idx > cols {
                 return Err(user_err(
-                    "MATLAB:data:badInput",
+                    "RUSTLAB:data:badInput",
                     "sortrows column index exceeds the number of columns.",
                 ));
             }
@@ -890,7 +920,7 @@ pub fn unique(args: &[Value], nargout: usize) -> Result<Vec<Value>, EvalError> {
     let shape = da.shape();
     if shape.len() != 2 {
         return Err(user_err(
-            "MATLAB:data:badInput",
+            "RUSTLAB:data:badInput",
             "unique requires a 2-D numeric array.",
         ));
     }
@@ -1035,7 +1065,7 @@ pub fn var_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError> 
                 omit = false;
             } else {
                 return Err(user_err(
-                    "MATLAB:data:badOption",
+                    "RUSTLAB:data:badOption",
                     &format!("Unsupported option '{s}'."),
                 ));
             }
@@ -1043,7 +1073,7 @@ pub fn var_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError> 
             if !seen_flag {
                 let fl = v.as_scalar_f64().map_err(|e| {
                     user_err(
-                        "MATLAB:data:badFlag",
+                        "RUSTLAB:data:badFlag",
                         &format!("Normalization flag must be 0 or 1: {e}"),
                     )
                 })?;
@@ -1053,7 +1083,7 @@ pub fn var_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError> 
                     flag = 1;
                 } else {
                     return Err(user_err(
-                        "MATLAB:data:badFlag",
+                        "RUSTLAB:data:badFlag",
                         "Normalization flag must be 0 or 1.",
                     ));
                 }

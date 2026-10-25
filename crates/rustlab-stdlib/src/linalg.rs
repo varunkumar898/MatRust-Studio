@@ -72,19 +72,23 @@ pub fn mldivide_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalEr
     // Build augmented matrix [A | B] of shape [N, N + n_rhs] in row-major for convenient row ops
     let total_cols = n + n_rhs;
     let mut aug = vec![0.0; n * total_cols];
-
-    for r in 0..n {
-        for c in 0..n {
-            aug[r * total_cols + c] = *a_arr.get_subscript(&[r + 1, c + 1])?;
+    let a_slice = a_arr.as_slice();
+    let b_slice = b_arr.as_slice();
+    for c in 0..n {
+        let a_col = c * n;
+        for r in 0..n {
+            aug[r * total_cols + c] = a_slice[a_col + r];
         }
-        for c in 0..n_rhs {
-            aug[r * total_cols + n + c] = *b_arr.get_subscript(&[r + 1, c + 1])?;
+    }
+    for c in 0..n_rhs {
+        let b_col = c * n;
+        for r in 0..n {
+            aug[r * total_cols + n + c] = b_slice[b_col + r];
         }
     }
 
-    // Forward and back elimination
+    // Forward elimination with partial row pivoting
     for col in 0..n {
-        // Find pivot
         let mut pivot_row = col;
         let mut max_val = aug[col * total_cols + col].abs();
         for r in (col + 1)..n {
@@ -102,38 +106,48 @@ pub fn mldivide_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalEr
             return Ok(vec![Value::Double(inf_matrix)]);
         }
 
-        // Swap rows
         if pivot_row != col {
-            for c in 0..total_cols {
-                aug.swap(col * total_cols + c, pivot_row * total_cols + c);
-            }
+            let (r1, r2) = if col < pivot_row {
+                let (first, second) = aug.split_at_mut(pivot_row * total_cols);
+                (
+                    &mut first[col * total_cols..col * total_cols + total_cols],
+                    &mut second[..total_cols],
+                )
+            } else {
+                let (first, second) = aug.split_at_mut(col * total_cols);
+                (
+                    &mut second[..total_cols],
+                    &mut first[pivot_row * total_cols..pivot_row * total_cols + total_cols],
+                )
+            };
+            r1.swap_with_slice(r2);
         }
 
-        // Normalize pivot row
         let pivot = aug[col * total_cols + col];
-        for c in col..total_cols {
-            aug[col * total_cols + c] /= pivot;
-        }
-
-        // Eliminate column entries in other rows
-        for r in 0..n {
-            if r != col {
-                let factor = aug[r * total_cols + col];
-                if factor != 0.0 {
-                    for c in col..total_cols {
-                        let sub = factor * aug[col * total_cols + c];
-                        aug[r * total_cols + c] -= sub;
-                    }
+        let pivot_row_start = col * total_cols;
+        for r in (col + 1)..n {
+            let r_row_start = r * total_cols;
+            let factor = aug[r_row_start + col] / pivot;
+            aug[r_row_start + col] = 0.0;
+            if factor != 0.0 {
+                for c in (col + 1)..total_cols {
+                    aug[r_row_start + c] -= factor * aug[pivot_row_start + c];
                 }
             }
         }
     }
 
-    // Extract solution X [N, n_rhs] in col-major
+    // Backward substitution
     let mut x_data = vec![0.0; n * n_rhs];
-    for c in 0..n_rhs {
-        for r in 0..n {
-            x_data[r + c * n] = aug[r * total_cols + n + c];
+    for rhs in 0..n_rhs {
+        let x_col = rhs * n;
+        for r in (0..n).rev() {
+            let r_start = r * total_cols;
+            let mut sum = aug[r_start + n + rhs];
+            for c in (r + 1)..n {
+                sum -= aug[r_start + c] * x_data[x_col + c];
+            }
+            x_data[x_col + r] = sum / aug[r_start + r];
         }
     }
 

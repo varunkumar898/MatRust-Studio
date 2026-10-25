@@ -21,6 +21,8 @@ All reverse engineering, disassembly, symbol inspection, and binary layout verif
 | `rustlab.exe` (A3.1 pre-fix build, historical) | Windows ARM64 PE (`coff-arm64`) | SHA-256 `3CA172EC8381C05D1E7D0E3F029109CFD580DDEE7A8F206F49350EBB2A5322A8` |
 | `rustlab.exe` (A3.1.2 build, historical; 5,165,568 bytes) | Windows ARM64 PE (`coff-arm64`) | MD5 `b43726a59f07262b8a6a7fa740b5a826`, SHA-256 `fff28580223c39f28785c7a5130152f9293a0d17a6ca28f9aaa3bcfc73ae40e6` |
 | `rustlab.exe` (A3.1.4 final release build: native Jacobi SVD, num2str multi-row alignment, faer-off parity; 5,177,344 bytes) | Windows ARM64 PE (`coff-arm64`) | MD5 `A59792C8864B55C8BAC1978C9B2839B0`, SHA-256 `EA753B792DEDDDC5941B8DCEC2D4161977F24FBC2DEBF75615BF0601F959588C` |
+| `rustlab.exe` (B2.1 release build: rustlab-data crate, clean-room stats; 5,393,408 bytes) | Windows ARM64 PE (`coff-arm64`) | SHA-256 `8fd8d28df96d1f36e9dfbd82c4566a26ee00cfee05add359cfb31fe191ff58d3` |
+| `rustlab.exe` (G0 closeout build: LU backsub, core omitnan, RUSTLAB IDs; 5,400,064 bytes) | Windows ARM64 PE (`coff-arm64`) | SHA-256 `683ea9cbc8bd2b025d93f1ead5281e3a36fbae0c01eae57365ff0681ed6be770` |
 | `scripts/validate_mat_v7.py` | Python 3 Reference Generator | SHA-256 `45012799761F7DC6D4F9F674F46C73D9CDFC08A5598234E1ACA3ECBFBE000538` |
 | `crates/rustlab-matio/tests/scipy_mat_tests.rs` (hardened 40-fixture interop test with clippy hygiene) | Rust Integration Test Harness | SHA-256 `C002ADD8AD58A93CBBABAD69F22656E3A15531B1F22E9E4D1C2BDE5ACA1EFD61` |
 | `crates/rustlab-matio/tests/data/suite_all_types_compressed.mat` | SciPy Level 5 MAT (Zlib) | SHA-256 `436C67A270DA598D22F2A4AEF4649A7D6101C61B5B8933A2486E5913BB335C13` |
@@ -75,3 +77,16 @@ All reverse engineering, disassembly, symbol inspection, and binary layout verif
 | 2026-10-25 13:47:22 | `call_mcp_tool` (`rea::open_binary`) | `target/release/rustlab.exe` (SHA-256 `8FD8D28D...`, 5,393,408 bytes) | `{"path": "C:\\Users\\varun\\.antigravity\\rustlab\\target\\release\\rustlab.exe"}` | **SUCCESS**: REA server process started cleanly. Binary identified as format `pe`, kind `executable`, architecture `arm64`, sha256 `8fd8d28df96d1f36e9dfbd82c4566a26ee00cfee05add359cfb31fe191ff58d3`. |
 | 2026-10-25 13:47:38 | `call_mcp_tool` (`rea::binary_session`) | `target/release/rustlab.exe` | `{}` | **SUCCESS**: Active session confirmed (`"open": true`). Capabilities reported: `rea-artifact-graph` and `rea-dotnet-static` available; `ghidra` provider unavailable (`reason: "REA Windows native controls require a Windows x64 host"`); `hopper` unavailable (`platform: win32`). |
 | 2026-10-25 13:48:03 | `call_mcp_tool` (`rea::close_binary`) | `target/release/rustlab.exe` | `{}` | **SUCCESS**: Target closed cleanly (`"result": null`). Ephemeral resources released. |
+
+---
+
+### G0 Closeout REA Tool Call Log
+
+| Timestamp (UTC) | Tool / Method | Target Binary & Checksum | Parameters & Request | Outcome & Observations |
+| :--- | :--- | :--- | :--- | :--- |
+| 2026-10-25 14:44:46 | `call_mcp_tool` (`rea::open_binary`) | `target/release/rustlab.exe` (SHA-256 `683EA9CB...`, 5,400,064 bytes) | `{"path": "C:\\Users\\varun\\.antigravity\\rustlab\\target\\release\\rustlab.exe"}` | **SUCCESS**: REA server validated target. Format: `pe`, kind: `executable`, architecture: `arm64`, sha256: `683ea9cbc8bd2b025d93f1ead5281e3a36fbae0c01eae57365ff0681ed6be770`. |
+| 2026-10-25 14:45:04 | `call_mcp_tool` (`rea::binary_session`) | `target/release/rustlab.exe` | `{}` | **SUCCESS**: Active session confirmed (`"open": true`). Capabilities: `rea-artifact-graph` and `rea-dotnet-static` available; `ghidra` provider unavailable on Windows ARM64 host. |
+| 2026-10-25 14:45:22 | `call_mcp_tool` (`rea::close_binary`) | `target/release/rustlab.exe` | `{}` | **SUCCESS**: Target closed cleanly (`"result": null`). Ephemeral resources released. |
+| 2026-10-25 14:45:41 | `llvm-objdump.exe` | `target/release/rustlab.exe` | `-d --start-address=0x1401a2b74 --stop-address=0x1401a2b9c` | **NEON Vector Loop Verified**: 4x unrolled `fadd v0.2d, v1.2d, v0.2d` and `fadd v1.2d, v2.2d, v3.2d` with paired `ldp q` loads and `stp q` stores. Upfront shape and length gates eliminate all interior bounds checks. |
+| 2026-10-25 14:46:08 | `llvm-objdump.exe` | `target/release/rustlab.exe` | `-d --start-address=0x140159db8 --stop-address=0x140159dec` | **Vectorized Statistics Loop Verified**: `movmean` and `var_fn` inner loop vectorized with dual `fsub v4.2d` / `fsub v5.2d` and `fmul v4.2d` in ARMv8 128-bit NEON vector registers. |
+

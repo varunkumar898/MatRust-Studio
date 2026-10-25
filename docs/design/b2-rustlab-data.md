@@ -46,7 +46,7 @@ crates/
         └── b2_csv.rs       # criterion: 1,000,000-row read/write
 ```
 
-Dependencies: `rustlab-math`, `rustlab-eval`, `rustlab-parse` (for `Span`), and `csv = "1.3"`.
+Dependencies: `rustlab-math`, `rustlab-eval`, `rustlab-parse` (for `Span`), and `csv = "1.4.0"`.
 `rustlab-data` must not depend on `rustlab-stdlib` (no cycle); `rustlab-stdlib` depends on it
 optionally.
 
@@ -145,11 +145,14 @@ No GPL/copyleft code is introduced. The dependency and its transitive crates are
 
 Use the existing interpreter error channel (`EvalError::UserError`) with these new identifiers:
 
-- `MATLAB:data:badInput` — argument is not numeric / not 2-D where required.
-- `MATLAB:data:badDim` — dimension argument is not a positive integer scalar.
-- `MATLAB:data:badFlag` — normalization flag is not 0 or 1.
-- `MATLAB:data:badOption` — unknown name-value option or malformed option value.
-- `MATLAB:data:csvRead` — file open/parse/ragged-row error (message includes the line number).
-- `MATLAB:data:csvWrite` — file create/write error.
+- `RUSTLAB:data:badInput` — argument is not numeric / not 2-D where required.
+- `RUSTLAB:data:badDim` — dimension argument is not a positive integer scalar.
+- `RUSTLAB:data:badFlag` — normalization flag is not 0 or 1.
+- `RUSTLAB:data:badOption` — unknown name-value option or malformed option value.
+- `RUSTLAB:data:badDelimiter` — delimiter must be a single ASCII character.
+- `RUSTLAB:data:missingOptionValue` — option value missing.
+- `RUSTLAB:data:badNumHeaderLines` — invalid NumHeaderLines value.
+- `RUSTLAB:readmatrix:badPath` / `RUSTLAB:readmatrix:fileNotFound` / `RUSTLAB:readmatrix:raggedData` — CSV read errors.
+- `RUSTLAB:writematrix:createFailed` / `RUSTLAB:writematrix:writeFailed` — CSV write errors.
 
 No `unwrap`/`expect`/`panic` in library code; tests may use them.

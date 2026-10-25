@@ -65,16 +65,16 @@ and accept an optional `dim` where MATLAB does. `'omitnan'` is a case-insensitiv
 | `mode(X [, dim] [, 'omitnan'])` | Most frequent value; **smallest value on ties**. |
 | `var(X [, flag] [, dim] [, 'omitnan'])` | Variance; `flag = 0` (default) normalizes by `N-1`, `flag = 1` by `N`. |
 | `std(X [, flag] [, dim] [, 'omitnan'])` | Square root of `var` with the same flag/dim rules. |
-| `prctile(X, p)` / `quantile(X, p)` | Percentile/quantile with linear interpolation between adjacent order statistics: `h = (N-1)*q + 1`, `Q = x_floor(h) + (h-floor(h))*(x_ceil(h)-x_floor(h))`, `q = p/100` for `prctile`. Source: <https://www.mathworks.com/help/matlab/ref/quantile.html>; exact method is **unverified** on that page. |
+| `prctile(X, p)` / `quantile(X, p)` | Percentile/quantile with piecewise linear interpolation through `(i - 0.5)/N`, i.e. position `pos = q * N + 0.5`, clamped to ends `[x_1, x_N]`. Optional `'method'` parameter supports `'numpy'` (`h = (N-1)*q + 1`). Citations: MathWorks `prctile` / `quantile`. |
 | `cov(X)` / `cov(X, Y)` | Covariance matrix with `N-1` normalization; columns are variables, rows observations. Two-vector form returns the scalar covariance. |
 | `corrcoef(X)` | Correlation matrix from `cov`; diagonal is 1; constant columns produce `NaN`. |
 | `histcounts(X [, edges])` | Bin counts; supplied edges are used verbatim; without edges a deterministic nice-step binning rule is used (**unverified** vs MATLAB's automatic rule). |
-| `movmean(X, k)` | Centered moving mean over `k` samples; endpoints shrink the window. |
+| `movmean(X, k)` | Centered moving mean over `k` samples ($O(N)$ sliding window); endpoints shrink the window. |
 | `movmedian(X, k)` | Centered moving median; endpoints shrink the window. |
 | `cummax(X [, dim])` / `cummin(X [, dim])` | Cumulative maximum/minimum along `dim`. |
-| `zscore(X)` | `(X - mean(X)) / std(X, 0)` along the first non-singleton dimension. |
+| `zscore(X)` | `(X - mean(X)) / std(X, 0)` along the first non-singleton dimension ($O(N)$ 3-pass fast path). |
 | `sortrows(A [, cols])` | Lexicographic row sort; negative column indices mean descending; optional second output is the row permutation. |
-| `unique(A)` | Sorted unique values; with `[C, ia, ic]`, `ia` is the first-occurrence index and `ic` maps original elements to `C`. |
+| `unique(A)` | Sorted unique values; preserves row vector orientation `1 x N -> 1 x M` for row inputs. With `[C, ia, ic]`, `ia` is the first-occurrence index and `ic` maps original elements to `C`. |
 | `'omitnan'` for `sum`, `mean`, `min`, `max`, `median`, `std`, `var` | Data-feature wrappers preserve the existing stdlib default behaviour and only change the NaN path. `min`/`max` retain index outputs. |
 
 Edge cases required by the test plan: empty input, NaN, Inf, N-D with `dim`, integer classes, and
@@ -105,7 +105,7 @@ diagonal = 1.
 
 ### `csv` crate licence / maintenance
 
-`csv` is dual-licensed **MIT / Unlicense**, maintained by BurntSushi, and is the standard streaming
+`csv` is dual-licensed **MIT / Apache-2.0** (version `1.4.0`), maintained by BurntSushi, and is the standard streaming
 CSV parser in the Rust ecosystem. It is a normal (non-optional) dependency of `rustlab-data` only.
 No GPL/copyleft code is introduced. The dependency and its transitive crates are checked with
 `cargo deny check licenses` (see `deny.toml`).

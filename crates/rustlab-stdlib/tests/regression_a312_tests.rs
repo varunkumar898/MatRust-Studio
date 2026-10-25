@@ -79,11 +79,12 @@ fn test_scientific_notation_threshold_rule_cited_unverified() {
     //  MATLAB applies a common scale factor for the short and long formats."
     // URL: https://www.mathworks.com/help/matlab/ref/format.html
 
-    // Value in [0.001, 1000) displays in standard fixed-point short format (4 decimals)
-    assert_eq!(rendered("x = 0.001"), "x =\n\n    0.0010\n");
+    // Value in [0.01, 1000) displays in standard fixed-point short format (4 decimals)
+    assert_eq!(rendered("x = 0.01"), "x =\n\n    0.0100\n");
     assert_eq!(rendered("x = 999.9"), "x =\n\n    999.9000\n");
 
-    // Value < 0.001 switches to signed zero-padded 2-digit exponent scientific notation
+    // Value < 0.01 switches to signed zero-padded 2-digit exponent scientific notation (B2.1.1)
+    assert_eq!(rendered("x = 0.001"), "x =\n\n   1.0000e-03\n");
     assert_eq!(rendered("x = 0.00099"), "x =\n\n   9.9000e-04\n");
     assert_eq!(rendered("x = 1e-16"), "x =\n\n   1.0000e-16\n");
 
@@ -106,24 +107,26 @@ fn scalar_integer_display_goldens() {
 
 #[test]
 fn non_integer_class_display_goldens_unverified() {
-    // Unverified scalar boundary rules: 1234.5678 is in [1e3,1e4) and prints
-    // scientific (1.2346e+03); 0.001 is exactly the lower boundary and stays
-    // fixed; 0.0012 is fixed. Only the matrix half of the MathWorks `format`
-    // threshold quote is cited.
+    // Scalar boundary rules (B2.1.1): 1234.5678 is in [1e3,1e4) and prints
+    // scientific (1.2346e+03); 0.001 and 0.0012 print in e-notation.
     assert_eq!(rendered("x = 1e-16"), "x =\n\n   1.0000e-16\n");
     assert_eq!(rendered("x = 5e-4"), "x =\n\n   5.0000e-04\n");
     assert_eq!(rendered("x = 1234.5678"), "x =\n\n   1.2346e+03\n");
-    assert_eq!(rendered("x = 0.001"), "x =\n\n    0.0010\n");
-    assert_eq!(rendered("x = 0.0012"), "x =\n\n    0.0012\n");
+    assert_eq!(rendered("x = 0.001"), "x =\n\n   1.0000e-03\n");
+    assert_eq!(rendered("x = 0.0012"), "x =\n\n   1.2000e-03\n");
+    assert_eq!(rendered("x = 0.01"), "x =\n\n    0.0100\n");
     assert_eq!(rendered("x = 12345.678"), "x =\n\n   1.2346e+04\n");
 }
 
 #[test]
 fn matrix_display_common_scale_boundary_unverified() {
-    // `format` cites "larger than 1000 or smaller than 0.001"; both boundaries
-    // are strict. [0.001 1000] therefore does NOT extract a common scale:
-    // 0.0010 stays fixed and 1000 keeps integer digits in a shared width.
-    assert_eq!(rendered("m = [0.001 1000]"), "m =\n\n    0.0010    1000\n");
+    // [0.001 1000] has max=1000 and dyn_range=1e6 < 1e9, so it extracts a common scale factor 1.0e+03 * (B2.1.1)
+    let s = rendered("m = [0.001 1000]");
+    assert!(s.contains("1.0e+03 *"), "must have scale factor: {s}");
+    assert!(
+        s.contains("0.0000") && s.contains("1.0000"),
+        "elements must be formatted with scale: {s}"
+    );
 }
 
 #[test]
@@ -160,10 +163,12 @@ fn test_num2str_noninteger_matrix_g_style_unverified() {
 
 #[test]
 fn matrix_display_parity_goldens_unverified() {
-    // [1e-16 1]: the scale decision comes from the WHOLE-matrix maximum. The max
-    // (1.0) is inside [1e-3, 1e4), so no multiplier is applied: the tiny cell
-    // clips to 0.0000 and BOTH columns share ONE width.
-    assert_eq!(rendered("m = [1e-16 1]"), "m =\n\n    0.0000       1\n");
+    // [1e-16 1]: extreme dynamic range (1e16 >= 1e9), each entry in e-notation (B2.1.1)
+    let s_extreme = rendered("m = [1e-16 1]");
+    assert!(
+        s_extreme.contains("1.0000e-16") && s_extreme.contains("1.0000e+00"),
+        "{s_extreme}"
+    );
     // [1 1000000]: integer magnitudes always print full digits in one width.
     assert_eq!(rendered("m = [1 1000000]"), "m =\n\n          1  1000000\n");
     // [12345.678 1]: mixed magnitudes get ONE common scale factor for the whole
@@ -182,9 +187,9 @@ fn matrix_display_width_is_uniform_across_rows() {
     assert_eq!(rows.len(), 6, "unexpected rendering: {out:?}");
     assert_eq!(rows[2], "  1.0e+05 *", "whole-matrix common scale header");
     // Exactly one shared column width: both data rows carry the same length, and
-    // the tiny clipped cells (0.0000) sit inside the same columns as raw ones.
+    // integer elements in non-integer matrices format with decimals (1.0000).
     assert_eq!(rows[4].chars().count(), rows[5].chars().count());
-    assert_eq!(rows[4], "     0.0000        1");
+    assert_eq!(rows[4], "     0.0000   1.0000");
     assert_eq!(rows[5], "    -0.0000   0.0000");
 }
 

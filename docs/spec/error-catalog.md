@@ -1,14 +1,14 @@
-# RustLab Error Catalog Specification
+# RustLab Error and Warning Catalog Specification (B2.1.1)
 
-This catalog documents all runtime, mathematical, parsing, and standard library error identifiers in
-RustLab, along with their exact messages and upstream references (MathWorks MATLAB Documentation or
-GNU Octave Manual).
+This catalog documents all runtime, mathematical, parsing, standard library error identifiers, and
+diagnostic warnings in RustLab, along with their exact messages and upstream references (MathWorks
+MATLAB Documentation or GNU Octave Manual).
 
-**Verification policy (A3.1.5).** Every identifier below carries either a source URL or the literal
-word **unverified** in the *Verification* column. `unverified` means that no primary MathWorks page
-was found that prints the exact identifier string; the linked page documents the underlying rule or
-the closest public behaviour. A URL in the *Citation* column does not by itself prove the identifier
-string.
+**Verification policy (A3.1.5 / B2.1.1).** Every identifier below carries either a source URL or the
+literal word **unverified** in the *Verification* column. `unverified` means that no primary MathWorks
+page was found that prints the exact identifier string; the linked page documents the underlying rule
+or the closest public behaviour. A URL in the *Citation* column does not by itself prove the
+identifier string.
 
 **Integer-mismatch identifier, settled once (A3.1.5).** RustLab uses exactly one identifier:
 `MATLAB:integerTypeMismatch`. It is produced by `MathError::integer_class_mismatch()` and emitted by
@@ -55,7 +55,7 @@ integer-arithmetic rule below; the exact identifier string itself is **unverifie
 
 ---
 
-## 3. General Builtin & File I/O Errors (`rustlab-stdlib`)
+## 3. General Builtin & File I/O Errors (`rustlab-stdlib`, `rustlab-data`)
 
 | Identifier | Exact Message | Citation / Source URL | Verification |
 | :--- | :--- | :--- | :--- |
@@ -71,6 +71,11 @@ integer-arithmetic rule below; the exact identifier string itself is **unverifie
 | `MATLAB:save:ioError` | `Cannot write to MAT-file: {err}` | [MathWorks: save](https://www.mathworks.com/help/matlab/ref/save.html) | unverified |
 | `MATLAB:badFID` | `Invalid file identifier. Use fopen to generate a valid file identifier.` | [MathWorks: fclose](https://www.mathworks.com/help/matlab/ref/fclose.html) | unverified |
 | `MATLAB:mat2str:invalidInput` | `mat2str input must be a numeric matrix.` | [MathWorks: mat2str](https://www.mathworks.com/help/matlab/ref/mat2str.html) | unverified |
+| `MATLAB:readmatrix:fileNotFound` | `Failed to open file '{filename}': {err}` | [MathWorks: readmatrix](https://www.mathworks.com/help/matlab/ref/readmatrix.html) | unverified |
+| `MATLAB:readmatrix:raggedData` | `Row {line} has {found} fields, expected {expected}.` | [MathWorks: readmatrix](https://www.mathworks.com/help/matlab/ref/readmatrix.html) | unverified |
+| `MATLAB:readmatrix:badPath` | `Filename must be a character vector or string scalar.` | [MathWorks: readmatrix](https://www.mathworks.com/help/matlab/ref/readmatrix.html) | unverified |
+| `MATLAB:data:badInput` | `{fn_name} requires a 2-D numeric array.` / `Percentile/quantile values must be finite.` | [MathWorks: Statistics](https://www.mathworks.com/help/matlab/statistics.html) | unverified |
+| `MATLAB:data:badOption` | `Unsupported option '{name}'.` | [MathWorks: Statistics Options](https://www.mathworks.com/help/matlab/statistics.html) | unverified |
 | `MATLAB:error` | `{user_message}` | [MathWorks: error](https://www.mathworks.com/help/matlab/ref/error.html) | unverified |
 
 ---
@@ -84,3 +89,11 @@ integer-arithmetic rule below; the exact identifier string itself is **unverifie
 | `TooManyOutputs` | `Too many output arguments: function provides at most {expected}, requested {found}` | [MathWorks: nargout](https://www.mathworks.com/help/matlab/ref/nargout.html) | unverified |
 | `InvalidCondition` | `Invalid loop or branch condition` | [MathWorks: if](https://www.mathworks.com/help/matlab/ref/if.html) | unverified |
 | `ParseError` | `Parse error: unexpected token / syntax error` | No public source for RustLab's internal parser diagnostic | unverified |
+
+---
+
+## 5. System Diagnostic Warnings (`rustlab-stdlib::linalg`)
+
+| Warning Identifier | Exact Warning Message | Action Taken | Citation / Source URL | Verification |
+| :--- | :--- | :--- | :--- | :--- |
+| `MATLAB:singularMatrix` | `Warning: Matrix is singular to working precision.` | Warning printed to stderr; returns matrix of `Inf` values without halting execution. Applies to both `inv(A)` and `A \ b`. | [MathWorks: inv](https://www.mathworks.com/help/matlab/ref/inv.html)<br>[MathWorks: mldivide](https://www.mathworks.com/help/matlab/ref/mldivide.html) | verified (exact message text documented in MathWorks MATLAB references; identifier unverified) |

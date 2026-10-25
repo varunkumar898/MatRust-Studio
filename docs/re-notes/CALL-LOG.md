@@ -64,3 +64,14 @@ All reverse engineering, disassembly, symbol inspection, and binary layout verif
 | 2026-10-25 09:26:40 | `analyzeHeadless.bat` (Ghidra 12.2 PUBLIC headless) | `rustlab.exe` (A3.1.2 build, MD5 `b43726a59f07262b8a6a7fa740b5a826`) | `JAVA_HOME=C:\Users\varun\tools\jdk-25.0.5+8 analyzeHeadless C:\Users\varun\ghidra-projects rustlab-self -import C:\Users\varun\AppData\Local\Temp\opencode\rustlab-target\release\rustlab.exe -analysisTimeoutPerFile 900` | **R0.1 COMPLETE (durable)**: import of `/rustlab.exe` succeeded into project `rustlab-self` at `C:\Users\varun\ghidra-projects` (dot-free path). Auto-analysis **226 s** total; `REPORT: Analysis succeeded`, `REPORT: Save succeeded for: /rustlab.exe (rustlab-self:/rustlab.exe)`, `REPORT: Import succeeded`. Durable artifacts verified on disk: `C:\Users\varun\ghidra-projects\rustlab-self.gpr` + `rustlab-self.rep\{idata,user,versioned}\*`. Raw headless log retained at `C:\Users\varun\ghidra-projects\analyzeHeadless-rerun.log`. Symbol hashes noted immediately before `cargo clean`: `matrixmultiply` symbols kept dependency hash `CscBoqMynl0Po`; `rustlab_math` re-hashed to `CslKrIkFzBsmX`. |
 
 **Timestamp note:** entries prefixed `~` were reconstructed after the host-side wipe of temporary analysis directories; their UTC timestamps are sequencing-consistent within the 2026-10-25 session but approximate. Tool invocations and outcomes themselves are recorded verbatim. **Maintenance note (2026-10-25):** the earlier `09:23:46` row had been corrupted (backslash-escape mangling during a scripted append) and was reconstructed in this rewrite; the fresh-symbol `llvm-objdump` rows record the exact mangled names captured from the A3.1.2 binary immediately before `cargo clean`.
+
+
+---
+
+### B2.1.1 REA Tool Call Log
+
+| Timestamp (UTC) | Tool / Method | Target Binary & Checksum | Parameters & Request | Outcome & Observations |
+| :--- | :--- | :--- | :--- | :--- |
+| 2026-10-25 13:47:22 | `call_mcp_tool` (`rea::open_binary`) | `target/release/rustlab.exe` (SHA-256 `8FD8D28D...`, 5,393,408 bytes) | `{"path": "C:\\Users\\varun\\.antigravity\\rustlab\\target\\release\\rustlab.exe"}` | **SUCCESS**: REA server process started cleanly. Binary identified as format `pe`, kind `executable`, architecture `arm64`, sha256 `8fd8d28df96d1f36e9dfbd82c4566a26ee00cfee05add359cfb31fe191ff58d3`. |
+| 2026-10-25 13:47:38 | `call_mcp_tool` (`rea::binary_session`) | `target/release/rustlab.exe` | `{}` | **SUCCESS**: Active session confirmed (`"open": true`). Capabilities reported: `rea-artifact-graph` and `rea-dotnet-static` available; `ghidra` provider unavailable (`reason: "REA Windows native controls require a Windows x64 host"`); `hopper` unavailable (`platform: win32`). |
+| 2026-10-25 13:48:03 | `call_mcp_tool` (`rea::close_binary`) | `target/release/rustlab.exe` | `{}` | **SUCCESS**: Target closed cleanly (`"result": null`). Ephemeral resources released. |

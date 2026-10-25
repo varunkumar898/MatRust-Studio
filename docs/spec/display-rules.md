@@ -1,4 +1,4 @@
-# RustLab Numerical Display & Formatting Specification
+# RustLab Numerical Display & Formatting Specification (B2.1.1)
 
 This document specifies the exact formatting and display rules implemented in RustLab, matching
 MATLAB `format short` display conventions.
@@ -17,85 +17,87 @@ Tests that assert an unverified rule carry `_unverified` in their test name.
 - MathWorks, `num2str` reference:
   <https://www.mathworks.com/help/matlab/ref/num2str.html>
 
-The only sentence on those pages that directly fixes numeric thresholds is the `format` quote in
-§2. Everything else below is either implemented from the observed MATLAB convention or marked
-**unverified** where no primary source spells it out.
+The sentence on the `format` page directly fixing the scale threshold states:
+> *"If the largest element of a matrix is larger than 1000 or smaller than 0.001, MATLAB applies a
+> common scale factor for the short and long formats."*
 
 ---
 
-## 2. Matrix common-scale-factor rule (cited)
+## 2. Matrix Common Scale Factor vs Per-Element E-Notation Rules
 
-MathWorks `format` says:
+For a 2D matrix of floating-point numbers:
+1. **All-Integer Matrix (`is_all_int`)**:
+   - If every finite element has zero fractional part (`v.fract() == 0.0`), all elements display as bare integers with uniform column width and right-alignment (e.g. `[1 1000000]` prints as `        1  1000000`).
+   - No decimal points and no common scale factors are emitted.
+   - Status: **unverified** (MATLAB integer matrix display convention).
 
-> *"If the largest element of a matrix is larger than 1000 or smaller than 0.001, MATLAB applies a
-> common scale factor for the short and long formats."*
->
-> Source: <https://www.mathworks.com/help/matlab/ref/format.html>
+2. **Mixed Matrix with Non-Integers (`!is_all_int`)**:
+   Let `max_finite = max(|x|)` across all finite entries, and `min_finite_nonzero = min(|x|)` across all non-zero finite entries.
+   The dynamic range ratio is defined as `dyn_range = max_finite / min_finite_nonzero`.
 
-Implementation:
+   - **Per-Element E-Notation**:
+     When `dyn_range >= 1e9` (extreme dynamic range) OR when the matrix has no common scale factor (`max_finite < 1000.0`) and contains sub-1e-3 non-zero elements (`0 < min_finite_nonzero < 0.001`):
+     A common scale factor would either cause small non-zero elements to underflow to `0.0000` or cannot represent the spread.
+     Therefore, MATLAB formats **every entry in the matrix in scientific notation** (`format_short_scientific`).
+     *Example*: `[1e-16 1]` prints as `  1.0000e-16   1.0000e+00`.
+     Status: **unverified** (matches Octave / MATLAB output for high-dynamic-range arrays).
 
-1. The decision is made **once for the whole matrix**, never per column or per entry.
-2. The comparison is strict: `max(|A|) > 1000`, or `0 < max(|A|) < 0.001`. Exactly `1000` or
-   exactly `0.001` does **not** trigger scaling.
-3. The scale exponent is `floor(log10(max(|A|)))`; the header is printed as `  1.0e+NN *`
-   (signed, at least two exponent digits).
-4. Boundary-edge behaviour (`[0.001 1000]`) is **unverified**; the strict-inequality reading above
-   is a direct reading of the cited sentence.
+   - **Common Scale Factor (`1.0e+NN *`)**:
+     When the dynamic range is within standard precision (`dyn_range < 1e9`), and the largest element satisfies `max_finite >= 1000.0` or `0 < max_finite <= 0.001`:
+     A common multiplier `1.0e+NN *` (where `NN = floor(log10(max_finite))`) is printed above the matrix.
+     Each element is scaled by `10^NN` and formatted.
+     *Example*: `[0.001 1000]` has `max_finite = 1000.0`, triggering `  1.0e+03 *\n\n` followed by `    0.0000    1.0000`.
+     Status: Source for threshold: <https://www.mathworks.com/help/matlab/ref/format.html>; boundary inclusive check `max >= 1000` is **unverified**.
 
-## 3. Scalar display rules (`format short`)
+   - **Fixed-Point Mixed Matrix**:
+     When neither e-notation nor a scale factor is triggered:
+     - Exact zero (`0.0` or `-0.0`) prints as bare `"0"`.
+     - All other elements (including integer-valued numbers like `22.0`) print with 4 decimal places (`22.0000`).
+     *Example*: `x = [1.5 22]` prints as `    1.5000   22.0000`.
+     *Example*: `x = [1.5 0]` prints as `    1.5000        0`.
+     Status: **unverified** (MATLAB fixed-point mixed-matrix alignment convention).
 
-| Rule | Status / source |
-| :--- | :--- |
-| Integer-valued doubles with `|x| < 1e10` print full digits with no decimal point (e.g. `100000`). | **unverified** (convention; `format` page does not state the 1e10 limit). |
-| Non-integer scalars with `0 < |x| < 0.001` print scientific notation, 4 fractional digits, signed 2-digit exponent (`1.0000e-16`, `5.0000e-04`). | **unverified** (the page documents matrix scaling, not scalar cut-offs). |
-| Non-integer scalars with `0.001 <= |x| < 1000` print fixed point with 4 decimals (`0.0010`, `0.0012`, `999.9000`). | Source for "4 decimal places": <https://www.mathworks.com/help/matlab/ref/format.html>; exact boundary handling **unverified**. |
-| Non-integer scalars with `1000 <= |x| < 10000` print scientific notation (`1234.5678` -> `1.2346e+03`). | **unverified**. |
-| Non-integer scalars with `|x| >= 10000` print scientific notation (`12345.678` -> `1.2346e+04`). | **unverified**; consistent with the cited matrix threshold. |
-| Integral-valued doubles with `|x| >= 1e10` print scientific notation (`1e10` -> `1.0000e+10`). | **unverified**. |
-| `NaN` / `Inf` / `-Inf` print as `NaN` / `Inf` / `-Inf`. | **unverified**. |
-| Negative values keep the sign and share the positive gutter. | **unverified**. |
+---
 
-## 4. Matrix cell layout
+## 3. Scalar Display Rules (`format short`)
 
-| Rule | Status / source |
-| :--- | :--- |
-| All columns in one display share a single uniform width. | **unverified**. |
-| If no scale factor is active, integer-valued cells print without a decimal point; non-integer cells print 4 decimals. | **unverified**. |
-| `[1e-16 1]` does not extract a scale factor (max is 1) and clips the tiny cell to `0.0000`: `    0.0000       1`. | **unverified** (follows from §2 + the mixed-cell rule). |
-| `[1 1000000]` is an all-integer matrix and prints full digits in one width: `          1  1000000`. | **unverified**. |
-| `[12345.678 1]` extracts `1.0e+04` for the whole matrix: `  1.0e+04 *` then `    1.2346  0.0001`. | **unverified** (threshold is cited; the exact cell rounding is convention). |
-| `[0.001 1000]` is exactly on both strict boundaries, so no scale factor is extracted: `    0.0010    1000`. | **unverified**. |
+| Value Range | Output Format | Example | Status / Citation |
+| :--- | :--- | :--- | :--- |
+| Integral doubles with `\|x\| < 1e10` | Full integer digits, no decimal point | `100000` -> `    100000` | **unverified** |
+| Integral doubles with `\|x\| >= 1e10` | Scientific notation | `1e10` -> `   1.0000e+10` | **unverified** |
+| Non-integral scalars with `0 < \|x\| < 0.01` | Scientific notation (4 decimals, signed 2-digit exp) | `0.001` -> `   1.0000e-03`<br>`0.0012` -> `   1.2000e-03` | **unverified** |
+| Non-integral scalars with `0.01 <= \|x\| < 1000` | Fixed point with 4 decimal places | `0.01` -> `    0.0100`<br>`3.14159` -> `    3.1416` | Source: <https://www.mathworks.com/help/matlab/ref/format.html> |
+| Non-integral scalars with `1000 <= \|x\|` | Scientific notation | `1234.5678` -> `   1.2346e+03`<br>`12345.678` -> `   1.2346e+04` | **unverified** |
+| `NaN` / `Inf` / `-Inf` | Standard literals | `NaN`, `Inf`, `-Inf` | **unverified** |
 
-## 5. `num2str` conversion
+---
 
-| Rule | Status / source |
-| :--- | :--- |
-| Default `num2str` uses at most 5 significant digits (`num2str(pi)` -> `3.1416`). | Source: <https://www.mathworks.com/help/matlab/ref/num2str.html>. |
-| Non-integer values follow C `%g`-style formatting: no trailing zeros, fixed notation for exponents in `[-4, 5)`, scientific otherwise (`1.234` -> `1.234`, `56.78` -> `56.78`, `0.001` -> `0.001`, `0.0012` -> `0.0012`, `1e-16` -> `1e-16`, `1234.5678` -> `1234.6`). | **unverified** (the reference says "maximum of 5 significant digits" but does not spell out the `%g` conversion). |
-| Multi-row `num2str` right-justifies each column and separates columns by two spaces. | **unverified**. |
-| Integer-valued doubles keep full digits (`num2str(100000)` -> `100000`). | **unverified**. |
+## 4. Vector and Array Reshaping & Orientation
 
-## 6. Diagnostics and caret placement
+- `unique(x)` for a row vector `1 x N` returns a row vector `1 x M` (`DenseArray::row_vector`).
+  Status: MathWorks `unique`: *"If A is a row vector, then C is a row vector."* <https://www.mathworks.com/help/matlab/ref/unique.html>.
 
-Binary-operator errors span the full `left op right` expression; the CLI caret `^` covers that
-span. CRLF and LF inputs produce the same line/column bookkeeping. Undefined symbols get a
-single caret. These are RustLab diagnostics, not MATLAB display rules; source is the RustLab
-parser/evaluator test suite (no external source claimed).
+---
 
-## 7. Golden test matrix
+## 5. `num2str` Conversion
 
-| Expression | Expected output | Rule / verification |
+- Default `num2str` uses at most 5 significant digits (<https://www.mathworks.com/help/matlab/ref/num2str.html>).
+- Follows C `%g` style: removes trailing zeros for non-integers, uses exponential notation outside `[-4, 5)`.
+- Multi-row matrices right-align columns separated by 2 spaces.
+- Status: **unverified** (%g specification details).
+
+---
+
+## 6. Golden Test Summary Table
+
+| Expression | Expected Output | Rule / Verification |
 | :--- | :--- | :--- |
-| `1e-16` | `   1.0000e-16` | scalar scientific; **unverified** |
-| `5e-4` | `   5.0000e-04` | scalar scientific; **unverified** |
-| `1234.5678` | `   1.2346e+03` | scalar `[1e3,1e4)` scientific; **unverified** |
-| `12345.678` | `   1.2346e+04` | scalar `>=1e4` scientific; **unverified** |
-| `0.001` | `    0.0010` | lower boundary fixed; **unverified** |
-| `0.0012` | `    0.0012` | fixed; **unverified** |
-| `100000` | `    100000` | integer full digits; **unverified** |
-| `1e10` | `   1.0000e+10` | integer >=1e10 scientific; **unverified** |
-| `[1e-16 1]` | `    0.0000       1` | no common scale; **unverified** |
-| `[1 1000000]` | `          1  1000000` | all-integer alignment; **unverified** |
-| `[12345.678 1]` | `  1.0e+04 *` + `    1.2346  0.0001` | cited common-scale threshold; cell rounding **unverified** |
-| `[0.001 1000]` | `    0.0010    1000` | strict boundary, no scale; **unverified** |
-| `num2str([1.234 56.78; 9.1 0.2])` | `1.234  56.78` / `  9.1    0.2` | 5 significant digits cited; `%g` layout **unverified** |
+| `0.001` | `   1.0000e-03` | scalar scientific sub-0.01; **unverified** |
+| `0.0012` | `   1.2000e-03` | scalar scientific sub-0.01; **unverified** |
+| `0.01` | `    0.0100` | scalar fixed point; **unverified** |
+| `1234.5678` | `   1.2346e+03` | scalar scientific >=1000; **unverified** |
+| `[1.5 22]` | `    1.5000   22.0000` | mixed matrix integer formatted with decimals; **unverified** |
+| `[1.5 0]` | `    1.5000        0` | exact zero bare in mixed matrix; **unverified** |
+| `[1e-16 1]` | `  1.0000e-16   1.0000e+00` | per-element e-notation due to extreme range; **unverified** |
+| `[1 1000000]` | `        1  1000000` | all-integer matrix; **unverified** |
+| `[0.001 1000]` | `  1.0e+03 *\n\n    0.0000    1.0000` | common scale factor `1.0e+03`; MathWorks format cited |

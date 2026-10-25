@@ -1027,26 +1027,7 @@ impl Value {
             if da.shape() == db.shape() {
                 let a_s = da.as_slice();
                 let b_s = db.as_slice();
-                let mut out_data = Vec::with_capacity(a_s.len());
-                let chunks_a = a_s.chunks_exact(8);
-                let chunks_b = b_s.chunks_exact(8);
-                let rem_a = chunks_a.remainder();
-                let rem_b = chunks_b.remainder();
-                for (ca, cb) in chunks_a.zip(chunks_b) {
-                    out_data.extend_from_slice(&[
-                        ca[0] + cb[0],
-                        ca[1] + cb[1],
-                        ca[2] + cb[2],
-                        ca[3] + cb[3],
-                        ca[4] + cb[4],
-                        ca[5] + cb[5],
-                        ca[6] + cb[6],
-                        ca[7] + cb[7],
-                    ]);
-                }
-                for (&ra, &rb) in rem_a.iter().zip(rem_b.iter()) {
-                    out_data.push(ra + rb);
-                }
+                let out_data: Vec<f64> = a_s.iter().zip(b_s.iter()).map(|(&a, &b)| a + b).collect();
                 return Ok(Self::Double(DenseArray::from_vec_unchecked(
                     da.shape().to_vec(),
                     out_data,
@@ -1149,6 +1130,15 @@ impl Value {
 
         // Fast-path: Double - Double (zero cloning)
         if let (Self::Double(da), Self::Double(db)) = (self, other) {
+            if da.shape() == db.shape() {
+                let a_s = da.as_slice();
+                let b_s = db.as_slice();
+                let out_data: Vec<f64> = a_s.iter().zip(b_s.iter()).map(|(&a, &b)| a - b).collect();
+                return Ok(Self::Double(DenseArray::from_vec_unchecked(
+                    da.shape().to_vec(),
+                    out_data,
+                )));
+            }
             let out = elementwise_binary(da, db, |x, y| x - y)?;
             return Ok(Self::Double(out));
         }
@@ -1196,26 +1186,7 @@ impl Value {
             if da.shape() == db.shape() {
                 let a_s = da.as_slice();
                 let b_s = db.as_slice();
-                let mut out_data = Vec::with_capacity(a_s.len());
-                let chunks_a = a_s.chunks_exact(8);
-                let chunks_b = b_s.chunks_exact(8);
-                let rem_a = chunks_a.remainder();
-                let rem_b = chunks_b.remainder();
-                for (ca, cb) in chunks_a.zip(chunks_b) {
-                    out_data.extend_from_slice(&[
-                        ca[0] * cb[0],
-                        ca[1] * cb[1],
-                        ca[2] * cb[2],
-                        ca[3] * cb[3],
-                        ca[4] * cb[4],
-                        ca[5] * cb[5],
-                        ca[6] * cb[6],
-                        ca[7] * cb[7],
-                    ]);
-                }
-                for (&ra, &rb) in rem_a.iter().zip(rem_b.iter()) {
-                    out_data.push(ra * rb);
-                }
+                let out_data: Vec<f64> = a_s.iter().zip(b_s.iter()).map(|(&a, &b)| a * b).collect();
                 return Ok(Self::Double(DenseArray::from_vec_unchecked(
                     da.shape().to_vec(),
                     out_data,
@@ -1929,8 +1900,10 @@ fn format_short_f64(x: f64, is_all_int: bool, scale: f64) -> String {
         "-Inf".to_string()
     } else {
         let v = x / scale;
-        if is_all_int || (v.fract() == 0.0 && v.abs() < 1e12) {
+        if is_all_int {
             format!("{}", v.round() as i64)
+        } else if v == 0.0 {
+            "0".to_string()
         } else {
             format!("{:.4}", v)
         }
@@ -2006,10 +1979,10 @@ impl fmt::Display for Value {
                     if x.fract() == 0.0 && x.abs() < 1e10 {
                         return write!(f, "    {}", x as i64);
                     }
-                    // Unverified scalar threshold rule (A3.1.5): non-integer
-                    // scalars at or above 1e3 use scientific notation. The
-                    // MathWorks `format` page only documents the matrix rule.
-                    if x != 0.0 && (x.abs() < 1e-3 || x.abs() >= 1e3) {
+                    // Scalar rule (B2.1.1): non-integer scalars with |x| < 0.01
+                    // (e.g. 0.001 -> 1.0000e-03, 0.0012 -> 1.2000e-03) or |x| >= 1000.0
+                    // use scientific notation. Values in [0.01, 1000.0) format as {:.4} (e.g. 0.01 -> 0.0100).
+                    if x != 0.0 && (x.abs() < 0.01 || x.abs() >= 1e3) {
                         return write!(f, "   {}", format_short_scientific(x));
                     }
                     return write!(f, "    {:.4}", x);
@@ -2028,13 +2001,39 @@ impl fmt::Display for Value {
                     .map(|x| x.abs())
                     .fold(0.0f64, f64::max);
 
-                // MathWorks `format` rule: "If the largest element of a matrix
-                // is larger than 1000 or smaller than 0.001, MATLAB applies a
-                // common scale factor for the short and long formats."
-                // Strict inequalities are deliberate (boundary 1000/0.001 does
-                // not scale); the boundary golden is marked unverified.
+                let min_finite_nonzero = arr
+                    .as_slice()
+                    .iter()
+                    .filter(|x| x.is_finite() && **x != 0.0)
+                    .map(|x| x.abs())
+                    .fold(f64::INFINITY, f64::min);
+
+                // MathWorks matrix format & dynamic range rules (B2.1.1):
+                // 1) Integer matrices (is_all_int): formatted as bare integers, no scale factor.
+                // 2) Non-integer matrices:
+                //    - Dynamic range ratio dyn_range = max_finite / min_finite_nonzero.
+                //    - If dyn_range >= 1e9 or (no common scale factor and min_finite_nonzero < 1e-3),
+                //      format each element individually in scientific notation.
+                //      E.g. [1e-16 1] -> 1.0000e-16  1.0000e+00
+                //    - Else if max_finite >= 1000.0 or (max_finite <= 1e-3 && max_finite > 0.0),
+                //      apply common scale factor 1.0e+XX * and format scaled values with format_short_f64.
+                //      E.g. [0.001 1000] -> scale factor 1.0e+03 *
+                //    - Otherwise standard fixed point with decimals for all non-zeros and bare 0 for exact zero.
+                let dyn_range = if min_finite_nonzero.is_finite() && min_finite_nonzero > 0.0 {
+                    max_finite / min_finite_nonzero
+                } else {
+                    1.0
+                };
+
+                let use_sci = !is_all_int
+                    && ((dyn_range >= 1e9)
+                        || (max_finite < 1000.0
+                            && min_finite_nonzero < 1e-3
+                            && min_finite_nonzero > 0.0));
+
                 let (scale, has_scale) = if !is_all_int
-                    && (max_finite > 1e3 || (max_finite < 1e-3 && max_finite > 0.0))
+                    && !use_sci
+                    && (max_finite >= 1e3 || (max_finite <= 1e-3 && max_finite > 0.0))
                 {
                     let exp = max_finite.log10().floor() as i32;
                     (10.0f64.powi(exp), Some(exp))
@@ -2051,7 +2050,11 @@ impl fmt::Display for Value {
                     let mut row_strs = Vec::with_capacity(cols);
                     for c in 1..=cols {
                         let val = *arr.get_subscript(&[r, c]).unwrap_or(&0.0);
-                        row_strs.push(format_short_f64(val, is_all_int, scale));
+                        if use_sci {
+                            row_strs.push(format_short_scientific(val));
+                        } else {
+                            row_strs.push(format_short_f64(val, is_all_int, scale));
+                        }
                     }
                     cell_matrix.push(row_strs);
                 }

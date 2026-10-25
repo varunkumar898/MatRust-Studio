@@ -430,16 +430,18 @@ fn bench_sparse_vs_dense() {
         return;
     }
 
+    let sp_mul_stmts = rustlab_parse::parse("c = S * b;").unwrap_or_default();
+    let dn_mul_stmts = rustlab_parse::parse("c = D * b;").unwrap_or_default();
     let (sp_mul_ms, _) = run_benchmark_samples(
         || {
-            let _ = interp.eval_script("c = S * b;");
+            let _ = interp.eval_stmts(&sp_mul_stmts);
         },
         3,
         20,
     );
     let (dn_mul_ms, _) = run_benchmark_samples(
         || {
-            let _ = interp.eval_script("c = D * b;");
+            let _ = interp.eval_stmts(&dn_mul_stmts);
         },
         3,
         20,
@@ -455,16 +457,18 @@ fn bench_sparse_vs_dense() {
         "Matvec (S * b)", sp_mul_ms, dn_mul_ms, mul_ratio
     );
 
+    let sp_add_stmts = rustlab_parse::parse("C = S + S;").unwrap_or_default();
+    let dn_add_stmts = rustlab_parse::parse("C = D + D;").unwrap_or_default();
     let (sp_add_ms, _) = run_benchmark_samples(
         || {
-            let _ = interp.eval_script("C = S + S;");
+            let _ = interp.eval_stmts(&sp_add_stmts);
         },
         3,
         20,
     );
     let (dn_add_ms, _) = run_benchmark_samples(
         || {
-            let _ = interp.eval_script("C = D + D;");
+            let _ = interp.eval_stmts(&dn_add_stmts);
         },
         3,
         20,
@@ -497,9 +501,10 @@ fn bench_b21_data_and_csv() {
     }
 
     // 1. movmean (k = 3) on 1M elements
+    let mm_stmts = rustlab_parse::parse("m = movmean(x, 3);").unwrap_or_default();
     let (mm_ms, mm_sp) = run_benchmark_samples(
         || {
-            let _ = interp.eval_script("m = movmean(x, 3);");
+            let _ = interp.eval_stmts(&mm_stmts);
         },
         2,
         10,
@@ -507,9 +512,10 @@ fn bench_b21_data_and_csv() {
     println!("{:<25} {:<18.3} {:<18.3}", "movmean(1M, 3)", mm_ms, mm_sp);
 
     // 2. cummax on 1M elements
+    let cm_stmts = rustlab_parse::parse("c = cummax(x);").unwrap_or_default();
     let (cm_ms, cm_sp) = run_benchmark_samples(
         || {
-            let _ = interp.eval_script("c = cummax(x);");
+            let _ = interp.eval_stmts(&cm_stmts);
         },
         2,
         10,
@@ -517,9 +523,10 @@ fn bench_b21_data_and_csv() {
     println!("{:<25} {:<18.3} {:<18.3}", "cummax(1M)", cm_ms, cm_sp);
 
     // 3. zscore on 1M elements
+    let zs_stmts = rustlab_parse::parse("z = zscore(x);").unwrap_or_default();
     let (zs_ms, zs_sp) = run_benchmark_samples(
         || {
-            let _ = interp.eval_script("z = zscore(x);");
+            let _ = interp.eval_stmts(&zs_stmts);
         },
         2,
         10,

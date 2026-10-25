@@ -332,3 +332,41 @@ fn test_matio_builtin_load_save() {
 
     let _ = std::fs::remove_file(tmp_path);
 }
+
+#[test]
+fn test_b2_inv_and_mldivide_singular_matrix_returns_inf() {
+    let mut interp = new_interpreter();
+    // inv([1 2; 2 4]) produces warning and returns Inf matrix without error
+    let res_inv = interp
+        .eval_script("inv([1 2; 2 4])")
+        .expect("inv on singular matrix must succeed")
+        .expect("val");
+    if let rustlab_math::Value::Double(arr) = res_inv {
+        assert_eq!(arr.shape(), &[2, 2]);
+        for &x in arr.as_slice() {
+            assert!(
+                x.is_infinite(),
+                "inv of singular matrix entries must be Inf"
+            );
+        }
+    } else {
+        panic!("expected double matrix");
+    }
+
+    // [1 2; 2 4] \ [1; 1] produces warning and returns Inf matrix without error
+    let res_mldiv = interp
+        .eval_script("[1 2; 2 4] \\ [1; 1]")
+        .expect("mldivide on singular matrix must succeed")
+        .expect("val");
+    if let rustlab_math::Value::Double(arr) = res_mldiv {
+        assert_eq!(arr.shape(), &[2, 1]);
+        for &x in arr.as_slice() {
+            assert!(
+                x.is_infinite(),
+                "mldivide of singular matrix entries must be Inf"
+            );
+        }
+    } else {
+        panic!("expected double matrix");
+    }
+}

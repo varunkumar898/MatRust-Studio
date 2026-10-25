@@ -96,10 +96,10 @@ pub fn mldivide_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalEr
         }
 
         if max_val < 1e-15 {
-            return Err(user_err(
-                "MATLAB:singularMatrix",
-                "Matrix is singular to working precision.",
-            ));
+            eprintln!("Warning: Matrix is singular to working precision.");
+            let inf_matrix = DenseArray::from_vec(vec![n, n_rhs], vec![f64::INFINITY; n * n_rhs])
+                .map_err(math_err)?;
+            return Ok(vec![Value::Double(inf_matrix)]);
         }
 
         // Swap rows
@@ -165,15 +165,7 @@ pub fn inv_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError> 
     }
     let n = shp[0];
     let eye_val = crate::generators::eye(&[Value::scalar(n as f64)], 1)?;
-    match mldivide_fn(&[args[0].clone(), eye_val[0].clone()], 1) {
-        Ok(v) => Ok(v),
-        Err(e) if e.to_string().contains("singularMatrix") => {
-            eprintln!("Warning: Matrix is singular to working precision.");
-            let inf_matrix = DenseArray::from_vec(vec![n, n], vec![f64::INFINITY; n * n])?;
-            Ok(vec![Value::Double(inf_matrix)])
-        }
-        Err(e) => Err(e),
-    }
+    mldivide_fn(&[args[0].clone(), eye_val[0].clone()], 1)
 }
 
 /// Helper to compute LU decomposition with partial pivoting: PA = LU.

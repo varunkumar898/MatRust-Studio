@@ -117,6 +117,11 @@ where
     F: FnMut(&[f64]) -> Vec<f64>,
 {
     let in_shape = da.shape();
+    // Fast path: 1D contiguous column or row vector along its active dimension
+    if in_shape.len() == 2 && ((in_shape[1] == 1 && dim == 1) || (in_shape[0] == 1 && dim == 2)) {
+        let out = op(da.as_slice());
+        return DenseArray::from_vec_unchecked(in_shape.to_vec(), out);
+    }
     let max_rank = in_shape.len().max(dim);
     let mut exp_shape = in_shape.to_vec();
     while exp_shape.len() < max_rank {
@@ -197,24 +202,33 @@ fn mode_slice(slice: &[f64], omitnan: bool) -> f64 {
     best
 }
 
-fn percentile_interp(sorted: &[f64], q: f64) -> f64 {
+fn percentile_interp(sorted: &[f64], q: f64, method: Option<&str>) -> f64 {
     if sorted.is_empty() {
         return f64::NAN;
     }
-    if sorted.len() == 1 {
+    let n = sorted.len();
+    if n == 1 {
         return sorted[0];
     }
-    let h = (sorted.len() - 1) as f64 * q + 1.0;
-    let lo = h.floor().max(1.0) as usize;
-    if lo >= sorted.len() {
-        return sorted[sorted.len() - 1];
-    }
-    let frac = h - lo as f64;
-    if frac <= 0.0 {
-        sorted[lo - 1]
+    // MATLAB rule (B2.1.1): piecewise linear through (i - 0.5)/n, clamped to ends.
+    // That is, position pos = q * n + 0.5.
+    // Optional 'method' can select 'numpy' (Method 7: pos = (n - 1) * q + 1).
+    let is_numpy = method.is_some_and(|m| m.eq_ignore_ascii_case("numpy"));
+    let pos = if is_numpy {
+        (n - 1) as f64 * q + 1.0
     } else {
-        sorted[lo - 1] + frac * (sorted[lo] - sorted[lo - 1])
+        q * n as f64 + 0.5
+    };
+
+    if pos <= 1.0 {
+        return sorted[0];
     }
+    if pos >= n as f64 {
+        return sorted[n - 1];
+    }
+    let lo = pos.floor() as usize;
+    let frac = pos - lo as f64;
+    sorted[lo - 1] + frac * (sorted[lo] - sorted[lo - 1])
 }
 
 /// `median(X [, dim] [, 'omitnan'])`
@@ -259,6 +273,25 @@ fn percentile_impl(args: &[Value], divide_by_100: bool) -> Result<Vec<Value>, Ev
         return Ok(vec![Value::scalar(f64::NAN)]);
     }
     let p = get_da(&args[1])?;
+
+    // Parse optional method parameter ('method', 'numpy'/'matlab' or 'numpy'/'matlab')
+    let mut method: Option<String> = None;
+    let mut arg_idx = 2;
+    while arg_idx < args.len() {
+        if let Some(s) = as_string(&args[arg_idx]) {
+            if s.eq_ignore_ascii_case("method") && arg_idx + 1 < args.len() {
+                if let Some(m) = as_string(&args[arg_idx + 1]) {
+                    method = Some(m);
+                    arg_idx += 2;
+                    continue;
+                }
+            } else if s.eq_ignore_ascii_case("numpy") || s.eq_ignore_ascii_case("matlab") {
+                method = Some(s);
+            }
+        }
+        arg_idx += 1;
+    }
+
     let mut vals: Vec<f64> = x.as_slice().to_vec();
     if vals.iter().any(|v| v.is_nan()) {
         return Ok(vec![Value::scalar(f64::NAN)]);
@@ -289,7 +322,7 @@ fn percentile_impl(args: &[Value], divide_by_100: bool) -> Result<Vec<Value>, Ev
             }
             pv
         };
-        out.push(percentile_interp(&vals, q));
+        out.push(percentile_interp(&vals, q, method.as_deref()));
     }
     if p.is_scalar() {
         Ok(vec![Value::scalar(out[0])])
@@ -556,6 +589,67 @@ fn window_bounds(i: usize, len: usize, k: usize) -> (usize, usize) {
     (i.saturating_sub(left), (i + right).min(len - 1))
 }
 
+fn movmean_slice(vals: &[f64], k: usize, omit: bool) -> Vec<f64> {
+    let len = vals.len();
+    if len == 0 {
+        return Vec::new();
+    }
+    let mut out = Vec::with_capacity(len);
+    let (first_a, first_b) = window_bounds(0, len, k);
+    let mut running_sum = 0.0f64;
+    let mut valid_count = 0usize;
+    let mut nan_count = 0usize;
+
+    for &v in &vals[first_a..=first_b] {
+        if v.is_nan() {
+            nan_count += 1;
+        } else {
+            running_sum += v;
+            valid_count += 1;
+        }
+    }
+    let mut cur_a = first_a;
+    let mut cur_b = first_b;
+
+    let res0 = if (!omit && nan_count > 0) || valid_count == 0 {
+        f64::NAN
+    } else {
+        running_sum / valid_count as f64
+    };
+    out.push(res0);
+
+    for i in 1..len {
+        let (new_a, new_b) = window_bounds(i, len, k);
+        while cur_a < new_a {
+            let v = vals[cur_a];
+            if v.is_nan() {
+                nan_count -= 1;
+            } else {
+                running_sum -= v;
+                valid_count -= 1;
+            }
+            cur_a += 1;
+        }
+        while cur_b < new_b {
+            cur_b += 1;
+            let v = vals[cur_b];
+            if v.is_nan() {
+                nan_count += 1;
+            } else {
+                running_sum += v;
+                valid_count += 1;
+            }
+        }
+        let res = if (!omit && nan_count > 0) || valid_count == 0 {
+            f64::NAN
+        } else {
+            running_sum / valid_count as f64
+        };
+        out.push(res);
+    }
+    out
+}
+
 /// `movmean(X, k)`
 pub fn movmean(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError> {
     if args.len() < 2 {
@@ -571,25 +665,7 @@ pub fn movmean(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError>
     }
     let default_dim = first_non_singleton_dim(da.shape());
     let (dim, omit) = dim_and_omit(args, 2, default_dim)?;
-    let res = map_fibers(&da, dim, |vals| {
-        let len = vals.len();
-        (0..len)
-            .map(|i| {
-                let (a, b) = window_bounds(i, len, k);
-                let w = &vals[a..=b];
-                if !omit && w.iter().any(|x| x.is_nan()) {
-                    f64::NAN
-                } else {
-                    let good: Vec<f64> = w.iter().copied().filter(|x| !x.is_nan()).collect();
-                    if good.is_empty() {
-                        f64::NAN
-                    } else {
-                        good.iter().sum::<f64>() / good.len() as f64
-                    }
-                }
-            })
-            .collect()
-    });
+    let res = map_fibers(&da, dim, |vals| movmean_slice(vals, k, omit));
     Ok(vec![Value::Double(res)])
 }
 
@@ -610,14 +686,51 @@ pub fn movmedian(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalErro
     let (dim, omit) = dim_and_omit(args, 2, default_dim)?;
     let res = map_fibers(&da, dim, |vals| {
         let len = vals.len();
-        (0..len)
-            .map(|i| {
-                let (a, b) = window_bounds(i, len, k);
-                median_slice(&vals[a..=b], omit)
-            })
-            .collect()
+        let mut out = Vec::with_capacity(len);
+        for i in 0..len {
+            let (a, b) = window_bounds(i, len, k);
+            out.push(median_slice(&vals[a..=b], omit));
+        }
+        out
     });
     Ok(vec![Value::Double(res)])
+}
+
+fn cumulative_slice(vals: &[f64], want_max: bool) -> Vec<f64> {
+    let len = vals.len();
+    if len == 0 {
+        return Vec::new();
+    }
+    let mut out = Vec::with_capacity(len);
+    let mut best: Option<f64> = None;
+    let mut poisoned = false;
+    for &x in vals {
+        if x.is_nan() {
+            poisoned = true;
+        }
+        if poisoned {
+            out.push(f64::NAN);
+        } else {
+            best = Some(match best {
+                None => x,
+                Some(b) => {
+                    if want_max {
+                        if x > b {
+                            x
+                        } else {
+                            b
+                        }
+                    } else if x < b {
+                        x
+                    } else {
+                        b
+                    }
+                }
+            });
+            out.push(best.unwrap_or(x));
+        }
+    }
+    out
 }
 
 fn cumulative(args: &[Value], want_max: bool) -> Result<Vec<Value>, EvalError> {
@@ -633,34 +746,7 @@ fn cumulative(args: &[Value], want_max: bool) -> Result<Vec<Value>, EvalError> {
     }
     let default_dim = first_non_singleton_dim(da.shape());
     let (dim, _omit) = dim_and_omit(args, 1, default_dim)?;
-    let res = map_fibers(&da, dim, |vals| {
-        let mut best: Option<f64> = None;
-        vals.iter()
-            .map(|&x| {
-                if x.is_nan() {
-                    f64::NAN
-                } else {
-                    best = Some(match best {
-                        None => x,
-                        Some(b) => {
-                            if want_max {
-                                if x > b {
-                                    x
-                                } else {
-                                    b
-                                }
-                            } else if x < b {
-                                x
-                            } else {
-                                b
-                            }
-                        }
-                    });
-                    best.unwrap_or(x)
-                }
-            })
-            .collect()
-    });
+    let res = map_fibers(&da, dim, |vals| cumulative_slice(vals, want_max));
     Ok(vec![Value::Double(res)])
 }
 
@@ -690,16 +776,18 @@ pub fn zscore(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError> 
     let (dim, _omit) = dim_and_omit(args, 1, default_dim)?;
     let res = map_fibers(&da, dim, |vals| {
         let n = vals.len();
+        if n <= 1 {
+            return vec![f64::NAN; n];
+        }
         let mean = vals.iter().sum::<f64>() / n as f64;
-        let ss: f64 = vals.iter().map(|x| (x - mean) * (x - mean)).sum();
-        let sd = if n > 1 {
-            (ss / (n - 1) as f64).sqrt()
+        let ss: f64 = vals.iter().map(|&x| (x - mean) * (x - mean)).sum();
+        let sd = (ss / (n - 1) as f64).sqrt();
+        let inv_sd = if sd > 0.0 { 1.0 / sd } else { 0.0 };
+        if sd > 0.0 {
+            vals.iter().map(|&x| (x - mean) * inv_sd).collect()
         } else {
-            0.0
-        };
-        vals.iter()
-            .map(|x| if sd > 0.0 { (x - mean) / sd } else { f64::NAN })
-            .collect()
+            vec![f64::NAN; n]
+        }
     });
     Ok(vec![Value::Double(res)])
 }
@@ -835,7 +923,11 @@ pub fn unique(args: &[Value], nargout: usize) -> Result<Vec<Value>, EvalError> {
             }
             i = j;
         }
-        let c = Value::Double(DenseArray::col_vector(vals));
+        let c = if shape[0] == 1 {
+            Value::Double(DenseArray::row_vector(vals))
+        } else {
+            Value::Double(DenseArray::col_vector(vals))
+        };
         if nargout >= 3 {
             let ic: Vec<f64> = group_of.iter().map(|&g| (g + 1) as f64).collect();
             return Ok(vec![

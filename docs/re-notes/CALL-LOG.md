@@ -1,5 +1,12 @@
 # Reverse Engineering Tool Call Log
 
+> **A3.1.5 VOID NOTICE.** Per the A3.1.5 integrity audit, **rows timestamped after 09:10** (including
+> the `09:10:08` Ghidra MCP error row) were not backed by retained raw command output and are
+> **VOID**. They remain below only as historical claims, not as verified tool output. The durable
+> Ghidra evidence is `C:\Users\varun\ghidra-projects\analyzeHeadless-rerun.log`; the real six-step
+> gate log is `bench-results/a312/verify-a312-final.utf8.log`. See
+> `docs/milestones/a3.1.5-integrity-void.md`.
+
 All reverse engineering, disassembly, symbol inspection, and binary layout verification calls executed by the **Analyst** are logged here under the RustLab Clean-Room Protocol.
 
 ### Confirmation of Clean-Room Compliance

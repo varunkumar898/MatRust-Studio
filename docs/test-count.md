@@ -15,10 +15,11 @@ This document tracks the cumulative and per-suite test counts across milestones,
 | **Milestone A3.1** | 119 | 119 | +6 stdlib A3.1 golden tests | Corrective pass: 0 unwraps, exact error messages |
 | **Milestone A3.1.2** | 152 | 148 | +11 regression_a312, +12 diagnostics, +8 stdlib_a2 | Deny lints, display parity, R0 clean-room |
 | **Milestone A3.1.4** | **153** | **153** | +1 `test_a2_both_native_and_faer_eig_paths_match`, +1 `test_scientific_notation_threshold_rule_cited`, -1 duplicate builtin test deduplicated, native Jacobi SVD enabled in no-default-features | Integrity pass: test-manifest CI check, 173 builtins verified two-way |
+| **Milestone B2.1** | **171** | **171** | +13 `rustlab-data` (statistics + CSV matrix I/O), +4 display goldens, +1 symmetric eig route test | Clean-room statistics, RFC 4180 CSV matrix I/O, BOM/CRLF, ragged row detection |
 
 ---
 
-## 2. Comprehensive Suite Breakdown (Milestone A3.1.4)
+## 2. Comprehensive Suite Breakdown (Milestone B2.1)
 
 | Crate | Unit (cargo header) | Default Passed | No-Default Passed | Status |
 | :--- | :--- | :---: | :---: | :--- |
@@ -26,6 +27,8 @@ This document tracks the cumulative and per-suite test counts across milestones,
 | **rustlab-cli** | `unittests src\main.rs` | 0 | 0 | clean |
 | **rustlab-cli** | `tests/cli_tests.rs` | 3 | 3 | PASSED |
 | **rustlab-cli** | `tests/diagnostics_tests.rs` | 12 | 12 | PASSED |
+| **rustlab-data** | `unittests src\lib.rs` | 0 | 0 | clean |
+| **rustlab-data** | `tests/data_tests.rs` | 13 | 13 | PASSED |
 | **rustlab-eval** | `unittests src\lib.rs` | 0 | 0 | clean |
 | **rustlab-eval** | `tests/eval_tests.rs` | 9 | 9 | PASSED |
 | **rustlab-eval** | `tests/milestone_a1_tests.rs` | 6 | 6 | PASSED |
@@ -38,13 +41,13 @@ This document tracks the cumulative and per-suite test counts across milestones,
 | **rustlab-parse** | `tests/lexer_tests.rs` | 4 | 4 | PASSED |
 | **rustlab-parse** | `tests/parser_tests.rs` | 9 | 9 | PASSED |
 | **rustlab-stdlib** | `unittests src\lib.rs` | 7 | 7 | PASSED |
-| **rustlab-stdlib** | `tests/regression_a312_tests.rs` | 12 | 12 | PASSED |
+| **rustlab-stdlib** | `tests/regression_a312_tests.rs` | 16 | 16 | PASSED |
 | **rustlab-stdlib** | `tests/stdlib_tests.rs` | 12 | 12 | PASSED |
 | **rustlab-stdlib** | `tests/stdlib_a1_tests.rs` | 13 | 13 | PASSED |
-| **rustlab-stdlib** | `tests/stdlib_a2_tests.rs` | 20 | 20 | PASSED |
+| **rustlab-stdlib** | `tests/stdlib_a2_tests.rs` | 21 | 21 | PASSED |
 | **rustlab-stdlib** | `tests/stdlib_a3_tests.rs` | 16 | 16 | PASSED |
-| *Doc-tests* | all 6 crates | 0 | 0 | clean |
-| **TOTAL** | 27 units incl. doc-tests | **153** | **153** | **100% PASSED** |
+| *Doc-tests* | all 7 crates | 0 | 0 | clean |
+| **TOTAL** | 31 units incl. doc-tests | **171** | **171** | **100% PASSED** |
 
 ---
 

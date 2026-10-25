@@ -895,6 +895,142 @@ pub fn get_help_text(name: &str) -> Option<&'static str> {
              Description:\n\
                Constructs an array of specified dimensions with all elements equal to 0.0.\n"
         ),
+        "median" => Some(
+            "MEDIAN  Median value of an array.\n\n\
+             Syntax:\n\
+               M = median(A)\n\
+               M = median(A, dim)\n\
+               M = median(..., 'omitnan')\n\n\
+             Description:\n\
+               M = median(A) returns the median value of the elements of A along the first non-singleton dimension.\n\
+               If the number of elements is even, median returns the mean of the two middle values.\n"
+        ),
+        "mode" => Some(
+            "MODE  Most frequent values in an array.\n\n\
+             Syntax:\n\
+               M = mode(A)\n\
+               M = mode(A, dim)\n\
+               M = mode(..., 'omitnan')\n\n\
+             Description:\n\
+               M = mode(A) returns the sample mode of A along the first non-singleton dimension.\n\
+               When multiple values have the highest frequency, mode returns the smallest value.\n"
+        ),
+        "prctile" => Some(
+            "PRCTILE  Percentiles of an array.\n\n\
+             Syntax:\n\
+               Y = prctile(X, p)\n\n\
+             Description:\n\
+               Y = prctile(X, p) computes the percentiles for percentages p in [0, 100]\n\
+               using linear interpolation.\n"
+        ),
+        "quantile" => Some(
+            "QUANTILE  Quantiles of an array.\n\n\
+             Syntax:\n\
+               Y = quantile(X, q)\n\n\
+             Description:\n\
+               Y = quantile(X, q) computes the quantiles for proportions q in [0, 1]\n\
+               using linear interpolation.\n"
+        ),
+        "cov" => Some(
+            "COV  Covariance matrix.\n\n\
+             Syntax:\n\
+               C = cov(A)\n\
+               C = cov(x, y)\n\n\
+             Description:\n\
+               C = cov(A) returns the sample covariance matrix for matrix A where columns are variables.\n\
+               C = cov(x, y) returns the covariance between two vectors x and y.\n"
+        ),
+        "corrcoef" => Some(
+            "CORRCOEF  Correlation coefficients.\n\n\
+             Syntax:\n\
+               R = corrcoef(A)\n\
+               R = corrcoef(x, y)\n\n\
+             Description:\n\
+               R = corrcoef(A) returns the matrix of correlation coefficients for columns of A.\n\
+               Diagonal elements are 1.0, and off-diagonal elements are in [-1.0, 1.0].\n"
+        ),
+        "histcounts" => Some(
+            "HISTCOUNTS  Histogram bin counts.\n\n\
+             Syntax:\n\
+               N = histcounts(X)\n\
+               N = histcounts(X, edges)\n\n\
+             Description:\n\
+               N = histcounts(X) partitions array X into bins and returns the number of elements in each bin.\n\
+               N = histcounts(X, edges) partitions X using monotonically increasing bin edges.\n"
+        ),
+        "movmean" => Some(
+            "MOVMEAN  Moving mean.\n\n\
+             Syntax:\n\
+               M = movmean(A, k)\n\
+               M = movmean(A, k, dim)\n\
+               M = movmean(..., 'omitnan')\n\n\
+             Description:\n\
+               M = movmean(A, k) computes a centered moving window average of length k along\n\
+               the first non-singleton dimension of A.\n"
+        ),
+        "movmedian" => Some(
+            "MOVMEDIAN  Moving median.\n\n\
+             Syntax:\n\
+               M = movmedian(A, k)\n\
+               M = movmedian(A, k, dim)\n\
+               M = movmedian(..., 'omitnan')\n\n\
+             Description:\n\
+               M = movmedian(A, k) computes a centered moving window median of length k along\n\
+               the first non-singleton dimension of A.\n"
+        ),
+        "cummax" => Some(
+            "CUMMAX  Cumulative maximum.\n\n\
+             Syntax:\n\
+               M = cummax(A)\n\
+               M = cummax(A, dim)\n\n\
+             Description:\n\
+               M = cummax(A) computes the cumulative maximum along the first non-singleton dimension.\n"
+        ),
+        "cummin" => Some(
+            "CUMMIN  Cumulative minimum.\n\n\
+             Syntax:\n\
+               M = cummin(A)\n\
+               M = cummin(A, dim)\n\n\
+             Description:\n\
+               M = cummin(A) computes the cumulative minimum along the first non-singleton dimension.\n"
+        ),
+        "zscore" => Some(
+            "ZSCORE  Standardized z-score.\n\n\
+             Syntax:\n\
+               Z = zscore(X)\n\
+               Z = zscore(X, dim)\n\n\
+             Description:\n\
+               Z = zscore(X) returns the z-score for each column of X, centered to mean 0 and scaled to standard deviation 1.\n"
+        ),
+        "sortrows" => Some(
+            "SORTROWS  Sort rows of a matrix.\n\n\
+             Syntax:\n\
+               B = sortrows(A)\n\
+               B = sortrows(A, cols)\n\
+               [B, idx] = sortrows(A, ...)\n\n\
+             Description:\n\
+               B = sortrows(A) sorts the rows of matrix A in ascending order based on the elements in the first column.\n\
+               Negative column indices in cols specify descending sort order.\n"
+        ),
+        "readmatrix" => Some(
+            "READMATRIX  Read matrix from a delimited file.\n\n\
+             Syntax:\n\
+               M = readmatrix(filename)\n\
+               M = readmatrix(filename, 'Delimiter', d)\n\
+               M = readmatrix(filename, 'NumHeaderLines', n)\n\n\
+             Description:\n\
+               M = readmatrix(filename) reads numerical matrix data from a delimited file.\n\
+               Non-numeric or empty cells evaluate to NaN. UTF-8 BOM headers are handled automatically.\n"
+        ),
+        "writematrix" => Some(
+            "WRITEMATRIX  Write matrix to a delimited file.\n\n\
+             Syntax:\n\
+               writematrix(A, filename)\n\
+               writematrix(A, filename, 'Delimiter', d)\n\n\
+             Description:\n\
+               writematrix(A, filename) writes a 2-D matrix A to a delimited file.\n\
+               Floats are written using shortest round-trip representation.\n"
+        ),
         _ => None,
     }
 }

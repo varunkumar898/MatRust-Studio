@@ -24,5 +24,6 @@ clap = { version = "4.5", features = ["derive"] }
 num-complex = "0.4"
 
 [features]
-default = ["faer"]
+default = ["faer", "data"]
 faer = ["rustlab-stdlib/faer"]
+data = ["rustlab-stdlib/data"]

@@ -253,6 +253,32 @@ pub fn eig_sym(mat: &DenseArray<f64>) -> Result<(Vec<f64>, DenseArray<f64>), Eva
     Ok((sorted_d, eig_vecs))
 }
 
+/// Reports the backend selected for real symmetric eigendecomposition.
+/// This is the same compile-time route used by [`eig_sym_auto`] and `eig`.
+pub fn symmetric_eig_backend() -> &'static str {
+    #[cfg(feature = "faer")]
+    {
+        "faer"
+    }
+    #[cfg(not(feature = "faer"))]
+    {
+        "native"
+    }
+}
+
+/// Routes a real symmetric eigendecomposition to faer when the feature is on,
+/// otherwise to the clean-room native Householder+QL path.
+pub fn eig_sym_auto(mat: &DenseArray<f64>) -> Result<(Vec<f64>, DenseArray<f64>), EvalError> {
+    #[cfg(feature = "faer")]
+    {
+        faer_self_adjoint_eig(mat)
+    }
+    #[cfg(not(feature = "faer"))]
+    {
+        eig_sym(mat)
+    }
+}
+
 /// Evaluates symmetric eigenvalue decomposition using `faer`'s optimized self-adjoint solver.
 #[cfg(feature = "faer")]
 pub fn faer_self_adjoint_eig(
@@ -314,6 +340,51 @@ pub fn faer_self_adjoint_eig(
                 sorted_v[r + c * n] = -sorted_v[r + c * n];
             }
         }
+    }
+
+    // Tie-break AFTER ordering and sign normalization: faer does not define
+    // an order for a degenerate eigenspace. We sort columns of each group of
+    // numerically equal eigenvalues lexicographically, yielding a stable,
+    // reproducible basis for a given faer output.
+    let mut group_start = 0;
+    while group_start < n {
+        let mut group_end = group_start + 1;
+        while group_end < n
+            && (sorted_d[group_end] - sorted_d[group_start]).abs()
+                <= 1e-12 * (1.0 + sorted_d[group_start].abs())
+        {
+            group_end += 1;
+        }
+        if group_end - group_start > 1 {
+            let mut order: Vec<usize> = (group_start..group_end).collect();
+            order.sort_by(|&a, &b| {
+                for r in 0..n {
+                    let av = sorted_v[r + a * n];
+                    let bv = sorted_v[r + b * n];
+                    match av.partial_cmp(&bv).unwrap_or(std::cmp::Ordering::Equal) {
+                        std::cmp::Ordering::Equal => continue,
+                        other => return other,
+                    }
+                }
+                std::cmp::Ordering::Equal
+            });
+            let old_d: Vec<f64> = order.iter().map(|&c| sorted_d[c]).collect();
+            let mut new_v = vec![0.0; n * n];
+            for (offset, &old_col) in order.iter().enumerate() {
+                let new_col = group_start + offset;
+                sorted_d[new_col] = old_d[offset];
+                for r in 0..n {
+                    new_v[r + new_col * n] = sorted_v[r + old_col * n];
+                }
+            }
+            for (offset, _) in order.iter().enumerate() {
+                let new_col = group_start + offset;
+                for r in 0..n {
+                    sorted_v[r + new_col * n] = new_v[r + new_col * n];
+                }
+            }
+        }
+        group_start = group_end;
     }
 
     let v_arr = DenseArray::from_vec_unchecked(vec![n, n], sorted_v);

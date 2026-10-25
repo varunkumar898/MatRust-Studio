@@ -46,7 +46,7 @@ fn rendered_var(code: &str, name: &str) -> String {
 // ---------------------------------------------------------------------------
 
 #[test]
-fn scalar_scientific_display_goldens() {
+fn scalar_scientific_display_goldens_unverified() {
     // Values far below display resolution -> exact MATLAB exponential layout.
     assert_eq!(rendered("x = 1e-16"), "x =\n\n   1.0000e-16\n");
     // Exponent is 2-digit zero-padded and SIGNED (-04, not 04, not 4).
@@ -73,7 +73,7 @@ fn scalar_display_via_env_matches_output_log() {
 }
 
 #[test]
-fn test_scientific_notation_threshold_rule_cited() {
+fn test_scientific_notation_threshold_rule_cited_unverified() {
     // Citation: MathWorks MATLAB Documentation - "Set Output Display Format" (format short rule):
     // "If the largest element of a matrix is larger than 1000 or smaller than 0.001,
     //  MATLAB applies a common scale factor for the short and long formats."
@@ -91,12 +91,75 @@ fn test_scientific_notation_threshold_rule_cited() {
     assert_eq!(rendered("x = 12345.678"), "x =\n\n   1.2346e+04\n");
 }
 
+// A3.1.5: these two names were claimed by the A3.1.3 report but never existed
+// in either git revision. They are re-created here as real tests.
+#[test]
+fn scalar_integer_display_goldens() {
+    // Cited rule: integral doubles below 1e10 print full digits (format short).
+    // https://www.mathworks.com/help/matlab/ref/format.html
+    assert_eq!(rendered("x = 0"), "x =\n\n    0\n");
+    assert_eq!(rendered("x = 1"), "x =\n\n    1\n");
+    assert_eq!(rendered("x = -42"), "x =\n\n    -42\n");
+    assert_eq!(rendered("x = 100000"), "x =\n\n    100000\n");
+    assert_eq!(rendered("x = 1e9"), "x =\n\n    1000000000\n");
+}
+
+#[test]
+fn non_integer_class_display_goldens_unverified() {
+    // Unverified scalar boundary rules: 1234.5678 is in [1e3,1e4) and prints
+    // scientific (1.2346e+03); 0.001 is exactly the lower boundary and stays
+    // fixed; 0.0012 is fixed. Only the matrix half of the MathWorks `format`
+    // threshold quote is cited.
+    assert_eq!(rendered("x = 1e-16"), "x =\n\n   1.0000e-16\n");
+    assert_eq!(rendered("x = 5e-4"), "x =\n\n   5.0000e-04\n");
+    assert_eq!(rendered("x = 1234.5678"), "x =\n\n   1.2346e+03\n");
+    assert_eq!(rendered("x = 0.001"), "x =\n\n    0.0010\n");
+    assert_eq!(rendered("x = 0.0012"), "x =\n\n    0.0012\n");
+    assert_eq!(rendered("x = 12345.678"), "x =\n\n   1.2346e+04\n");
+}
+
+#[test]
+fn matrix_display_common_scale_boundary_unverified() {
+    // `format` cites "larger than 1000 or smaller than 0.001"; both boundaries
+    // are strict. [0.001 1000] therefore does NOT extract a common scale:
+    // 0.0010 stays fixed and 1000 keeps integer digits in a shared width.
+    assert_eq!(rendered("m = [0.001 1000]"), "m =\n\n    0.0010    1000\n");
+}
+
+#[test]
+fn test_num2str_noninteger_matrix_g_style_unverified() {
+    // Source (maximum 5 significant digits):
+    // https://www.mathworks.com/help/matlab/ref/num2str.html
+    // The precise %g rounding/alignment is unverified. A3.1.5 requires no
+    // trailing zeros in non-integer num2str output.
+    fn num2str_of(expr: &str) -> String {
+        let mut interp = new_interpreter();
+        let value = interp
+            .eval_script(&format!("s = num2str({expr});"))
+            .unwrap_or_else(|e| panic!("eval failed for num2str({expr}): {e}"));
+        let _ = value;
+        match interp.env.get("s") {
+            Some(Value::Char(ca)) => ca.as_slice().iter().collect(),
+            other => panic!("num2str did not return char: {other:?}"),
+        }
+    }
+
+    assert_eq!(num2str_of("1234.5678"), "1234.6");
+    assert_eq!(num2str_of("0.001"), "0.001");
+    assert_eq!(num2str_of("0.0012"), "0.0012");
+    assert_eq!(num2str_of("[1e-16 1]"), "1e-16  1");
+    assert_eq!(
+        num2str_of("[1.234 56.78; 9.1 0.2]"),
+        "1.234  56.78\n  9.1    0.2"
+    );
+}
+
 // ---------------------------------------------------------------------------
 // 2. Matrix display parity: one shared column width + one common scale factor
 // ---------------------------------------------------------------------------
 
 #[test]
-fn matrix_display_parity_goldens() {
+fn matrix_display_parity_goldens_unverified() {
     // [1e-16 1]: the scale decision comes from the WHOLE-matrix maximum. The max
     // (1.0) is inside [1e-3, 1e4), so no multiplier is applied: the tiny cell
     // clips to 0.0000 and BOTH columns share ONE width.
@@ -305,11 +368,33 @@ fn every_registered_builtin_has_docs_and_help() {
 
     // 2. Reverse check: zero orphan doc files in docs/functions
     let mut orphan_docs = Vec::new();
+    #[cfg(not(feature = "data"))]
+    let data_builtins = [
+        "median",
+        "mode",
+        "prctile",
+        "quantile",
+        "cov",
+        "corrcoef",
+        "histcounts",
+        "movmean",
+        "movmedian",
+        "cummax",
+        "cummin",
+        "zscore",
+        "sortrows",
+        "readmatrix",
+        "writematrix",
+    ];
     for entry in std::fs::read_dir(&docs_dir).expect("failed to read docs_dir") {
         let entry = entry.expect("valid entry");
         let path = entry.path();
         if path.extension().and_then(|e| e.to_str()) == Some("md") {
             if let Some(stem) = path.file_stem().and_then(|s| s.to_str()) {
+                #[cfg(not(feature = "data"))]
+                if data_builtins.contains(&stem) {
+                    continue;
+                }
                 if !name_set.contains(stem) {
                     orphan_docs.push(stem.to_string());
                 }

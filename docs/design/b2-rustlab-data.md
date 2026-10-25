@@ -1,128 +1,155 @@
-# Phase B: Capability Area B2 — `rustlab-data` & `rustlab-plot` Design Note
+# Phase B2 — `rustlab-data` Design Note (B2.1 scope)
 
-## 1. Overview & Clean-Room Boundaries
+**Status:** approved scope for Milestone B2.1. Tables, XLSX, JSON, and plotting are explicitly out of
+scope here and are deferred to the later milestones named at the end.
 
-To maintain modularity, fast compilation, and distinct separation of concerns, Phase B2 is partitioned into two specialized crates:
-- **`rustlab-data` (Milestone B2.1)**: High-performance tabular data structures (`table`), heterogeneous typed columns, relational operations (`join`, `innerjoin`), and multi-format scientific file I/O (CSV, XLSX via `calamine`, JSON via `serde_json`).
-- **`rustlab-plot` (Milestone B2.2)**: Headless, deterministic visualization engine implementing MATLAB Handle Graphics concepts (Figure, Axes, Line, Scatter, Bar, Histogram) with a plot-description model and deterministic W3C SVG vector renderer.
+## 1. Scope of B2.1
 
-In adherence to clean-room development principles:
-- **No GPL / Copyleft code**: Clean-room implementation referencing only public MATLAB documentation, W3C SVG specifications, OpenXML (ECMA-376) standards, and public format behaviors.
-- **Zero-unwrap rule**: All functions return structured error types (`DataError`, `PlotError`) with `thiserror`. `#![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::todo, clippy::unimplemented)]` enforced across all library code.
-- **Strict linting**: 100% clean under `cargo clippy --workspace --all-targets --all-features -- -D warnings`.
+B2.1 delivers **two things only**:
 
----
+1. **Statistics builtins** implemented in Rust in a new `rustlab-data` crate, with no new
+   third-party dependencies.
+2. **CSV matrix I/O** (`readmatrix`, `writematrix`) using the `csv` crate.
 
-## 2. Workspace Architecture
+Everything is exposed through the interpreter behind the Cargo feature **`data`** (enabled by
+default, disabled by `--no-default-features`). The crate itself is a workspace member; the feature
+controls registration of its builtins in `rustlab-stdlib`.
+
+### Explicitly deferred
+
+| Item | Deferred to |
+| :--- | :--- |
+| `table`, `timetable`, heterogeneous columns, `join`/`innerjoin`/`outerjoin`, `summary`/`head`/`tail` | **B2.3 (later)** |
+| XLSX / ODS spreadsheets (`calamine`), `readtable`/`writetable` | **B2.3 (later)** |
+| JSON (`jsonencode`/`jsondecode`, `serde_json`) | **B2.3 (later)** |
+| `rustlab-plot`: plot description model, deterministic SVG, `plot`/`scatter`/`bar`/`histogram` | **B2.2** |
+| Terminal Braille ANSI rendering | later |
+| 3D surfaces, interactive GUI event loops | later |
+
+No table, XLSX, JSON, or plotting code is to be added in B2.1.
+
+## 2. Crate layout
 
 ```
 crates/
-├── rustlab-data/                 # Milestone B2.1: Tabular data & Scientific File I/O
-│   ├── Cargo.toml
-│   └── src/
-│       ├── lib.rs                # Crate root and builtin registrations
-│       ├── error.rs              # DataError enum via thiserror
-│       ├── table/                # Tabular Data Engine
-│       │   ├── mod.rs            # Table struct definition & constructors
-│       │   ├── column.rs         # Typed column vectors (Double, Int, String, Categorical, Logical)
-│       │   ├── indexing.rs       # Row/column subscripting (T(:, {'A','B'}), T(1:5, :))
-│       │   ├── summary.rs        # summary(T), head(T), tail(T)
-│       │   └── join.rs           # innerjoin, outerjoin, join
-│       └── io/                   # Scientific File I/O
-│           ├── mod.rs
-│           ├── csv.rs            # readtable, writetable, readmatrix, writematrix (via csv crate)
-│           ├── spreadsheet.rs    # readtable('file.xlsx', 'Sheet', 1, 'Range', 'A1:C10') via calamine
-│           └── json.rs           # jsonencode, jsondecode via serde_json
-│
-└── rustlab-plot/                 # Milestone B2.2: Retained-mode Plot Description & SVG
+└── rustlab-data/
     ├── Cargo.toml
-    └── src/
-        ├── lib.rs                # Plot crate root & registrations
-        ├── error.rs              # PlotError enum via thiserror
-        ├── scene/                # Retained-Mode Plot-Description Model
-        │   ├── figure.rs         # Figure container ('Color', 'Position', 'Visible')
-        │   ├── axes.rs           # Coordinate box, limits, tick locators, grid lines
-        │   └── series.rs         # Plot series descriptions: Line, Scatter, Bar, Histogram
-        ├── properties.rs         # MATLAB Name-Value pair parser ('LineWidth', 'Color', 'Marker')
-        ├── render/               # Deterministic Rendering Engine
-        │   ├── svg.rs            # Deterministic, byte-stable W3C SVG vector renderer
-        │   └── color.rs          # MATLAB standard color order and RGBA conversions
-        └── builtins.rs           # plot, scatter, bar, histogram, xlabel, ylabel, title, grid, legend
+    ├── src/
+    │   ├── lib.rs          # error helper + register_all
+    │   ├── stats.rs        # all statistics builtins
+    │   └── csv_io.rs       # readmatrix / writematrix
+    ├── tests/
+    │   ├── stats_tests.rs
+    │   ├── csv_tests.rs
+    │   └── data/           # CSV fixtures (BOM, CRLF, quotes, ragged, empty fields)
+    └── benches/
+        └── b2_csv.rs       # criterion: 1,000,000-row read/write
 ```
 
----
+Dependencies: `rustlab-math`, `rustlab-eval`, `rustlab-parse` (for `Span`), and `csv = "1.3"`.
+`rustlab-data` must not depend on `rustlab-stdlib` (no cycle); `rustlab-stdlib` depends on it
+optionally.
 
-## 3. Tabular Data Specification (`rustlab-data` — B2.1)
+Quality attributes: `#![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic,
+clippy::todo, clippy::unimplemented)]` in `lib.rs`; all public functions return `EvalError`; no
+panics on user input.
 
-### Data Structures
-1. **`Table`**:
-   - `variables: Vec<ColumnData>` (heterogeneous columns: `f64`, `f32`, `i64`, `i32`, `String`, `Categorical`, `Logical`).
-   - `variable_names: Vec<String>` (validated identifier strings, non-empty, unique).
-   - `row_names: Option<Vec<String>>`.
-   - `num_rows: usize`, `num_cols: usize`.
-2. **Operations**:
-   - **Table Subscripting**:
-     - `T.VarName` -> extracts column as typed array.
-     - `T(:, {'A', 'C'})` -> subtable extraction by column name list.
-     - `T(1:10, :)` -> row slicing.
-     - `T.VarName = new_data` -> column assignment/replacement or creation.
-   - **Relational Filtering**:
-     - `T(T.Age > 30, :)` -> boolean mask indexing.
-   - **Join Operations**:
-     - `innerjoin(T1, T2, 'Keys', 'ID')`, `outerjoin`.
+## 3. Statistics API
 
----
+All functions operate on numeric `Value`s, reduce along the first non-singleton dimension by default,
+and accept an optional `dim` where MATLAB does. `'omitnan'` is a case-insensitive string flag.
 
-## 4. File I/O Engine (`rustlab-data` — B2.1)
+| Builtin | Contract |
+| :--- | :--- |
+| `median(X [, dim] [, 'omitnan'])` | Middle value; even count averages the two middle values. Default NaN propagates; `'omitnan'` removes NaN before computing. |
+| `mode(X [, dim] [, 'omitnan'])` | Most frequent value; **smallest value on ties**. |
+| `var(X [, flag] [, dim] [, 'omitnan'])` | Variance; `flag = 0` (default) normalizes by `N-1`, `flag = 1` by `N`. |
+| `std(X [, flag] [, dim] [, 'omitnan'])` | Square root of `var` with the same flag/dim rules. |
+| `prctile(X, p)` / `quantile(X, p)` | Percentile/quantile with linear interpolation between adjacent order statistics: `h = (N-1)*q + 1`, `Q = x_floor(h) + (h-floor(h))*(x_ceil(h)-x_floor(h))`, `q = p/100` for `prctile`. Source: <https://www.mathworks.com/help/matlab/ref/quantile.html>; exact method is **unverified** on that page. |
+| `cov(X)` / `cov(X, Y)` | Covariance matrix with `N-1` normalization; columns are variables, rows observations. Two-vector form returns the scalar covariance. |
+| `corrcoef(X)` | Correlation matrix from `cov`; diagonal is 1; constant columns produce `NaN`. |
+| `histcounts(X [, edges])` | Bin counts; supplied edges are used verbatim; without edges a deterministic nice-step binning rule is used (**unverified** vs MATLAB's automatic rule). |
+| `movmean(X, k)` | Centered moving mean over `k` samples; endpoints shrink the window. |
+| `movmedian(X, k)` | Centered moving median; endpoints shrink the window. |
+| `cummax(X [, dim])` / `cummin(X [, dim])` | Cumulative maximum/minimum along `dim`. |
+| `zscore(X)` | `(X - mean(X)) / std(X, 0)` along the first non-singleton dimension. |
+| `sortrows(A [, cols])` | Lexicographic row sort; negative column indices mean descending; optional second output is the row permutation. |
+| `unique(A)` | Sorted unique values; with `[C, ia, ic]`, `ia` is the first-occurrence index and `ic` maps original elements to `C`. |
+| `'omitnan'` for `sum`, `mean`, `min`, `max`, `median`, `std`, `var` | Data-feature wrappers preserve the existing stdlib default behaviour and only change the NaN path. `min`/`max` retain index outputs. |
 
-1. **Delimited Files (`csv.rs`)**:
-   - High-throughput streaming CSV parser using the standard Rust `csv` crate (DFA-based fast lexer).
-   - Automatic type inference:
-     - Pure numeric column $\to$ `f64` / `int64`.
-     - Mixed strings / words $\to$ `string` array.
-   - Support for MATLAB options: `'Delimiter'`, `'HeaderLines'`, `'VariableNames'`, `'TreatAsMissing'`.
-2. **Spreadsheet Files (`spreadsheet.rs`)**:
-   - Pure-Rust OpenXML reader using `calamine` (supports `.xlsx`, `.xls`, `.ods`).
-   - Options: `'Sheet'`, `'Range'`, `'ReadVariableNames'`.
-   - Zero COM/ActiveX or external runtime dependency; 100% cross-platform (Windows, Linux, macOS).
-3. **JSON Serialization (`json.rs`)**:
-   - `jsonencode(val)`: serializes structs, cells, tables, and numeric arrays to JSON strings via `serde_json`.
-   - `jsondecode(str)`: deserializes JSON into MATLAB structs, cells, and numeric matrices.
+Edge cases required by the test plan: empty input, NaN, Inf, N-D with `dim`, integer classes, and
+wrong-argument error text. Property tests: percentiles monotone in `p`, `var >= 0`, `corrcoef`
+diagonal = 1.
 
----
+## 4. CSV API
 
-## 5. Graphics & Plotting Specification (`rustlab-plot` — B2.2)
+### `readmatrix(filename, Name, Value, ...)`
 
-### Retained-Mode Plot-Description Model
-The plotting engine separates plot description from rasterization or rendering:
-1. **`Figure`**: Canvas descriptor holding figure metadata, sizing, and child axes.
-2. **`Axes`**: Coordinate space description with bounding box, affine coordinate transformations ($x, y \to x_{px}, y_{px}$), linear/log scales, auto-ticking algorithms (Wilkinson/Talbot nice numbers), and axis labels.
-3. **`SeriesDescriptor`**: Concrete graphical primitives (Line, Scatter, Bar, Histogram) with styling properties (LineWidth, Color, Marker, LineStyle).
+- Options: `Delimiter` (single character, default comma), `NumHeaderLines` (non-negative integer,
+  default 0).
+- Empty field -> `NaN`.
+- Quoted fields are parsed by the `csv` crate; quoted delimiters/newlines are supported.
+- UTF-8 BOM is stripped; CRLF and LF are accepted.
+- Ragged rows are an error that names the 1-based **file line number**.
+- Numeric parsing accepts `NaN`, `Inf`, `-Inf`; a non-numeric non-empty cell is an error with its
+  line/column.
+- The result is a dense `double` matrix; a single row is `1 x n`, a single column `n x 1`.
 
-### Deterministic SVG Renderer
-- **Pure-Rust Vector Output**: Directly emits valid, standalone W3C SVG XML strings.
-- **Deterministic & Byte-Stable**: Floating-point coordinates formatted with consistent precision (`{:.2}`) and sorted attribute orders to guarantee identical output across runs for golden regression testing.
-- **Zero X11 / Wayland / GPU Dependencies**: Completely headless; generates visual assets suitable for headless CI, web dashboards, documentation, and chat Generative UI.
+### `writematrix(A, filename, Name, Value, ...)`
 
----
+- Options: `Delimiter` (default comma).
+- Writes the shortest round-trip `f64` representation produced by Rust's standard formatter
+  (`format!("{}", x)`); `NaN`/`Inf`/`-Inf` are written as those spellings.
+- No header is written.
+- The writer is deterministic: same matrix + options -> byte-identical file.
 
-## 6. Verification Plan
+### `csv` crate licence / maintenance
 
-1. **`rustlab-data` Goldens**:
-   - CSV roundtrips with quotes, commas, escapes, missing values, headers.
-   - XLSX workbook reading across multiple sheets and cell ranges.
-   - Table relational operations (`innerjoin`, column mutation, logical filtering).
-2. **`rustlab-plot` Deterministic Goldens**:
-   - Exact byte-matching SVG golden comparisons for 2D line plots, scatter plots, bar charts, and histograms.
-   - Verification of coordinate transforms, axis tick locations, and legend rendering.
-3. **Clippy and Quality Bar**:
-   - Zero unwraps in library code, 100% `clippy -D warnings` clean across all targets, full rustdoc documentation.
+`csv` is dual-licensed **MIT / Unlicense**, maintained by BurntSushi, and is the standard streaming
+CSV parser in the Rust ecosystem. It is a normal (non-optional) dependency of `rustlab-data` only.
+No GPL/copyleft code is introduced. The dependency and its transitive crates are checked with
+`cargo deny check licenses` (see `deny.toml`).
 
----
+## 5. Feature and registration wiring
 
-## 7. Deferred ("Later") Items
+- Root workspace adds `crates/rustlab-data`.
+- `rustlab-stdlib`:
+  - optional dependency `rustlab-data`;
+  - `[features] default = ["faer", "data"]`, `data = ["dep:rustlab-data"]`;
+  - `register_all` calls `rustlab_data::register_all(interp)` when `data` is enabled, after the
+    core registrations (data versions intentionally override `unique`/`sum`/`mean`/`min`/`max`/
+    `median`/`std`/`var` only when the feature is on).
+- `rustlab-cli`: `default = ["faer", "data"]`, `data = ["rustlab-stdlib/data"]`.
+- `--no-default-features` builds and runs the core without data builtins; the `rustlab-data`
+  integration tests are gated by `#[cfg(feature = "data")]` so the feature matrix is honest.
 
-- **`timetable` & Time-Series Engine**: Sub-second timestamps, regular/irregular time spacing, retime, synchronize. (Deferred to later time-series milestone).
-- **Terminal Braille ANSI Backend**: Rendering Unicode Braille characters in CLI. The primary visualization output for B2 is deterministic SVG.
-- **3D Surface Meshes (`surf`, `mesh`)**: 3D lighting, camera view matrices, and z-buffering. (Deferred to later 3D extension).
-- **Interactive GUI Event Loops**: Headless SVG rendering satisfies all automated scripting and dashboard requirements; interactive windowing is deferred.
+## 6. Verification plan
+
+1. **Golden tests** (exact values):
+   - `median([1 2 3 4]) = 2.5`
+   - `std([1 2 3 4]) = 1.2910` (1.2909944487358056, displayed/asserted to tolerance)
+   - `mode([1 2 2 3 3]) = 2` (smallest tie)
+   - `prctile([1 2 3 4 5], 50) = 3`
+   - `movmean(1:5, 3) = [1.5 2 3 4 4.5]`
+2. **Edge cases**: empty, NaN, Inf, N-D with `dim`, integer classes, wrong-argument text.
+3. **Property tests**: percentile monotonicity, variance non-negative, `corrcoef` diagonal 1.
+4. **CSV fixtures** in `tests/data/`: BOM, CRLF, quoted fields, empty field -> NaN, ragged row
+   error line, shortest round-trip.
+5. **Release benchmark**: 1,000,000-row CSV read + write under criterion; record in
+   `docs/bench-history.md`.
+6. **Deliverables**: this note, `LEARNING.md` section, `examples/b2/*.m` with captured real output,
+   `docs/functions/<name>.md` + `help.rs` entries for every new builtin, updated
+   `docs/test-manifest.txt` / `docs/test-count.md`, unedited final verify log, and git tag `b2.1`.
+
+## 7. Error handling
+
+Use the existing interpreter error channel (`EvalError::UserError`) with these new identifiers:
+
+- `MATLAB:data:badInput` — argument is not numeric / not 2-D where required.
+- `MATLAB:data:badDim` — dimension argument is not a positive integer scalar.
+- `MATLAB:data:badFlag` — normalization flag is not 0 or 1.
+- `MATLAB:data:badOption` — unknown name-value option or malformed option value.
+- `MATLAB:data:csvRead` — file open/parse/ragged-row error (message includes the line number).
+- `MATLAB:data:csvWrite` — file create/write error.
+
+No `unwrap`/`expect`/`panic` in library code; tests may use them.

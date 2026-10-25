@@ -6,6 +6,7 @@ members = [
     "crates/rustlab-eval",
     "crates/rustlab-stdlib",
     "crates/rustlab-matio",
+    "crates/rustlab-data",
     "crates/rustlab-cli",
 ]
 

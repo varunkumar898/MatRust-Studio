@@ -231,6 +231,29 @@ pub fn register_all(interp: &mut Interpreter) {
     interp.register_builtin("nnz", sparse_builtins::nnz);
     interp.register_builtin("nonzeros", sparse_builtins::nonzeros);
     interp.register_builtin("spones", sparse_builtins::spones);
+
+    // Data & Statistics (Milestone B2.1)
+    #[cfg(feature = "data")]
+    {
+        interp.register_builtin("median", rustlab_data::stats::median);
+        interp.register_builtin("mode", rustlab_data::stats::mode);
+        interp.register_builtin("prctile", rustlab_data::stats::prctile);
+        interp.register_builtin("quantile", rustlab_data::stats::quantile);
+        interp.register_builtin("cov", rustlab_data::stats::cov);
+        interp.register_builtin("corrcoef", rustlab_data::stats::corrcoef);
+        interp.register_builtin("histcounts", rustlab_data::stats::histcounts);
+        interp.register_builtin("movmean", rustlab_data::stats::movmean);
+        interp.register_builtin("movmedian", rustlab_data::stats::movmedian);
+        interp.register_builtin("cummax", rustlab_data::stats::cummax);
+        interp.register_builtin("cummin", rustlab_data::stats::cummin);
+        interp.register_builtin("zscore", rustlab_data::stats::zscore);
+        interp.register_builtin("sortrows", rustlab_data::stats::sortrows);
+        interp.register_builtin("unique", rustlab_data::stats::unique);
+        interp.register_builtin("var", rustlab_data::stats::var_fn);
+        interp.register_builtin("std", rustlab_data::stats::std_fn);
+        interp.register_builtin("readmatrix", rustlab_data::csv_io::readmatrix);
+        interp.register_builtin("writematrix", rustlab_data::csv_io::writematrix);
+    }
 }
 
 /// Creates a new `Interpreter` pre-loaded with the complete MATLAB standard library.

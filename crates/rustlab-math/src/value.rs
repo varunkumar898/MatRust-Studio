@@ -2006,7 +2006,10 @@ impl fmt::Display for Value {
                     if x.fract() == 0.0 && x.abs() < 1e10 {
                         return write!(f, "    {}", x as i64);
                     }
-                    if x != 0.0 && (x.abs() < 1e-3 || x.abs() >= 1e4) {
+                    // Unverified scalar threshold rule (A3.1.5): non-integer
+                    // scalars at or above 1e3 use scientific notation. The
+                    // MathWorks `format` page only documents the matrix rule.
+                    if x != 0.0 && (x.abs() < 1e-3 || x.abs() >= 1e3) {
                         return write!(f, "   {}", format_short_scientific(x));
                     }
                     return write!(f, "    {:.4}", x);
@@ -2025,8 +2028,13 @@ impl fmt::Display for Value {
                     .map(|x| x.abs())
                     .fold(0.0f64, f64::max);
 
+                // MathWorks `format` rule: "If the largest element of a matrix
+                // is larger than 1000 or smaller than 0.001, MATLAB applies a
+                // common scale factor for the short and long formats."
+                // Strict inequalities are deliberate (boundary 1000/0.001 does
+                // not scale); the boundary golden is marked unverified.
                 let (scale, has_scale) = if !is_all_int
-                    && (max_finite >= 1e4 || (max_finite < 1e-3 && max_finite > 0.0))
+                    && (max_finite > 1e3 || (max_finite < 1e-3 && max_finite > 0.0))
                 {
                     let exp = max_finite.log10().floor() as i32;
                     (10.0f64.powi(exp), Some(exp))

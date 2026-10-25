@@ -1,5 +1,10 @@
 # RustLab Numerical Performance History & Baseline Comparison
 
+> **A3.1.5 RETRACTION.** Any A3.1.3-report figure of **0.94 ms** for A+B, or any A3.1.3 profile
+> percentage breakdown, is **VOID**: no such artifact exists in the repository. Use §4 (criterion
+> 774.41 µs; instrumented 0.5044 ms; in-binary 0.488 ms) or §5. See
+> `docs/milestones/a3.1.5-integrity-void.md`.
+
 This document records the official performance history for `rustlab` releases and milestones, benchmarking GEMM throughput, linear system solving ($A \backslash b$ via LU factorization), 1D FFT scaling, elementwise vector operations ($10^6$ doubles), and eigensolvers.
 
 ---
@@ -178,3 +183,29 @@ Captured on 2026-10-25 using `rustlab.exe bench` built under `[profile.release]`
 | **1D FFT ($N=1000$)** | RustFFT (Bluestein) | Latency | N/A | **43.3 µs** | 298.8x faster than Naive (12938 µs)|
 | **1D FFT ($N=1009$)** | RustFFT (prime) | Latency | N/A | **94.4 µs** | 141.6x faster than Naive (13370 µs)|
 | **1D FFT ($N=65536$)** | RustFFT backend | Latency | N/A | **2.847 ms** | 4.39x faster than Radix-2 (12.5 ms)|
+
+
+---
+
+## 6. Milestone B2.1 Release Benchmark Run (Unedited Output)
+
+Captured on 2026-10-25 using `rustlab.exe bench` built under `[profile.release]` (`opt-level = 3`, `lto = "fat"`, `codegen-units = 1`, `panic = "abort"`):
+
+| Domain | Workload | Benchmark Metric | Milestone 7 Baseline | B2.1 Measured | Status vs Target |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **GEMM** | $384 \times 384$ doubles | Throughput | 11.8 GFLOPS | **26.04 GFLOPS** | **2.21x baseline** |
+| **Linear Solve ($A \backslash b$)** | $50 \times 50$ LU | Latency | N/A | **0.167 ms** | Monotonic |
+| **Linear Solve ($A \backslash b$)** | $100 \times 100$ LU | Latency | 0.487 ms | **0.951 ms** | Monotonic scaling |
+| **Linear Solve ($A \backslash b$)** | $200 \times 200$ LU | Latency | N/A | **6.505 ms** | Monotonic scaling |
+| **Elementwise Add ($A+B$)** | $10^6$ doubles | Latency | 22.0 ms | **0.944 ms** | **23.3x faster** ($\le 3$ ms target met) |
+| **Elementwise Mul ($A .* B$)**| $10^6$ doubles | Latency | ~22.0 ms | **0.532 ms** | **1,878.6 MEl/s** |
+| **Trigonometric ($\sin(A)$)** | $10^6$ doubles | Latency | N/A | **18.394 ms** | 54.4 MEl/s |
+| **Symmetric Eig ($100 \times 100$)**| Native Householder+QL | Latency | N/A | **6.197 ms** | Teaching/clean-room reference |
+| **Symmetric Eig ($100 \times 100$)**| Faer `self_adjoint_eigen` | Latency | N/A | **1.927 ms** | **3.22x faster** than native QL |
+| **Sparse Matvec ($S \cdot b$)** | $N=1000$, 1% CSC | Latency | N/A | **0.030 ms** | **266.57x speedup** vs dense (7.917 ms) |
+| **Sparse Matrix Add ($S + S$)** | $N=1000$, 1% CSC | Latency | N/A | **0.122 ms** | **105.44x speedup** vs dense (12.875 ms) |
+| **B2.1 movmean** | $10^6$ doubles, $k=3$ | Latency | N/A | **116.888 ms** | Moving window centering |
+| **B2.1 cummax** | $10^6$ doubles | Latency | N/A | **57.127 ms** | Cumulative streaming reducer |
+| **B2.1 zscore** | $10^6$ doubles | Latency | N/A | **60.953 ms** | Standardization $(X - \mu)/\sigma$ |
+| **B2.1 writematrix** | $10^6$ floats ($250k \times 4$) | Latency | N/A | **158.783 ms** | Shortest round-trip via `ryu` |
+| **B2.1 readmatrix** | $10^6$ floats ($250k \times 4$) | Latency | N/A | **144.724 ms** | RFC 4180 streaming parse |

@@ -1,0 +1,120 @@
+﻿# RustLab A3.1.5 REPL transcript (real output)
+# Binary: C:\Users\varun\AppData\Local\Temp\opencode\rustlab-target\debug\rustlab.exe
+# Invocation: rustlab.exe -e "<expression>"
+
+>>> x = 100000
+--- stdout ---
+x =
+
+    100000
+--- stderr ---
+[exit 0]
+
+>>> 12345.678
+--- stdout ---
+ans =
+
+   1.2346e+04
+--- stderr ---
+[exit 0]
+
+>>> 1234.5678
+--- stdout ---
+ans =
+
+   1.2346e+03
+--- stderr ---
+[exit 0]
+
+>>> 0.001
+--- stdout ---
+ans =
+
+    0.0010
+--- stderr ---
+[exit 0]
+
+>>> 0.0012
+--- stdout ---
+ans =
+
+    0.0012
+--- stderr ---
+[exit 0]
+
+>>> [1e-16 1]
+--- stdout ---
+ans =
+
+    0.0000       1
+--- stderr ---
+[exit 0]
+
+>>> [1 1000000]
+--- stdout ---
+ans =
+
+          1  1000000
+--- stderr ---
+[exit 0]
+
+>>> [0.001 1000]
+--- stdout ---
+ans =
+
+    0.0010    1000
+--- stderr ---
+[exit 0]
+
+>>> int8(-2.5)
+--- stdout ---
+ans =
+
+    -3
+--- stderr ---
+[exit 0]
+
+>>> uint8(3.5)
+--- stdout ---
+ans =
+
+    4
+--- stderr ---
+[exit 0]
+
+>>> A = 1:5; A([true false true false true]) = [10 20];
+--- stdout ---
+--- stderr ---
+Error: In an assignment  A(I) = B, the number of elements in B and I must be the same.
+  --> Line 1, Column 10:
+   |
+  1 | A = 1:5; A([true false true false true]) = [10 20];
+   |          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[exit 1]
+
+>>> 0/0
+--- stdout ---
+ans =
+
+   NaN
+--- stderr ---
+[exit 0]
+
+>>> 0.1+0.2==0.3
+--- stdout ---
+ans =
+
+     0
+--- stderr ---
+[exit 0]
+
+>>> inv([1 2;2 4])
+--- stdout ---
+ans =
+
+     Inf   Inf
+     Inf   Inf
+--- stderr ---
+Warning: Matrix is singular to working precision.
+[exit 0]
+

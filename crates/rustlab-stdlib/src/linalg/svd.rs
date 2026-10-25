@@ -640,10 +640,11 @@ pub fn eig_fn(args: &[Value], nargout: usize) -> Result<Vec<Value>, EvalError> {
     }
 
     if is_sym {
-        #[cfg(feature = "faer")]
-        let (eigenvalues, v_arr) = crate::linalg::eig_sym::faer_self_adjoint_eig(&da)?;
-        #[cfg(not(feature = "faer"))]
-        let (eigenvalues, v_arr) = crate::linalg::eig_sym::eig_sym(&da)?;
+        // Single route used by both the builtin and the routing test:
+        // faer when enabled, native Householder+QL otherwise. Both backends
+        // apply ascending ordering, sign normalization, and (faer) the
+        // degenerate-eigenspace tie-break after decomposition.
+        let (eigenvalues, v_arr) = crate::linalg::eig_sym::eig_sym_auto(&da)?;
         if nargout <= 1 {
             let d_col = DenseArray::from_vec_unchecked(vec![n, 1], eigenvalues);
             return Ok(vec![Value::Double(d_col)]);

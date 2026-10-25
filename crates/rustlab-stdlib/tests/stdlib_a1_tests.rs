@@ -101,7 +101,9 @@ fn test_num2str_and_mat2str() {
     };
     assert_eq!(t5, "10000  25000");
 
-    // num2str multi-row matrix with non-integers (right-justified columns)
+    // num2str multi-row matrix with non-integers: A3.1.5 requires the
+    // MATLAB `%g`-style rule (maximum 5 significant digits, no trailing
+    // zeros), right-justified per column. Source: MathWorks num2str.
     let r6 = interp
         .eval_script("num2str([1.234 56.78; 9.1 0.2])")
         .unwrap()
@@ -110,7 +112,7 @@ fn test_num2str_and_mat2str() {
         Value::Char(ca) => ca.as_slice().iter().collect(),
         _ => panic!(),
     };
-    assert_eq!(t6, "1.2340  56.7800\n9.1000   0.2000");
+    assert_eq!(t6, "1.234  56.78\n  9.1    0.2");
 }
 
 #[test]

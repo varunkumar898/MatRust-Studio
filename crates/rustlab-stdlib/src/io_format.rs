@@ -460,6 +460,56 @@ pub fn disp_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError>
     Ok(Vec::new())
 }
 
+/// Formats one `num2str` default-mode element with C `%g`-style significant
+/// digits: at most five significant digits, no trailing zeros, and scientific
+/// notation only for exponents outside [-4, 5). Integer-valued doubles keep
+/// full digits (matching `num2str(100000)`).
+///
+/// Source: MathWorks `num2str` (maximum of 5 significant digits):
+/// https://www.mathworks.com/help/matlab/ref/num2str.html
+/// The exact `%g`-style rounding/alignment is marked **unverified** because the
+/// page does not spell out the printf conversion.
+fn format_num2str_element(x: f64) -> String {
+    if x.is_nan() {
+        return "NaN".to_string();
+    }
+    if x == f64::INFINITY {
+        return "Inf".to_string();
+    }
+    if x == f64::NEG_INFINITY {
+        return "-Inf".to_string();
+    }
+    if x == 0.0 {
+        return "0".to_string();
+    }
+    if x.fract() == 0.0 && x.abs() < 1e12 {
+        return format!("{}", x as i64);
+    }
+
+    let exp = x.abs().log10().floor() as i32;
+    if !(-4..5).contains(&exp) {
+        let s = format!("{:.4e}", x);
+        if let Some((mantissa, exponent)) = s.split_once('e') {
+            let mant = mantissa
+                .trim_end_matches('0')
+                .trim_end_matches('.')
+                .to_string();
+            if let Ok(e) = exponent.parse::<i32>() {
+                return format!("{mant}e{e:+03}");
+            }
+        }
+        return s;
+    }
+
+    let decimals = (4 - exp).max(0) as usize;
+    let s = format!("{x:.decimals$}");
+    if s.contains('.') {
+        s.trim_end_matches('0').trim_end_matches('.').to_string()
+    } else {
+        s
+    }
+}
+
 /// `num2str(A, [precision_or_format])`
 pub fn num2str_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError> {
     if args.is_empty() {
@@ -493,11 +543,7 @@ pub fn num2str_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalErr
             }
             if da.is_scalar() {
                 let x = da.as_slice()[0];
-                let s = if x.fract() == 0.0 && x.abs() < 1e12 {
-                    format!("{}", x as i64)
-                } else {
-                    format!("{x:.4}")
-                };
+                let s = format_num2str_element(x);
                 return Ok(vec![Value::char_vector(&s)]);
             }
 
@@ -508,11 +554,7 @@ pub fn num2str_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalErr
             for c in 0..cols {
                 for r in 0..rows {
                     let x = da.as_slice()[c * rows + r];
-                    let s = if x.fract() == 0.0 && x.abs() < 1e12 {
-                        format!("{}", x as i64)
-                    } else {
-                        format!("{x:.4}")
-                    };
+                    let s = format_num2str_element(x);
                     col_widths[c] = col_widths[c].max(s.len());
                     col_entries[c][r] = s;
                 }

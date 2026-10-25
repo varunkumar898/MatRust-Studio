@@ -38,6 +38,7 @@ pub fn run_benchmarks() {
     bench_eig_comparison();
     bench_fft_architectures();
     bench_sparse_vs_dense();
+    bench_b21_data_and_csv();
 
     println!();
     println!("All benchmarks completed successfully.");
@@ -393,19 +394,41 @@ fn bench_sparse_vs_dense() {
     println!("--- 7. Sparse vs Dense Scaling (N = 1,000, Density 1%) ---");
     println!(
         "{:<20} {:<18} {:<18} {:<18}",
-        "Operation", "Sparse Time (ms)", "Dense Time (ms)", "Speedup / Ratio"
+        "Operation", "Sparse Time (ms)", "Dense Time (ms)", "Dense/Sparse"
     );
     println!("{:-<76}", "");
 
     let mut interp = new_interpreter();
+    // A3.1.5: `sprand` is not a registered builtin. The earlier version
+    // swallowed that setup error and timed an error path (matvec ratio 1.0x,
+    // dense add ~0.043 ms). Build a deterministic 1%-dense CSC matrix from
+    // triplets instead, and fail loudly if setup/evaluation regresses.
     let setup = "
         n = 1000;
-        density = 0.01;
-        S = sprand(n, n, density);
+        idx = (0:n*n/100-1)';
+        I = mod(idx, n) + 1;
+        J = floor(idx/n) + 1;
+        V = ones(numel(idx), 1);
+        S = sparse(I, J, V, n, n);
         D = full(S);
         b = ones(n, 1);
     ";
-    let _ = interp.eval_script(setup);
+    if let Err(e) = interp.eval_script(setup) {
+        println!("  SETUP ERROR: {e}");
+        return;
+    }
+    if let Err(e) = interp.eval_script("c = S * b;") {
+        println!("  MATVEC SETUP ERROR: {e}");
+        return;
+    }
+    if let Err(e) = interp.eval_script("C = S + S;") {
+        println!("  SPARSE ADD SETUP ERROR: {e}");
+        return;
+    }
+    if let Err(e) = interp.eval_script("C = D + D;") {
+        println!("  DENSE ADD SETUP ERROR: {e}");
+        return;
+    }
 
     let (sp_mul_ms, _) = run_benchmark_samples(
         || {
@@ -428,8 +451,8 @@ fn bench_sparse_vs_dense() {
     };
 
     println!(
-        "{:<20} {:<18.3} {:<18.3} {:<18.1}x faster",
-        "Matvec (A * b)", sp_mul_ms, dn_mul_ms, mul_ratio
+        "{:<20} {:<18.3} {:<18.3} {:<18.2}x",
+        "Matvec (S * b)", sp_mul_ms, dn_mul_ms, mul_ratio
     );
 
     let (sp_add_ms, _) = run_benchmark_samples(
@@ -453,8 +476,84 @@ fn bench_sparse_vs_dense() {
     };
 
     println!(
-        "{:<20} {:<18.3} {:<18.3} {:<18.1}x faster",
-        "Matrix Add (A + A)", sp_add_ms, dn_add_ms, add_ratio
+        "{:<20} {:<18.3} {:<18.3} {:<18.2}x",
+        "Matrix Add (S + S)", sp_add_ms, dn_add_ms, add_ratio
     );
+    println!();
+}
+
+fn bench_b21_data_and_csv() {
+    println!("--- 8. Milestone B2.1: 1,000,000-Element Statistics & CSV Matrix I/O ---");
+    println!(
+        "{:<25} {:<18} {:<18}",
+        "Benchmark", "Median (ms)", "Spread (ms)"
+    );
+    println!("{:-<65}", "");
+
+    let mut interp = new_interpreter();
+    if let Err(e) = interp.eval_script("x = (1:1000000)';") {
+        println!("  SETUP ERROR: {e}");
+        return;
+    }
+
+    // 1. movmean (k = 3) on 1M elements
+    let (mm_ms, mm_sp) = run_benchmark_samples(
+        || {
+            let _ = interp.eval_script("m = movmean(x, 3);");
+        },
+        2,
+        10,
+    );
+    println!("{:<25} {:<18.3} {:<18.3}", "movmean(1M, 3)", mm_ms, mm_sp);
+
+    // 2. cummax on 1M elements
+    let (cm_ms, cm_sp) = run_benchmark_samples(
+        || {
+            let _ = interp.eval_script("c = cummax(x);");
+        },
+        2,
+        10,
+    );
+    println!("{:<25} {:<18.3} {:<18.3}", "cummax(1M)", cm_ms, cm_sp);
+
+    // 3. zscore on 1M elements
+    let (zs_ms, zs_sp) = run_benchmark_samples(
+        || {
+            let _ = interp.eval_script("z = zscore(x);");
+        },
+        2,
+        10,
+    );
+    println!("{:<25} {:<18.3} {:<18.3}", "zscore(1M)", zs_ms, zs_sp);
+
+    // 4. CSV writematrix and readmatrix on 1,000,000 elements (250,000 x 4)
+    let _ = interp
+        .eval_script("X = [(1:250000)', (250001:500000)', (500001:750000)', (750001:1000000)'];");
+    let csv_path = "target/bench_1m.csv";
+    let (write_ms, write_sp) = run_benchmark_samples(
+        || {
+            let _ = interp.eval_script(&format!("writematrix(X, '{csv_path}');"));
+        },
+        1,
+        5,
+    );
+    println!(
+        "{:<25} {:<18.3} {:<18.3}",
+        "writematrix(1M floats)", write_ms, write_sp
+    );
+
+    let (read_ms, read_sp) = run_benchmark_samples(
+        || {
+            let _ = interp.eval_script(&format!("R = readmatrix('{csv_path}');"));
+        },
+        1,
+        5,
+    );
+    println!(
+        "{:<25} {:<18.3} {:<18.3}",
+        "readmatrix(1M floats)", read_ms, read_sp
+    );
+
+    let _ = std::fs::remove_file(csv_path);
     println!();
 }

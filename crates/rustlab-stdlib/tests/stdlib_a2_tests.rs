@@ -585,7 +585,7 @@ fn test_a2_both_native_and_faer_eig_paths_match() {
 
 #[cfg(not(feature = "faer"))]
 #[test]
-fn test_a2_both_native_and_faer_eig_paths_match() {
+fn test_a2_native_eig_path_without_faer() {
     use rustlab_math::DenseArray;
     use rustlab_stdlib::linalg::eig_sym::eig_sym;
 
@@ -597,6 +597,65 @@ fn test_a2_both_native_and_faer_eig_paths_match() {
     let (d_native, v_native) = eig_sym(&a).unwrap();
     assert_eq!(d_native.len(), 3);
     assert_eq!(v_native.shape(), &[3, 3]);
+}
+
+#[cfg(feature = "faer")]
+#[test]
+fn test_a2_symmetric_eig_routes_to_faer_and_canonicalizes() {
+    use rustlab_math::DenseArray;
+    use rustlab_stdlib::linalg::eig_sym::{
+        eig_sym_auto, faer_self_adjoint_eig, symmetric_eig_backend,
+    };
+
+    // The compile-time route used by `eig` must select faer in a default build.
+    assert_eq!(symmetric_eig_backend(), "faer");
+
+    let a = DenseArray::from_vec(
+        vec![3, 3],
+        vec![4.0, 1.0, -2.0, 1.0, 2.0, 0.0, -2.0, 0.0, 3.0],
+    )
+    .unwrap();
+
+    // Same route as eig_fn, and it matches calling faer directly.
+    let (d_auto, v_auto) = eig_sym_auto(&a).unwrap();
+    let (d_faer, v_faer) = faer_self_adjoint_eig(&a).unwrap();
+    assert_eq!(d_auto, d_faer);
+    assert_eq!(v_auto.as_slice(), v_faer.as_slice());
+
+    // Ordering is ascending.
+    assert!(d_auto.windows(2).all(|w| w[0] <= w[1]));
+
+    // Sign normalization: first maximum-absolute component is non-negative.
+    let n = 3;
+    for c in 0..n {
+        let mut max_abs = -1.0;
+        let mut max_idx = 0;
+        for r in 0..n {
+            let val = v_auto.as_slice()[r + c * n].abs();
+            if val > max_abs {
+                max_abs = val;
+                max_idx = r;
+            }
+        }
+        assert!(v_auto.as_slice()[max_idx + c * n] >= 0.0);
+    }
+
+    // Degenerate eigenspace: tie-break after ordering is deterministic.
+    let deg = DenseArray::from_vec(
+        vec![4, 4],
+        vec![
+            2.0, 0.0, 0.0, 0.0, // col 0
+            0.0, 2.0, 0.0, 0.0, // col 1
+            0.0, 0.0, 1.0, 0.0, // col 2
+            0.0, 0.0, 0.0, 1.0, // col 3
+        ],
+    )
+    .unwrap();
+    let (d1, v1) = eig_sym_auto(&deg).unwrap();
+    let (d2, v2) = eig_sym_auto(&deg).unwrap();
+    assert_eq!(d1, vec![1.0, 1.0, 2.0, 2.0]);
+    assert_eq!(d1, d2);
+    assert_eq!(v1.as_slice(), v2.as_slice());
 }
 
 #[test]

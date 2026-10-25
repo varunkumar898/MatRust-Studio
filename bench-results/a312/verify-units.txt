@@ -1,0 +1,51 @@
+
+########## STEP 4 ##########
+[ RUN:tests\stdlib_a1_tests.rs ]  named=13
+[ RUN:tests\stdlib_tests.rs ]  named=12
+[ RUN:tests\cli_tests.rs ]  named=3
+[ RUN:tests\stdlib_a3_tests.rs ]  named=17
+[ RUN:tests\eval_tests.rs ]  named=9
+[ RUN:tests\parser_tests.rs ]  named=9
+[ RUN:tests\scipy_mat_tests.rs ]  named=1
+[ RUN:tests\diagnostics_tests.rs ]  named=12
+[ RUN:unittests src\lib.rs ]  named=17
+[ RUN:tests\regression_a312_tests.rs ]  named=11
+[ RUN:tests\math_tests.rs ]  named=12
+[ RUN:tests\stdlib_a2_tests.rs ]  named=19
+[ RUN:tests\milestone_a1_tests.rs ]  named=6
+[ RUN:tests\matio_tests.rs ]  named=7
+[ RUN:tests\lexer_tests.rs ]  named=4
+
+########## STEP 5 ##########
+[ RUN:tests\stdlib_a3_tests.rs ]  named=17
+[ RUN:tests\milestone_a1_tests.rs ]  named=6
+[ RUN:tests\matio_tests.rs ]  named=7
+[ RUN:tests\diagnostics_tests.rs ]  named=12
+[ RUN:unittests src\lib.rs ]  named=17
+[ RUN:tests\stdlib_a1_tests.rs ]  named=13
+[ RUN:tests\stdlib_tests.rs ]  named=12
+[ RUN:tests\regression_a312_tests.rs ]  named=11
+[ RUN:tests\math_tests.rs ]  named=12
+[ RUN:tests\cli_tests.rs ]  named=3
+[ RUN:tests\lexer_tests.rs ]  named=4
+[ RUN:tests\parser_tests.rs ]  named=9
+[ RUN:tests\stdlib_a2_tests.rs ]  named=19
+[ RUN:tests\eval_tests.rs ]  named=9
+[ RUN:tests\scipy_mat_tests.rs ]  named=1
+
+########## STEP 6 ##########
+[ RUN:tests\lexer_tests.rs ]  named=4
+[ RUN:tests\matio_tests.rs ]  named=7
+[ RUN:tests\math_tests.rs ]  named=12
+[ RUN:tests\eval_tests.rs ]  named=9
+[ RUN:tests\stdlib_a1_tests.rs ]  named=13
+[ RUN:tests\stdlib_a3_tests.rs ]  named=17
+[ RUN:tests\stdlib_a2_tests.rs ]  named=15
+[ RUN:unittests src\lib.rs ]  named=17
+[ RUN:tests\parser_tests.rs ]  named=9
+[ RUN:tests\milestone_a1_tests.rs ]  named=6
+[ RUN:tests\diagnostics_tests.rs ]  named=12
+[ RUN:tests\cli_tests.rs ]  named=3
+[ RUN:tests\scipy_mat_tests.rs ]  named=1
+[ RUN:tests\regression_a312_tests.rs ]  named=11
+[ RUN:tests\stdlib_tests.rs ]  named=12

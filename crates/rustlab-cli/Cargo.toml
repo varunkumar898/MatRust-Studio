@@ -3,6 +3,7 @@ name = "rustlab-cli"
 version = "0.1.0"
 edition = "2021"
 description = "Interactive REPL, CLI runner, diagnostic printer, and benchmark suite for RustLab"
+license = "MIT OR Apache-2.0"
 
 [lib]
 name = "rustlab_cli"

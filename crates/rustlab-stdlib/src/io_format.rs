@@ -503,16 +503,27 @@ pub fn num2str_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalErr
 
             let rows = da.shape()[0];
             let cols = da.shape()[1];
+            let mut col_widths = vec![0; cols];
+            let mut col_entries: Vec<Vec<String>> = vec![vec![String::new(); rows]; cols];
+            for c in 0..cols {
+                for r in 0..rows {
+                    let x = da.as_slice()[c * rows + r];
+                    let s = if x.fract() == 0.0 && x.abs() < 1e12 {
+                        format!("{}", x as i64)
+                    } else {
+                        format!("{x:.4}")
+                    };
+                    col_widths[c] = col_widths[c].max(s.len());
+                    col_entries[c][r] = s;
+                }
+            }
             let mut row_strings = Vec::new();
             for r in 0..rows {
                 let mut parts = Vec::new();
                 for c in 0..cols {
-                    let x = da.as_slice()[c * rows + r];
-                    if x.fract() == 0.0 && x.abs() < 1e12 {
-                        parts.push(format!("{}", x as i64));
-                    } else {
-                        parts.push(format!("{x:.4}"));
-                    }
+                    let s = &col_entries[c][r];
+                    let padded = format!("{:>width$}", s, width = col_widths[c]);
+                    parts.push(padded);
                 }
                 row_strings.push(parts.join("  "));
             }

@@ -280,8 +280,44 @@ pub fn faer_self_adjoint_eig(
             v_data[r + c * n] = u[(r, c)];
         }
     }
-    let v_arr = DenseArray::from_vec_unchecked(vec![n, n], v_data);
-    Ok((eigenvalues, v_arr))
+
+    // Sort eigenvalues in ascending order and permute eigenvector columns
+    let mut indices: Vec<usize> = (0..n).collect();
+    indices.sort_by(|&i1, &i2| {
+        eigenvalues[i1]
+            .partial_cmp(&eigenvalues[i2])
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
+
+    let mut sorted_d = vec![0.0; n];
+    let mut sorted_v = vec![0.0; n * n];
+    for (new_col, &old_col) in indices.iter().enumerate() {
+        sorted_d[new_col] = eigenvalues[old_col];
+        for r in 0..n {
+            sorted_v[r + new_col * n] = v_data[r + old_col * n];
+        }
+    }
+
+    // Sign normalization: first maximum-magnitude component by index is non-negative
+    for c in 0..n {
+        let mut max_abs = -1.0;
+        let mut max_idx = 0;
+        for r in 0..n {
+            let val = sorted_v[r + c * n].abs();
+            if val > max_abs {
+                max_abs = val;
+                max_idx = r;
+            }
+        }
+        if sorted_v[max_idx + c * n] < 0.0 {
+            for r in 0..n {
+                sorted_v[r + c * n] = -sorted_v[r + c * n];
+            }
+        }
+    }
+
+    let v_arr = DenseArray::from_vec_unchecked(vec![n, n], sorted_v);
+    Ok((sorted_d, v_arr))
 }
 
 #[cfg(test)]

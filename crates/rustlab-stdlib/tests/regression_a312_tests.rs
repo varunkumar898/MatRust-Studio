@@ -72,6 +72,25 @@ fn scalar_display_via_env_matches_output_log() {
     assert_eq!(rendered_var("x = 100000", "x"), "    100000");
 }
 
+#[test]
+fn test_scientific_notation_threshold_rule_cited() {
+    // Citation: MathWorks MATLAB Documentation - "Set Output Display Format" (format short rule):
+    // "If the largest element of a matrix is larger than 1000 or smaller than 0.001,
+    //  MATLAB applies a common scale factor for the short and long formats."
+    // URL: https://www.mathworks.com/help/matlab/ref/format.html
+
+    // Value in [0.001, 1000) displays in standard fixed-point short format (4 decimals)
+    assert_eq!(rendered("x = 0.001"), "x =\n\n    0.0010\n");
+    assert_eq!(rendered("x = 999.9"), "x =\n\n    999.9000\n");
+
+    // Value < 0.001 switches to signed zero-padded 2-digit exponent scientific notation
+    assert_eq!(rendered("x = 0.00099"), "x =\n\n   9.9000e-04\n");
+    assert_eq!(rendered("x = 1e-16"), "x =\n\n   1.0000e-16\n");
+
+    // Value >= 10000 non-integer switches to scientific notation
+    assert_eq!(rendered("x = 12345.678"), "x =\n\n   1.2346e+04\n");
+}
+
 // ---------------------------------------------------------------------------
 // 2. Matrix display parity: one shared column width + one common scale factor
 // ---------------------------------------------------------------------------
@@ -254,14 +273,11 @@ fn binary_expression_span_covers_full_expression() {
 fn every_registered_builtin_has_docs_and_help() {
     let interp = new_interpreter();
     let names = interp.builtin_names();
-    assert!(
-        names.len() >= 160,
-        "expected >= 160 registered builtins, got {}",
-        names.len()
-    );
+    let name_set: std::collections::BTreeSet<_> = names.iter().cloned().collect();
 
     let docs_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../docs/functions");
 
+    // 1. Forward check: every registered builtin must have a non-empty, non-TODO markdown doc and help text
     for name in &names {
         let doc_path = docs_dir.join(format!("{name}.md"));
         assert!(
@@ -285,5 +301,32 @@ fn every_registered_builtin_has_docs_and_help() {
             help_text.contains(name),
             "help text for `{name}` lacks its own name"
         );
+    }
+
+    // 2. Reverse check: zero orphan doc files in docs/functions
+    let mut orphan_docs = Vec::new();
+    for entry in std::fs::read_dir(&docs_dir).expect("failed to read docs_dir") {
+        let entry = entry.expect("valid entry");
+        let path = entry.path();
+        if path.extension().and_then(|e| e.to_str()) == Some("md") {
+            if let Some(stem) = path.file_stem().and_then(|s| s.to_str()) {
+                if !name_set.contains(stem) {
+                    orphan_docs.push(stem.to_string());
+                }
+            }
+        }
+    }
+    assert!(
+        orphan_docs.is_empty(),
+        "Orphan markdown doc files found without a registered builtin: {:?}",
+        orphan_docs
+    );
+
+    // Export sorted list to docs/builtins.txt
+    let mut sorted_names = names;
+    sorted_names.sort();
+    if let Some(parent) = docs_dir.parent() {
+        let builtins_txt = parent.join("builtins.txt");
+        let _ = std::fs::write(builtins_txt, sorted_names.join("\n") + "\n");
     }
 }

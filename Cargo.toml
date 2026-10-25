@@ -10,16 +10,15 @@ members = [
 ]
 
 [profile.release]
+# Standalone numerical engine binary uses panic = "abort" to eliminate
+# landing pad tables and EH frames, optimizing binary size and vector registers.
 opt-level = 3
 lto = "fat"
 codegen-units = 1
 panic = "abort"
 
-# Benchmarks must run under the *same* codegen as the shipped binary. The bench
-# profile does not inherit user [profile.release] overrides automatically, so it
-# is pinned explicitly; panic stays unwind because criterion's sampling loop
-# requires unwinding.
+# Benchmarks inherit optimized release codegen settings.
 [profile.bench]
 inherits = "release"
-panic = "unwind"
+
 

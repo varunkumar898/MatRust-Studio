@@ -1,0 +1,81 @@
+STEP 4 | Running unittests src\lib.rs | 0 passed
+STEP 4 | Running unittests src\main.rs | 0 passed
+STEP 4 | Running tests\cli_tests.rs | 3 passed
+STEP 4 | Running tests\diagnostics_tests.rs | 12 passed
+STEP 4 | Running unittests src\lib.rs | 0 passed
+STEP 4 | Running tests\eval_tests.rs | 9 passed
+STEP 4 | Running tests\milestone_a1_tests.rs | 6 passed
+STEP 4 | Running unittests src\lib.rs | 10 passed
+STEP 4 | Running tests\math_tests.rs | 12 passed
+STEP 4 | Running unittests src\lib.rs | 0 passed
+STEP 4 | Running tests\matio_tests.rs | 7 passed
+STEP 4 | Running tests\scipy_mat_tests.rs | 1 passed
+STEP 4 | Running unittests src\lib.rs | 0 passed
+STEP 4 | Running tests\lexer_tests.rs | 4 passed
+STEP 4 | Running tests\parser_tests.rs | 9 passed
+STEP 4 | Running unittests src\lib.rs | 7 passed
+STEP 4 | Running tests\regression_a312_tests.rs | 11 passed
+STEP 4 | Running tests\stdlib_a1_tests.rs | 13 passed
+STEP 4 | Running tests\stdlib_a2_tests.rs | 19 passed
+STEP 4 | Running tests\stdlib_a3_tests.rs | 17 passed
+STEP 4 | Running tests\stdlib_tests.rs | 12 passed
+STEP 4 | Doc-tests rustlab_cli | 0 passed
+STEP 4 | Doc-tests rustlab_eval | 0 passed
+STEP 4 | Doc-tests rustlab_math | 0 passed
+STEP 4 | Doc-tests rustlab_matio | 0 passed
+STEP 4 | Doc-tests rustlab_parse | 0 passed
+STEP 4 | Doc-tests rustlab_stdlib | 0 passed
+STEP 5 | Running unittests src\lib.rs | 0 passed
+STEP 5 | Running unittests src\main.rs | 0 passed
+STEP 5 | Running tests\cli_tests.rs | 3 passed
+STEP 5 | Running tests\diagnostics_tests.rs | 12 passed
+STEP 5 | Running unittests src\lib.rs | 0 passed
+STEP 5 | Running tests\eval_tests.rs | 9 passed
+STEP 5 | Running tests\milestone_a1_tests.rs | 6 passed
+STEP 5 | Running unittests src\lib.rs | 10 passed
+STEP 5 | Running tests\math_tests.rs | 12 passed
+STEP 5 | Running unittests src\lib.rs | 0 passed
+STEP 5 | Running tests\matio_tests.rs | 7 passed
+STEP 5 | Running tests\scipy_mat_tests.rs | 1 passed
+STEP 5 | Running unittests src\lib.rs | 0 passed
+STEP 5 | Running tests\lexer_tests.rs | 4 passed
+STEP 5 | Running tests\parser_tests.rs | 9 passed
+STEP 5 | Running unittests src\lib.rs | 7 passed
+STEP 5 | Running tests\regression_a312_tests.rs | 11 passed
+STEP 5 | Running tests\stdlib_a1_tests.rs | 13 passed
+STEP 5 | Running tests\stdlib_a2_tests.rs | 19 passed
+STEP 5 | Running tests\stdlib_a3_tests.rs | 17 passed
+STEP 5 | Running tests\stdlib_tests.rs | 12 passed
+STEP 5 | Doc-tests rustlab_cli | 0 passed
+STEP 5 | Doc-tests rustlab_eval | 0 passed
+STEP 5 | Doc-tests rustlab_math | 0 passed
+STEP 5 | Doc-tests rustlab_matio | 0 passed
+STEP 5 | Doc-tests rustlab_parse | 0 passed
+STEP 5 | Doc-tests rustlab_stdlib | 0 passed
+STEP 6 | Running unittests src\lib.rs | 0 passed
+STEP 6 | Running unittests src\main.rs | 0 passed
+STEP 6 | Running tests\cli_tests.rs | 3 passed
+STEP 6 | Running tests\diagnostics_tests.rs | 12 passed
+STEP 6 | Running unittests src\lib.rs | 0 passed
+STEP 6 | Running tests\eval_tests.rs | 9 passed
+STEP 6 | Running tests\milestone_a1_tests.rs | 6 passed
+STEP 6 | Running unittests src\lib.rs | 10 passed
+STEP 6 | Running tests\math_tests.rs | 12 passed
+STEP 6 | Running unittests src\lib.rs | 0 passed
+STEP 6 | Running tests\matio_tests.rs | 7 passed
+STEP 6 | Running tests\scipy_mat_tests.rs | 1 passed
+STEP 6 | Running unittests src\lib.rs | 0 passed
+STEP 6 | Running tests\lexer_tests.rs | 4 passed
+STEP 6 | Running tests\parser_tests.rs | 9 passed
+STEP 6 | Running unittests src\lib.rs | 7 passed
+STEP 6 | Running tests\regression_a312_tests.rs | 11 passed
+STEP 6 | Running tests\stdlib_a1_tests.rs | 13 passed
+STEP 6 | Running tests\stdlib_a2_tests.rs | 15 passed
+STEP 6 | Running tests\stdlib_a3_tests.rs | 17 passed
+STEP 6 | Running tests\stdlib_tests.rs | 12 passed
+STEP 6 | Doc-tests rustlab_cli | 0 passed
+STEP 6 | Doc-tests rustlab_eval | 0 passed
+STEP 6 | Doc-tests rustlab_math | 0 passed
+STEP 6 | Doc-tests rustlab_matio | 0 passed
+STEP 6 | Doc-tests rustlab_parse | 0 passed
+STEP 6 | Doc-tests rustlab_stdlib | 0 passed

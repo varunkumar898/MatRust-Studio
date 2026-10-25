@@ -1,0 +1,11 @@
+== Units with names: step4=15 step5=15 step6=15
+
+== Per-unit name-count comparisons (4 vs 6), showing units where 6 has fewer names: ==
+UNIT RUN:tests\stdlib_a2_tests.rs : 19 vs 15
+   MISSING-IN-6: test_a2_golden_eig_rotation_complex_conjugate
+   MISSING-IN-6: test_a2_golden_pinv_rank_deficient
+   MISSING-IN-6: test_a2_pinv_moore_penrose_condition
+   MISSING-IN-6: test_a2_golden_svd_rank1
+   MISSING-IN-6: test_a2_tolerance_rule_max_mn_eps_sigma1
+
+== Sanity: units in 6 not in 4 (should be none): ==

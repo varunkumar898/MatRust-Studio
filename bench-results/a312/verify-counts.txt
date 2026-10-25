@@ -1,0 +1,39 @@
+=== 4. Running tests (default features) === | running 0 tests | ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s | named=0
+=== 4. Running tests (default features) === | running 1 test | ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s | named=1
+=== 4. Running tests (default features) === | running 10 tests | ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s | named=10
+=== 4. Running tests (default features) === | running 11 tests | ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s | named=11
+=== 4. Running tests (default features) === | running 12 tests | ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s | named=36
+=== 4. Running tests (default features) === | running 13 tests | ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.23s | named=13
+=== 4. Running tests (default features) === | running 17 tests | ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s | named=17
+=== 4. Running tests (default features) === | running 19 tests | ok. 19 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s | named=19
+=== 4. Running tests (default features) === | running 3 tests | ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s | named=3
+=== 4. Running tests (default features) === | running 4 tests | ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s | named=4
+=== 4. Running tests (default features) === | running 6 tests | ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s | named=6
+=== 4. Running tests (default features) === | running 7 tests | ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s | named=14
+=== 4. Running tests (default features) === | running 9 tests | ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s | named=18
+=== 5. Running tests (all features) === | running 0 tests | ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s | named=0
+=== 5. Running tests (all features) === | running 1 test | ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s | named=1
+=== 5. Running tests (all features) === | running 10 tests | ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s | named=10
+=== 5. Running tests (all features) === | running 11 tests | ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s | named=11
+=== 5. Running tests (all features) === | running 12 tests | ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s | named=36
+=== 5. Running tests (all features) === | running 13 tests | ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s | named=13
+=== 5. Running tests (all features) === | running 17 tests | ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s | named=17
+=== 5. Running tests (all features) === | running 19 tests | ok. 19 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s | named=19
+=== 5. Running tests (all features) === | running 3 tests | ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s | named=3
+=== 5. Running tests (all features) === | running 4 tests | ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s | named=4
+=== 5. Running tests (all features) === | running 6 tests | ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s | named=6
+=== 5. Running tests (all features) === | running 7 tests | ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s | named=14
+=== 5. Running tests (all features) === | running 9 tests | ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s | named=18
+=== 6. Running tests (no default features) === | running 0 tests | ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s | named=0
+=== 6. Running tests (no default features) === | running 1 test | ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s | named=1
+=== 6. Running tests (no default features) === | running 10 tests | ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s | named=10
+=== 6. Running tests (no default features) === | running 11 tests | ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s | named=11
+=== 6. Running tests (no default features) === | running 12 tests | ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s | named=36
+=== 6. Running tests (no default features) === | running 13 tests | ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s | named=13
+=== 6. Running tests (no default features) === | running 15 tests | ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s | named=15
+=== 6. Running tests (no default features) === | running 17 tests | ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s | named=17
+=== 6. Running tests (no default features) === | running 3 tests | ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s | named=3
+=== 6. Running tests (no default features) === | running 4 tests | ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s | named=4
+=== 6. Running tests (no default features) === | running 6 tests | ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s | named=6
+=== 6. Running tests (no default features) === | running 7 tests | ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s | named=14
+=== 6. Running tests (no default features) === | running 9 tests | ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s | named=18

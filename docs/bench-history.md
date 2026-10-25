@@ -155,3 +155,26 @@ In-binary GEMM throughput (35.73 GFLOPS at 384) exceeds the criterion number (20
 Fix: the initial criterion pass black-boxed *both add operands* in the harness, which blocked inlining and forced the non-vectorized fallback loop; the harness was corrected to black-box only the result (`bb.iter(|| black_box(a.add(&b)))`).
 
 Even with the fixed harness, the **raw external `Value::add`** benchmark measures ~5–6.3 ms while the *identical function reached through the interpreter fast path* (`eval_pipeline`) measures 0.774 ms, the instrumented in-pipeline measurement 0.504 ms, and the in-binary suite 0.488 ms. The delta is **inlining/vectorization placement, not algorithmics**: the standalone public `Value::add` dispatch does not receive the monomorphized, inlined codegen layout the interpreter hot path gets, so the raw bench measures codegen artifacts. The honest contract view is the production path: `eval_pipeline` at 774 µs meets the ≤ 3 ms A+B target with 3.9x margin.
+
+
+---
+
+## 5. Milestone A3.1.4 Release Benchmark Run (Unedited Output)
+
+Captured on 2026-10-25 using `rustlab.exe bench` built under `[profile.release]` (`opt-level = 3`, `lto = "fat"`, `codegen-units = 1`, `panic = "abort"`):
+
+| Domain | Workload | Benchmark Metric | Milestone 7 Baseline | A3.1.4 Measured | Status vs Target |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **GEMM** | $384 \times 384$ doubles | Throughput | 11.8 GFLOPS | **41.06 GFLOPS** | **3.48x baseline** |
+| **Linear Solve ($A \backslash b$)** | $50 \times 50$ LU | Latency | N/A | **0.073 ms** | Monotonic |
+| **Linear Solve ($A \backslash b$)** | $100 \times 100$ LU | Latency | 0.487 ms | **0.369 ms** | **Target Met** ($\le 0.6$ ms) |
+| **Linear Solve ($A \backslash b$)** | $200 \times 200$ LU | Latency | N/A | **1.895 ms** | Monotonic |
+| **Elementwise Add ($A+B$)** | $10^6$ doubles | Latency | 22.0 ms | **0.474 ms** | **46.4x faster** ($\le 3$ ms met) |
+| **Elementwise Mul ($A .* B$)**| $10^6$ doubles | Latency | ~22.0 ms | **0.444 ms** | **2,254.8 MEl/s** |
+| **Trigonometric ($\sin(A)$)** | $10^6$ doubles | Latency | N/A | **10.910 ms** | 91.7 MEl/s |
+| **Symmetric Eig ($100 \times 100$)**| Native Householder+QL | Latency | N/A | **2.102 ms** | Teaching/clean-room reference |
+| **Symmetric Eig ($100 \times 100$)**| Faer `self_adjoint_eigen` | Latency | N/A | **0.678 ms** | **3.10x faster** than native QL |
+| **1D FFT ($N=1024$)** | RustFFT backend | Latency | N/A | **32.0 µs** | 4.97x faster than Radix-2 (159 µs) |
+| **1D FFT ($N=1000$)** | RustFFT (Bluestein) | Latency | N/A | **43.3 µs** | 298.8x faster than Naive (12938 µs)|
+| **1D FFT ($N=1009$)** | RustFFT (prime) | Latency | N/A | **94.4 µs** | 141.6x faster than Naive (13370 µs)|
+| **1D FFT ($N=65536$)** | RustFFT backend | Latency | N/A | **2.847 ms** | 4.39x faster than Radix-2 (12.5 ms)|

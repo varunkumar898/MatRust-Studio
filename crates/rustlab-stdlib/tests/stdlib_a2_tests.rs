@@ -121,7 +121,6 @@ fn test_a2_golden_eig_rotation_complex_conjugate() {
     }
 }
 
-#[cfg(feature = "faer")]
 #[test]
 fn test_a2_golden_svd_rank1() {
     let mut interp = new_interpreter();
@@ -249,7 +248,6 @@ fn test_a2_golden_expm_zero_and_diagonal() {
     }
 }
 
-#[cfg(feature = "faer")]
 #[test]
 fn test_a2_golden_pinv_rank_deficient() {
     let mut interp = new_interpreter();
@@ -297,33 +295,30 @@ fn test_a2_property_av_equals_vd_and_usvt_equals_a() {
         "Property A*V = V*D failed"
     );
 
-    #[cfg(feature = "faer")]
-    {
-        // Property 2: U * S * V' = A for rectangular 4x3 matrix
-        interp
-            .eval_script("B = [1 2 3; 4 5 6; 7 8 9; 10 11 12];")
-            .unwrap();
-        interp.eval_script("[U, S, V] = svd(B, 'econ');").unwrap();
-        interp
-            .eval_script("diff_svd = norm(U * S * V' - B);")
-            .unwrap();
-        let diff_svd = interp.eval_script("diff_svd").unwrap().unwrap();
-        assert!(
-            diff_svd.as_scalar_f64().unwrap() < 1e-10,
-            "Property U*S*V' = B failed"
-        );
+    // Property 2: U * S * V' = A for rectangular 4x3 matrix
+    interp
+        .eval_script("B = [1 2 3; 4 5 6; 7 8 9; 10 11 12];")
+        .unwrap();
+    interp.eval_script("[U, S, V] = svd(B, 'econ');").unwrap();
+    interp
+        .eval_script("diff_svd = norm(U * S * V' - B);")
+        .unwrap();
+    let diff_svd = interp.eval_script("diff_svd").unwrap().unwrap();
+    assert!(
+        diff_svd.as_scalar_f64().unwrap() < 1e-10,
+        "Property U*S*V' = B failed"
+    );
 
-        // Property 3: A * pinv(A) * A = A (Moore-Penrose first condition)
-        interp.eval_script("P = pinv(B);").unwrap();
-        interp
-            .eval_script("diff_pinv = norm(B * P * B - B);")
-            .unwrap();
-        let diff_pinv = interp.eval_script("diff_pinv").unwrap().unwrap();
-        assert!(
-            diff_pinv.as_scalar_f64().unwrap() < 1e-10,
-            "Property A*pinv(A)*A = A failed"
-        );
-    }
+    // Property 3: A * pinv(A) * A = A (Moore-Penrose first condition)
+    interp.eval_script("P = pinv(B);").unwrap();
+    interp
+        .eval_script("diff_pinv = norm(B * P * B - B);")
+        .unwrap();
+    let diff_pinv = interp.eval_script("diff_pinv").unwrap().unwrap();
+    assert!(
+        diff_pinv.as_scalar_f64().unwrap() < 1e-10,
+        "Property A*pinv(A)*A = A failed"
+    );
 }
 
 #[test]
@@ -531,21 +526,77 @@ fn test_a2_faer_feature_off_returns_clear_error() {
         "eig error message must mention 'requires' and 'faer', got: {msg_eig}"
     );
 
-    // General SVD requires faer
-    let err_svd = interp.eval_script("svd([1 2; 3 4])").unwrap_err();
-    let msg_svd = format!("{err_svd}");
-    assert!(
-        msg_svd.contains("requires") && msg_svd.contains("faer"),
-        "svd error message must mention 'requires' and 'faer', got: {msg_svd}"
-    );
+    // Native one-sided Jacobi SVD enables SVD, pinv, rank, cond, null, orth without faer
+    let res_svd = interp.eval_script("svd([1 2; 3 4])").unwrap().unwrap();
+    assert_eq!(res_svd.shape(), &[2, 1]);
 
-    // pinv requires faer
-    let err_pinv = interp.eval_script("pinv([1 2; 3 4])").unwrap_err();
-    let msg_pinv = format!("{err_pinv}");
-    assert!(
-        msg_pinv.contains("requires") && msg_pinv.contains("faer"),
-        "pinv error message must mention 'requires' and 'faer', got: {msg_pinv}"
-    );
+    let res_pinv = interp.eval_script("pinv([1 2; 3 4])").unwrap().unwrap();
+    assert_eq!(res_pinv.shape(), &[2, 2]);
+
+    let res_rank = interp.eval_script("rank([1 2; 3 4])").unwrap().unwrap();
+    assert_eq!(res_rank.as_scalar_f64().unwrap(), 2.0);
+}
+
+#[cfg(feature = "faer")]
+#[test]
+fn test_a2_both_native_and_faer_eig_paths_match() {
+    use rustlab_math::DenseArray;
+    use rustlab_stdlib::linalg::eig_sym::{eig_sym, faer_self_adjoint_eig};
+
+    // Symmetric 3x3 test matrix
+    let a = DenseArray::from_vec(
+        vec![3, 3],
+        vec![
+            4.0, 1.0, -2.0, // col 0
+            1.0, 2.0, 0.0, // col 1
+            -2.0, 0.0, 3.0, // col 2
+        ],
+    )
+    .unwrap();
+
+    let (d_native, v_native) = eig_sym(&a).unwrap();
+    let (d_faer, v_faer) = faer_self_adjoint_eig(&a).unwrap();
+
+    assert_eq!(d_native.len(), 3);
+    assert_eq!(d_faer.len(), 3);
+
+    // Eigenvalues must match to high numerical precision
+    for i in 0..3 {
+        assert!(
+            (d_native[i] - d_faer[i]).abs() < 1e-12,
+            "Eigenvalue mismatch at index {i}: native={}, faer={}",
+            d_native[i],
+            d_faer[i]
+        );
+    }
+
+    // Eigenvector columns must match exactly under sign normalization
+    for col in 0..3 {
+        for row in 0..3 {
+            let nat_val = *v_native.get_subscript(&[row + 1, col + 1]).unwrap();
+            let faer_val = *v_faer.get_subscript(&[row + 1, col + 1]).unwrap();
+            assert!(
+                (nat_val - faer_val).abs() < 1e-12,
+                "Eigenvector component mismatch at ({row},{col}): native={nat_val}, faer={faer_val}"
+            );
+        }
+    }
+}
+
+#[cfg(not(feature = "faer"))]
+#[test]
+fn test_a2_both_native_and_faer_eig_paths_match() {
+    use rustlab_math::DenseArray;
+    use rustlab_stdlib::linalg::eig_sym::eig_sym;
+
+    let a = DenseArray::from_vec(
+        vec![3, 3],
+        vec![4.0, 1.0, -2.0, 1.0, 2.0, 0.0, -2.0, 0.0, 3.0],
+    )
+    .unwrap();
+    let (d_native, v_native) = eig_sym(&a).unwrap();
+    assert_eq!(d_native.len(), 3);
+    assert_eq!(v_native.shape(), &[3, 3]);
 }
 
 #[test]
@@ -617,7 +668,6 @@ fn test_a2_expm_defective_matrix() {
     }
 }
 
-#[cfg(feature = "faer")]
 #[test]
 fn test_a2_pinv_moore_penrose_condition() {
     let mut interp = new_interpreter();
@@ -664,7 +714,6 @@ fn test_a2_eigenvector_tie_break_sign_invariant() {
     }
 }
 
-#[cfg(feature = "faer")]
 #[test]
 fn test_a2_tolerance_rule_max_mn_eps_sigma1() {
     let mut interp = new_interpreter();

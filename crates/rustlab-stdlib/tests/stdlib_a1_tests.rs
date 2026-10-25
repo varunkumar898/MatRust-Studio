@@ -89,6 +89,28 @@ fn test_num2str_and_mat2str() {
         _ => panic!(),
     };
     assert_eq!(t4, "[1+2i 3-4i]");
+
+    // num2str row vector of integers
+    let r5 = interp
+        .eval_script("num2str([10000 25000])")
+        .unwrap()
+        .unwrap();
+    let t5: String = match r5 {
+        Value::Char(ca) => ca.as_slice().iter().collect(),
+        _ => panic!(),
+    };
+    assert_eq!(t5, "10000  25000");
+
+    // num2str multi-row matrix with non-integers (right-justified columns)
+    let r6 = interp
+        .eval_script("num2str([1.234 56.78; 9.1 0.2])")
+        .unwrap()
+        .unwrap();
+    let t6: String = match r6 {
+        Value::Char(ca) => ca.as_slice().iter().collect(),
+        _ => panic!(),
+    };
+    assert_eq!(t6, "1.2340  56.7800\n9.1000   0.2000");
 }
 
 #[test]

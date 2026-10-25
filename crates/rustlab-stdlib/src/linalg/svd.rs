@@ -161,10 +161,65 @@ pub fn svd_fn(args: &[Value], nargout: usize) -> Result<Vec<Value>, EvalError> {
 
     #[cfg(not(feature = "faer"))]
     {
-        Err(user_err(
-            "MATLAB:svd:featureRequired",
-            "SVD on general matrices requires the 'faer' feature flag.",
-        ))
+        let (s_vals, u_arr, v_arr) = jacobi_svd_native(&da)?;
+        let k = m.min(n);
+        let is_econ = if args.len() >= 2 {
+            match &args[1] {
+                Value::Char(c) => {
+                    let s: String = c.as_slice().iter().collect();
+                    s == "econ"
+                }
+                Value::String(sa) => sa.as_slice().first().map(|s| s == "econ").unwrap_or(false),
+                v => v.as_scalar_f64().map(|x| x == 0.0).unwrap_or(false),
+            }
+        } else {
+            false
+        };
+
+        if nargout <= 1 {
+            let s_col = DenseArray::from_vec_unchecked(vec![k, 1], s_vals);
+            return Ok(vec![Value::Double(s_col)]);
+        }
+
+        if is_econ {
+            let mut s_data = vec![0.0; k * k];
+            for i in 0..k {
+                s_data[i + i * k] = s_vals[i];
+            }
+            let s_mat = DenseArray::from_vec_unchecked(vec![k, k], s_data);
+            Ok(vec![
+                Value::Double(u_arr),
+                Value::Double(s_mat),
+                Value::Double(v_arr),
+            ])
+        } else {
+            let mut u_full = vec![0.0; m * m];
+            let mut s_full = vec![0.0; m * n];
+            let mut v_full = vec![0.0; n * n];
+            for c in 0..k {
+                for r in 0..m {
+                    u_full[r + c * m] = u_arr.as_slice()[r + c * m];
+                }
+                for r in 0..n {
+                    v_full[r + c * n] = v_arr.as_slice()[r + c * n];
+                }
+                s_full[c + c * m] = s_vals[c];
+            }
+            for c in k..m {
+                u_full[c + c * m] = 1.0;
+            }
+            for c in k..n {
+                v_full[c + c * n] = 1.0;
+            }
+            let u_out = DenseArray::from_vec_unchecked(vec![m, m], u_full);
+            let s_out = DenseArray::from_vec_unchecked(vec![m, n], s_full);
+            let v_out = DenseArray::from_vec_unchecked(vec![n, n], v_full);
+            Ok(vec![
+                Value::Double(u_out),
+                Value::Double(s_out),
+                Value::Double(v_out),
+            ])
+        }
     }
 }
 
@@ -232,10 +287,36 @@ pub fn pinv_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError>
 
     #[cfg(not(feature = "faer"))]
     {
-        Err(user_err(
-            "MATLAB:pinv:featureRequired",
-            "pinv requires the 'faer' feature flag.",
-        ))
+        let (s_vals, u_arr, v_arr) = jacobi_svd_native(&da)?;
+        let k = m.min(n);
+        let max_sigma = if k > 0 { s_vals[0] } else { 0.0 };
+        let tol = if args.len() >= 2 {
+            args[1]
+                .as_scalar_f64()
+                .unwrap_or((m.max(n) as f64) * eps(max_sigma))
+        } else {
+            (m.max(n) as f64) * eps(max_sigma)
+        };
+
+        let mut pinv_data = vec![0.0; n * m];
+        for c_out in 0..m {
+            for r_out in 0..n {
+                let mut sum = 0.0;
+                for i in 0..k {
+                    let sigma = s_vals[i];
+                    if sigma > tol {
+                        let inv_s = 1.0 / sigma;
+                        sum += v_arr.as_slice()[r_out + i * n]
+                            * inv_s
+                            * u_arr.as_slice()[c_out + i * m];
+                    }
+                }
+                pinv_data[r_out + c_out * n] = sum;
+            }
+        }
+
+        let out = DenseArray::from_vec_unchecked(vec![n, m], pinv_data);
+        Ok(vec![Value::Double(out)])
     }
 }
 
@@ -287,10 +368,24 @@ pub fn rank_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError>
 
     #[cfg(not(feature = "faer"))]
     {
-        Err(user_err(
-            "MATLAB:rank:featureRequired",
-            "rank requires the 'faer' feature flag.",
-        ))
+        let (s_vals, _, _) = jacobi_svd_native(&da)?;
+        let k = m.min(n);
+        let max_sigma = if k > 0 { s_vals[0] } else { 0.0 };
+        let tol = if args.len() >= 2 {
+            args[1]
+                .as_scalar_f64()
+                .unwrap_or((m.max(n) as f64) * eps(max_sigma))
+        } else {
+            (m.max(n) as f64) * eps(max_sigma)
+        };
+
+        let mut r = 0;
+        for i in 0..k {
+            if s_vals[i] > tol {
+                r += 1;
+            }
+        }
+        Ok(vec![Value::scalar(r as f64)])
     }
 }
 
@@ -343,10 +438,32 @@ pub fn orth_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError>
 
     #[cfg(not(feature = "faer"))]
     {
-        Err(user_err(
-            "MATLAB:orth:featureRequired",
-            "orth requires the 'faer' feature flag.",
-        ))
+        let (s_vals, u_arr, _) = jacobi_svd_native(&da)?;
+        let k = m.min(n);
+        let max_sigma = if k > 0 { s_vals[0] } else { 0.0 };
+        let tol = (m.max(n) as f64) * eps(max_sigma);
+
+        let mut rank = 0;
+        for i in 0..k {
+            if s_vals[i] > tol {
+                rank += 1;
+            }
+        }
+
+        if rank == 0 {
+            let out = DenseArray::from_vec_unchecked(vec![m, 0], Vec::new());
+            return Ok(vec![Value::Double(out)]);
+        }
+
+        let mut orth_data = vec![0.0; m * rank];
+        for c in 0..rank {
+            for r in 0..m {
+                orth_data[r + c * m] = u_arr.as_slice()[r + c * m];
+            }
+        }
+
+        let out = DenseArray::from_vec_unchecked(vec![m, rank], orth_data);
+        Ok(vec![Value::Double(out)])
     }
 }
 
@@ -408,10 +525,34 @@ pub fn null_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError>
 
     #[cfg(not(feature = "faer"))]
     {
-        Err(user_err(
-            "MATLAB:null:featureRequired",
-            "null requires the 'faer' feature flag.",
-        ))
+        let (s_vals, _, v_arr) = jacobi_svd_native(&da)?;
+        let k = m.min(n);
+        let max_sigma = if k > 0 { s_vals[0] } else { 0.0 };
+        let tol = (m.max(n) as f64) * eps(max_sigma);
+
+        let mut rank = 0;
+        for i in 0..k {
+            if s_vals[i] > tol {
+                rank += 1;
+            }
+        }
+
+        let null_dim = n - rank;
+        if null_dim == 0 {
+            let out = DenseArray::from_vec_unchecked(vec![n, 0], Vec::new());
+            return Ok(vec![Value::Double(out)]);
+        }
+
+        let mut null_data = vec![0.0; n * null_dim];
+        for c in 0..null_dim {
+            let src_col = rank + c;
+            for r in 0..n {
+                null_data[r + c * n] = v_arr.as_slice()[r + src_col * n];
+            }
+        }
+
+        let out = DenseArray::from_vec_unchecked(vec![n, null_dim], null_data);
+        Ok(vec![Value::Double(out)])
     }
 }
 
@@ -447,10 +588,13 @@ pub fn cond_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError>
 
     #[cfg(not(feature = "faer"))]
     {
-        Err(user_err(
-            "MATLAB:cond:featureRequired",
-            "cond requires the 'faer' feature flag.",
-        ))
+        let (s_vals, _, _) = jacobi_svd_native(&da)?;
+        let s_max = s_vals[0];
+        let s_min = s_vals[k - 1];
+        if s_min == 0.0 {
+            return Ok(vec![Value::scalar(f64::INFINITY)]);
+        }
+        Ok(vec![Value::scalar(s_max / s_min)])
     }
 }
 
@@ -582,5 +726,129 @@ pub fn eig_fn(args: &[Value], nargout: usize) -> Result<Vec<Value>, EvalError> {
             "MATLAB:eig:featureRequired",
             "Non-symmetric eigenvalue decomposition requires the 'faer' feature flag.",
         ))
+    }
+}
+
+/// Native one-sided Hestenes Jacobi SVD algorithm (pure Rust, zero dependencies).
+/// Computes A = U * S * V^T, returning (singular_values, U, V).
+/// U is M x K, V is N x K where K = min(M, N) (economy SVD).
+pub fn jacobi_svd_native(
+    da: &DenseArray<f64>,
+) -> Result<(Vec<f64>, DenseArray<f64>, DenseArray<f64>), EvalError> {
+    let shp = da.shape();
+    let (m, n) = (shp[0], shp[1]);
+    let k = m.min(n);
+    if k == 0 {
+        let u = DenseArray::from_vec_unchecked(vec![m, 0], Vec::new());
+        let v = DenseArray::from_vec_unchecked(vec![n, 0], Vec::new());
+        return Ok((Vec::new(), u, v));
+    }
+
+    if m >= n {
+        let mut w = da.as_slice().to_vec();
+        let mut v = vec![0.0; n * n];
+        for i in 0..n {
+            v[i + i * n] = 1.0;
+        }
+
+        for _sweep in 0..30 {
+            let mut max_off_diag = 0.0f64;
+            for i in 0..n {
+                for j in (i + 1)..n {
+                    let mut alpha = 0.0f64;
+                    let mut beta = 0.0f64;
+                    let mut gamma = 0.0f64;
+                    for r in 0..m {
+                        let wi = w[r + i * m];
+                        let wj = w[r + j * m];
+                        alpha += wi * wi;
+                        beta += wj * wj;
+                        gamma += wi * wj;
+                    }
+                    let denom = (alpha * beta).sqrt();
+                    if denom > 1e-15 {
+                        max_off_diag = max_off_diag.max(gamma.abs() / denom);
+                    }
+                    if gamma.abs() <= 1e-15 * denom || denom == 0.0 {
+                        continue;
+                    }
+                    let zeta = (beta - alpha) / (2.0 * gamma);
+                    let t = if zeta >= 0.0 {
+                        1.0 / (zeta + (1.0 + zeta * zeta).sqrt())
+                    } else {
+                        -1.0 / (-zeta + (1.0 + zeta * zeta).sqrt())
+                    };
+                    let c = 1.0 / (1.0 + t * t).sqrt();
+                    let s = t * c;
+                    for r in 0..m {
+                        let wi = w[r + i * m];
+                        let wj = w[r + j * m];
+                        w[r + i * m] = c * wi - s * wj;
+                        w[r + j * m] = s * wi + c * wj;
+                    }
+                    for r in 0..n {
+                        let vi = v[r + i * n];
+                        let vj = v[r + j * n];
+                        v[r + i * n] = c * vi - s * vj;
+                        v[r + j * n] = s * vi + c * vj;
+                    }
+                }
+            }
+            if max_off_diag < 1e-14 {
+                break;
+            }
+        }
+
+        let mut sigmas = vec![0.0; n];
+        let mut u_data = vec![0.0; m * n];
+        for j in 0..n {
+            let mut norm_sq = 0.0;
+            for r in 0..m {
+                let val = w[r + j * m];
+                norm_sq += val * val;
+            }
+            let sigma = norm_sq.sqrt();
+            sigmas[j] = sigma;
+            if sigma > 1e-15 {
+                let inv = 1.0 / sigma;
+                for r in 0..m {
+                    u_data[r + j * m] = w[r + j * m] * inv;
+                }
+            }
+        }
+
+        let mut order: Vec<usize> = (0..n).collect();
+        order.sort_by(|&a, &b| {
+            sigmas[b]
+                .partial_cmp(&sigmas[a])
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+
+        let mut sorted_s = vec![0.0; n];
+        let mut sorted_u = vec![0.0; m * n];
+        let mut sorted_v = vec![0.0; n * n];
+        for (new_idx, &old_idx) in order.iter().enumerate() {
+            sorted_s[new_idx] = sigmas[old_idx];
+            for r in 0..m {
+                sorted_u[r + new_idx * m] = u_data[r + old_idx * m];
+            }
+            for r in 0..n {
+                sorted_v[r + new_idx * n] = v[r + old_idx * n];
+            }
+        }
+
+        let u_arr = DenseArray::from_vec_unchecked(vec![m, n], sorted_u);
+        let v_arr = DenseArray::from_vec_unchecked(vec![n, n], sorted_v);
+        Ok((sorted_s, u_arr, v_arr))
+    } else {
+        let mut a_t = vec![0.0; n * m];
+        for r in 0..m {
+            for c in 0..n {
+                a_t[c + r * n] = da.as_slice()[r + c * m];
+            }
+        }
+        let da_t = DenseArray::from_vec_unchecked(vec![n, m], a_t);
+        let (s, u_t, v_t) = jacobi_svd_native(&da_t)?;
+        Ok((s, v_t, u_t))
     }
 }

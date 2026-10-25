@@ -1,0 +1,628 @@
+
+=== 1. Checking formatting ===
+
+=== 2. Running clippy (all features) ===
+
+=== 3. Running clippy (no default features) ===
+
+=== 4. Running tests (default features) ===
+  [Running unittests src\lib.rs  =>  RUN:unittests src\lib.rs]
+    test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+  [Running unittests src\main.rs  =>  RUN:unittests src\main.rs]
+    test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+  [Running tests\cli_tests.rs  =>  RUN:tests\cli_tests.rs]
+      test test_incomplete_input_detection ... ok
+      test test_semicolon_output_suppression ... ok
+      test test_diagnostic_error_formatting ... ok
+    test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+  [Running tests\diagnostics_tests.rs  =>  RUN:tests\diagnostics_tests.rs]
+      test span_to_location_lf_bookkeeping ... ok
+      test span_to_location_crlf_bookkeeping ... ok
+      test span_to_location_edge_cases ... ok
+      test span_to_location_single_crlf_line ... ok
+      test parse_error_keeps_location_and_caret ... ok
+      test undefined_symbol_caret_survives_two_crlf_lines ... ok
+      test undefined_symbol_caret_lands_on_symbol_line_lf ... ok
+      test rendered_line_text_never_contains_carriage_return ... ok
+      test binary_op_error_underlines_whole_expression_lf ... ok
+      test binary_op_caret_lands_on_spanning_line_lf ... ok
+      test binary_op_caret_is_crlf_insensitive ... ok
+      test undefined_symbol_gets_a_single_caret_lf ... ok
+    test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+  [Running unittests src\lib.rs  =>  RUN:unittests src\lib.rs]
+    test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+  [Running tests\eval_tests.rs  =>  RUN:tests\eval_tests.rs]
+      test test_global_scoping ... ok
+      test test_basic_arithmetic_evaluation ... ok
+      test test_indexing_with_end ... ok
+      test test_for_loop_and_column_iteration ... ok
+      test test_if_elseif_else ... ok
+      test test_user_defined_functions_and_multiple_returns ... ok
+      test test_matrix_creation_and_multiplication ... ok
+      test test_array_growth_on_assignment ... ok
+      test test_while_loop_with_break ... ok
+    test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+  [Running tests\milestone_a1_tests.rs  =>  RUN:tests\milestone_a1_tests.rs]
+      test test_varargin_varargout_nargin_nargout ... ok
+      test test_try_catch_mexception ... ok
+      test test_function_handles_and_lexical_closures ... ok
+      test test_cellfun_arrayfun_structfun ... ok
+      test test_nested_end_contexts ... ok
+      test test_boolean_mask_indexing_and_assignment ... ok
+    test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+  [Running unittests src\lib.rs  =>  RUN:unittests src\lib.rs]
+      test broadcast::tests::test_broadcast_iterator_outer_sum ... ok
+      test broadcast::tests::test_broadcast_shapes ... ok
+      test array::tests::test_dynamic_array_growth ... ok
+      test array::tests::test_dense_array_creation_and_indexing ... ok
+      test array::tests::test_transpose ... ok
+      test ops::tests::test_colon_range ... ok
+      test ops::tests::test_elementwise_binary_with_broadcasting ... ok
+      test ops::tests::test_matmul_2d ... ok
+      test shape::tests::test_column_major_strides ... ok
+      test shape::tests::test_normalize_shape ... ok
+    test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+  [Running tests\math_tests.rs  =>  RUN:tests\math_tests.rs]
+      test test_a3_sparse_csc_duplicate_summing_and_algebra ... ok
+      test test_array_growth_on_assignment ... ok
+      test test_broadcasting_elementwise_binary ... ok
+      test test_a3_exact_int64_uint64 ... ok
+      test test_1_based_indexing_column_major ... ok
+      test test_colon_range ... ok
+      test test_a3_mixed_type_rules_and_errors ... ok
+      test test_minimum_2d_and_singleton_stripping ... ok
+      test test_a3_saturating_integer_arithmetic ... ok
+      test test_relational_and_logical_operations ... ok
+      test test_matrix_multiplication ... ok
+      test test_a3_sparse_memory_efficiency_10000x10000 ... ok
+    test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+  [Running unittests src\lib.rs  =>  RUN:unittests src\lib.rs]
+    test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+  [Running tests\matio_tests.rs  =>  RUN:tests\matio_tests.rs]
+      test test_uncompressed_roundtrip ... ok
+      test test_char_and_logical_roundtrip ... ok
+      test test_compressed_roundtrip ... ok
+      test test_complex_numbers_roundtrip ... ok
+      test test_numeric_classes_roundtrip ... ok
+      test test_matio_image_sparse_and_empty_roundtrip ... ok
+      test test_file_save_and_load ... ok
+    test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+  [Running tests\scipy_mat_tests.rs  =>  RUN:tests\scipy_mat_tests.rs]
+      test test_scipy_generated_files_interop ... ok
+    test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+  [Running unittests src\lib.rs  =>  RUN:unittests src\lib.rs]
+    test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+  [Running tests\lexer_tests.rs  =>  RUN:tests\lexer_tests.rs]
+      test test_numeric_literals ... ok
+      test test_transpose_vs_char_vector ... ok
+      test test_char_and_string_literals ... ok
+      test test_comments_and_line_continuations ... ok
+    test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+  [Running tests\parser_tests.rs  =>  RUN:tests\parser_tests.rs]
+      test test_colon_range_expressions ... ok
+      test test_control_flow ... ok
+      test test_indexing_and_end ... ok
+      test test_function_def ... ok
+      test test_anonymous_function ... ok
+      test test_matrix_literals_and_whitespace ... ok
+      test test_multi_assignment ... ok
+      test test_operator_precedence ... ok
+      test test_power_right_associativity ... ok
+    test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+  [Running unittests src\lib.rs  =>  RUN:unittests src\lib.rs]
+      test linalg::eig_sym::tests::test_eig_sym_known_2x2 ... ok
+      test linalg::expm::tests::test_expm_zero_matrix ... ok
+      test linalg::kron::tests::test_kron_2x2 ... ok
+      test linalg::expm::tests::test_expm_diagonal_matrix ... ok
+      test linalg::eig_sym::tests::test_eig_sym_3x3 ... ok
+      test signal::radix2::tests::test_radix2_roundtrip ... ok
+      test linalg::eig_sym::tests::test_eig_sym_diagonal ... ok
+    test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+  [Running tests\regression_a312_tests.rs  =>  RUN:tests\regression_a312_tests.rs]
+      test binary_expression_span_covers_full_expression ... ok
+      test reshape_empty_bracket_in_higher_dimension ... ok
+      test mixed_integer_assignment_refuses_inconsistent_class ... ok
+      test matrix_display_width_is_uniform_across_rows ... ok
+      test mixed_integer_class_binary_ops_use_exact_matlab_text ... ok
+      test reshape_empty_bracket_autodim_matches_explicit_dims ... ok
+      test matrix_display_parity_goldens ... ok
+      test reshape_invalid_size_arguments_keep_matlab_diagnostics ... ok
+      test scalar_display_via_env_matches_output_log ... ok
+      test scalar_scientific_display_goldens ... ok
+      test every_registered_builtin_has_docs_and_help ... ok
+    test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+  [Running tests\stdlib_a1_tests.rs  =>  RUN:tests\stdlib_a1_tests.rs]
+      test test_nan_comparison_semantics_regression ... ok
+      test test_nd_array_trailing_end_expansion ... ok
+      test test_diagnostics_error_and_assert ... ok
+      test test_ieee754_nan_inf_semantics ... ok
+      test test_nested_anonymous_functions_and_closure_handles ... ok
+      test test_boolean_mask_shape_rules_and_deletion ... ok
+      test test_num2str_and_mat2str ... ok
+      test test_number_display_format_short_golden ... ok
+      test test_sprintf_format_recycling_golden ... ok
+      test test_sprintf_fprintf_edge_cases ... ok
+      test test_string_library_core ... ok
+      test test_regexp_and_regexprep ... ok
+      test test_path_which_exist_and_scripts ... ok
+    test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.23s
+  [Running tests\stdlib_a2_tests.rs  =>  RUN:tests\stdlib_a2_tests.rs]
+      test test_a2_expm_defective_matrix ... ok
+      test test_a2_expm_nilpotent_matrix ... ok
+      test test_a2_expm_rotation_generator ... ok
+      test test_a2_expm_large_norm_scaling_squaring ... ok
+      test test_a2_2d_transforms_fft2_ifft2 ... ok
+      test test_a2_golden_eig_rotation_complex_conjugate ... ok
+      test test_a2_eigenvector_tie_break_sign_invariant ... ok
+      test test_a2_edge_cases_empty_1x1_singular_nan_nonsquare ... ok
+      test test_a2_golden_eig_symmetric_ascending_and_sign_normalized ... ok
+      test test_a2_golden_pinv_rank_deficient ... ok
+      test test_a2_golden_expm_zero_and_diagonal ... ok
+      test test_a2_pinv_moore_penrose_condition ... ok
+      test test_a2_golden_svd_rank1 ... ok
+      test test_a2_pivoted_qr_decomposition ... ok
+      test test_a2_pivoted_qr_rank_deficient_matrix ... ok
+      test test_a2_tolerance_rule_max_mn_eps_sigma1 ... ok
+      test test_a2_rank_cond_null_orth_kron ... ok
+      test test_a2_property_av_equals_vd_and_usvt_equals_a ... ok
+      test test_a2_property_fft_ifft_roundtrip_various_lengths ... ok
+    test result: ok. 19 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+  [Running tests\stdlib_a3_tests.rs  =>  RUN:tests\stdlib_a3_tests.rs]
+      test test_a3_logical_mask_assignment_errors ... ok
+      test test_a3_find_variants_and_short_circuit ... ok
+      test test_a3_exact_64bit_integers_and_saturation ... ok
+      test test_a3_mixed_type_rules_and_errors ... ok
+      test test_a3_bitwise_operations ... ok
+      test test_a3_class_predicates_and_limits ... ok
+      test test_a3_integer_types_and_saturating_arithmetic ... ok
+      test test_a3_nd_deletion_3d_and_growth ... ok
+      test test_a3_nd_reductions_and_integer_preservation ... ok
+      test test_a3_nd_operations_cat_permute_meshgrid_reshape ... ok
+      test test_a3_nd_sort_cumsum_prod_and_broadcast ... ok
+      test test_a3_nd_slicing_assignment_and_deletion ... ok
+      test test_a3_reshape_empty_placeholder_and_negative_error ... ok
+      test test_a3_sparse_csc_matrices_and_algebra ... ok
+      test test_a3_sparse_parity_and_residual ... ok
+      test test_a3_sparse_memory_efficiency ... ok
+      test test_a3_all_registered_builtins_have_markdown_docs_and_help ... ok
+    test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+  [Running tests\stdlib_tests.rs  =>  RUN:tests\stdlib_tests.rs]
+      test test_cell_arrays ... ok
+      test test_search_and_sort ... ok
+      test test_multiple_return_values ... ok
+      test test_array_generators ... ok
+      test test_reductions_and_statistics ... ok
+      test test_linear_algebra_and_system_solve ... ok
+      test test_elementwise_elementary_math ... ok
+      test test_strings_and_chars ... ok
+      test test_signal_and_fft ... ok
+      test test_struct_arrays ... ok
+      test test_shape_and_inspection ... ok
+      test test_matio_builtin_load_save ... ok
+    test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+  [Doc-tests rustlab_cli  =>  DOC:rustlab_cli]
+    test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+  [Doc-tests rustlab_eval  =>  DOC:rustlab_eval]
+    test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+  [Doc-tests rustlab_math  =>  DOC:rustlab_math]
+    test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+  [Doc-tests rustlab_matio  =>  DOC:rustlab_matio]
+    test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+  [Doc-tests rustlab_parse  =>  DOC:rustlab_parse]
+    test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+  [Doc-tests rustlab_stdlib  =>  DOC:rustlab_stdlib]
+    test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+=== 5. Running tests (all features) ===
+  [Running unittests src\lib.rs  =>  RUN:unittests src\lib.rs]
+    test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+  [Running unittests src\main.rs  =>  RUN:unittests src\main.rs]
+    test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+  [Running tests\cli_tests.rs  =>  RUN:tests\cli_tests.rs]
+      test test_incomplete_input_detection ... ok
+      test test_semicolon_output_suppression ... ok
+      test test_diagnostic_error_formatting ... ok
+    test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+  [Running tests\diagnostics_tests.rs  =>  RUN:tests\diagnostics_tests.rs]
+      test span_to_location_crlf_bookkeeping ... ok
+      test span_to_location_edge_cases ... ok
+      test parse_error_keeps_location_and_caret ... ok
+      test rendered_line_text_never_contains_carriage_return ... ok
+      test binary_op_caret_lands_on_spanning_line_lf ... ok
+      test binary_op_error_underlines_whole_expression_lf ... ok
+      test span_to_location_lf_bookkeeping ... ok
+      test binary_op_caret_is_crlf_insensitive ... ok
+      test span_to_location_single_crlf_line ... ok
+      test undefined_symbol_caret_survives_two_crlf_lines ... ok
+      test undefined_symbol_gets_a_single_caret_lf ... ok
+      test undefined_symbol_caret_lands_on_symbol_line_lf ... ok
+    test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+  [Running unittests src\lib.rs  =>  RUN:unittests src\lib.rs]
+    test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+  [Running tests\eval_tests.rs  =>  RUN:tests\eval_tests.rs]
+      test test_basic_arithmetic_evaluation ... ok
+      test test_if_elseif_else ... ok
+      test test_global_scoping ... ok
+      test test_for_loop_and_column_iteration ... ok
+      test test_matrix_creation_and_multiplication ... ok
+      test test_array_growth_on_assignment ... ok
+      test test_user_defined_functions_and_multiple_returns ... ok
+      test test_indexing_with_end ... ok
+      test test_while_loop_with_break ... ok
+    test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+  [Running tests\milestone_a1_tests.rs  =>  RUN:tests\milestone_a1_tests.rs]
+      test test_boolean_mask_indexing_and_assignment ... ok
+      test test_function_handles_and_lexical_closures ... ok
+      test test_try_catch_mexception ... ok
+      test test_cellfun_arrayfun_structfun ... ok
+      test test_nested_end_contexts ... ok
+      test test_varargin_varargout_nargin_nargout ... ok
+    test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+  [Running unittests src\lib.rs  =>  RUN:unittests src\lib.rs]
+      test array::tests::test_dense_array_creation_and_indexing ... ok
+      test array::tests::test_dynamic_array_growth ... ok
+      test array::tests::test_transpose ... ok
+      test broadcast::tests::test_broadcast_shapes ... ok
+      test ops::tests::test_colon_range ... ok
+      test ops::tests::test_elementwise_binary_with_broadcasting ... ok
+      test broadcast::tests::test_broadcast_iterator_outer_sum ... ok
+      test ops::tests::test_matmul_2d ... ok
+      test shape::tests::test_normalize_shape ... ok
+      test shape::tests::test_column_major_strides ... ok
+    test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+  [Running tests\math_tests.rs  =>  RUN:tests\math_tests.rs]
+      test test_1_based_indexing_column_major ... ok
+      test test_a3_exact_int64_uint64 ... ok
+      test test_a3_sparse_csc_duplicate_summing_and_algebra ... ok
+      test test_a3_mixed_type_rules_and_errors ... ok
+      test test_array_growth_on_assignment ... ok
+      test test_a3_saturating_integer_arithmetic ... ok
+      test test_broadcasting_elementwise_binary ... ok
+      test test_colon_range ... ok
+      test test_a3_sparse_memory_efficiency_10000x10000 ... ok
+      test test_matrix_multiplication ... ok
+      test test_minimum_2d_and_singleton_stripping ... ok
+      test test_relational_and_logical_operations ... ok
+    test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+  [Running unittests src\lib.rs  =>  RUN:unittests src\lib.rs]
+    test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+  [Running tests\matio_tests.rs  =>  RUN:tests\matio_tests.rs]
+      test test_char_and_logical_roundtrip ... ok
+      test test_uncompressed_roundtrip ... ok
+      test test_complex_numbers_roundtrip ... ok
+      test test_compressed_roundtrip ... ok
+      test test_file_save_and_load ... ok
+      test test_numeric_classes_roundtrip ... ok
+      test test_matio_image_sparse_and_empty_roundtrip ... ok
+    test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+  [Running tests\scipy_mat_tests.rs  =>  RUN:tests\scipy_mat_tests.rs]
+      test test_scipy_generated_files_interop ... ok
+    test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+  [Running unittests src\lib.rs  =>  RUN:unittests src\lib.rs]
+    test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+  [Running tests\lexer_tests.rs  =>  RUN:tests\lexer_tests.rs]
+      test test_char_and_string_literals ... ok
+      test test_transpose_vs_char_vector ... ok
+      test test_comments_and_line_continuations ... ok
+      test test_numeric_literals ... ok
+    test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+  [Running tests\parser_tests.rs  =>  RUN:tests\parser_tests.rs]
+      test test_function_def ... ok
+      test test_control_flow ... ok
+      test test_colon_range_expressions ... ok
+      test test_anonymous_function ... ok
+      test test_indexing_and_end ... ok
+      test test_multi_assignment ... ok
+      test test_matrix_literals_and_whitespace ... ok
+      test test_operator_precedence ... ok
+      test test_power_right_associativity ... ok
+    test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+  [Running unittests src\lib.rs  =>  RUN:unittests src\lib.rs]
+      test linalg::eig_sym::tests::test_eig_sym_diagonal ... ok
+      test linalg::eig_sym::tests::test_eig_sym_3x3 ... ok
+      test linalg::eig_sym::tests::test_eig_sym_known_2x2 ... ok
+      test linalg::expm::tests::test_expm_diagonal_matrix ... ok
+      test linalg::expm::tests::test_expm_zero_matrix ... ok
+      test linalg::kron::tests::test_kron_2x2 ... ok
+      test signal::radix2::tests::test_radix2_roundtrip ... ok
+    test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+  [Running tests\regression_a312_tests.rs  =>  RUN:tests\regression_a312_tests.rs]
+      test binary_expression_span_covers_full_expression ... ok
+      test matrix_display_width_is_uniform_across_rows ... ok
+      test reshape_empty_bracket_in_higher_dimension ... ok
+      test mixed_integer_assignment_refuses_inconsistent_class ... ok
+      test mixed_integer_class_binary_ops_use_exact_matlab_text ... ok
+      test matrix_display_parity_goldens ... ok
+      test reshape_empty_bracket_autodim_matches_explicit_dims ... ok
+      test scalar_display_via_env_matches_output_log ... ok
+      test reshape_invalid_size_arguments_keep_matlab_diagnostics ... ok
+      test scalar_scientific_display_goldens ... ok
+      test every_registered_builtin_has_docs_and_help ... ok
+    test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+  [Running tests\stdlib_a1_tests.rs  =>  RUN:tests\stdlib_a1_tests.rs]
+      test test_nan_comparison_semantics_regression ... ok
+      test test_nd_array_trailing_end_expansion ... ok
+      test test_ieee754_nan_inf_semantics ... ok
+      test test_boolean_mask_shape_rules_and_deletion ... ok
+      test test_diagnostics_error_and_assert ... ok
+      test test_nested_anonymous_functions_and_closure_handles ... ok
+      test test_number_display_format_short_golden ... ok
+      test test_num2str_and_mat2str ... ok
+      test test_sprintf_format_recycling_golden ... ok
+      test test_sprintf_fprintf_edge_cases ... ok
+      test test_string_library_core ... ok
+      test test_path_which_exist_and_scripts ... ok
+      test test_regexp_and_regexprep ... ok
+    test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+  [Running tests\stdlib_a2_tests.rs  =>  RUN:tests\stdlib_a2_tests.rs]
+      test test_a2_expm_rotation_generator ... ok
+      test test_a2_expm_defective_matrix ... ok
+      test test_a2_expm_nilpotent_matrix ... ok
+      test test_a2_expm_large_norm_scaling_squaring ... ok
+      test test_a2_2d_transforms_fft2_ifft2 ... ok
+      test test_a2_golden_eig_rotation_complex_conjugate ... ok
+      test test_a2_edge_cases_empty_1x1_singular_nan_nonsquare ... ok
+      test test_a2_eigenvector_tie_break_sign_invariant ... ok
+      test test_a2_golden_expm_zero_and_diagonal ... ok
+      test test_a2_pinv_moore_penrose_condition ... ok
+      test test_a2_golden_svd_rank1 ... ok
+      test test_a2_golden_pinv_rank_deficient ... ok
+      test test_a2_pivoted_qr_decomposition ... ok
+      test test_a2_golden_eig_symmetric_ascending_and_sign_normalized ... ok
+      test test_a2_pivoted_qr_rank_deficient_matrix ... ok
+      test test_a2_tolerance_rule_max_mn_eps_sigma1 ... ok
+      test test_a2_rank_cond_null_orth_kron ... ok
+      test test_a2_property_av_equals_vd_and_usvt_equals_a ... ok
+      test test_a2_property_fft_ifft_roundtrip_various_lengths ... ok
+    test result: ok. 19 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+  [Running tests\stdlib_a3_tests.rs  =>  RUN:tests\stdlib_a3_tests.rs]
+      test test_a3_exact_64bit_integers_and_saturation ... ok
+      test test_a3_find_variants_and_short_circuit ... ok
+      test test_a3_logical_mask_assignment_errors ... ok
+      test test_a3_bitwise_operations ... ok
+      test test_a3_nd_deletion_3d_and_growth ... ok
+      test test_a3_mixed_type_rules_and_errors ... ok
+      test test_a3_nd_reductions_and_integer_preservation ... ok
+      test test_a3_nd_operations_cat_permute_meshgrid_reshape ... ok
+      test test_a3_reshape_empty_placeholder_and_negative_error ... ok
+      test test_a3_nd_sort_cumsum_prod_and_broadcast ... ok
+      test test_a3_nd_slicing_assignment_and_deletion ... ok
+      test test_a3_class_predicates_and_limits ... ok
+      test test_a3_integer_types_and_saturating_arithmetic ... ok
+      test test_a3_sparse_parity_and_residual ... ok
+      test test_a3_sparse_csc_matrices_and_algebra ... ok
+      test test_a3_sparse_memory_efficiency ... ok
+      test test_a3_all_registered_builtins_have_markdown_docs_and_help ... ok
+    test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+  [Running tests\stdlib_tests.rs  =>  RUN:tests\stdlib_tests.rs]
+      test test_multiple_return_values ... ok
+      test test_cell_arrays ... ok
+      test test_search_and_sort ... ok
+      test test_reductions_and_statistics ... ok
+      test test_elementwise_elementary_math ... ok
+      test test_array_generators ... ok
+      test test_linear_algebra_and_system_solve ... ok
+      test test_signal_and_fft ... ok
+      test test_strings_and_chars ... ok
+      test test_struct_arrays ... ok
+      test test_shape_and_inspection ... ok
+      test test_matio_builtin_load_save ... ok
+    test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+  [Doc-tests rustlab_cli  =>  DOC:rustlab_cli]
+    test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+  [Doc-tests rustlab_eval  =>  DOC:rustlab_eval]
+    test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+  [Doc-tests rustlab_math  =>  DOC:rustlab_math]
+    test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+  [Doc-tests rustlab_matio  =>  DOC:rustlab_matio]
+    test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+  [Doc-tests rustlab_parse  =>  DOC:rustlab_parse]
+    test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+  [Doc-tests rustlab_stdlib  =>  DOC:rustlab_stdlib]
+    test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+=== 6. Running tests (no default features) ===
+  [Running unittests src\lib.rs  =>  RUN:unittests src\lib.rs]
+    test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+  [Running unittests src\main.rs  =>  RUN:unittests src\main.rs]
+    test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+  [Running tests\cli_tests.rs  =>  RUN:tests\cli_tests.rs]
+      test test_incomplete_input_detection ... ok
+      test test_semicolon_output_suppression ... ok
+      test test_diagnostic_error_formatting ... ok
+    test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+  [Running tests\diagnostics_tests.rs  =>  RUN:tests\diagnostics_tests.rs]
+      test span_to_location_lf_bookkeeping ... ok
+      test span_to_location_crlf_bookkeeping ... ok
+      test span_to_location_edge_cases ... ok
+      test span_to_location_single_crlf_line ... ok
+      test parse_error_keeps_location_and_caret ... ok
+      test undefined_symbol_caret_survives_two_crlf_lines ... ok
+      test undefined_symbol_gets_a_single_caret_lf ... ok
+      test rendered_line_text_never_contains_carriage_return ... ok
+      test undefined_symbol_caret_lands_on_symbol_line_lf ... ok
+      test binary_op_error_underlines_whole_expression_lf ... ok
+      test binary_op_caret_is_crlf_insensitive ... ok
+      test binary_op_caret_lands_on_spanning_line_lf ... ok
+    test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+  [Running unittests src\lib.rs  =>  RUN:unittests src\lib.rs]
+    test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+  [Running tests\eval_tests.rs  =>  RUN:tests\eval_tests.rs]
+      test test_global_scoping ... ok
+      test test_for_loop_and_column_iteration ... ok
+      test test_array_growth_on_assignment ... ok
+      test test_matrix_creation_and_multiplication ... ok
+      test test_indexing_with_end ... ok
+      test test_basic_arithmetic_evaluation ... ok
+      test test_user_defined_functions_and_multiple_returns ... ok
+      test test_if_elseif_else ... ok
+      test test_while_loop_with_break ... ok
+    test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+  [Running tests\milestone_a1_tests.rs  =>  RUN:tests\milestone_a1_tests.rs]
+      test test_try_catch_mexception ... ok
+      test test_boolean_mask_indexing_and_assignment ... ok
+      test test_function_handles_and_lexical_closures ... ok
+      test test_varargin_varargout_nargin_nargout ... ok
+      test test_nested_end_contexts ... ok
+      test test_cellfun_arrayfun_structfun ... ok
+    test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+  [Running unittests src\lib.rs  =>  RUN:unittests src\lib.rs]
+      test broadcast::tests::test_broadcast_iterator_outer_sum ... ok
+      test array::tests::test_dense_array_creation_and_indexing ... ok
+      test array::tests::test_transpose ... ok
+      test ops::tests::test_colon_range ... ok
+      test array::tests::test_dynamic_array_growth ... ok
+      test ops::tests::test_matmul_2d ... ok
+      test broadcast::tests::test_broadcast_shapes ... ok
+      test ops::tests::test_elementwise_binary_with_broadcasting ... ok
+      test shape::tests::test_column_major_strides ... ok
+      test shape::tests::test_normalize_shape ... ok
+    test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+  [Running tests\math_tests.rs  =>  RUN:tests\math_tests.rs]
+      test test_a3_sparse_csc_duplicate_summing_and_algebra ... ok
+      test test_1_based_indexing_column_major ... ok
+      test test_array_growth_on_assignment ... ok
+      test test_broadcasting_elementwise_binary ... ok
+      test test_a3_exact_int64_uint64 ... ok
+      test test_colon_range ... ok
+      test test_a3_mixed_type_rules_and_errors ... ok
+      test test_a3_saturating_integer_arithmetic ... ok
+      test test_relational_and_logical_operations ... ok
+      test test_matrix_multiplication ... ok
+      test test_minimum_2d_and_singleton_stripping ... ok
+      test test_a3_sparse_memory_efficiency_10000x10000 ... ok
+    test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+  [Running unittests src\lib.rs  =>  RUN:unittests src\lib.rs]
+    test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+  [Running tests\matio_tests.rs  =>  RUN:tests\matio_tests.rs]
+      test test_char_and_logical_roundtrip ... ok
+      test test_uncompressed_roundtrip ... ok
+      test test_complex_numbers_roundtrip ... ok
+      test test_compressed_roundtrip ... ok
+      test test_file_save_and_load ... ok
+      test test_numeric_classes_roundtrip ... ok
+      test test_matio_image_sparse_and_empty_roundtrip ... ok
+    test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+  [Running tests\scipy_mat_tests.rs  =>  RUN:tests\scipy_mat_tests.rs]
+      test test_scipy_generated_files_interop ... ok
+    test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+  [Running unittests src\lib.rs  =>  RUN:unittests src\lib.rs]
+    test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+  [Running tests\lexer_tests.rs  =>  RUN:tests\lexer_tests.rs]
+      test test_char_and_string_literals ... ok
+      test test_numeric_literals ... ok
+      test test_transpose_vs_char_vector ... ok
+      test test_comments_and_line_continuations ... ok
+    test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+  [Running tests\parser_tests.rs  =>  RUN:tests\parser_tests.rs]
+      test test_colon_range_expressions ... ok
+      test test_function_def ... ok
+      test test_indexing_and_end ... ok
+      test test_anonymous_function ... ok
+      test test_control_flow ... ok
+      test test_multi_assignment ... ok
+      test test_matrix_literals_and_whitespace ... ok
+      test test_operator_precedence ... ok
+      test test_power_right_associativity ... ok
+    test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+  [Running unittests src\lib.rs  =>  RUN:unittests src\lib.rs]
+      test linalg::eig_sym::tests::test_eig_sym_known_2x2 ... ok
+      test linalg::eig_sym::tests::test_eig_sym_diagonal ... ok
+      test linalg::expm::tests::test_expm_zero_matrix ... ok
+      test linalg::expm::tests::test_expm_diagonal_matrix ... ok
+      test linalg::kron::tests::test_kron_2x2 ... ok
+      test signal::radix2::tests::test_radix2_roundtrip ... ok
+      test linalg::eig_sym::tests::test_eig_sym_3x3 ... ok
+    test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+  [Running tests\regression_a312_tests.rs  =>  RUN:tests\regression_a312_tests.rs]
+      test binary_expression_span_covers_full_expression ... ok
+      test reshape_empty_bracket_in_higher_dimension ... ok
+      test mixed_integer_assignment_refuses_inconsistent_class ... ok
+      test matrix_display_width_is_uniform_across_rows ... ok
+      test matrix_display_parity_goldens ... ok
+      test mixed_integer_class_binary_ops_use_exact_matlab_text ... ok
+      test reshape_empty_bracket_autodim_matches_explicit_dims ... ok
+      test scalar_display_via_env_matches_output_log ... ok
+      test reshape_invalid_size_arguments_keep_matlab_diagnostics ... ok
+      test scalar_scientific_display_goldens ... ok
+      test every_registered_builtin_has_docs_and_help ... ok
+    test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+  [Running tests\stdlib_a1_tests.rs  =>  RUN:tests\stdlib_a1_tests.rs]
+      test test_nd_array_trailing_end_expansion ... ok
+      test test_nan_comparison_semantics_regression ... ok
+      test test_diagnostics_error_and_assert ... ok
+      test test_nested_anonymous_functions_and_closure_handles ... ok
+      test test_ieee754_nan_inf_semantics ... ok
+      test test_number_display_format_short_golden ... ok
+      test test_boolean_mask_shape_rules_and_deletion ... ok
+      test test_num2str_and_mat2str ... ok
+      test test_sprintf_format_recycling_golden ... ok
+      test test_sprintf_fprintf_edge_cases ... ok
+      test test_string_library_core ... ok
+      test test_path_which_exist_and_scripts ... ok
+      test test_regexp_and_regexprep ... ok
+    test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+  [Running tests\stdlib_a2_tests.rs  =>  RUN:tests\stdlib_a2_tests.rs]
+      test test_a2_expm_defective_matrix ... ok
+      test test_a2_expm_nilpotent_matrix ... ok
+      test test_a2_edge_cases_empty_1x1_singular_nan_nonsquare ... ok
+      test test_a2_expm_rotation_generator ... ok
+      test test_a2_faer_feature_off_returns_clear_error ... ok
+      test test_a2_eigenvector_tie_break_sign_invariant ... ok
+      test test_a2_expm_large_norm_scaling_squaring ... ok
+      test test_a2_2d_transforms_fft2_ifft2 ... ok
+      test test_a2_golden_eig_symmetric_ascending_and_sign_normalized ... ok
+      test test_a2_pivoted_qr_decomposition ... ok
+      test test_a2_property_av_equals_vd_and_usvt_equals_a ... ok
+      test test_a2_golden_expm_zero_and_diagonal ... ok
+      test test_a2_rank_cond_null_orth_kron ... ok
+      test test_a2_pivoted_qr_rank_deficient_matrix ... ok
+      test test_a2_property_fft_ifft_roundtrip_various_lengths ... ok
+    test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+  [Running tests\stdlib_a3_tests.rs  =>  RUN:tests\stdlib_a3_tests.rs]
+      test test_a3_logical_mask_assignment_errors ... ok
+      test test_a3_exact_64bit_integers_and_saturation ... ok
+      test test_a3_find_variants_and_short_circuit ... ok
+      test test_a3_bitwise_operations ... ok
+      test test_a3_mixed_type_rules_and_errors ... ok
+      test test_a3_nd_deletion_3d_and_growth ... ok
+      test test_a3_nd_reductions_and_integer_preservation ... ok
+      test test_a3_nd_operations_cat_permute_meshgrid_reshape ... ok
+      test test_a3_nd_slicing_assignment_and_deletion ... ok
+      test test_a3_nd_sort_cumsum_prod_and_broadcast ... ok
+      test test_a3_reshape_empty_placeholder_and_negative_error ... ok
+      test test_a3_sparse_parity_and_residual ... ok
+      test test_a3_integer_types_and_saturating_arithmetic ... ok
+      test test_a3_sparse_memory_efficiency ... ok
+      test test_a3_sparse_csc_matrices_and_algebra ... ok
+      test test_a3_class_predicates_and_limits ... ok
+      test test_a3_all_registered_builtins_have_markdown_docs_and_help ... ok
+    test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+  [Running tests\stdlib_tests.rs  =>  RUN:tests\stdlib_tests.rs]
+      test test_multiple_return_values ... ok
+      test test_search_and_sort ... ok
+      test test_array_generators ... ok
+      test test_reductions_and_statistics ... ok
+      test test_cell_arrays ... ok
+      test test_linear_algebra_and_system_solve ... ok
+      test test_signal_and_fft ... ok
+      test test_struct_arrays ... ok
+      test test_shape_and_inspection ... ok
+      test test_strings_and_chars ... ok
+      test test_elementwise_elementary_math ... ok
+      test test_matio_builtin_load_save ... ok
+    test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+  [Doc-tests rustlab_cli  =>  DOC:rustlab_cli]
+    test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+  [Doc-tests rustlab_eval  =>  DOC:rustlab_eval]
+    test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+  [Doc-tests rustlab_math  =>  DOC:rustlab_math]
+    test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+  [Doc-tests rustlab_matio  =>  DOC:rustlab_matio]
+    test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+  [Doc-tests rustlab_parse  =>  DOC:rustlab_parse]
+    test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+  [Doc-tests rustlab_stdlib  =>  DOC:rustlab_stdlib]
+    test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+=== All verification steps passed successfully! ===

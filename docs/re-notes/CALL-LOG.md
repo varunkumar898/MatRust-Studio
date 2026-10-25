@@ -12,11 +12,13 @@ All reverse engineering, disassembly, symbol inspection, and binary layout verif
 | File / Target | Architecture / Format | Checksum |
 | :--- | :--- | :--- |
 | `rustlab.exe` (A3.1 pre-fix build, historical) | Windows ARM64 PE (`coff-arm64`) | SHA-256 `3CA172EC8381C05D1E7D0E3F029109CFD580DDEE7A8F206F49350EBB2A5322A8` |
-| `rustlab.exe` (A3.1.2 final build: caret CRLF fix, scalar/matrix display parity, `mxSTRUCT_CLASS` reader, lint parity; 5,165,568 bytes) | Windows ARM64 PE (`coff-arm64`) | MD5 `b43726a59f07262b8a6a7fa740b5a826`, SHA-256 `fff28580223c39f28785c7a5130152f9293a0d17a6ca28f9aaa3bcfc73ae40e6` |
+| `rustlab.exe` (A3.1.2 build, historical; 5,165,568 bytes) | Windows ARM64 PE (`coff-arm64`) | MD5 `b43726a59f07262b8a6a7fa740b5a826`, SHA-256 `fff28580223c39f28785c7a5130152f9293a0d17a6ca28f9aaa3bcfc73ae40e6` |
+| `rustlab.exe` (A3.1.4 final release build: native Jacobi SVD, num2str multi-row alignment, faer-off parity; 5,177,344 bytes) | Windows ARM64 PE (`coff-arm64`) | MD5 `A59792C8864B55C8BAC1978C9B2839B0`, SHA-256 `EA753B792DEDDDC5941B8DCEC2D4161977F24FBC2DEBF75615BF0601F959588C` |
 | `scripts/validate_mat_v7.py` | Python 3 Reference Generator | SHA-256 `45012799761F7DC6D4F9F674F46C73D9CDFC08A5598234E1ACA3ECBFBE000538` |
-| `crates/rustlab-matio/tests/scipy_mat_tests.rs` (hardened 40-fixture interop test) | Rust Integration Test Harness | SHA-256 `B03C056DC5301B98424D50A24EE2A8EA648E1AA387746692FADFE4E98ACE888A` |
-| `crates/rustlab-matio/tests/data/suite_all_types_compressed.mat` | SciPy Level 5 MAT (Zlib) | SHA-256 `AC657D9BEFF686DAFFC7C752C75F90B19D5DC2EFBA43940428BC1F153F5927D4` |
-| `crates/rustlab-matio/tests/data/suite_all_types_uncompressed.mat` | SciPy Level 5 MAT (Raw) | SHA-256 `0B11A46DCB66B579E94A77D2C5FF0D0092B0A9DC716866299DE1DA69D2C79CA5` |
+| `crates/rustlab-matio/tests/scipy_mat_tests.rs` (hardened 40-fixture interop test with clippy hygiene) | Rust Integration Test Harness | SHA-256 `C002ADD8AD58A93CBBABAD69F22656E3A15531B1F22E9E4D1C2BDE5ACA1EFD61` |
+| `crates/rustlab-matio/tests/data/suite_all_types_compressed.mat` | SciPy Level 5 MAT (Zlib) | SHA-256 `436C67A270DA598D22F2A4AEF4649A7D6101C61B5B8933A2486E5913BB335C13` |
+| `crates/rustlab-matio/tests/data/suite_all_types_uncompressed.mat` | SciPy Level 5 MAT (Raw) | SHA-256 `75A3E2FD3A5A0EA7617BE7CD4AE9A2960E307C885BC782634D547B8075ED1DF7` |
+| `scripts/verify_bidirectional_mat.py` | Python 3 Bidirectional Test Harness | SHA-256 `51B91B130356A1D315F2A3B69C277C3CF10B9E5EA3E42C8C7387DAB1FBDD601C` |
 
 ---
 

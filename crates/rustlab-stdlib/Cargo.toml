@@ -3,6 +3,7 @@ name = "rustlab-stdlib"
 version = "0.1.0"
 edition = "2021"
 description = "MATLAB-compatible standard library for RustLab (linear algebra, statistics, transforms, generators)"
+license = "MIT OR Apache-2.0"
 
 [dependencies]
 rustlab-parse = { path = "../rustlab-parse" }

@@ -1,13 +1,17 @@
-# RustLab Project State (docs/STATE.md)
+﻿# RustLab Project State (docs/STATE.md)
 
-**Current Milestone:** G0 (Closeout of B2.1.1)
-**Repository HEAD:** `230ade5` (tag `b2.1.1`)
+**Current Milestone:** M0 (Relocate project to Desktop\MATSTUDIO)
+**Root Path:** `C:\Users\varun\Desktop\MATSTUDIO`
+**Date:** 2026-10-26
+**Repository Commit:** `24ac6e2` (tag `g0`)
 **Platform:** Windows 11 ARM64 (`aarch64-pc-windows-gnullvm`), Rust 1.99.1 stable
-**Verification Status:** All gates passing (`scripts/verify.ps1`)
+**Verification Status:** All gates passing (`scripts/verify.ps1`, log: `docs/verify-logs/m0-move.log`)
 **Total Tests:**
 - Default features: **196** passed
 - All features: **196** passed
 - No-default features: **195** passed (`test_a2_both_native_and_faer_eig_paths_match`, `test_a2_golden_eig_rotation_complex_conjugate`, and `test_a2_symmetric_eig_routes_to_faer_and_canonicalizes` replaced by `test_a2_faer_feature_off_returns_clear_error` and `test_a2_native_eig_path_without_faer`)
+
+> **Note on historical paths:** Paths recorded before milestone M0 refer to the old repository location (`C:\Users\varun\.antigravity\rustlab`). Live configuration, RE targets, and project roots are relocated to `C:\Users\varun\Desktop\MATSTUDIO`.
 
 ---
 
@@ -29,7 +33,9 @@
 
 - `target/release/rustlab.exe`:
   - Size: 5,400,064 bytes
-  - SHA-256: `683ea9cbc8bd2b025d93f1ead5281e3a36fbae0c01eae57365ff0681ed6be770`
+  - SHA-256: `02bbda0c68cafe87e01a33fa15f71c2bae96e7cd3f95dafcb82c712380f7460c`
+- REA Target Root: `C:\Users\varun\Desktop\MATSTUDIO\re\targets`
+- REA Project Root: `C:\Users\varun\Desktop\MATSTUDIO\re\projects`
 - REA MCP session integration verified via native MCP calls (`open_binary`, `binary_session`, `close_binary`).
 
 ---
@@ -42,4 +48,5 @@
 - **Milestone A3**: Integer classes, CSC sparse, N-D tensor ops (111 tests)
 - **Milestone A3.1 - A3.1.4**: Corrective and integrity passes, zero unwrap policy, test manifest check (153 tests)
 - **Milestone B2.1 - B2.1.1**: Clean-room statistics, RFC 4180 CSV matrix I/O, display goldens, MATLAB percentile rule, singular matrix warning + Inf (196 tests)
-- **Milestone G0 (Active)**: B2.1.1 closeout, performance contracts, error ID standardization (`RUSTLAB:`), omitnan core migration.
+- **Milestone G0**: B2.1.1 closeout, performance contracts, error ID standardization (`RUSTLAB:`), omitnan core migration (196 tests)
+- **Milestone M0**: Relocate project to Desktop\MATSTUDIO, verify 196/196/195 tests from cargo clean, configure re\targets and re\projects, record binary hash. Next milestone remains G0.1.

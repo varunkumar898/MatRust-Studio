@@ -1,11 +1,11 @@
-﻿# RustLab Project State (docs/STATE.md)
+# RustLab Project State (docs/STATE.md)
 
-**Current Milestone:** M0 (Relocate project to Desktop\MATSTUDIO)
+**Current Milestone:** G0.1 (Review Closeout & Owed Items Verification)
 **Root Path:** `C:\Users\varun\Desktop\MATSTUDIO`
 **Date:** 2026-10-26
-**Repository Commit:** `24ac6e2` (tag `g0`)
+**Repository Commit:** `HEAD` (tag `g0.1`)
 **Platform:** Windows 11 ARM64 (`aarch64-pc-windows-gnullvm`), Rust 1.99.1 stable
-**Verification Status:** All gates passing (`scripts/verify.ps1`, log: `docs/verify-logs/m0-move.log`)
+**Verification Status:** All gates passing (`scripts/verify.ps1`, log: `docs/verify-logs/2026-10-26-g0.1.log`)
 **Total Tests:**
 - Default features: **196** passed
 - All features: **196** passed
@@ -19,12 +19,12 @@
 
 | Crate | Responsibility | Dependencies | Feature Flags |
 | :--- | :--- | :--- | :--- |
-| `crates/rustlab-parse` | Lexer, AST definitions with `Span`, recursive-descent parser | `num-traits` | None |
-| `crates/rustlab-math` | Column-major `DenseArray`, `Value` enum, CSC sparse matrix, integer classes | `rustlab-parse`, `matrixmultiply`, `num-complex` | None |
-| `crates/rustlab-eval` | AST evaluator, runtime `Environment`, closure handles | `rustlab-parse`, `rustlab-math` | None |
+| `crates/rustlab-parse` | Lexer, AST definitions with `Span`, recursive-descent parser | `thiserror` | None |
+| `crates/rustlab-math` | Column-major `DenseArray`, `Value` enum, CSC sparse matrix, integer classes | `rustlab-parse`, `matrixmultiply`, `num-complex`, `num-traits` | `matrixmultiply` |
+| `crates/rustlab-eval` | AST evaluator, runtime `Environment`, closure handles | `rustlab-parse`, `rustlab-math`, `thiserror` | None |
 | `crates/rustlab-stdlib` | Standard library builtins (elementary math, linalg, FFT, string, IO) | `rustlab-parse`, `rustlab-math`, `rustlab-eval`, `rustlab-matio`, `rustlab-data` (opt) | `faer`, `data` |
 | `crates/rustlab-matio` | Level 5 MAT-file read/write | `rustlab-math`, `flate2` | None |
-| `crates/rustlab-data` | Summary statistics, windowing, rankings, CSV matrix I/O | `rustlab-parse`, `rustlab-math`, `rustlab-eval`, `csv = "1.4.0"` | None |
+| `crates/rustlab-data` | Summary statistics, windowing, rankings, CSV matrix I/O | `rustlab-parse`, `rustlab-math`, `rustlab-eval`, `csv = "1.4"`, `ryu = "1.0"` | None |
 | `crates/rustlab-cli` | REPL, line-editor, diagnostic error reporting, benchmark suite | `rustlab-eval`, `rustlab-stdlib`, `rustyline`, `clap` | `faer`, `data` |
 
 ---
@@ -33,8 +33,8 @@
 
 - `target/release/rustlab.exe`:
   - Size: 5,400,064 bytes
-  - SHA-256: `02bbda0c68cafe87e01a33fa15f71c2bae96e7cd3f95dafcb82c712380f7460c`
-- REA Target Root: `C:\Users\varun\Desktop\MATSTUDIO\re\targets`
+  - SHA-256: `78a31a97b1e73696d5ec2ea434af9878da543bda43d4f058cf5c21a6eb42c3c7`
+- REA Target: `re/targets/rustlab.exe` (SHA-256 matches `target/release/rustlab.exe`)
 - REA Project Root: `C:\Users\varun\Desktop\MATSTUDIO\re\projects`
 - REA MCP session integration verified via native MCP calls (`open_binary`, `binary_session`, `close_binary`).
 
@@ -49,4 +49,5 @@
 - **Milestone A3.1 - A3.1.4**: Corrective and integrity passes, zero unwrap policy, test manifest check (153 tests)
 - **Milestone B2.1 - B2.1.1**: Clean-room statistics, RFC 4180 CSV matrix I/O, display goldens, MATLAB percentile rule, singular matrix warning + Inf (196 tests)
 - **Milestone G0**: B2.1.1 closeout, performance contracts, error ID standardization (`RUSTLAB:`), omitnan core migration (196 tests)
-- **Milestone M0**: Relocate project to Desktop\MATSTUDIO, verify 196/196/195 tests from cargo clean, configure re\targets and re\projects, record binary hash. Next milestone remains G0.1.
+- **Milestone M0**: Relocate project to Desktop\MATSTUDIO, verify 196/196/195 tests from cargo clean, configure re\targets and re\projects, record binary hash.
+- **Milestone G0.1**: Complete owed items review, docs/OWED.md, REA R-check on release binary, REPL transcript log, release benchmark triplet, gate verification. Next milestone is G1.

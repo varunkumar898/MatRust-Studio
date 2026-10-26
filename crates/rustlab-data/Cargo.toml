@@ -2,6 +2,8 @@
 name = "rustlab-data"
 version = "0.1.0"
 edition = "2021"
+description = "Summary statistics, windowing, rankings, and CSV matrix I/O for RustLab"
+license = "MIT OR Apache-2.0"
 
 [dependencies]
 rustlab-parse = { path = "../rustlab-parse" }

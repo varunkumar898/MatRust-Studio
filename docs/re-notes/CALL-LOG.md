@@ -90,3 +90,18 @@ All reverse engineering, disassembly, symbol inspection, and binary layout verif
 | 2026-10-25 14:45:41 | `llvm-objdump.exe` | `target/release/rustlab.exe` | `-d --start-address=0x1401a2b74 --stop-address=0x1401a2b9c` | **NEON Vector Loop Verified**: 4x unrolled `fadd v0.2d, v1.2d, v0.2d` and `fadd v1.2d, v2.2d, v3.2d` with paired `ldp q` loads and `stp q` stores. Upfront shape and length gates eliminate all interior bounds checks. |
 | 2026-10-25 14:46:08 | `llvm-objdump.exe` | `target/release/rustlab.exe` | `-d --start-address=0x140159db8 --stop-address=0x140159dec` | **Vectorized Statistics Loop Verified**: `movmean` and `var_fn` inner loop vectorized with dual `fsub v4.2d` / `fsub v5.2d` and `fmul v4.2d` in ARMv8 128-bit NEON vector registers. |
 
+---
+
+### G0.1 REA Tool Call Log
+
+| Timestamp (UTC) | Tool / Method | Target Binary & Checksum | Parameters & Request | Outcome & Observations |
+| :--- | :--- | :--- | :--- | :--- |
+| 2026-10-26 12:12:35 | `call_mcp_tool` (`rea::open_binary`) | `re/targets/rustlab.exe` (SHA-256 `02BBDA0C...`, 5,400,064 bytes) | `{"path": "C:\\Users\\varun\\Desktop\\MATSTUDIO\\re\\targets\\rustlab.exe"}` | **SUCCESS**: Binary identified as format `pe`, kind `executable`, architecture `arm64`, sha256 `02bbda0c68cafe87e01a33fa15f71c2bae96e7cd3f95dafcb82c712380f7460c`. |
+| 2026-10-26 12:13:19 | `call_mcp_tool` (`rea::binary_session`) | `re/targets/rustlab.exe` | `{}` | **SUCCESS**: Active session confirmed (`"open": true`). Capabilities: `rea-artifact-graph`, `rea-dotnet-static`. Native ghidra provider unavailable on Windows ARM64 host. |
+| 2026-10-26 12:13:32 | `call_mcp_tool` (`rea::close_binary`) | `re/targets/rustlab.exe` | `{}` | **SUCCESS**: Session closed cleanly (`"result": null`). |
+| 2026-10-26 12:31:43 | `call_mcp_tool` (`rea::open_binary`) | `re/targets/rustlab.exe` (SHA-256 `78A31A97...`, 5,400,064 bytes) | `{"path": "C:\\Users\\varun\\Desktop\\MATSTUDIO\\re\\targets\\rustlab.exe"}` | **SUCCESS**: Target validated after Cargo.toml metadata update. Format `pe`, architecture `arm64`, sha256 `78a31a97b1e73696d5ec2ea434af9878da543bda43d4f058cf5c21a6eb42c3c7`. |
+| 2026-10-26 12:31:22 | `call_mcp_tool` (`rea::binary_session`) | `re/targets/rustlab.exe` | `{}` | **SUCCESS**: Active session confirmed (`"open": true`). Ephemeral resources intact. |
+| 2026-10-26 12:31:37 | `call_mcp_tool` (`rea::close_binary`) | `re/targets/rustlab.exe` | `{}` | **SUCCESS**: Session closed cleanly (`"result": null`). |
+| 2026-10-26 12:15:47 | `llvm-objdump.exe` | `re/targets/rustlab.exe` | `-d --start-address=0x1401a27f4 --stop-address=0x1401a2850` | **Vector Loop Verified**: 4x unrolled `fadd v0.2d, v1.2d, v0.2d` and `fadd v1.2d, v2.2d, v3.2d` using paired loads (`ldp q`) and stores (`stp q`). |
+
+

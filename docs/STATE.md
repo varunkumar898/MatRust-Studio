@@ -1,11 +1,12 @@
 # RustLab Project State (docs/STATE.md)
 
-**Current Milestone:** G0.1 (Review Closeout & Owed Items Verification)
+**Current Milestone:** R0 (Roadmap & Status Tracking)
+**Next Milestone:** G0.1
 **Root Path:** `C:\Users\varun\Desktop\MATSTUDIO`
-**Date:** 2026-10-26
-**Repository Commit:** `HEAD` (tag `g0.1`)
+**Date:** 2026-10-27
+**Repository Commit:** tag `r0`
 **Platform:** Windows 11 ARM64 (`aarch64-pc-windows-gnullvm`), Rust 1.99.1 stable
-**Verification Status:** All gates passing (`scripts/verify.ps1`, log: `docs/verify-logs/2026-10-26-g0.1.log`)
+**Verification Status:** All gates passing (`scripts/verify.ps1` from `cargo clean`, log: `docs/verify-logs/2026-10-27-r0-verify-clean.log`)
 **Total Tests:**
 - Default features: **196** passed
 - All features: **196** passed
@@ -31,10 +32,10 @@
 
 ## 2. Binary Hashes & REA Target
 
-- `target/release/rustlab.exe`:
+- Latest recorded release build (G0.1), preserved in `re/targets/rustlab.exe`:
   - Size: 5,400,064 bytes
   - SHA-256: `78a31a97b1e73696d5ec2ea434af9878da543bda43d4f058cf5c21a6eb42c3c7`
-- REA Target: `re/targets/rustlab.exe` (SHA-256 matches `target/release/rustlab.exe`)
+- `target/release/rustlab.exe` is absent after the R0 `cargo clean`; R0 did not rebuild it (documentation-only milestone).
 - REA Project Root: `C:\Users\varun\Desktop\MATSTUDIO\re\projects`
 - REA MCP session integration verified via native MCP calls (`open_binary`, `binary_session`, `close_binary`).
 
@@ -50,4 +51,5 @@
 - **Milestone B2.1 - B2.1.1**: Clean-room statistics, RFC 4180 CSV matrix I/O, display goldens, MATLAB percentile rule, singular matrix warning + Inf (196 tests)
 - **Milestone G0**: B2.1.1 closeout, performance contracts, error ID standardization (`RUSTLAB:`), omitnan core migration (196 tests)
 - **Milestone M0**: Relocate project to Desktop\MATSTUDIO, verify 196/196/195 tests from cargo clean, configure re\targets and re\projects, record binary hash.
-- **Milestone G0.1**: Complete owed items review, docs/OWED.md, REA R-check on release binary, REPL transcript log, release benchmark triplet, gate verification. Next milestone is G1.
+- **Milestone G0.1**: Complete owed items review, docs/OWED.md, REA R-check on release binary, REPL transcript log, release benchmark triplet, gate verification.
+- **Milestone R0**: Added `docs/ROADMAP.md` with status from git tags; recorded next milestone as G0.1. Documentation only; no feature code.

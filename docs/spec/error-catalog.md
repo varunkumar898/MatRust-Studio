@@ -23,13 +23,26 @@ integer-arithmetic rule below; the exact identifier string itself is **unverifie
 | Identifier | Exact Message | Citation / Source URL | Verification |
 | :--- | :--- | :--- | :--- |
 | `MATLAB:integerTypeMismatch` | `Integers can only be combined with integers of the same class, or scalar doubles.` | [MathWorks: Arithmetic with Integer and Float](https://www.mathworks.com/help/matlab/matlab_prog/arithmetic-with-integer-and-float.html) | unverified (identifier); rule documented |
-| `MATLAB:subsasgn:dimensionMismatch` | `In an assignment  A(I) = B, the number of elements in B and I must be the same.` | [MathWorks: Matrix Indexing](https://www.mathworks.com/help/matlab/math/matrix-indexing.html) | unverified |
-| `MATLAB:dimagree` | `Array dimensions must match for binary array op or logical indexing.` / `Arrays have incompatible sizes for this operation` | [MathWorks: Compatible Array Sizes](https://www.mathworks.com/help/matlab/matlab_prog/compatible-array-sizes-for-basic-operations.html) | unverified |
+| `MATLAB:subsassigndimmismatch` | `In an assignment  A(I) = B, the number of elements in B and I must be the same.` | [MathWorks: Matrix Indexing](https://www.mathworks.com/help/matlab/math/matrix-indexing.html) | UNVERIFIED (identifier); documented assignment-count rule |
+| `MATLAB:subsasgn:dimensionMismatch` | `Subscripted assignment dimension mismatch.` | [MathWorks: Matrix Indexing](https://www.mathworks.com/help/matlab/math/matrix-indexing.html) | UNVERIFIED (numeric slice-assignment path) |
+| `MATLAB:dimagree` | `Array dimensions must match for binary array op or logical indexing.` | [MathWorks: Compatible Array Sizes](https://www.mathworks.com/help/matlab/matlab_prog/compatible-array-sizes-for-basic-operations.html) | UNVERIFIED (settled logical-mask size mismatch) |
 | `MATLAB:innerdim` | `Incorrect dimensions for matrix multiplication. Check that the number of columns in the first matrix ({cols_a}) matches the number of rows in the second matrix ({rows_b})` | [MathWorks: mtimes](https://www.mathworks.com/help/matlab/ref/mtimes.html) | unverified |
 | `MATLAB:badsubscript` | `Index exceeds the number of array elements ({max_len}): requested 1-based index {index}` | [MathWorks: Array Indexing](https://www.mathworks.com/help/matlab/math/array-indexing.html) | unverified |
 | `MATLAB:subscriptNotPositiveInteger` | `Array indices must be positive integers or logical values: invalid index {index}` | [MathWorks: Array Indexing](https://www.mathworks.com/help/matlab/math/array-indexing.html) | unverified |
 | `MATLAB:square` | `Matrix must be square: shape is {rows}x{cols}` | [MathWorks: inv](https://www.mathworks.com/help/matlab/ref/inv.html) | unverified |
 | `MATLAB:getReshapeDims:notSameNumel` | `To RESHAPE the number of elements must not change: from {original} to {requested}` | [MathWorks: reshape](https://www.mathworks.com/help/matlab/ref/reshape.html) | unverified |
+
+**Settled mask-count identifier (G0.1-VERIFY).** `A(mask) = B` with a
+non-scalar `B` uses exactly one identifier and one message:
+`MATLAB:subsassigndimmismatch` /
+`In an assignment  A(I) = B, the number of elements in B and I must be the same.`
+The identifier string is **UNVERIFIED** against a MathWorks page; the message
+is the documented assignment-count rule. The separate numeric slice-assignment
+path keeps `MATLAB:subsasgn:dimensionMismatch` and its own
+`Subscripted assignment dimension mismatch.` message. The logical-mask size
+mismatch (mask shape not equal to the array shape) is a different error:
+`MATLAB:dimagree` with the single message shown above. No claim of online
+MathWorks identifier verification is made.
 
 ---
 
@@ -60,6 +73,7 @@ integer-arithmetic rule below; the exact identifier string itself is **unverifie
 | Identifier | Exact Message | Citation / Source URL | Verification |
 | :--- | :--- | :--- | :--- |
 | `MATLAB:minrhs` | `{fn_name} requires at least {N} input(s).` | [MathWorks: nargin](https://www.mathworks.com/help/matlab/ref/nargin.html) | unverified |
+| `MATLAB:maxrhs` | `Too many input arguments.` | [MathWorks: nargin](https://www.mathworks.com/help/matlab/ref/nargin.html) | UNVERIFIED (identifier) |
 | `MATLAB:cat:badDim` | `Dimension argument must be a positive integer scalar.` | [MathWorks: cat](https://www.mathworks.com/help/matlab/ref/cat.html) | unverified |
 | `MATLAB:size:badDim` | `Dimension argument must be a positive integer scalar.` | [MathWorks: size](https://www.mathworks.com/help/matlab/ref/size.html) | unverified |
 | `MATLAB:diag:invalidDims` | `First input must be a 1D vector or 2D matrix.` | [MathWorks: diag](https://www.mathworks.com/help/matlab/ref/diag.html) | unverified |

@@ -1,0 +1,3 @@
+Value::add             median    0.602 ms  min    0.426  max    0.713
+manual zip collect     median    0.664 ms  min    0.519  max    3.672
+eval_pipeline          median    0.583 ms  min    0.483  max    0.920

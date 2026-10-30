@@ -1,0 +1,45 @@
+cargo :    Compiling rustlab-math v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-math)
+At line:1 char:1
++ cargo bench -p rustlab-stdlib --bench a312 -- "a312/elementwise_add"  ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (   Compiling ru...s\rustlab-math):String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+   Compiling rustlab-eval v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-eval)
+   Compiling rustlab-matio v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-matio)
+   Compiling rustlab-data v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-data)
+   Compiling rustlab-stdlib v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-stdlib)
+    Finished `bench` profile [optimized] target(s) in 3m 45s
+     Running benches\a312.rs (target\release\deps\a312-87e64ef7c456014d.exe)
+Gnuplot not found, using plotters backend
+Benchmarking a312/elementwise_add/raw_Value_add/1e6
+Benchmarking a312/elementwise_add/raw_Value_add/1e6: Warming up for 3.0000 s
+Benchmarking a312/elementwise_add/raw_Value_add/1e6: Collecting 100 samples in estimated 5.2552 s (1000 iterations)
+Benchmarking a312/elementwise_add/raw_Value_add/1e6: Analyzing
+a312/elementwise_add/raw_Value_add/1e6
+                        time:   [7.4709 ms 7.5576 ms 7.6436 ms]
+                        thrpt:  [130.83 Melem/s 132.32 Melem/s 133.85 Melem/s]
+                 change:
+                        time:   [-2.9313% -1.3358% +0.3276%] (p = 0.12 > 0.05)
+                        thrpt:  [-0.3265% +1.3539% +3.0198%]
+                        No change in performance detected.
+Found 5 outliers among 100 measurements (5.00%)
+  2 (2.00%) low mild
+  3 (3.00%) high mild
+Benchmarking a312/elementwise_add/eval_pipeline/1e6
+Benchmarking a312/elementwise_add/eval_pipeline/1e6: Warming up for 3.0000 s
+
+Warning: Unable to complete 100 samples in 5.0s. You may wish to increase target time to 6.3s, enable flat sampling, 
+or reduce sample count to 60.
+Benchmarking a312/elementwise_add/eval_pipeline/1e6: Collecting 100 samples in estimated 6.2540 s (5050 iterations)
+Benchmarking a312/elementwise_add/eval_pipeline/1e6: Analyzing
+a312/elementwise_add/eval_pipeline/1e6
+                        time:   [1.1497 ms 1.1649 ms 1.1810 ms]
+                        thrpt:  [846.72 Melem/s 858.44 Melem/s 869.80 Melem/s]
+                 change:
+                        time:   [-8.7191% -7.0707% -5.3955%] (p = 0.00 < 0.05)
+                        thrpt:  [+5.7033% +7.6087% +9.5520%]
+                        Performance has improved.
+Found 2 outliers among 100 measurements (2.00%)
+  2 (2.00%) high mild
+

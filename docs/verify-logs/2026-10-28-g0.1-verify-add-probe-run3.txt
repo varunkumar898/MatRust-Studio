@@ -1,0 +1,35 @@
+cargo.exe : warning: unused `Result` that must be used
+At line:1 char:32
++ ... ct { $out = & cargo run -q -p rustlab-cli --release --example add_pro ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (warning: unused...at must be used:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  --> crates\rustlab-cli\examples\add_probe.rs:38:9
+   |
+38 |         black_box(a.add(&b));
+   |         ^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: this `Result` may be an `Err` variant, which should be handled
+   = note: `#[warn(unused_must_use)]` (part of `#[warn(unused)]`) on by default
+help: use `let _ = ...` to ignore the resulting value
+   |
+38 |         let _ = black_box(a.add(&b));
+   |         +++++++
+
+warning: unused `Result` that must be used
+  --> crates\rustlab-cli\examples\add_probe.rs:65:9
+   |
+65 |         black_box(interp.eval_stmts(&stmts));
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: this `Result` may be an `Err` variant, which should be handled
+help: use `let _ = ...` to ignore the resulting value
+   |
+65 |         let _ = black_box(interp.eval_stmts(&stmts));
+   |         +++++++
+
+Value::add             median    0.697 ms  min    0.574  max    2.947
+manual zip collect     median    0.687 ms  min    0.563  max    0.907
+manual push loop       median    1.041 ms  min    0.945  max    1.424
+eval_pipeline          median    0.519 ms  min    0.429  max    0.584

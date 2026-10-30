@@ -1,0 +1,17 @@
+cargo :    Compiling faer v0.24.4
+At line:1 char:1
++ cargo test -p rustlab-cli --test cli_tests test_g01_singular_inv_warn ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (   Compiling faer v0.24.4:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+   Compiling rustlab-stdlib v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-stdlib)
+   Compiling rustlab-cli v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-cli)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1m 43s
+     Running tests\cli_tests.rs (target\debug\deps\cli_tests-17c3cb3aecf4278b.exe)
+
+running 1 test
+test test_g01_singular_inv_warns_on_stderr_and_prints_inf ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 3 filtered out; finished in 0.12s
+

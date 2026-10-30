@@ -1,0 +1,13 @@
+G0.1-VERIFY Octave availability probe
+Date: 2026-10-28
+
+Command: octave --version
+The term 'octave' is not recognized as the name of a cmdlet, function, script file, or operable program. Check the spelling of the name, or if a path was included, verify that the path is correct and try again.
+exit_code=not-found
+
+Command: octave-cli --version
+The term 'octave-cli' is not recognized as the name of a cmdlet, function, script file, or operable program. Check the spelling of the name, or if a path was included, verify that the path is correct and try again.
+exit_code=not-found
+
+Get-Command result:
+No octave or octave-cli command found on PATH.

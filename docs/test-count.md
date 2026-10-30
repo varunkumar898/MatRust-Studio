@@ -17,19 +17,21 @@ This document tracks the cumulative and per-suite test counts across milestones,
 | **Milestone A3.1.4** | **153** | **153** | +1 `test_a2_both_native_and_faer_eig_paths_match`, +1 `test_scientific_notation_threshold_rule_cited`, -1 duplicate builtin test deduplicated, native Jacobi SVD enabled in no-default-features | Integrity pass: test-manifest CI check, 173 builtins verified two-way |
 | **Milestone B2.1** | **171** | **171** | +13 `rustlab-data` (statistics + CSV matrix I/O), +4 display goldens, +1 symmetric eig route test | Clean-room statistics, RFC 4180 CSV matrix I/O, BOM/CRLF, ragged row detection |
 | **Milestone B2.1.1** | **196** | **195** | +24 `rustlab-data` tests (depth, properties, CSV edge cases, display goldens), +1 `rustlab-stdlib` singular matrix inv/mldivide Inf test | B2.1.1 corrective pass: display goldens, MATLAB percentile rule, singular matrix warning + Inf, $O(n)$ movmean/cummax/zscore |
+| **Milestone G0.1-VERIFY** | **205** | **204** | +7 `rustlab-stdlib` G0.1 regressions, +1 `rustlab-data` RUSTLAB-id scan, +1 CLI singular-warning integration test | Verification-only pass: LU residuals, singular warning, core `omitnan`, mask ids, display goldens, test-manifest refresh |
 
 ---
 
-## 2. Comprehensive Suite Breakdown (Milestone B2.1.1)
+## 2. Comprehensive Suite Breakdown (Milestone G0.1-VERIFY)
 
 | Crate | Unit (cargo header) | Default Passed | No-Default Passed | Status |
 | :--- | :--- | :---: | :---: | :--- |
 | **rustlab-cli** | `unittests src\lib.rs` | 0 | 0 | clean |
 | **rustlab-cli** | `unittests src\main.rs` | 0 | 0 | clean |
-| **rustlab-cli** | `tests/cli_tests.rs` | 3 | 3 | PASSED |
+| **rustlab-cli** | `tests/cli_tests.rs` | 4 | 4 | PASSED |
 | **rustlab-cli** | `tests/diagnostics_tests.rs` | 12 | 12 | PASSED |
 | **rustlab-data** | `unittests src\lib.rs` | 0 | 0 | clean |
 | **rustlab-data** | `tests/data_tests.rs` | 37 | 37 | PASSED |
+| **rustlab-data** | `tests/g01_verify_tests.rs` | 1 | 1 | PASSED |
 | **rustlab-eval** | `unittests src\lib.rs` | 0 | 0 | clean |
 | **rustlab-eval** | `tests/eval_tests.rs` | 9 | 9 | PASSED |
 | **rustlab-eval** | `tests/milestone_a1_tests.rs` | 6 | 6 | PASSED |
@@ -42,17 +44,18 @@ This document tracks the cumulative and per-suite test counts across milestones,
 | **rustlab-parse** | `tests/lexer_tests.rs` | 4 | 4 | PASSED |
 | **rustlab-parse** | `tests/parser_tests.rs` | 9 | 9 | PASSED |
 | **rustlab-stdlib** | `unittests src\lib.rs` | 7 | 7 | PASSED |
+| **rustlab-stdlib** | `tests/g01_verify_tests.rs` | 7 | 7 | PASSED |
 | **rustlab-stdlib** | `tests/regression_a312_tests.rs` | 16 | 16 | PASSED |
 | **rustlab-stdlib** | `tests/stdlib_tests.rs` | 13 | 13 | PASSED |
 | **rustlab-stdlib** | `tests/stdlib_a1_tests.rs` | 13 | 13 | PASSED |
 | **rustlab-stdlib** | `tests/stdlib_a2_tests.rs` | 21 | 20 | PASSED |
 | **rustlab-stdlib** | `tests/stdlib_a3_tests.rs` | 16 | 16 | PASSED |
 | *Doc-tests* | all 7 crates | 0 | 0 | clean |
-| **TOTAL** | 31 units incl. doc-tests | **196** | **195** | **100% PASSED** |
+| **TOTAL** | 33 units incl. doc-tests | **205** | **204** | **100% PASSED** |
 
 ---
 
-## 3. Justification of Test Changes in B2.1.1
+## 3. Justification of Test Changes (B2.1.1 and G0.1-VERIFY)
 
 As strictly mandated by reporting rules, all additions, modifications, or removals are documented:
 1. **Added 24 Tests to `crates/rustlab-data/tests/data_tests.rs`** (expanding from 13 to 37):
@@ -67,8 +70,45 @@ As strictly mandated by reporting rules, all additions, modifications, or remova
 3. **No Tests Removed**:
    - Total test count strictly increased from 171 to 196 (default) and 195 (no-default).
 
+### G0.1-VERIFY additions (9 tests)
+
+4. **Added 7 tests to `crates/rustlab-stdlib/tests/g01_verify_tests.rs`**:
+   - `test_g01_lu_residuals_random_5x5` and `test_g01_lu_residuals_random_50x50`:
+     deterministic random, diagonally dominant matrices; check `P*A = L*U`
+     and `||A*x - b||_inf < 1e-10`.
+   - `test_g01_mldivide_singular_returns_inf`: singular `A \ b` returns an
+     all-`Inf` result.
+   - `test_g01_core_omitnan_sum_mean_min_max`: core `sum`/`mean`/`min`/`max`
+     with explicit `"omitnan"`; also checks `sum`/`mean` default and
+     `"includenan"` NaN propagation.
+   - `test_g01_mask_count_and_size_identifiers_settled`: mask-count error id is
+     `MATLAB:subsassigndimmismatch`; mask-size error id/message is
+     `MATLAB:dimagree` / `"Array dimensions must match for binary array op or logical indexing."`
+   - `test_g01_display_scale_factor_0_001_1000_golden_unverified` and
+     `test_g01_display_extreme_range_1e_16_1_golden_unverified`: byte-exact
+     display strings. The `_unverified` suffix records that Octave/MATLAB was
+     not available to confirm the exact layout.
+5. **Added 1 test to `crates/rustlab-data/tests/g01_verify_tests.rs`**:
+   - `test_g01_rustlab_only_ids_do_not_use_matlab_prefix`: source scan rejects
+     future RustLab-only `MATLAB:` identifiers in `stats.rs`/`csv_io.rs` unless
+     the id is in the documented generic allow-list.
+6. **Added 1 integration test to `crates/rustlab-cli/tests/cli_tests.rs`**:
+   - `test_g01_singular_inv_warns_on_stderr_and_prints_inf`: runs the real
+     `rustlab` test binary, asserts the singular warning is on stderr and
+     `Inf` is on stdout, and that the process succeeds.
+7. **No tests removed.** Default count went from 196 to 205; no-default from
+   195 to 204. The default/no-default name diff is the same five faer/native
+   eig tests as B2.1.1 (3 default-only, 2 no-default-only).
+
 ---
 
 ## 4. Test Manifest Integrity CI Enforcement
 
-All 196 test identifiers are recorded in `docs/test-manifest.txt` directly from `cargo test --workspace -- --list`. `scripts/verify.ps1` runs a manifest integrity check (Step 7) comparing active tests against `docs/test-manifest.txt`, failing if any entry disappears without explicit manifest modification.
+All 205 default test identifiers are recorded in `docs/test-manifest.txt`
+directly from `cargo test --workspace -- --list` (duplicate names from
+different test binaries are preserved as separate lines). `scripts/verify.ps1`
+runs a manifest integrity check (Step 7) comparing active tests against
+`docs/test-manifest.txt`, failing if any entry disappears without explicit
+manifest modification. Raw lists:
+`docs/verify-logs/2026-10-28-g0.1-verify-test-list-default.txt` and
+`...-test-list-no-default.txt`.

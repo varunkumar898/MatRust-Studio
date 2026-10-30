@@ -1,6 +1,7 @@
 use rustlab_cli::format::format_eval_error;
 use rustlab_cli::repl::is_incomplete_input;
 use rustlab_stdlib::new_interpreter;
+use std::process::Command;
 
 #[test]
 fn test_incomplete_input_detection() {
@@ -27,6 +28,29 @@ fn test_incomplete_input_detection() {
     // Ellipsis line continuation
     assert!(is_incomplete_input("x = 1 + ..."));
     assert!(is_incomplete_input("A = [1, 2, ..."));
+}
+
+#[test]
+fn test_g01_singular_inv_warns_on_stderr_and_prints_inf() {
+    let output = Command::new(env!("CARGO_BIN_EXE_rustlab"))
+        .args(["-e", "x = inv([1 2; 2 4])"])
+        .output()
+        .expect("failed to run the rustlab test binary");
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+
+    assert!(
+        output.status.success(),
+        "singular inv must not fail the process; stderr: {stderr}"
+    );
+    assert!(
+        stderr.contains("Warning: Matrix is singular to working precision."),
+        "expected singular-matrix warning on stderr, got: {stderr}"
+    );
+    assert!(
+        stdout.contains("Inf"),
+        "expected Inf result on stdout, got: {stdout}"
+    );
 }
 
 #[test]

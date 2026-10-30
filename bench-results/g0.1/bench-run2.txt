@@ -1,0 +1,71 @@
+
+===============================================================
+              RustLab Numerical Performance Suite              
+===============================================================
+
+--- 1. Dense Matrix Multiplication (2D Gemm) ---
+Size         Samples         Median Time (ms)   Throughput (GFLOPS)
+--------------------------------------------------------------
+  Backend: matrixmultiply::dgemm (single-threaded; no thread pool). Host available_parallelism=Ok(8)
+64x64        20 (┬▒0.001)     0.034              15.29          
+128x128      20 (┬▒0.006)     0.220              19.04          
+256x256      20 (┬▒0.641)     1.491              22.51          
+384x384      20 (┬▒4.563)     6.663              17.00          
+
+--- 2. Linear System Solver (A \ b with LU / Gaussian Elim) ---
+Size         Samples            Median Time (ms)  
+--------------------------------------------------
+50x50        20 (┬▒0.002)        0.027             
+100x100      20 (┬▒0.149)        0.291             
+200x200      20 (┬▒2.092)        1.631             
+
+--- 3. 1D FFT Scaling Across Problem Sizes (RustFFT Backend) ---
+Points       Samples            Median Time (┬╡s)  
+--------------------------------------------------
+1024         20 (┬▒3.30)         34.80             
+4096         20 (┬▒655.95)       314.40            
+16384        20 (┬▒2438.30)      1431.70           
+65536        20 (┬▒7135.70)      5359.40           
+
+--- 4. Elementwise & Broadcasting Operations (1,000,000 Elements) ---
+Operation            Samples            Median Time (ms)   Throughput (MEl/s)
+----------------------------------------------------------------------------
+A + B                20 (┬▒3.036)        4.112              243.2             
+A .* B               20 (┬▒1.756)        3.947              253.4             
+sin(A)               20 (┬▒5.083)        21.277             47.0              
+
+--- 5. Symmetric Eigenvalue: Native Householder+QL vs Faer Self-Adjoint ---
+Size       Samples      Native QL (ms)         Faer Self-Adjoint (ms)
+--------------------------------------------------------------------
+30x30      20           0.144                  0.068                 
+60x60      20           0.966                  0.471                 
+100x100    20           3.722                  1.304                 
+
+--- 6. Architectural FFT Comparison (RustFFT vs Radix-2 Ref vs Naive O(N^2)) ---
+Length (N)      RustFFT (┬╡s)       Radix-2 Ref (┬╡s)   Naive O(N^2) (┬╡s) 
+------------------------------------------------------------------------
+1024 (pow2)     32.7               308.7              30458.8           
+1000 (non-pow2) 48.1               N/A (non-pow2)     26273.6           
+1009 (prime)    83.8               N/A (non-pow2)     20082.2           
+65536 (pow2)    4331.6             18479.3            Omitted (>10^8 ops)
+
+--- 7. Sparse vs Dense Scaling (N = 1,000, Density 1%) ---
+Operation            Sparse Time (ms)   Dense Time (ms)    Dense/Sparse      
+----------------------------------------------------------------------------
+Matvec (S * b)       0.012              4.192              343.57            x
+Matrix Add (S + S)   0.049              4.805              98.67             x
+
+--- 8. Milestone B2.1: 1,000,000-Element Statistics & CSV Matrix I/O ---
+Benchmark                 Median (ms)        Spread (ms)       
+-----------------------------------------------------------------
+movmean(1M, 3)            18.057             3.640             
+cummax(1M)                11.129             1.613             
+zscore(1M)                12.135             5.744             
+writematrix(1M floats)    115.308            42.016            
+readmatrix(1M floats)     84.954             9.821             
+writematrix(1M rows)      133.258            39.008            
+readmatrix(1M rows)       261.212            3.500             
+
+
+All benchmarks completed successfully.
+===============================================================

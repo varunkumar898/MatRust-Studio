@@ -119,10 +119,14 @@ impl MathError {
         }
     }
 
-    /// Subscripted assignment count mismatch (`MATLAB:subsasgn:dimensionMismatch`).
+    /// Subscripted assignment count mismatch (`MATLAB:subsassigndimmismatch`).
+    ///
+    /// Settled in G0.1-VERIFY: the mask-count path and the class-rules
+    /// specification use this one identifier. The exact MATLAB identifier is
+    /// UNVERIFIED; see `docs/spec/error-catalog.md`.
     pub fn assignment_count_mismatch() -> Self {
         Self::SubscriptedAssignmentCountMismatch {
-            identifier: "MATLAB:subsasgn:dimensionMismatch",
+            identifier: "MATLAB:subsassigndimmismatch",
         }
     }
 

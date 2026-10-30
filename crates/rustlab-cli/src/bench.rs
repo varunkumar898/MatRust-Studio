@@ -52,6 +52,10 @@ fn bench_matmul() {
         "Size", "Samples", "Median Time (ms)", "Throughput (GFLOPS)"
     );
     println!("{:-<62}", "");
+    println!(
+        "  Backend: matrixmultiply::dgemm (single-threaded; no thread pool). Host available_parallelism={:?}",
+        std::thread::available_parallelism()
+    );
 
     let sizes = [64, 128, 256, 384];
     for &n in &sizes {
@@ -561,6 +565,35 @@ fn bench_b21_data_and_csv() {
         "readmatrix(1M floats)", read_ms, read_sp
     );
 
+    // 5. A true 1,000,000-ROW CSV (one column), separate from the 250,000x4
+    // float workload above. This is deliberately a smaller sample count: each
+    // iteration writes/reads a multi-megabyte text file.
+    let rows_path = "target/bench_1m_rows.csv";
+    let (rows_write_ms, rows_write_sp) = run_benchmark_samples(
+        || {
+            let _ = interp.eval_script(&format!("writematrix(x, '{rows_path}');"));
+        },
+        1,
+        3,
+    );
+    println!(
+        "{:<25} {:<18.3} {:<18.3}",
+        "writematrix(1M rows)", rows_write_ms, rows_write_sp
+    );
+
+    let (rows_read_ms, rows_read_sp) = run_benchmark_samples(
+        || {
+            let _ = interp.eval_script(&format!("Rrows = readmatrix('{rows_path}');"));
+        },
+        1,
+        3,
+    );
+    println!(
+        "{:<25} {:<18.3} {:<18.3}",
+        "readmatrix(1M rows)", rows_read_ms, rows_read_sp
+    );
+
     let _ = std::fs::remove_file(csv_path);
+    let _ = std::fs::remove_file(rows_path);
     println!();
 }

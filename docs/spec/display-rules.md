@@ -39,15 +39,15 @@ For a 2D matrix of floating-point numbers:
      When `dyn_range >= 1e9` (extreme dynamic range) OR when the matrix has no common scale factor (`max_finite < 1000.0`) and contains sub-1e-3 non-zero elements (`0 < min_finite_nonzero < 0.001`):
      A common scale factor would either cause small non-zero elements to underflow to `0.0000` or cannot represent the spread.
      Therefore, MATLAB formats **every entry in the matrix in scientific notation** (`format_short_scientific`).
-     *Example*: `[1e-16 1]` prints as `  1.0000e-16   1.0000e+00`.
+     *Example*: `[1e-16 1]` prints as `    1.0000e-16  1.0000e+00`.
      Status: **unverified** (matches Octave / MATLAB output for high-dynamic-range arrays).
 
    - **Common Scale Factor (`1.0e+NN *`)**:
      When the dynamic range is within standard precision (`dyn_range < 1e9`), and the largest element satisfies `max_finite >= 1000.0` or `0 < max_finite <= 0.001`:
      A common multiplier `1.0e+NN *` (where `NN = floor(log10(max_finite))`) is printed above the matrix.
      Each element is scaled by `10^NN` and formatted.
-     *Example*: `[0.001 1000]` has `max_finite = 1000.0`, triggering `  1.0e+03 *\n\n` followed by `    0.0000    1.0000`.
-     Status: Source for threshold: <https://www.mathworks.com/help/matlab/ref/format.html>; boundary inclusive check `max >= 1000` is **unverified**.
+     *Example*: `[0.001 1000]` has `max_finite = 1000.0`, triggering `  1.0e+03 *\n\n` followed by `    0.0000  1.0000` (one shared column width; two spaces between cells).
+     Status: Source for threshold: <https://www.mathworks.com/help/matlab/ref/format.html>; boundary inclusive check `max >= 1000` is **unverified**. The exact column spacing is also **unverified** and is locked by `test_g01_display_scale_factor_0_001_1000_golden_unverified`.
 
    - **Fixed-Point Mixed Matrix**:
      When neither e-notation nor a scale factor is triggered:
@@ -98,6 +98,6 @@ For a 2D matrix of floating-point numbers:
 | `1234.5678` | `   1.2346e+03` | scalar scientific >=1000; **unverified** |
 | `[1.5 22]` | `    1.5000   22.0000` | mixed matrix integer formatted with decimals; **unverified** |
 | `[1.5 0]` | `    1.5000        0` | exact zero bare in mixed matrix; **unverified** |
-| `[1e-16 1]` | `  1.0000e-16   1.0000e+00` | per-element e-notation due to extreme range; **unverified** |
+| `[1e-16 1]` | `    1.0000e-16  1.0000e+00` | per-element e-notation due to extreme range; **unverified** |
 | `[1 1000000]` | `        1  1000000` | all-integer matrix; **unverified** |
-| `[0.001 1000]` | `  1.0e+03 *\n\n    0.0000    1.0000` | common scale factor `1.0e+03`; MathWorks format cited |
+| `[0.001 1000]` | `  1.0e+03 *\n\n    0.0000  1.0000` | common scale factor `1.0e+03`; MathWorks threshold cited, exact layout **unverified** |

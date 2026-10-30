@@ -17,6 +17,27 @@ Items tracked here are out of scope for the current milestone but recorded for f
 
 ---
 
+## 2. LU / Linear-Solve Teaching Note Correction (G0.1-VERIFY)
+
+The earlier teaching note said the LU trailing update costs about **n^3/2**
+multiply-adds. That is wrong. The forward elimination/trailing update for an
+n-by-n LU factorization costs
+
+`sum_{k=1..n} (n-k)^2 = 1^2 + 2^2 + ... + (n-1)^2 ~ n^3/3`
+
+multiply-adds. Back substitution adds about `n^2/2` operations. The `n^3/2`
+figure is an order-of-magnitude label only, not the leading constant.
+
+The implementation still updates whole rows. `mldivide_fn` in
+`crates/rustlab-stdlib/src/linalg.rs` zeroes the pivot column and then updates
+every column from `col + 1` through the last augmented column, including
+already-zero left-hand-side columns. `compute_lu` builds full L and U matrices
+and computes each entry with dot products; it has no trailing-submatrix
+microkernel. A future optimization can restrict the update to the trailing
+submatrix and cache blocks, but that is out of scope for verification.
+
+---
+
 ## 2. Planned Roadmapped Milestones
 
 - **G1**: Built-in Self-Debug Tools (`--dump-tokens`, `--dump-ast`, `--trace`, `doctor`, `selftest`, `explain`) and `tests/golden` corpus (I1..I15).

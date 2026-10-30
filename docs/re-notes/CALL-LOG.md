@@ -23,6 +23,10 @@ All reverse engineering, disassembly, symbol inspection, and binary layout verif
 | `rustlab.exe` (A3.1.4 final release build: native Jacobi SVD, num2str multi-row alignment, faer-off parity; 5,177,344 bytes) | Windows ARM64 PE (`coff-arm64`) | MD5 `A59792C8864B55C8BAC1978C9B2839B0`, SHA-256 `EA753B792DEDDDC5941B8DCEC2D4161977F24FBC2DEBF75615BF0601F959588C` |
 | `rustlab.exe` (B2.1 release build: rustlab-data crate, clean-room stats; 5,393,408 bytes) | Windows ARM64 PE (`coff-arm64`) | SHA-256 `8fd8d28df96d1f36e9dfbd82c4566a26ee00cfee05add359cfb31fe191ff58d3` |
 | `rustlab.exe` (G0 closeout build: LU backsub, core omitnan, RUSTLAB IDs; 5,400,064 bytes) | Windows ARM64 PE (`coff-arm64`) | SHA-256 `683ea9cbc8bd2b025d93f1ead5281e3a36fbae0c01eae57365ff0681ed6be770` |
+| `re/targets/rustlab.exe` (M0 relocation copy; 5,400,064 bytes) | Windows ARM64 PE (`coff-arm64`) | SHA-256 `02bbda0c68cafe87e01a33fa15f71c2bae96e7cd3f95dafcb82c712380f7460c` |
+| `re/targets/rustlab.exe` (G0.1 metadata rebuild; 5,400,064 bytes) | Windows ARM64 PE (`coff-arm64`) | SHA-256 `78a31a97b1e73696d5ec2ea434af9878da543bda43d4f058cf5c21a6eb42c3c7` |
+| `re/targets/rustlab-g0.1-verified.exe` (canonical G0.1-VERIFY build; 5,416,960 bytes) | Windows ARM64 PE (`coff-arm64`) | SHA-256 `80E6AF2442D97CED5E67145D0DF2B9961EF5957ED178049C689457B67CD5CA58` |
+| `re/targets/rustlab-g0.1-verified-preclean-F6A302EB.exe` (non-canonical pre-clean build; 5,416,960 bytes) | Windows ARM64 PE (`coff-arm64`) | SHA-256 `F6A302EB92DD04CDE4C3B54D9F90E3A7288341737D7089EC5F1341CDDCDEDAC0` |
 | `scripts/validate_mat_v7.py` | Python 3 Reference Generator | SHA-256 `45012799761F7DC6D4F9F674F46C73D9CDFC08A5598234E1ACA3ECBFBE000538` |
 | `crates/rustlab-matio/tests/scipy_mat_tests.rs` (hardened 40-fixture interop test with clippy hygiene) | Rust Integration Test Harness | SHA-256 `C002ADD8AD58A93CBBABAD69F22656E3A15531B1F22E9E4D1C2BDE5ACA1EFD61` |
 | `crates/rustlab-matio/tests/data/suite_all_types_compressed.mat` | SciPy Level 5 MAT (Zlib) | SHA-256 `436C67A270DA598D22F2A4AEF4649A7D6101C61B5B8933A2486E5913BB335C13` |
@@ -103,5 +107,18 @@ All reverse engineering, disassembly, symbol inspection, and binary layout verif
 | 2026-10-26 12:31:22 | `call_mcp_tool` (`rea::binary_session`) | `re/targets/rustlab.exe` | `{}` | **SUCCESS**: Active session confirmed (`"open": true`). Ephemeral resources intact. |
 | 2026-10-26 12:31:37 | `call_mcp_tool` (`rea::close_binary`) | `re/targets/rustlab.exe` | `{}` | **SUCCESS**: Session closed cleanly (`"result": null`). |
 | 2026-10-26 12:15:47 | `llvm-objdump.exe` | `re/targets/rustlab.exe` | `-d --start-address=0x1401a27f4 --stop-address=0x1401a2850` | **Vector Loop Verified**: 4x unrolled `fadd v0.2d, v1.2d, v0.2d` and `fadd v1.2d, v2.2d, v3.2d` using paired loads (`ldp q`) and stores (`stp q`). |
+
+> **G0.1-VERIFY note on the rows above.** These G0.1 rows were recorded by the
+> previous Antigravity session. This verification session runs in OpenCode,
+> where the REA MCP server is not configured. They are retained as historical
+> claims, not as calls made in this session.
+
+---
+
+### G0.1-VERIFY REA Attempt (OpenCode, 2026-10-28)
+
+| Timestamp (UTC) | Tool / Method | Target Binary & Checksum | Parameters & Request | Outcome & Observations |
+| :--- | :--- | :--- | :--- | :--- |
+| 2026-10-28 08:19:39 | `opencode mcp list`; `tools.opencode.list_mcp_resources` | `re/targets/rustlab.exe` (shell SHA-256 `78A31A97B1E73696D5EC2EA434AF9878DA543BDA43D4F058CF5C21A6EB42C3C7`, 5,400,064 bytes) | `{"server": "rea"}` | **SKIPPED**: `opencode mcp list` returned `No MCP servers configured`; the list-resources probe returned `MCP server not found: rea`. No session hash and no binary analysis were produced. The shell hash matches the recorded G0.1 copy. Raw command output: `docs/verify-logs/2026-10-28-g0.1-verify-rea-mcp-list.txt`; probe note: `docs/re-notes/g0.1-add-path.md`. |
 
 

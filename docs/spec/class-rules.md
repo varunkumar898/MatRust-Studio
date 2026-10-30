@@ -32,4 +32,5 @@ This document documents and cites the sources for RustLab's numeric class combin
 - **Rule**: When assigning to a logical mask with a non-scalar right-hand side `A(mask) = B`, the number of elements in `B` must equal the number of `true` values in `mask`.
 - **Error Message**: `"In an assignment  A(I) = B, the number of elements in B and I must be the same."`
 - **Identifier**: `MATLAB:subsassigndimmismatch`
-- **Source Citation**: MATLAB Documentation: *Subscripted Assignment Dimension Mismatch*.
+- **Source**: Message rule documented by MathWorks (*Matrix Indexing*); the exact
+  identifier string is **UNVERIFIED**. See `docs/spec/error-catalog.md`.

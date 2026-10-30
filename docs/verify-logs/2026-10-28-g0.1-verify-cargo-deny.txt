@@ -1,0 +1,13 @@
+cargo : error: no such command: `deny`
+At line:1 char:1
++ cargo deny check licenses 2>&1 | Tee-Object -FilePath docs\verify-log ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (error: no such command: `deny`:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+help: a command with a similar name exists: `bench`
+
+help: view all installed commands with `cargo --list`
+help: find a package to install `deny` with `cargo search cargo-deny`
+exit_code=101

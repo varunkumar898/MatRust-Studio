@@ -1,14 +1,15 @@
 # RustLab Milestone Roadmap
 
-Status source: git tags (`git tag -l`, `git show-ref --tags`, run 2026-10-27).
+Status source: git tags (`git tag -l`, `git show-ref --tags`, run 2026-10-28).
 G0.1 is listed from `docs/STATE.md`; it is not a row in the AGENTS.md roadmap.
-Owner instruction keeps G0.1 as the next milestone even though tag `g0.1` exists
-(recorded as DONE from the tag). This is flagged for owner confirmation.
+The tag `g0.1` exists, but the owner rejected it as an unverified baseline.
+G0.1-VERIFY is the accepted verification-only pass (tag `g0.1-verified`).
 
 | Milestone ID | Description (verbatim from AGENTS.md section 5) | Status |
 |-------------|--------------------------------------------------|--------|
 | G0 | G0 CLOSEOUT of B2.1.1 (no new features)<br> a Answer the owed items with raw evidence: purpose of every file in<br>   bench-results/a312/ and the one-line Cargo.toml additions (rustlab-cli,<br>   rustlab-matio, rustlab-stdlib, workspace); cargo deny check licenses<br>   output; reconcile hashes (5F12F389... vs 8fd8d28d..., both 5,177,856 B);<br>   mark gemm-codegen.md with its build.<br> b Real REPL transcript for: x=100000; 12345.678; 1234.5678; 0.001; 0.0012;<br>   [1e-16 1]; [1 1000000]; [0.001 1000]; [1.5 22]; int8(-2.5); uint8(3.5);<br>   A=[1 2 3]; A([true false true])=[9 9 9]; 0/0; 0.1+0.2==0.3;<br>   inv([1 2;2 4]); prctile([1 2 3 4 5],25) (expect 1.75);<br>   prctile([12.5 18.2 14.1 22 19.8 14.1 16.5],75) (expect 19.4);<br>   unique([3 1 2 1]) (row output). Compare with Octave where installed and<br>   record the Octave version; mark UNVERIFIED where it differs or is absent.<br> c Fix contract misses: LU 100x100 <= 0.6 ms; interpreter A+B 1e6 <= 3 ms;<br>   movmean/cummax/zscore on 1e6 O(n) and about 10 ms or less in steady state;<br>   fair dense baseline in the sparse table; GEMM numbers with thread count.<br> d Rename RustLab-only ids to RUSTLAB:. Move 'omitnan' into core sum/mean/<br>   min/max (R13) so --no-default-features keeps the same semantics.<br>   Fix csv version text.<br> e First real REA R-check on hot loops (section 3), including the public<br>   Value::add vs fast-path question. Fix the public path if it is slow. | DONE |
-| G0.1 | Complete owed items review, docs/OWED.md, REA R-check on release binary, REPL transcript log, release benchmark triplet, gate verification. | DONE |
+| G0.1 | Complete owed items review, docs/OWED.md, REA R-check on release binary, REPL transcript log, release benchmark triplet, gate verification. | BASELINE (rejected; superseded by G0.1-VERIFY) |
+| G0.1-VERIFY | Verification-only closeout of G0.1: nine missing regressions, mask-id/catalog fix, hash reconciliation, 1M-row CSV benchmark, REPL transcript, clean gate run. No new features. | DONE (tag `g0.1-verified`) |
 | G1 | G1 SELF-DEBUG TOOLS (section 2.4) + tests/golden corpus covering I1..I15 +<br>   docs/LEARNING-core.md explaining sections 2.1-2.3 with worked examples. | TODO |
 | B2.2 | B2.2 rustlab-plot: plot-description model (Figure, Axes, Line, Scatter, Bar,<br>   Histogram, text, legend, limits, scales) independent of any renderer;<br>   deterministic SVG renderer (fixed number formatting, documented "nice<br>   ticks" rule, stable ids); builtins figure, plot, scatter, bar, hist, hold,<br>   subplot, xlabel, ylabel, title, legend, xlim, ylim, grid, saveas('x.svg').<br>   Snapshot tests (stored .svg files, byte-equal). PNG via resvg is a later<br>   optional feature. No GUI, no 3D, no timetables. | TODO |
 | B2.3 | B2.3 Tables and file formats: table type with typed columns, T.Var access,<br>   T(mask,:), readtable/writetable (CSV with type inference), sortrows/groupby/<br>   join, missing values, display; XLSX read via calamine; JSON via serde_json<br>   (jsonencode/jsondecode). Plain-text fixtures in tests/data. | TODO |
@@ -24,4 +25,4 @@ Owner instruction keeps G0.1 as the next milestone even though tag `g0.1` exists
 Language completeness backlog (schedule inside B7 or earlier when a milestone
 needs it): everything recorded in docs/BACKLOG.md.
 
-**Next Milestone:** G0.1
+**Next Milestone:** G1 (wait for owner approval)

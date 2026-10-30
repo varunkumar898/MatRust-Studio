@@ -6,7 +6,25 @@
 **Build Profile**: `[profile.release]` (`opt-level = 3`, `lto = "fat"`, `codegen-units = 1`, `panic = "abort"`)  
 **Disassembly Tool**: `llvm-objdump.exe` (LLVM 23.1.1-rust-1.99.1-stable)  
 **Inspection Date**: 2026-10-25  
-**Current Binary (G0)**: Size 5,400,064 bytes; SHA-256 `683ea9cbc8bd2b025d93f1ead5281e3a36fbae0c01eae57365ff0681ed6be770`  
+**Historical G0 Binary (Sections 1-5)**: Size 5,400,064 bytes; SHA-256 `683ea9cbc8bd2b025d93f1ead5281e3a36fbae0c01eae57365ff0681ed6be770`; source commit `24ac6e2` (tag `g0`).
+
+### Build provenance map (added G0.1-VERIFY)
+
+| Note section | Binary size | SHA-256 | Source commit / tag | Notes |
+| :--- | :--- | :--- | :--- | :--- |
+| Sections 1-5 | 5,400,064 B | `683ea9cbc8bd2b025d93f1ead5281e3a36fbae0c01eae57365ff0681ed6be770` | `24ac6e2` (`g0`) | Original G0 disassembly; addresses are specific to this build. |
+| Section 6 | 5,165,568 B | `fff28580223c39f28785c7a5130152f9293a0d17a6ca28f9aaa3bcfc73ae40e6` | A3.1.2 rebuild (pre-G0) | Re-verification log in CALL-LOG line 22; not the current build. |
+| Section 7.1 build (1) | 5,177,344 B | `EA753B792DEDDDC5941B8DCEC2D4161977F24FBC2DEBF75615BF0601F959588C` | A3.1.4 final | MD5 `A59792C8864B55C8BAC1978C9B2839B0`. |
+| Section 7.1 build (2) | 5,177,856 B | `5F12F38994E80D2BC910CD8D36D611DE78CF4CD9004B2EC6DF759A11BFED0288` | A3.1.4 intermediate | 512 bytes larger than build (1) due to PE section alignment. |
+| Section 7.1 build (3) | 5,393,408 B | `8fd8d28df96d1f36e9dfbd82c4566a26ee00cfee05add359cfb31fe191ff58d3` | B2.1 | Includes `rustlab-data`. Not 5,177,856 B; the G0 review note that said both 5F12F389 and 8fd8d28d were 5,177,856 B was wrong. |
+| Section 7.1 build (4) | 5,400,064 B | `683ea9cbc8bd2b025d93f1ead5281e3a36fbae0c01eae57365ff0681ed6be770` | `24ac6e2` (`g0`) | Same build as Sections 1-5. |
+| M0 relocation build | 5,400,064 B | `02bbda0c68cafe87e01a33fa15f71c2bae96e7cd3f95dafcb82c712380f7460c` | `24ac6e2` code; built in M0 tree at `e84d542` | M0 commit `e84d542` changes docs/config only, so executable code is the `g0` code. |
+| G0.1 metadata build | 5,400,064 B | `78a31a97b1e73696d5ec2ea434af9878da543bda43d4f058cf5c21a6eb42c3c7` | `95dcbca` (`g0.1`) | Only crate license metadata changed; the binary hash differs from `02bbda0c` despite identical code. |
+| G0.1-VERIFY final build (post-`cargo clean`, canonical) | 5,416,960 B | `80E6AF2442D97CED5E67145D0DF2B9961EF5957ED178049C689457B67CD5CA58` | final source tree, tag `g0.1-verified` | Canonical final build; `re/targets/rustlab-g0.1-verified.exe` and `target/release/rustlab.exe` matched. Benchmarks and REPL transcript use this binary. |
+| G0.1-VERIFY pre-clean build (non-canonical) | 5,416,960 B | `F6A302EB92DD04CDE4C3B54D9F90E3A7288341737D7089EC5F1341CDDCDEDAC0` | same source tree, built before `cargo clean` | Preserved as `re/targets/rustlab-g0.1-verified-preclean-F6A302EB.exe` and `bench-results/g0.1/preclean-F6A302EB/`; not used for final evidence. |
+
+Every binary-specific note below applies only to the build listed for its section.
+Notes without a binary hash are source-code observations, not disassembly claims.
 
 ---
 
@@ -218,6 +236,10 @@ When remaining elements are less than 4, control jumps to `0x140192898`:
 
 ## 6. Re-verification on the A3.1.2 rebuild (2026-10-25, later binary)
 
+**Build**: 5,165,568 bytes, SHA-256
+`fff28580223c39f28785c7a5130152f9293a0d17a6ca28f9aaa3bcfc73ae40e6`.
+This section does not describe the G0 or G0.1 binaries.
+
 The release binary was rebuilt after the A3.1.2 fixes (CRLF caret fix, scalar/
 matrix display, `mxSTRUCT_CLASS` reader, deny-lint parity). Because symbol
 addresses and mangled hashes change with every rebuild, instructions below were
@@ -281,3 +303,43 @@ In B2.1.1, the public path `Value::add` (and `Value::sub`, `Value::dot_mul`) was
 - The previous implementation used an 8-element stack chunk array and called `out_data.extend_from_slice(&[...])`, creating 125,000 stack allocations and function calls that inhibited SIMD autovectorization.
 - The new implementation uses `a_s.iter().zip(b_s.iter()).map(|(&a, &b)| a + b).collect()`.
 - Result: Both public Rust API and interpreter paths now vectorize into 128-bit NEON `fadd v0.2d, v1.2d, v0.2d` instructions, achieving ~0.77 ms execution time on 1,000,000 doubles with zero stack spills or bounds checks.
+
+> **G0.1-VERIFY clarification (2026-10-28).** The ~0.77 ms claim is true for
+> normal inlined call sites, not for the criterion `raw_Value_add` closure. The
+> call-site probe measured the public `Value::add` at 0.513 ms median and the
+> interpreter at 0.533 ms median (three release runs); the criterion raw path
+> measured 6.0169 ms because its closure does not inline the public call. Two
+> experimental refactors were tried and reverted; `git diff` for
+> `crates/rustlab-math/src/value.rs` is empty. See Section 8.
+
+---
+
+## 8. G0.1-VERIFY add-path recheck (2026-10-28, canonical build)
+
+**Build:** 5,416,960 bytes, SHA-256
+`80E6AF2442D97CED5E67145D0DF2B9961EF5957ED178049C689457B67CD5CA58`.
+This section is a Rust-level measurement, not a disassembly claim; REA was
+unavailable in OpenCode (see `docs/re-notes/CALL-LOG.md`).
+
+| Measurement (1,000,000 doubles) | Run 1 | Run 2 | Run 3 | Median |
+| :--- | ---: | ---: | ---: | ---: |
+| public `Value::add` | 0.491 ms | 0.656 ms | 0.513 ms | **0.513 ms** |
+| interpreter `C = A + B;` | 0.498 ms | 0.579 ms | 0.533 ms | **0.533 ms** |
+| manual same-shape zip loop | 0.506 ms | 0.628 ms | 0.585 ms | **0.585 ms** |
+
+The public path is within measurement noise of the interpreter and a manual
+loop. The criterion raw path is a different instantiation: its `Bencher::iter`
+closure does not inline the public call, so it measures the non-inlined scalar
+path (6.0169 ms) rather than the normal call-site path. The interpreter
+criterion number was 1.0834 ms on the same original build. The criterion raw
+number is therefore retained as a harness artifact and is not evidence that the
+public API is slow for `plus`/`cellfun`-style inlined call sites.
+
+Two production edits were tried and reverted: adding `#[inline]`, and splitting
+into a small inline wrapper plus an `#[inline(never)]` mixed-type dispatch.
+Criterion raw was 7.6599 ms and 7.5576 ms respectively; neither improved the
+call-site probe, and both slowed the non-inlined criterion path. The original
+code was restored. Raw logs:
+`docs/verify-logs/2026-10-28-g0.1-verify-add-probe-original-run[1-3].txt`,
+`...-add-criterion-run1.txt`, `...-add-criterion-inline.txt`, and
+`...-add-criterion-split.txt`.

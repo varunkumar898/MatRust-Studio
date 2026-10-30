@@ -1,4 +1,4 @@
-﻿array::tests::test_dense_array_creation_and_indexing: test
+array::tests::test_dense_array_creation_and_indexing: test
 array::tests::test_dynamic_array_growth: test
 array::tests::test_transpose: test
 binary_expression_span_covers_full_expression: test
@@ -144,6 +144,15 @@ test_file_save_and_load: test
 test_for_loop_and_column_iteration: test
 test_function_def: test
 test_function_handles_and_lexical_closures: test
+test_g01_core_omitnan_sum_mean_min_max: test
+test_g01_display_extreme_range_1e_16_1_golden_unverified: test
+test_g01_display_scale_factor_0_001_1000_golden_unverified: test
+test_g01_lu_residuals_random_50x50: test
+test_g01_lu_residuals_random_5x5: test
+test_g01_mask_count_and_size_identifiers_settled: test
+test_g01_mldivide_singular_returns_inf: test
+test_g01_rustlab_only_ids_do_not_use_matlab_prefix: test
+test_g01_singular_inv_warns_on_stderr_and_prints_inf: test
 test_global_scoping: test
 test_ieee754_nan_inf_semantics: test
 test_if_elseif_else: test

@@ -1,0 +1,12 @@
+=== Reproducibility Byte Comparison ===
+Date: 2026-10-30
+Binary A (C:\Users\varun\AppData\Local\Temp\g1-a\target\release\rustlab.exe): Length=5401600, SHA-256=726520C91EE79810C84159E0B161F282686AC6F71979462C26DD9A8FB0A14728
+Binary B (C:\Users\varun\AppData\Local\Temp\g1-b\target\release\rustlab.exe): Length=5401600, SHA-256=726520C91EE79810C84159E0B161F282686AC6F71979462C26DD9A8FB0A14728
+Total byte differences: 0
+VERDICT: Byte-for-byte identical (100% reproducible)
+
+=== Path Token Scan ===
+Token 'varun': 0 occurrences in Binary A
+Token '.cargo': 0 occurrences in Binary A
+Token '.rustup': 0 occurrences in Binary A
+Token 'MATSTUDIO': 0 occurrences in Binary A

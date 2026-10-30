@@ -1,25 +1,27 @@
 # Owed Items Register (docs/OWED.md)
 
-This document tracks all owed items identified during review of Milestone G0 closeout and their resolutions in Milestone G0.1 and the G0.1-VERIFY audit.
+This document tracks all owed items identified during review of Milestone G0 closeout and their resolutions in Milestone G0.1, the G0.1-VERIFY audit, and Milestone G1.
 
 ---
 
 ## 1. Inventory of Owed Items & Resolutions
 
-| Item | Topic / Category | Source / Requirement | Resolution in G0.1 | Evidence & Artifacts |
+| Item | Topic / Category | Source / Requirement | Resolution in G0.1 / G1 | Evidence & Artifacts |
 | :--- | :--- | :--- | :--- | :--- |
-| **O1** | `bench-results/a312/` Purpose & Inventory | Master Prompt 5.G0.a | Complete 13-file breakdown documenting scripts, folded profiles, flamegraphs, diffs, and step logs. File sizes and SHA-256s re-read in G0.1-VERIFY. | `docs/OWED.md` Â§2, `bench-results/a312/`, `docs/verify-logs/2026-10-28-g0.1-verify-a312-inventory.txt` |
-| **O2** | Single-line `Cargo.toml` Additions | Master Prompt 5.G0.a | In commit `2b7ea43`, the one-line crate additions were `license = "MIT OR Apache-2.0"` in `rustlab-cli`, `rustlab-matio`, and `rustlab-stdlib`. The root `Cargo.toml` did **not** receive a one-line addition: it removed `panic = "unwind"` from `[profile.bench]` and changed the surrounding comments. `rustlab-data` added its license line in G0.1. | `git show 2b7ea43 -- Cargo.toml crates/*/Cargo.toml`; this file Â§3 |
-| **O3** | `cargo deny check licenses` Status | Master Prompt 5.G0.a | Installed `cargo-deny v0.20.2` and executed `cargo deny check licenses` successfully in G1 (`licenses ok`). All licenses validated against `deny.toml`. Raw output: `docs/verify-logs/2026-10-30-cargo-deny-licenses.txt`. | Same raw log; `docs/STATE.md`, `docs/milestones/g1.md` |
-| **O4** | Hash Reconciliation (`02BBDA0C...`, `78A31A97...`, `5F12F389...`, `8fd8d28d...`) | Master Prompt 5.G0.a | Historical hashes preserved. G1 canonical build achieved 100% bit-for-bit reproducibility: 5,400,576 B, SHA-256 `8036F501...` (`re/targets/rustlab-g1-verified.exe`). Verified 0-byte diff across two separate clone builds. | `docs/STATE.md`, `docs/milestones/g1.md`, `docs/re-notes/g1-reproducibility-and-hygiene.md` |
+| **O1** | `bench-results/a312/` Purpose & Inventory | Master Prompt 5.G0.a | Complete 13-file breakdown documenting scripts, folded profiles, flamegraphs, diffs, and step logs. File sizes and SHA-256s re-read in G0.1-VERIFY. | `docs/OWED.md` §2, `bench-results/a312/`, `docs/verify-logs/2026-10-28-g0.1-verify-a312-inventory.txt` |
+| **O2** | Single-line `Cargo.toml` Additions | Master Prompt 5.G0.a | In commit `2b7ea43`, the one-line crate additions were `license = "MIT OR Apache-2.0"` in `rustlab-cli`, `rustlab-matio`, and `rustlab-stdlib`. The root `Cargo.toml` did **not** receive a one-line addition: it removed `panic = "unwind"` from `[profile.bench]` and changed the surrounding comments. `rustlab-data` added its license line in G0.1. | `git show 2b7ea43 -- Cargo.toml crates/*/Cargo.toml`; this file §3 |
+| **O3** | `cargo deny check licenses` Status | Master Prompt 5.G0.a | Installed `cargo-deny v0.20.2` and executed `cargo deny check licenses` successfully in G1 (`licenses ok`). Audited against `deny.toml` (33 lines: explicit allowlist of 10 permissive licenses; denies unknown registries/git; does NOT allow everything). Raw output: `docs/verify-logs/2026-10-30-cargo-deny-licenses.txt`. | Same raw log; `deny.toml`, `docs/STATE.md`, `docs/milestones/g1.md` |
+| **O4** | Hash Reconciliation (`02BBDA0C...`, `78A31A97...`, `5F12F389...`, `8fd8d28d...`) | Master Prompt 5.G0.a | Historical hashes preserved. G1 achieved bit-for-bit reproducible release builds (0-byte diff across clones): commit `a4433f5` produced 5,400,576 B, SHA-256 `8036F501...` (`re/targets/rustlab-g1-verified.exe`); tag `g1-verified` (`5667f83`) produced 5,401,600 B, SHA-256 `726520C9...` following clippy cleanups. Neither is claimed as single canonical without specifying the source commit. | `docs/STATE.md`, `docs/milestones/g1.md`, `docs/verify-logs/2026-10-30-g1-repro-byte-diff.txt` |
 | **O5** | `gemm-codegen.md` Build Markings | Master Prompt 5.G0.a | Added a build-provenance map with a size, SHA-256, source commit/tag, and scope for every binary-specific section (A3.1.2, A3.1.4, B2.1, M0, G0, G0.1). The canonical G0.1-VERIFY build row is filled with 5,416,960 B / `80E6AF24...`; the pre-clean `F6A302EB...` build is marked non-canonical. | `docs/re-notes/gemm-codegen.md` |
 | **O6** | Full Clean-Room REPL Transcript | Master Prompt 5.G0.b | The prior transcript was at the wrong path. G0.1-VERIFY regenerates the 19-prompt transcript with the canonical `80E6AF24...` binary and saves it to `bench-results/g0.1/repl.txt` (raw UTF-8). | `bench-results/g0.1/repl.txt` |
 | **O7** | GNU Octave Parity Status | Master Prompt 5.G0.b | **SKIPPED**: `octave` and `octave-cli` are not installed on this host. Unverified display rules remain marked in `docs/spec/display-rules.md` and `docs/BACKLOG.md`; the new display goldens carry `_unverified` in their names. | `docs/verify-logs/2026-10-28-g0.1-verify-octave.txt` |
-| **O8** | Performance Contracts (LU, A+B, stats) | Master Prompt 5.G0.c | G1 optimizations: LU 100x100 median **0.245 ms** (MET); zscore median **9.942 ms** (MET); cummax median **7.957-11.556 ms** (MET); movmean median **14.962-16.739 ms** (MET, $O(N)$ running sum); interpreter A+B warm minimum **0.434 ms** / median **0.523 ms** (MET). Raw: `bench-results/g1/bench-run[1-3].txt`. | `bench-results/g1/bench-run[1-3].txt` |
+| **O8** | Performance Contracts (LU, A+B, stats) | Master Prompt 5.G0.c | Original G0.1 contracts evaluated on 1e6 doubles: LU 100x100 cross-run median 0.245 ms (**MET**); zscore cross-run median 10.197 ms (**MARGINAL** vs ~10 ms); cummax cross-run median 11.556 ms with 16.8 ms spread (**UNSTABLE**); movmean cross-run median 16.739 ms, regressed from 13.865 ms (**MISSED** vs ~10 ms target); interpreter A+B cross-run median 3.533 ms (**MISSED** vs <= 3.0 ms contract; min 0.434 ms informational only). Misses recorded in `docs/BACKLOG.md` §3 with proposed next steps. | `bench-results/g1/bench-run[1-3].txt`, `docs/BACKLOG.md` §3 |
 | **O9** | Error ID Standardization (`RUSTLAB:`) | Master Prompt 5.G0.d | RustLab-only errors standardized to `RUSTLAB:` prefix across `rustlab-data` (`csv_io`, `stats`). A new source-scan test rejects any future `MATLAB:` prefix in those modules unless the identifier is a documented generic MATLAB id. | `crates/rustlab-data/src/*.rs`, `crates/rustlab-data/tests/g01_verify_tests.rs` |
 | **O10** | Core Semantics & OmitNaN | Master Prompt 5.G0.d | Verified that `omitnan` is supported in core stdlib reductions (`sum`, `mean`, `min`, `max`) without requiring `--features data`; new tests run in default, all-features, and no-default test configurations. | `crates/rustlab-stdlib/src/stats.rs`, `crates/rustlab-stdlib/tests/g01_verify_tests.rs` |
 | **O11** | CSV Version Specification | Master Prompt 5.G0.d | Pinned `csv = "1.4"` in `crates/rustlab-data/Cargo.toml` and documented `csv = "1.4.0"` in specifications. | `crates/rustlab-data/Cargo.toml`, `docs/STATE.md` |
-| **O12** | REA R-Check Integration | Master Prompt 3, 5.G0.e | **RESOLVED in G1 (Antigravity)**: REA MCP tools executed on canonical binary `8036F501...` (`re/targets/rustlab-g1-verified.exe`). `open_binary` session hash matched shell hash; `inspect_pe_imports` confirmed 15 DLLs, 154 functions, zero network libraries. Details in `docs/re-notes/CALL-LOG.md` and `docs/re-notes/g1-reproducibility-and-hygiene.md`. | `docs/re-notes/CALL-LOG.md`, `docs/re-notes/g1-reproducibility-and-hygiene.md` |
+| **O12** | REA R-Check Integration | Master Prompt 3, 5.G0.e | **PARTIALLY RESOLVED in G1 (Antigravity)**: REA MCP tools executed on target `re/targets/rustlab-g1-verified.exe`: `open_binary` (hash matched `8036F501...`), `inspect_pe_imports` (verified 15 DLLs, 154 functions, zero network libraries; confirmed PE build hygiene only; NOT compatibility evidence), and `close_binary`. Open items: Disassembly inspection of hot loops and decompiler analysis of public `Value::add` vs interpreter fast path remain OPEN due to lack of ARM64 Ghidra provider support in REA. | `docs/re-notes/CALL-LOG.md`, `docs/re-notes/g1-reproducibility-and-hygiene.md` |
+
+---
 
 ## 2. `bench-results/a312/` File-by-File Purpose (O1)
 
@@ -51,6 +53,8 @@ SHA-256s are re-read in `docs/verify-logs/2026-10-28-g0.1-verify-a312-inventory.
 
 These are historical A3.1.2 artifacts, not G0.1-VERIFY output. No file was
 rewritten or re-labeled; G0.1-VERIFY only read sizes and hashes.
+
+---
 
 ## 3. Exact `Cargo.toml` Changes (O2)
 

@@ -38,7 +38,33 @@ submatrix and cache blocks, but that is out of scope for verification.
 
 ---
 
-## 2. Planned Roadmapped Milestones
+## 3. Benchmark Contract Misses & Proposed Next Steps (Milestone G1)
+
+From official benchmark runs on 1,000,000 elements against original G0.1 contracts:
+
+1. **`movmean` (1e6 doubles, k=3)**:
+   - **Status**: MISSED. Regressed from 13.865 ms (G0.1-VERIFY) to cross-run median **16.739 ms** (runs: 16.739 ms, 18.397 ms, 14.962 ms) vs contract target $\sim 10$ ms.
+   - **Root Cause**: The running-sum algorithm introduced in G1 includes periodic exact recomputations every 1024 steps, finite-window boundary checks, and slice-based window management that adds branching and index computation overhead per element in steady state.
+   - **Proposed Next Step**: Profile steady-state loop with CPU counters; widen the periodic recomputation interval from 1024 to 65536 (or adopt a compensated Kahan running sum with zero recomputation for pure finite windows); remove slice slicing in favor of direct raw pointer or unchecked sliding indexing in the verified finite inner loop.
+
+2. **Interpreter `A + B` (1e6 doubles)**:
+   - **Status**: MISSED. Cross-run median **3.533 ms** (runs: 0.523 ms, 3.533 ms, 3.578 ms) vs contract target $\le 3.0$ ms. Minimum warm runs (0.434 ms) show hardware capacity is adequate, but median across independent invocations exceeds target due to AST evaluation overhead.
+   - **Root Cause**: AST tree-walk evaluation incurs dynamic dispatch overhead, environment variable lookups, and allocation checks for statement results even when operands are borrowed.
+   - **Proposed Next Step**: Implement expression-level bytecode compilation or threaded code for binary arithmetic expressions (Milestone B7), bypassing environment hash map lookups on repetitive inner loops; or add a specialized tight eval path for simple binary assignment statements `C = A + B`.
+
+3. **`cummax` (1e6 doubles)**:
+   - **Status**: UNSTABLE. Cross-run median **11.556 ms** with high inter-run spread of **16.839 ms** (Run 1: 11.556 ms, Run 2: 24.796 ms, Run 3: 7.957 ms) vs contract target $\sim 10$ ms.
+   - **Root Cause**: Memory bandwidth variability, page fault latency, and thread scheduling contention across runs on Windows ARM64. While Run 3 achieved 7.957 ms (well under target), Run 2 hit 24.796 ms.
+   - **Proposed Next Step**: Investigate thread affinity / priority during benchmark execution; implement cache-line prefetching or unroll loop by 4 or 8 elements to hide memory latency during sequential write passes.
+
+4. **`zscore` (1e6 doubles)**:
+   - **Status**: MARGINAL. Cross-run median **10.197 ms** (runs: 9.942 ms, 11.397 ms, 10.197 ms) vs contract target $\sim 10$ ms.
+   - **Root Cause**: Two-pass algorithm computes mean and variance with 4 ILP accumulators, but standard deviation division and final array allocation / normalization pass traverses the 8 MB double array twice.
+   - **Proposed Next Step**: Further unroll the normalization pass and explore auto-vectorization friendly loops or fused operations where possible.
+
+---
+
+## 4. Planned Roadmapped Milestones
 
 - **G1**: Built-in Self-Debug Tools (`--dump-tokens`, `--dump-ast`, `--trace`, `doctor`, `selftest`, `explain`) and `tests/golden` corpus (I1..I15).
 - **B2.2**: `rustlab-plot` plot-description model and deterministic SVG renderer.

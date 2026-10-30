@@ -1,10 +1,10 @@
 # RustLab Project State (docs/STATE.md)
 
-**Current Milestone:** G1 (reproducible builds, stats contracts, tool verification)  
+**Current Milestone:** G1 (reproducible builds, stats contracts, tool verification; fix tag `g1-fix`)  
 **Next Milestone:** B2.2 (rustlab-plot: plot-description model, SVG renderer; wait for owner approval)  
 **Root Path:** `C:\Users\varun\Desktop\MATSTUDIO`  
 **Date:** 2026-10-30  
-**Repository Commit:** tag `g1-verified` (commit hash printed by `git log -1`)  
+**Repository Commit:** tag `g1-verified` (commit `5667f83`), fix tag `g1-fix`  
 **Platform:** Windows 11 ARM64 (`aarch64-pc-windows-gnullvm`), Rust 1.99.1 stable  
 **Verification Status:** `scripts/verify.ps1` clean gate run passed; log: `docs/verify-logs/2026-10-30-g1-verify-clean.log`.  
 **Total Tests:**
@@ -32,19 +32,30 @@
 
 ## 2. Binary Hashes & REA Target
 
-### Canonical G1 reproducible release build
+### G1 Reproducible Release Builds
 
-- Size: **5,400,576 bytes**
-- SHA-256: `8036F5016640AAF9EA38E3EE3EBCA052C20780FBD7912ADE91A6527C49BEDDAC`
-- Preserved copy: `re/targets/rustlab-g1-verified.exe`
-- Canonical status: **100% bit-for-bit reproducible** across independent directories ($0$ byte diff between two separate clone builds); all embedded host filesystem paths neutralized via `--remap-path-prefix`. Unstripped for reverse-engineering inspection.
-- Build command: `powershell.exe -File scripts/build-release.ps1`
-- Measured benchmark runs: Three canonical runs stored in `bench-results/g1/bench-run[1-3].txt`.
+Both intermediate commit `a4433f5` and tag `g1-verified` (`5667f83`) were proven **100% bit-for-bit reproducible** across independent directories ($0$ byte diff between two separate clone builds); all embedded host filesystem paths neutralized via `--remap-path-prefix` (0 occurrences of `varun`, `.cargo`, `.rustup`, `MATSTUDIO`). Unstripped for reverse-engineering inspection.
+Build command: `powershell.exe -File scripts/build-release.ps1`
+
+- **Intermediate commit `a4433f5` build:**
+  - Size: **5,400,576 bytes**
+  - SHA-256: `8036F5016640AAF9EA38E3EE3EBCA052C20780FBD7912ADE91A6527C49BEDDAC`
+  - Preserved copy: `re/targets/rustlab-g1-verified.exe`
+  - Measured benchmark runs: Three runs stored in `bench-results/g1/bench-run[1-3].txt`.
+- **Tag `g1-verified` (`5667f83`) build:**
+  - Size: **5,401,600 bytes**
+  - SHA-256: `726520C91EE79810C84159E0B161F282686AC6F71979462C26DD9A8FB0A14728`
+  - Difference (+1,024 B): Clippy warning resolutions (`as_chunks`, slice `.fill()`, direct indexing) committed in `5667f83`.
+  - Proven bit-for-bit identical across two independent clones (`$env:TEMP\g1-a` and `$env:TEMP\g1-b`). Raw log: `docs/verify-logs/2026-10-30-g1-repro-byte-diff.txt`.
+
+*Note on canonical hashes:* Neither hash is designated as an unconditional canonical hash without specifying its exact commit hash.
 
 ### Historical hashes
 
 | Build | Size | SHA-256 | Notes |
 | :--- | ---: | :--- | :--- |
+| G1 tag `g1-verified` (`5667f83`) | 5,401,600 B | `726520C91EE79810C84159E0B161F282686AC6F71979462C26DD9A8FB0A14728` | Tagged release build. 100% reproducible (0-byte diff across clones). |
+| G1 commit `a4433f5` build | 5,400,576 B | `8036F5016640AAF9EA38E3EE3EBCA052C20780FBD7912ADE91A6527C49BEDDAC` | Preserved as `re/targets/rustlab-g1-verified.exe`. Used for benchmark runs 1-3. |
 | G0.1-VERIFY canonical build | 5,416,960 B | `80E6AF2442D97CED5E67145D0DF2B9961EF5957ED178049C689457B67CD5CA58` | Preserved as `re/targets/rustlab-g0.1-verified.exe`. Non-reproducible due to timestamp/paths. |
 | G0.1-VERIFY pre-clean build | 5,416,960 B | `F6A302EB92DD04CDE4C3B54D9F90E3A7288341737D7089EC5F1341CDDCDEDAC0` | Preserved as `re/targets/rustlab-g0.1-verified-preclean-F6A302EB.exe`. |
 | M0 relocation copy (historical) | 5,400,064 B | `02bbda0c68cafe87e01a33fa15f71c2bae96e7cd3f95dafcb82c712380f7460c` | Executable code from `24ac6e2` (`g0`); M0 commit `e84d542` changed docs/config only. Not the current `re/targets/rustlab.exe`. |
@@ -58,8 +69,9 @@
 - REA Project Root: `C:\Users\varun\Desktop\MATSTUDIO\re\projects`
 - REA was executed in Antigravity on target `re/targets/rustlab-g1-verified.exe`:
   - `open_binary`: validated session SHA-256 matches shell hash `8036F501...`.
-  - `inspect_pe_imports`: verified 15 system DLLs and 154 functions; zero networking imports (`ws2_32.dll` absent). Binary hygiene confirmed.
+  - `inspect_pe_imports`: verified 15 system DLLs and 154 functions; zero networking imports (`ws2_32.dll` absent). Confirmed binary hygiene / build facts only (not compatibility evidence).
   - `close_binary`: target closed cleanly.
+  - *Open R-check items:* Disassembly and decompiler inspection of hot loops (elementwise add, GEMM, FFT) and public `Value::add` vs interpreter fast path remain OPEN due to lack of ARM64 Ghidra provider support in REA.
 
 ---
 
@@ -76,4 +88,4 @@
 - **Milestone G0.1**: Unverified baseline only. Added owed-items review, a REA R-check claim, a REPL transcript at the wrong path, and a release benchmark triplet; rejected by the owner as not sufficient evidence.
 - **Milestone R0**: Added `docs/ROADMAP.md` with status from git tags; recorded next milestone as G0.1. Documentation only; no feature code.
 - **Milestone G0.1-VERIFY**: Verification-only closeout. Added nine missing regressions, settled the mask-count error id, corrected display rules and LU backlog notes, reconciled binary hashes, re-ran release benchmarks with a 1,000,000-row CSV and single-thread GEMM proof, regenerated the 19-prompt REPL transcript at `bench-results/g0.1/repl.txt`, and passed `scripts/verify.ps1` from `cargo clean` at 205/205/204. Tag: `g0.1-verified`.
-- **Milestone G1**: Bit-for-bit reproducible release build (0-byte diff across clones), stats routine optimizations with 7 reference tests (212/212/211 tests), REA PE import hygiene audit, cargo-deny license verification, release benchmark triplet with detailed min/median/spread reporting. Tag: `g1-verified`.
+- **Milestone G1**: Bit-for-bit reproducible release build (0-byte diff across clones), stats routine optimizations with 7 reference tests (212/212/211 tests), REA PE import hygiene audit, cargo-deny license verification, release benchmark triplet with detailed min/median/spread reporting. Benchmark results: LU MET, movmean MISSED (regressed to 16.739 ms), cummax UNSTABLE (16.8 ms spread), A+B MISSED on cross-run median (3.533 ms), zscore MARGINAL (10.197 ms). Misses logged to `docs/BACKLOG.md` §3. Tag: `g1-verified`, fix tag: `g1-fix`.

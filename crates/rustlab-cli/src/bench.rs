@@ -12,7 +12,11 @@ fn run_benchmark_samples<F: FnMut()>(mut op: F, warmup: usize, samples: usize) -
     (median, spread)
 }
 
-fn run_benchmark_detailed<F: FnMut()>(mut op: F, warmup: usize, samples: usize) -> (f64, f64, f64, f64) {
+fn run_benchmark_detailed<F: FnMut()>(
+    mut op: F,
+    warmup: usize,
+    samples: usize,
+) -> (f64, f64, f64, f64) {
     for _ in 0..warmup {
         op();
     }

@@ -643,18 +643,18 @@ fn movmean_slice(vals: &[f64], k: usize, omit: bool) -> Vec<f64> {
     let mut out = vec![0.0f64; len];
 
     if len < k {
-        for i in 0..len {
+        for (i, slot) in out.iter_mut().enumerate().take(len) {
             let a = i.saturating_sub(left);
             let b = (i + right).min(len - 1);
-            out[i] = compute_window(&vals[a..=b], omit);
+            *slot = compute_window(&vals[a..=b], omit);
         }
         return out;
     }
 
     // 1. Left boundary: i < left
-    for i in 0..left {
+    for (i, slot) in out.iter_mut().enumerate().take(left) {
         let b = (i + right).min(len - 1);
-        out[i] = compute_window(&vals[0..=b], omit);
+        *slot = compute_window(&vals[0..=b], omit);
     }
 
     // 2. Steady-state interior: left <= i && i + right < len
@@ -718,9 +718,9 @@ fn movmean_slice(vals: &[f64], k: usize, omit: bool) -> Vec<f64> {
     }
 
     // 3. Right boundary: i >= steady_end
-    for i in steady_end..len {
+    for (i, slot) in out.iter_mut().enumerate().take(len).skip(steady_end) {
         let a = i.saturating_sub(left);
-        out[i] = compute_window(&vals[a..len], omit);
+        *slot = compute_window(&vals[a..len], omit);
     }
 
     out
@@ -780,9 +780,7 @@ fn cumulative_slice(vals: &[f64], want_max: bool) -> Vec<f64> {
     let mut out = vec![0.0f64; len];
     let mut current = vals[0];
     if current.is_nan() {
-        for slot in &mut out {
-            *slot = f64::NAN;
-        }
+        out.fill(f64::NAN);
         return out;
     }
     out[0] = current;
@@ -856,8 +854,7 @@ fn zscore_slice(vals: &[f64]) -> Vec<f64> {
     }
 
     // Pass 1: compute mean with 4 accumulators for instruction-level parallelism
-    let chunks = vals.chunks_exact(4);
-    let rem = chunks.remainder();
+    let (chunks, rem) = vals.as_chunks::<4>();
     let mut s0 = 0.0f64;
     let mut s1 = 0.0f64;
     let mut s2 = 0.0f64;
@@ -875,8 +872,7 @@ fn zscore_slice(vals: &[f64]) -> Vec<f64> {
     let mean = sum / n as f64;
 
     // Pass 2: compute sum of squared differences from mean (two-pass)
-    let chunks = vals.chunks_exact(4);
-    let rem = chunks.remainder();
+    let (chunks, rem) = vals.as_chunks::<4>();
     let mut ss0 = 0.0f64;
     let mut ss1 = 0.0f64;
     let mut ss2 = 0.0f64;
@@ -898,24 +894,22 @@ fn zscore_slice(vals: &[f64]) -> Vec<f64> {
     }
 
     let sd = (ss / (n - 1) as f64).sqrt();
-    if !(sd > 0.0) {
+    if sd <= 0.0 || sd.is_nan() {
         return vec![f64::NAN; n];
     }
     let inv_sd = 1.0 / sd;
 
     // Pass 3: normalize directly into pre-allocated output
     let mut out = vec![0.0f64; n];
-    let in_chunks = vals.chunks_exact(4);
-    let mut out_chunks = out.chunks_exact_mut(4);
-    let in_rem = in_chunks.remainder();
+    let (in_chunks, in_rem) = vals.as_chunks::<4>();
+    let (out_chunks, out_rem) = out.as_chunks_mut::<4>();
 
-    for (ci, co) in in_chunks.zip(&mut out_chunks) {
+    for (ci, co) in in_chunks.iter().zip(out_chunks.iter_mut()) {
         co[0] = (ci[0] - mean) * inv_sd;
         co[1] = (ci[1] - mean) * inv_sd;
         co[2] = (ci[2] - mean) * inv_sd;
         co[3] = (ci[3] - mean) * inv_sd;
     }
-    let out_rem = out_chunks.into_remainder();
     for (xi, xo) in in_rem.iter().zip(out_rem.iter_mut()) {
         *xo = (*xi - mean) * inv_sd;
     }
@@ -937,7 +931,7 @@ pub fn zscore(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError> 
     }
     let default_dim = first_non_singleton_dim(da.shape());
     let (dim, _omit) = dim_and_omit(args, 1, default_dim)?;
-    let res = map_fibers(&da, dim, |vals| zscore_slice(vals));
+    let res = map_fibers(&da, dim, zscore_slice);
     Ok(vec![Value::Double(res)])
 }
 

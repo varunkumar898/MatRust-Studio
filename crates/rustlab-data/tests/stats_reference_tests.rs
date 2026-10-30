@@ -2,8 +2,7 @@ use rustlab_data::stats::{cummax, movmean, zscore};
 use rustlab_math::{DenseArray, Value};
 
 fn to_col(vals: &[f64]) -> Value {
-    let da = DenseArray::from_vec(vec![vals.len(), 1], vals.to_vec())
-        .expect("valid dense array");
+    let da = DenseArray::from_vec(vec![vals.len(), 1], vals.to_vec()).expect("valid dense array");
     Value::Double(da)
 }
 
@@ -90,10 +89,7 @@ fn assert_approx_eq(actual: &[f64], expected: &[f64], tol: f64, desc: &str) {
     assert_eq!(actual.len(), expected.len(), "{desc}: length mismatch");
     for (i, (&act, &exp)) in actual.iter().zip(expected.iter()).enumerate() {
         if exp.is_nan() {
-            assert!(
-                act.is_nan(),
-                "{desc} at index {i}: expected NaN, got {act}"
-            );
+            assert!(act.is_nan(), "{desc} at index {i}: expected NaN, got {act}");
         } else if exp.is_infinite() {
             assert_eq!(
                 act, exp,
@@ -116,7 +112,9 @@ fn lcg_data(n: usize, seed: u64, min: f64, max: f64) -> Vec<f64> {
     let mut state = seed;
     let mut out = Vec::with_capacity(n);
     for _ in 0..n {
-        state = state.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        state = state
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407);
         let u = (state >> 11) as f64 / ((1u64 << 53) as f64);
         out.push(min + u * (max - min));
     }
@@ -139,7 +137,12 @@ fn test_reference_empty_and_len1() {
     // Len-1 normal
     let one = vec![42.0];
     let mm = movmean(&[to_col(&one), Value::scalar(3.0)], 1).expect("mm 1");
-    assert_approx_eq(&from_val(&mm), &naive_movmean_window(&one, 3), 1e-12, "mm len1");
+    assert_approx_eq(
+        &from_val(&mm),
+        &naive_movmean_window(&one, 3),
+        1e-12,
+        "mm len1",
+    );
 
     let zs = zscore(&[to_col(&one)], 1).expect("zs 1");
     assert_approx_eq(&from_val(&zs), &naive_zscore(&one), 1e-12, "zs len1");
@@ -181,15 +184,25 @@ fn test_reference_constant_data() {
             &from_val(&mm),
             &naive_movmean_window(&const_data, k),
             1e-12,
-            &format!("mm const k={k}")
+            &format!("mm const k={k}"),
         );
     }
 
     let zs = zscore(&[to_col(&const_data)], 1).expect("zs const");
-    assert_approx_eq(&from_val(&zs), &naive_zscore(&const_data), 1e-12, "zs const");
+    assert_approx_eq(
+        &from_val(&zs),
+        &naive_zscore(&const_data),
+        1e-12,
+        "zs const",
+    );
 
     let cm = cummax(&[to_col(&const_data)], 1).expect("cm const");
-    assert_approx_eq(&from_val(&cm), &naive_cummax(&const_data), 1e-12, "cm const");
+    assert_approx_eq(
+        &from_val(&cm),
+        &naive_cummax(&const_data),
+        1e-12,
+        "cm const",
+    );
 }
 
 #[test]
@@ -202,7 +215,7 @@ fn test_reference_random_data() {
             &from_val(&mm),
             &naive_movmean_window(&rand_data, k),
             1e-11,
-            &format!("mm rand k={k}")
+            &format!("mm rand k={k}"),
         );
     }
 
@@ -227,7 +240,7 @@ fn test_reference_offset_1e8_plus_noise() {
             &from_val(&mm),
             &naive_movmean_window(&data, k),
             1e-10,
-            &format!("mm 1e8 k={k}")
+            &format!("mm 1e8 k={k}"),
         );
     }
 
@@ -242,12 +255,12 @@ fn test_reference_offset_1e8_plus_noise() {
 fn test_reference_nan_and_inf_windows() {
     let mut data = lcg_data(200, 424242, 10.0, 50.0);
     // Inject NaNs and Infs
-    data[0] = f64::NAN;         // edge
-    data[5] = f64::NAN;         // isolated
-    data[6] = f64::NAN;         // consecutive
-    data[50] = f64::INFINITY;    // Inf
+    data[0] = f64::NAN; // edge
+    data[5] = f64::NAN; // isolated
+    data[6] = f64::NAN; // consecutive
+    data[50] = f64::INFINITY; // Inf
     data[100] = f64::NEG_INFINITY; // -Inf
-    data[199] = f64::NAN;       // last edge
+    data[199] = f64::NAN; // last edge
 
     for &k in &[1, 3, 5, 11] {
         let mm = movmean(&[to_col(&data), Value::scalar(k as f64)], 1).expect("mm nan/inf");
@@ -255,7 +268,7 @@ fn test_reference_nan_and_inf_windows() {
             &from_val(&mm),
             &naive_movmean_window(&data, k),
             1e-12,
-            &format!("mm nan/inf k={k}")
+            &format!("mm nan/inf k={k}"),
         );
     }
 
@@ -273,7 +286,7 @@ fn test_reference_window_edges_and_k_equals_len() {
         &from_val(&mm),
         &naive_movmean_window(&data, k),
         1e-12,
-        "mm k=len"
+        "mm k=len",
     );
 
     let k1 = 1;
@@ -282,7 +295,7 @@ fn test_reference_window_edges_and_k_equals_len() {
         &from_val(&mm1),
         &naive_movmean_window(&data, k1),
         1e-12,
-        "mm k=1"
+        "mm k=1",
     );
 }
 
@@ -299,7 +312,9 @@ fn test_reference_drift_over_100k_elements() {
     let right = k.saturating_sub(1) - left;
 
     // Check every 1000th element and edges
-    let indices = (0usize..50).chain((50..100_000).step_by(1000)).chain(99_950..100_000);
+    let indices = (0usize..50)
+        .chain((50..100_000).step_by(1000))
+        .chain(99_950..100_000);
     for idx in indices {
         let a = idx.saturating_sub(left);
         let b = (idx + right).min(data.len() - 1);
@@ -308,7 +323,8 @@ fn test_reference_drift_over_100k_elements() {
         assert!(
             diff < 1e-10,
             "drift at index {idx}: actual={}, expected={}, diff={diff}",
-            actual[idx], expected
+            actual[idx],
+            expected
         );
     }
 }

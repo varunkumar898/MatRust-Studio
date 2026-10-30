@@ -1,4 +1,4 @@
-array::tests::test_dense_array_creation_and_indexing: test
+﻿array::tests::test_dense_array_creation_and_indexing: test
 array::tests::test_dynamic_array_growth: test
 array::tests::test_transpose: test
 binary_expression_span_covers_full_expression: test
@@ -181,6 +181,13 @@ test_operator_precedence: test
 test_path_which_exist_and_scripts: test
 test_power_right_associativity: test
 test_reductions_and_statistics: test
+test_reference_constant_data: test
+test_reference_drift_over_100k_elements: test
+test_reference_empty_and_len1: test
+test_reference_nan_and_inf_windows: test
+test_reference_offset_1e8_plus_noise: test
+test_reference_random_data: test
+test_reference_window_edges_and_k_equals_len: test
 test_regexp_and_regexprep: test
 test_relational_and_logical_operations: test
 test_scientific_notation_threshold_rule_cited_unverified: test

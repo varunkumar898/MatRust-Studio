@@ -594,89 +594,135 @@ fn window_bounds(i: usize, len: usize, k: usize) -> (usize, usize) {
     (i.saturating_sub(left), (i + right).min(len - 1))
 }
 
+#[inline]
+fn compute_window(w: &[f64], omit: bool) -> f64 {
+    if omit {
+        let mut sum = 0.0f64;
+        let mut count = 0usize;
+        for &x in w {
+            if !x.is_nan() {
+                sum += x;
+                count += 1;
+            }
+        }
+        if count == 0 {
+            f64::NAN
+        } else {
+            sum / count as f64
+        }
+    } else {
+        let mut sum = 0.0f64;
+        for &x in w {
+            if x.is_nan() {
+                return f64::NAN;
+            }
+            sum += x;
+        }
+        sum / w.len() as f64
+    }
+}
+
 fn movmean_slice(vals: &[f64], k: usize, omit: bool) -> Vec<f64> {
     let len = vals.len();
     if len == 0 {
         return Vec::new();
     }
+    if k <= 1 {
+        if omit {
+            return vals
+                .iter()
+                .map(|&x| if x.is_nan() { f64::NAN } else { x })
+                .collect();
+        } else {
+            return vals.to_vec();
+        }
+    }
+
     let left = (k - 1) / 2;
     let right = k.saturating_sub(1) - left;
-    let mut out = Vec::with_capacity(len);
+    let mut out = vec![0.0f64; len];
 
-    let has_nan = vals.iter().any(|x| x.is_nan());
-    if !has_nan && len >= k {
-        let (mut cur_a, mut cur_b) = (0, right);
-        let mut running_sum: f64 = vals[..=right].iter().sum();
-        out.push(running_sum / (cur_b + 1) as f64);
-
-        for i in 1..len {
-            let new_a = i.saturating_sub(left);
-            let new_b = (i + right).min(len - 1);
-            while cur_a < new_a {
-                running_sum -= vals[cur_a];
-                cur_a += 1;
-            }
-            while cur_b < new_b {
-                cur_b += 1;
-                running_sum += vals[cur_b];
-            }
-            let count = (cur_b - cur_a + 1) as f64;
-            out.push(running_sum / count);
+    if len < k {
+        for i in 0..len {
+            let a = i.saturating_sub(left);
+            let b = (i + right).min(len - 1);
+            out[i] = compute_window(&vals[a..=b], omit);
         }
         return out;
     }
 
-    let (mut cur_a, mut cur_b) = window_bounds(0, len, k);
-    let mut running_sum = 0.0f64;
-    let mut valid_count = 0usize;
-    let mut nan_count = 0usize;
-
-    for &v in &vals[cur_a..=cur_b] {
-        if v.is_nan() {
-            nan_count += 1;
-        } else {
-            running_sum += v;
-            valid_count += 1;
-        }
+    // 1. Left boundary: i < left
+    for i in 0..left {
+        let b = (i + right).min(len - 1);
+        out[i] = compute_window(&vals[0..=b], omit);
     }
 
-    let res0 = if (!omit && nan_count > 0) || valid_count == 0 {
-        f64::NAN
+    // 2. Steady-state interior: left <= i && i + right < len
+    let inv_k = 1.0 / (k as f64);
+    let mut running_sum: f64 = 0.0;
+    let mut window_finite = true;
+
+    // Initialize running sum for window at i = left (vals[0..k])
+    for &x in &vals[0..k] {
+        if !x.is_finite() {
+            window_finite = false;
+        }
+        running_sum += x;
+    }
+
+    if window_finite {
+        out[left] = running_sum * inv_k;
     } else {
-        running_sum / valid_count as f64
-    };
-    out.push(res0);
-
-    for i in 1..len {
-        let new_a = i.saturating_sub(left);
-        let new_b = (i + right).min(len - 1);
-        while cur_a < new_a {
-            let v = vals[cur_a];
-            if v.is_nan() {
-                nan_count -= 1;
-            } else {
-                running_sum -= v;
-                valid_count -= 1;
-            }
-            cur_a += 1;
-        }
-        while cur_b < new_b {
-            cur_b += 1;
-            let v = vals[cur_b];
-            if v.is_nan() {
-                nan_count += 1;
-            } else {
-                running_sum += v;
-                valid_count += 1;
-            }
-        }
-        let res = if (!omit && nan_count > 0) || valid_count == 0 {
-            f64::NAN
-        } else {
-            running_sum / valid_count as f64
-        };
-        out.push(res);
+        out[left] = compute_window(&vals[0..k], omit);
     }
+
+    let steady_end = len - right;
+    for i in (left + 1)..steady_end {
+        let val_out = vals[i - left - 1];
+        let val_in = vals[i + right];
+
+        if window_finite && val_in.is_finite() && val_out.is_finite() {
+            // Periodic exact recompute every 1024 steps to prevent floating point drift
+            if (i - left) & 1023 == 0 {
+                let mut sum = 0.0f64;
+                for &x in &vals[(i - left)..=(i + right)] {
+                    sum += x;
+                }
+                running_sum = sum;
+            } else {
+                running_sum += val_in - val_out;
+            }
+            out[i] = running_sum * inv_k;
+        } else {
+            // Window contains or touches non-finite value (NaN or Inf):
+            // Fall back to exact per-window compute
+            out[i] = compute_window(&vals[(i - left)..=(i + right)], omit);
+
+            // Check if window has returned to fully finite
+            let mut all_finite = true;
+            let mut sum = 0.0f64;
+            for &x in &vals[(i - left)..=(i + right)] {
+                if !x.is_finite() {
+                    all_finite = false;
+                    break;
+                }
+                sum += x;
+            }
+            if all_finite {
+                running_sum = sum;
+                window_finite = true;
+            } else {
+                window_finite = false;
+            }
+        }
+    }
+
+    // 3. Right boundary: i >= steady_end
+    for i in steady_end..len {
+        let a = i.saturating_sub(left);
+        out[i] = compute_window(&vals[a..len], omit);
+    }
+
     out
 }
 
@@ -731,35 +777,48 @@ fn cumulative_slice(vals: &[f64], want_max: bool) -> Vec<f64> {
     if len == 0 {
         return Vec::new();
     }
-    let mut out = Vec::with_capacity(len);
-    let mut best: Option<f64> = None;
-    let mut poisoned = false;
-    for &x in vals {
-        if x.is_nan() {
-            poisoned = true;
+    let mut out = vec![0.0f64; len];
+    let mut current = vals[0];
+    if current.is_nan() {
+        for slot in &mut out {
+            *slot = f64::NAN;
         }
-        if poisoned {
-            out.push(f64::NAN);
-        } else {
-            best = Some(match best {
-                None => x,
-                Some(b) => {
-                    if want_max {
-                        if x > b {
-                            x
-                        } else {
-                            b
-                        }
-                    } else if x < b {
-                        x
-                    } else {
-                        b
-                    }
-                }
-            });
-            out.push(best.unwrap_or(x));
+        return out;
+    }
+    out[0] = current;
+    let mut idx = 1;
+
+    if want_max {
+        while idx < len {
+            let x = vals[idx];
+            if x.is_nan() {
+                break;
+            }
+            if x > current {
+                current = x;
+            }
+            out[idx] = current;
+            idx += 1;
+        }
+    } else {
+        while idx < len {
+            let x = vals[idx];
+            if x.is_nan() {
+                break;
+            }
+            if x < current {
+                current = x;
+            }
+            out[idx] = current;
+            idx += 1;
         }
     }
+
+    while idx < len {
+        out[idx] = f64::NAN;
+        idx += 1;
+    }
+
     out
 }
 
@@ -790,6 +849,80 @@ pub fn cummin(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError> 
     cumulative(args, false)
 }
 
+fn zscore_slice(vals: &[f64]) -> Vec<f64> {
+    let n = vals.len();
+    if n <= 1 {
+        return vec![f64::NAN; n];
+    }
+
+    // Pass 1: compute mean with 4 accumulators for instruction-level parallelism
+    let chunks = vals.chunks_exact(4);
+    let rem = chunks.remainder();
+    let mut s0 = 0.0f64;
+    let mut s1 = 0.0f64;
+    let mut s2 = 0.0f64;
+    let mut s3 = 0.0f64;
+    for c in chunks {
+        s0 += c[0];
+        s1 += c[1];
+        s2 += c[2];
+        s3 += c[3];
+    }
+    let mut sum = (s0 + s1) + (s2 + s3);
+    for &x in rem {
+        sum += x;
+    }
+    let mean = sum / n as f64;
+
+    // Pass 2: compute sum of squared differences from mean (two-pass)
+    let chunks = vals.chunks_exact(4);
+    let rem = chunks.remainder();
+    let mut ss0 = 0.0f64;
+    let mut ss1 = 0.0f64;
+    let mut ss2 = 0.0f64;
+    let mut ss3 = 0.0f64;
+    for c in chunks {
+        let d0 = c[0] - mean;
+        let d1 = c[1] - mean;
+        let d2 = c[2] - mean;
+        let d3 = c[3] - mean;
+        ss0 += d0 * d0;
+        ss1 += d1 * d1;
+        ss2 += d2 * d2;
+        ss3 += d3 * d3;
+    }
+    let mut ss = (ss0 + ss1) + (ss2 + ss3);
+    for &x in rem {
+        let d = x - mean;
+        ss += d * d;
+    }
+
+    let sd = (ss / (n - 1) as f64).sqrt();
+    if !(sd > 0.0) {
+        return vec![f64::NAN; n];
+    }
+    let inv_sd = 1.0 / sd;
+
+    // Pass 3: normalize directly into pre-allocated output
+    let mut out = vec![0.0f64; n];
+    let in_chunks = vals.chunks_exact(4);
+    let mut out_chunks = out.chunks_exact_mut(4);
+    let in_rem = in_chunks.remainder();
+
+    for (ci, co) in in_chunks.zip(&mut out_chunks) {
+        co[0] = (ci[0] - mean) * inv_sd;
+        co[1] = (ci[1] - mean) * inv_sd;
+        co[2] = (ci[2] - mean) * inv_sd;
+        co[3] = (ci[3] - mean) * inv_sd;
+    }
+    let out_rem = out_chunks.into_remainder();
+    for (xi, xo) in in_rem.iter().zip(out_rem.iter_mut()) {
+        *xo = (*xi - mean) * inv_sd;
+    }
+
+    out
+}
+
 /// `zscore(X [, dim])`
 pub fn zscore(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError> {
     if args.is_empty() {
@@ -804,21 +937,7 @@ pub fn zscore(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError> 
     }
     let default_dim = first_non_singleton_dim(da.shape());
     let (dim, _omit) = dim_and_omit(args, 1, default_dim)?;
-    let res = map_fibers(&da, dim, |vals| {
-        let n = vals.len();
-        if n <= 1 {
-            return vec![f64::NAN; n];
-        }
-        let mean = vals.iter().sum::<f64>() / n as f64;
-        let ss: f64 = vals.iter().map(|&x| (x - mean) * (x - mean)).sum();
-        let sd = (ss / (n - 1) as f64).sqrt();
-        let inv_sd = if sd > 0.0 { 1.0 / sd } else { 0.0 };
-        if sd > 0.0 {
-            vals.iter().map(|&x| (x - mean) * inv_sd).collect()
-        } else {
-            vec![f64::NAN; n]
-        }
-    });
+    let res = map_fibers(&da, dim, |vals| zscore_slice(vals));
     Ok(vec![Value::Double(res)])
 }
 

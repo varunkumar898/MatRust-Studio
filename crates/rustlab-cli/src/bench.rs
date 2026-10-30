@@ -8,6 +8,11 @@ use std::time::Instant;
 /// Runs a benchmark function with warmup, collects multiple samples,
 /// and computes the median time and spread (in milliseconds).
 fn run_benchmark_samples<F: FnMut()>(mut op: F, warmup: usize, samples: usize) -> (f64, f64) {
+    let (_min, median, _max, spread) = run_benchmark_detailed(&mut op, warmup, samples);
+    (median, spread)
+}
+
+fn run_benchmark_detailed<F: FnMut()>(mut op: F, warmup: usize, samples: usize) -> (f64, f64, f64, f64) {
     for _ in 0..warmup {
         op();
     }
@@ -18,9 +23,11 @@ fn run_benchmark_samples<F: FnMut()>(mut op: F, warmup: usize, samples: usize) -
         times_ms.push(t0.elapsed().as_secs_f64() * 1000.0);
     }
     times_ms.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+    let min = times_ms[0];
+    let max = times_ms[times_ms.len() - 1];
     let median = times_ms[times_ms.len() / 2];
-    let spread = (times_ms[times_ms.len() - 1] - times_ms[0]) / 2.0;
-    (median, spread)
+    let spread = (max - min) / 2.0;
+    (min, median, max, spread)
 }
 
 /// Runs the complete benchmark suite and prints formatted results.
@@ -178,14 +185,16 @@ fn bench_elementwise() {
     let samples = 20;
     let warmup = 5;
 
-    // 1. Matrix Addition
+    // 1. Matrix Addition (extended warm-up & samples for stable measurement)
     let add_stmts = rustlab_parse::parse("C = A + B;").unwrap_or_default();
-    let (add_ms, add_spread) = run_benchmark_samples(
+    let add_warmup = 15;
+    let add_samples = 30;
+    let (add_min, add_ms, add_max, add_spread) = run_benchmark_detailed(
         || {
             let _ = interp.eval_stmts(&add_stmts);
         },
-        warmup,
-        samples,
+        add_warmup,
+        add_samples,
     );
     let add_mels = if add_ms > 0.0 {
         (n as f64 / (add_ms / 1000.0)) / 1e6
@@ -193,11 +202,13 @@ fn bench_elementwise() {
         0.0
     };
     println!(
-        "{:<20} {:<18} {:<18.3} {:<18.1}",
+        "{:<20} {:<18} {:<18.3} {:<18.1}  [min: {:.3} ms, max: {:.3} ms]",
         "A + B",
-        format!("{samples} (±{add_spread:.3})"),
+        format!("{add_samples} (±{add_spread:.3})"),
         add_ms,
-        add_mels
+        add_mels,
+        add_min,
+        add_max
     );
 
     // 2. Elementwise Multiplication

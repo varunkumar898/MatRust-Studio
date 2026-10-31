@@ -2097,10 +2097,13 @@ dependencies = [
 name = "mlapp-render"
 version = "0.1.0"
 dependencies = [
+ "eframe",
  "egui",
  "mlapp-host",
  "mlapp-plot",
+ "mlapp-runtime",
  "mlapp-ui",
+ "png",
  "serde",
  "thiserror 2.0.21",
 ]
@@ -3296,6 +3299,7 @@ version = "0.1.0"
 dependencies = [
  "criterion",
  "faer",
+ "matrixmultiply",
  "num-complex",
  "regex",
  "rustfft",

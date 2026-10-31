@@ -1,0 +1,26 @@
+Criterion Host Benchmarks - MatRust Studio (mlapp-host)
+Target: crates/mlapp-host/benches/host_benches.rs
+Profile: release
+Command: cargo test -p mlapp-host --bench host_benches --release -- --bench
+
+================================================================================
+Benchmark: container_open_and_inspect
+Warming up: 500.00 ms
+Samples: 20 samples in estimated 2.0045 s (66k iterations)
+Time: [35.240 µs 39.704 µs 44.191 µs]
+Median: 39.704 µs
+Outliers: 2 (10.00%) high mild
+
+Benchmark: ui_xml_parse_component_tree
+Warming up: 500.00 ms
+Samples: 20 samples in estimated 2.0011 s (231k iterations)
+Time: [6.2195 µs 7.6537 µs 9.7387 µs]
+Median: 7.6537 µs
+Outliers: 2 (10.00%) high mild / severe
+
+Benchmark: interpreter_session_and_button_callback
+Warming up: 500.00 ms
+Samples: 20 samples in estimated 3.7444 s (420 iterations)
+Time: [8.6980 ms 9.1857 ms 9.6962 ms]
+Median: 9.1857 ms
+================================================================================

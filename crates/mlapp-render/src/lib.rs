@@ -219,9 +219,35 @@ impl RenderBackend for HeadlessRenderer {
     }
 }
 
+/// Encodes and saves the rendered component tree as a PNG screenshot.
+pub fn save_screenshot_png(root: &Component, path: &std::path::Path) -> Result<(), std::io::Error> {
+    let width = root.position.width as u32;
+    let height = root.position.height as u32;
+    let renderer = HeadlessRenderer::new();
+    let rgba = renderer.capture_rgba_buffer(root, width, height);
+
+    if let Some(parent) = path.parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
+
+    let file = std::fs::File::create(path)?;
+    let mut encoder = png::Encoder::new(file, width, height);
+    encoder.set_color(png::ColorType::Rgba);
+    encoder.set_depth(png::BitDepth::Eight);
+    let mut writer = encoder
+        .write_header()
+        .map_err(|e| std::io::Error::other(e.to_string()))?;
+    writer
+        .write_image_data(&rgba)
+        .map_err(|e| std::io::Error::other(e.to_string()))?;
+    Ok(())
+}
+
 #[cfg(feature = "egui-backend")]
 pub mod egui_backend {
     use super::*;
+    use mlapp_host::{AppSession, HostNotification};
+    use mlapp_runtime::UiMutation;
     use mlapp_ui::PropertyValue;
 
     /// Egui UI renderer backend
@@ -321,5 +347,98 @@ pub mod egui_backend {
         fn name(&self) -> &'static str {
             "egui"
         }
+    }
+
+    /// Interactive egui application window running an AppSession.
+    pub struct EguiAppWindow {
+        pub session: AppSession,
+        pub renderer: EguiRenderer,
+    }
+
+    impl EguiAppWindow {
+        pub fn new(session: AppSession) -> Self {
+            Self {
+                session,
+                renderer: EguiRenderer::new(),
+            }
+        }
+    }
+
+    impl eframe::App for EguiAppWindow {
+        fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+            while let Some(notif) = self.session.poll_notification() {
+                match notif {
+                    HostNotification::Mutations(mutations) => {
+                        for m in mutations {
+                            match m {
+                                UiMutation::SetProperty {
+                                    component,
+                                    property,
+                                    value,
+                                } => {
+                                    if let Some(comp) =
+                                        self.session.ui_tree.find_by_name_mut(&component)
+                                    {
+                                        let _ = comp.set_property(&property, value);
+                                    }
+                                }
+                                UiMutation::Alert { title, message } => {
+                                    eprintln!("[Alert Dialog] {title}: {message}");
+                                }
+                                UiMutation::PlotCall { .. } => {}
+                            }
+                        }
+                    }
+                    HostNotification::Alert { title, message } => {
+                        eprintln!("[Alert Dialog] {title}: {message}");
+                    }
+                    HostNotification::Error(e) => {
+                        eprintln!("[Worker Error]: {e}");
+                    }
+                    HostNotification::Terminated => {}
+                }
+            }
+
+            egui::CentralPanel::default().show(ctx, |ui| {
+                ui.heading(&self.session.manifest.app_name);
+                ui.separator();
+                let parent_h = self.session.ui_tree.position.height;
+                self.renderer.render(ui, &self.session.ui_tree, parent_h);
+            });
+
+            for ev in self.renderer.pending_events.drain(..) {
+                let _ = self.session.send_event(ev);
+            }
+
+            ctx.request_repaint_after(std::time::Duration::from_millis(16));
+        }
+    }
+
+    /// Launches an interactive eframe GUI window for the app session.
+    pub fn run_gui_window(
+        session: AppSession,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let title = session.manifest.app_name.clone();
+        let w = session.ui_tree.position.width.max(640.0) as f32;
+        let h = session.ui_tree.position.height.max(480.0) as f32;
+
+        let native_options = eframe::NativeOptions {
+            viewport: egui::ViewportBuilder::default()
+                .with_inner_size([w, h])
+                .with_title(&title),
+            ..Default::default()
+        };
+
+        eframe::run_native(
+            &title,
+            native_options,
+            Box::new(|_cc| Ok(Box::new(EguiAppWindow::new(session)))),
+        )
+        .map_err(|e| {
+            Box::new(std::io::Error::other(e.to_string()))
+                as Box<dyn std::error::Error + Send + Sync>
+        })?;
+
+        Ok(())
     }
 }

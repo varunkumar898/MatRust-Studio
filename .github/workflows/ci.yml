@@ -75,8 +75,8 @@ jobs:
           echo "Active workspace test count: $ACTIVE_COUNT"
           MANIFEST_COUNT=$(grep -E ': test$' docs/test-manifest.txt | wc -l)
           echo "Manifest baseline test count: $MANIFEST_COUNT"
-          if [ "$ACTIVE_COUNT" -lt "$MANIFEST_COUNT" ] || [ "$ACTIVE_COUNT" -lt 309 ]; then
-            echo "ERROR: Test count regression detected ($ACTIVE_COUNT < $MANIFEST_COUNT or < 309)!"
+          if [ "$ACTIVE_COUNT" -lt "$MANIFEST_COUNT" ] || [ "$ACTIVE_COUNT" -lt 313 ]; then
+            echo "ERROR: Test count regression detected ($ACTIVE_COUNT < $MANIFEST_COUNT or < 313)!"
             exit 1
           fi
         shell: bash
@@ -88,15 +88,23 @@ jobs:
           name: test-logs-${{ matrix.os }}
           path: target/test-logs/
 
-  fuzz-smoke:
-    name: Cargo Fuzz Targets (Smoke Run)
+  fuzz:
+    name: Cargo Fuzz Targets (Smoke & Nightly Runs)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@nightly
       - uses: Swatinem/rust-cache@v2
-      - name: Run Fuzz Smoke Test Suite
-        run: cargo test --manifest-path fuzz/Cargo.toml --test fuzz_smoke
+      - name: Run Corpus Smoke Test Suite
+        run: cargo test --manifest-path fuzz/Cargo.toml --test corpus_smoke
+      - name: Install cargo-fuzz
+        uses: taiki-e/install-action@cargo-fuzz
+      - name: Run Fuzz Targets (60s per target)
+        run: |
+          cargo +nightly fuzz run fuzz_parser -- -max_total_time=60
+          cargo +nightly fuzz run fuzz_xml -- -max_total_time=60
+          cargo +nightly fuzz run fuzz_zip -- -max_total_time=60
 
   security:
     name: Security & License Checks
@@ -130,7 +138,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@1.80.0
       - uses: Swatinem/rust-cache@v2
       - name: Check workspace under MSRV
-        run: cargo check --workspace --all-targets
+        run: cargo check --workspace --all-targets --all-features
 
   geiger:
     name: Unsafe Code Audit (cargo-geiger)

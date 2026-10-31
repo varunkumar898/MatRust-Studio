@@ -586,16 +586,20 @@ fn test_extract_security_symlink_not_allowed() {
 #[test]
 fn test_opt_in_real_apps_validation() {
     let dir = match std::env::var("MLAPP_REAL_APPS_DIR") {
-        Ok(val) if !val.trim().is_empty() => std::path::PathBuf::from(val),
-        _ => {
-            eprintln!("[INFO] MLAPP_REAL_APPS_DIR not set; skipping real-app external validation (0 external apps tested).");
+        Ok(val) => {
+            if val.trim().is_empty() {
+                panic!("MLAPP_REAL_APPS_DIR is set but empty! Provide a valid directory path containing .mlapp files.");
+            }
+            std::path::PathBuf::from(val)
+        }
+        Err(_) => {
+            println!("SKIPPED: MLAPP_REAL_APPS_DIR unset (0 real apps tested).");
             return;
         }
     };
 
     if !dir.exists() {
-        eprintln!("[WARN] MLAPP_REAL_APPS_DIR directory does not exist: {dir:?}; skipping.");
-        return;
+        panic!("MLAPP_REAL_APPS_DIR directory does not exist: {:?}", dir);
     }
 
     let entries = std::fs::read_dir(&dir).expect("failed to read MLAPP_REAL_APPS_DIR");
@@ -603,7 +607,7 @@ fn test_opt_in_real_apps_validation() {
     for entry in entries.flatten() {
         let path = entry.path();
         if path.extension().and_then(|ext| ext.to_str()) == Some("mlapp") {
-            println!("Validating real .mlapp: {path:?}");
+            println!("Validating real .mlapp: {:?}", path);
             let file = std::fs::File::open(&path).expect("open file failed");
             let mut container = AppContainer::open(file).expect("AppContainer::open failed");
             if let Ok(doc_xml) = container.read_entry_to_string("matlab/document.xml") {
@@ -617,5 +621,14 @@ fn test_opt_in_real_apps_validation() {
             tested_count += 1;
         }
     }
-    println!("MLAPP_REAL_APPS_DIR tested {tested_count} external application(s).");
+    if tested_count == 0 {
+        panic!(
+            "MLAPP_REAL_APPS_DIR set to '{:?}' but contains 0 .mlapp files!",
+            dir
+        );
+    }
+    println!(
+        "MLAPP_REAL_APPS_DIR tested {} external application(s).",
+        tested_count
+    );
 }

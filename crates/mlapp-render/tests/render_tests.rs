@@ -80,3 +80,55 @@ fn test_headless_screenshot_render() {
         "Expected rasterized plot line with MATLAB blue color in UIAxes screenshot"
     );
 }
+
+#[test]
+fn test_gui_window_screenshot_capture_and_export() {
+    let mut root = Component::new(ComponentKind::UIFigure, "UIFigure");
+    root.position = Rect::new(0.0, 0.0, 640.0, 480.0);
+
+    let mut panel = Component::new(ComponentKind::Panel, "ControlPanel");
+    panel.position = Rect::new(10.0, 10.0, 200.0, 460.0);
+
+    let mut btn = Component::new(ComponentKind::Button, "ActionBtn");
+    btn.position = Rect::new(20.0, 400.0, 100.0, 30.0);
+
+    let mut axes = Component::new(ComponentKind::UIAxes, "PlotAxes");
+    axes.position = Rect::new(230.0, 30.0, 390.0, 420.0);
+
+    panel.children.push(btn);
+    root.children.push(panel);
+    root.children.push(axes);
+
+    let candidate_paths = [
+        std::path::PathBuf::from("docs/assets/gui_window_sample.png"),
+        std::path::PathBuf::from("../../docs/assets/gui_window_sample.png"),
+    ];
+
+    let mut out_path = candidate_paths[0].clone();
+    for p in &candidate_paths {
+        if let Some(parent) = p.parent() {
+            if parent.exists() {
+                out_path = p.clone();
+                break;
+            }
+        }
+    }
+
+    mlapp_render::save_screenshot_png(&root, &out_path).expect("save_screenshot_png failed");
+
+    assert!(
+        out_path.exists(),
+        "Screenshot file was not generated: {:?}",
+        out_path
+    );
+    let bytes = std::fs::read(&out_path).expect("read screenshot file failed");
+    assert!(
+        bytes.len() > 1000,
+        "Screenshot file is unexpectedly small: {} bytes",
+        bytes.len()
+    );
+
+    // Verify PNG magic bytes
+    let png_header = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
+    assert_eq!(&bytes[0..8], &png_header, "Invalid PNG header");
+}

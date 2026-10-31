@@ -66,9 +66,11 @@ fn bench_interpreter_callback(c: &mut Criterion) {
 }
 
 criterion_group!(
-    benches,
-    bench_container_open,
-    bench_ui_xml_parse,
-    bench_interpreter_callback
+    name = benches;
+    config = Criterion::default()
+        .sample_size(20)
+        .warm_up_time(std::time::Duration::from_millis(500))
+        .measurement_time(std::time::Duration::from_secs(2));
+    targets = bench_container_open, bench_ui_xml_parse, bench_interpreter_callback
 );
 criterion_main!(benches);

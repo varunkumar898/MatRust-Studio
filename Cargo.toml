@@ -36,3 +36,5 @@ panic = "unwind"
 # Benchmarks inherit optimized release codegen settings.
 [profile.bench]
 inherits = "release"
+lto = "thin"
+codegen-units = 16

@@ -94,8 +94,8 @@ jobs:
       - name: Install cargo-deny
         uses: taiki-e/install-action@cargo-deny
 
-      - name: Run cargo-deny (licenses and bans)
-        run: cargo deny check licenses bans
+      - name: Run cargo-deny (licenses, bans, advisories)
+        run: cargo deny check licenses bans advisories
 
       - name: Install cargo-audit
         uses: taiki-e/install-action@cargo-audit
@@ -125,7 +125,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - name: Install cargo-geiger
-        uses: taiki-e/install-action@cargo-geiger
+        run: cargo install cargo-geiger --locked
       - name: Generate Geiger Report
         run: |
           mkdir -p target/geiger

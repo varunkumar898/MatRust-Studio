@@ -1,0 +1,16 @@
+[package]
+name = "mlapp-ui"
+version = "0.1.0"
+edition = "2021"
+authors = ["mlapp-rs contributors"]
+license = "MIT OR Apache-2.0"
+description = "UI component model, property validation, quick-xml parser, and coordinate geometry transformation for MATLAB App Designer"
+
+[dependencies]
+quick-xml = { version = "0.37", features = ["serialize"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "2.0"
+
+[dev-dependencies]
+insta = { version = "1.41", features = ["yaml"] }

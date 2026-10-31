@@ -1,0 +1,16 @@
+---
+source: crates/mlapp-lang/tests/lang_tests.rs
+expression: report
+---
+compatibility_score: 100
+status: Runs
+supported_functions:
+  - cos
+  - disp
+  - linspace
+  - plot
+  - sin
+unsupported_functions: []
+hazardous_functions: []
+detected_toolboxes: []
+diagnostics: []

@@ -101,3 +101,47 @@ The project is partitioned into six modular, single-responsibility crates within
 - **Justification**:
   - Tree-walking provides immediate transparency, readable AST node evaluation, straightforward stack trace generation, and rapid iteration during language feature development.
   - The AST and `Value` types will be decoupled from the interpreter loop so a bytecode compiler and register VM can be added cleanly as an optimization pass in later milestones.
+
+---
+
+## 4. MATLAB App Designer Runtime (`mlapp-rs`) Architecture
+
+```mermaid
+graph TD
+    CLI["mlapp-cli (inspect, extract, run, check-compat)"]
+    FFI["mlapp-ffi (C ABI / PyO3 embedding)"]
+    HOST["mlapp-host (App lifecycle, worker thread, event loop)"]
+    RENDER["mlapp-render (RenderBackend trait, egui, headless)"]
+    PLOT["mlapp-plot (AxesModel, FigureModel, SVG)"]
+    RUNTIME["mlapp-runtime (AppHandle semantics, builtins, Octave bridge)"]
+    LANG["mlapp-lang (classdef parser, AST extraction, compat analyzer)"]
+    UI["mlapp-ui (Component tree, quick-xml, coordinate mapping)"]
+    CONTAINER["mlapp-container (ZIP/OPC reader, Zip-Slip/Bomb defenses)"]
+
+    CLI --> CONTAINER
+    CLI --> UI
+    CLI --> LANG
+    CLI --> HOST
+    CLI --> RENDER
+    FFI --> CONTAINER
+    FFI --> HOST
+    HOST --> RUNTIME
+    HOST --> UI
+    HOST --> LANG
+    HOST --> PLOT
+    RENDER --> UI
+    RENDER --> HOST
+    RUNTIME --> LANG
+    RUNTIME --> UI
+```
+
+### 4.1 Crate Boundaries
+- **`mlapp-container`**: ZIP/OPC reading, Zip-Slip and Zip-Bomb mitigation, format detection by content, manifest discovery (`.mlappinstall` and `.mlapp`), and inspection reports.
+- **`mlapp-ui`**: Typed `Component` tree parsed with `quick-xml`, property validation, and isolated coordinate transformation (MATLAB bottom-left to target top-left).
+- **`mlapp-lang`**: App Designer classdef extraction, properties/methods blocks, `startupFcn` & callback detection, and static compatibility scoring.
+- **`mlapp-runtime`**: Handle object semantics for `app`, copy-on-write synchronization, callback invocation, and built-in function registry with GNU Octave bridge hints.
+- **`mlapp-plot`**: Renderer-agnostic 2D `AxesModel` and `FigureModel` supporting line, scatter, bar, limits, titles, and deterministic SVG output.
+- **`mlapp-host`**: Worker thread lifecycle, event-driven callback execution, batched UI mutation dispatching, timeouts, and cancellation.
+- **`mlapp-render`**: Pluggable `RenderBackend` trait with headless and egui implementations.
+- **`mlapp-ffi`**: Stable C ABI (`mlapp_ffi.h`) for embedding in C, C++, and Python hosts.
+- **`mlapp-cli`**: Headless developer tool offering `inspect`, `extract`, `check-compat`, and `run` commands.

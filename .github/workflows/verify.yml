@@ -8,8 +8,11 @@ on:
 
 jobs:
   verify:
-    name: Formatting, Clippy, and Comprehensive Tests
-    runs-on: ubuntu-latest
+    name: Verification (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4

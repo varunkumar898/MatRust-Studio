@@ -97,9 +97,64 @@ pub fn matmul_2d(a: &DenseArray<f64>, b: &DenseArray<f64>) -> Result<DenseArray<
         return Err(MathError::inner_dim(k_a, k_b));
     }
 
+    // Dimension / overflow checks
+    let total_c = match m.checked_mul(n) {
+        Some(sz) if sz <= 128 * 1024 * 1024 => sz,
+        _ => {
+            return Err(MathError::DimensionMismatch {
+                identifier: "MATLAB:pmaxsize",
+                shape_a: vec![m, n],
+                shape_b: Vec::new(),
+            });
+        }
+    };
+
+    // If any dimension is zero, return empty or zero matrix safely without calling external kernels
+    if m == 0 || n == 0 {
+        return DenseArray::from_vec(vec![m, n], Vec::new());
+    }
+    if k_a == 0 {
+        return DenseArray::from_vec(vec![m, n], vec![0.0; total_c]);
+    }
+
+    // Verify stride conversions to isize do not overflow
+    let m_isize = isize::try_from(m).map_err(|_| MathError::DimensionMismatch {
+        identifier: "MATLAB:pmaxsize",
+        shape_a: vec![m],
+        shape_b: Vec::new(),
+    })?;
+    let k_isize = isize::try_from(k_a).map_err(|_| MathError::DimensionMismatch {
+        identifier: "MATLAB:pmaxsize",
+        shape_a: vec![k_a],
+        shape_b: Vec::new(),
+    })?;
+
+    // Verify input buffer lengths match dimensions
+    let total_a = m
+        .checked_mul(k_a)
+        .ok_or_else(|| MathError::DimensionMismatch {
+            identifier: "MATLAB:pmaxsize",
+            shape_a: vec![m, k_a],
+            shape_b: Vec::new(),
+        })?;
+    let total_b = k_a
+        .checked_mul(n)
+        .ok_or_else(|| MathError::DimensionMismatch {
+            identifier: "MATLAB:pmaxsize",
+            shape_a: vec![k_a, n],
+            shape_b: Vec::new(),
+        })?;
+
+    if a.as_slice().len() != total_a || b.as_slice().len() != total_b {
+        return Err(MathError::dim_agree(
+            &[a.as_slice().len(), b.as_slice().len()],
+            &[total_a, total_b],
+        ));
+    }
+
     #[cfg(feature = "matrixmultiply")]
     {
-        let mut c_data = vec![0.0; m * n];
+        let mut c_data = vec![0.0; total_c];
         let a_data = a.as_slice();
         let b_data = b.as_slice();
         // matrixmultiply::dgemm uses column-major layout when rsa=1, csa=m, rsb=1, csb=k, rsc=1, csc=m
@@ -111,14 +166,14 @@ pub fn matmul_2d(a: &DenseArray<f64>, b: &DenseArray<f64>) -> Result<DenseArray<
                 1.0,
                 a_data.as_ptr(),
                 1,
-                m as isize,
+                m_isize,
                 b_data.as_ptr(),
                 1,
-                k_a as isize,
+                k_isize,
                 0.0,
                 c_data.as_mut_ptr(),
                 1,
-                m as isize,
+                m_isize,
             );
         }
         Ok(DenseArray::from_vec_unchecked(vec![m, n], c_data))

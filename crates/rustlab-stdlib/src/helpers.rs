@@ -21,6 +21,25 @@ pub fn user_err(identifier: &str, message: &str) -> EvalError {
     }
 }
 
+pub const MAX_ARRAY_ELEMENTS: usize = 128 * 1024 * 1024; // 128M elements cap (1 GB for double)
+
+/// Validates that dimension products do not overflow usize and remain under MAX_ARRAY_ELEMENTS.
+pub fn validate_dims(dims: Vec<usize>) -> Result<Vec<usize>, EvalError> {
+    let mut total: usize = 1;
+    for &d in &dims {
+        match total.checked_mul(d) {
+            Some(prod) if prod <= MAX_ARRAY_ELEMENTS => total = prod,
+            _ => {
+                return Err(user_err(
+                    "MATLAB:pmaxsize",
+                    "Requested array exceeds the maximum possible variable size.",
+                ));
+            }
+        }
+    }
+    Ok(dims)
+}
+
 /// Parses dimension arguments:
 /// e.g. `(3)` -> `[3, 3]`, `(3, 4)` -> `[3, 4]`, `([3, 4])` -> `[3, 4]`
 pub fn parse_dims(args: &[Value]) -> Result<Vec<usize>, EvalError> {
@@ -33,7 +52,7 @@ pub fn parse_dims(args: &[Value]) -> Result<Vec<usize>, EvalError> {
         if v.is_scalar() {
             let n = v.as_scalar_f64().map_err(math_err)? as isize;
             let sz = n.max(0) as usize;
-            return Ok(vec![sz, sz]);
+            return validate_dims(vec![sz, sz]);
         } else if let Ok(arr) = v.to_double_array() {
             let dims: Vec<usize> = arr
                 .as_slice()
@@ -41,9 +60,9 @@ pub fn parse_dims(args: &[Value]) -> Result<Vec<usize>, EvalError> {
                 .map(|&d| (d as isize).max(0) as usize)
                 .collect();
             if dims.len() == 1 {
-                return Ok(vec![dims[0], dims[0]]);
+                return validate_dims(vec![dims[0], dims[0]]);
             }
-            return Ok(dims);
+            return validate_dims(dims);
         }
     }
 
@@ -55,7 +74,7 @@ pub fn parse_dims(args: &[Value]) -> Result<Vec<usize>, EvalError> {
     if dims.len() == 1 {
         dims.push(dims[0]);
     }
-    Ok(dims)
+    validate_dims(dims)
 }
 
 /// Extracts a DenseArray<f64> from a Value, returning an error if incompatible.

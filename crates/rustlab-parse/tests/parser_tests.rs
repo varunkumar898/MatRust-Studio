@@ -271,3 +271,145 @@ fn test_anonymous_function() {
         }
     }
 }
+
+#[test]
+fn test_parser_nesting_depth_limit() {
+    use rustlab_parse::error::ParseError;
+
+    // Construct 100,000 nested parentheses: "((((... 1 ...))))"
+    let n = 100_000;
+    let mut s = String::with_capacity(n * 2 + 10);
+    for _ in 0..n {
+        s.push('(');
+    }
+    s.push('1');
+    for _ in 0..n {
+        s.push(')');
+    }
+
+    let res = parse(&s);
+    assert!(res.is_err(), "100k nested parens must return an error");
+    match res.unwrap_err() {
+        ParseError::RecursionLimitExceeded { .. } => {}
+        other => panic!("expected RecursionLimitExceeded, got {other:?}"),
+    }
+}
+
+#[test]
+fn test_dos_100k_terms_addition() {
+    use rustlab_parse::error::ParseError;
+    // 100k terms: 1 + 1 + 1 + ...
+    let n = 100_000;
+    let mut s = String::with_capacity(n * 4);
+    s.push('1');
+    for _ in 0..n {
+        s.push_str(" + 1");
+    }
+
+    let res = parse(&s);
+    assert!(res.is_err(), "100k terms addition must return an error");
+    match res.unwrap_err() {
+        ParseError::RecursionLimitExceeded { .. } => {}
+        other => panic!("expected RecursionLimitExceeded, got {other:?}"),
+    }
+}
+
+#[test]
+fn test_dos_nested_brackets_and_braces() {
+    use rustlab_parse::error::ParseError;
+    // Nested brackets [ [ [ ... 1 ... ] ] ]
+    let n = 500;
+    let mut s_mat = String::new();
+    for _ in 0..n {
+        s_mat.push('[');
+    }
+    s_mat.push('1');
+    for _ in 0..n {
+        s_mat.push(']');
+    }
+    let res_mat = parse(&s_mat);
+    assert!(res_mat.is_err(), "nested brackets must return an error");
+    assert!(matches!(
+        res_mat.unwrap_err(),
+        ParseError::RecursionLimitExceeded { .. }
+    ));
+
+    // Nested braces { { { ... 1 ... } } }
+    let mut s_cell = String::new();
+    for _ in 0..n {
+        s_cell.push('{');
+    }
+    s_cell.push('1');
+    for _ in 0..n {
+        s_cell.push('}');
+    }
+    let res_cell = parse(&s_cell);
+    assert!(res_cell.is_err(), "nested braces must return an error");
+    assert!(matches!(
+        res_cell.unwrap_err(),
+        ParseError::RecursionLimitExceeded { .. }
+    ));
+}
+
+#[test]
+fn test_dos_nested_anon_and_unary_minus() {
+    use rustlab_parse::error::ParseError;
+    // Nested @(x) @(x) ... 1
+    let n = 500;
+    let mut s_anon = String::new();
+    for _ in 0..n {
+        s_anon.push_str("@(x) ");
+    }
+    s_anon.push('1');
+    let res_anon = parse(&s_anon);
+    assert!(res_anon.is_err(), "nested @() must return an error");
+    assert!(matches!(
+        res_anon.unwrap_err(),
+        ParseError::RecursionLimitExceeded { .. }
+    ));
+
+    // Nested unary minus - - - ... 1
+    let mut s_minus = String::new();
+    for _ in 0..n {
+        s_minus.push_str("- ");
+    }
+    s_minus.push('1');
+    let res_minus = parse(&s_minus);
+    assert!(
+        res_minus.is_err(),
+        "nested unary minus must return an error"
+    );
+    assert!(matches!(
+        res_minus.unwrap_err(),
+        ParseError::RecursionLimitExceeded { .. }
+    ));
+}
+
+#[test]
+fn test_dos_long_dot_and_call_chains() {
+    use rustlab_parse::error::ParseError;
+    // Long .a.a.a chain
+    let n = 500;
+    let mut s_dot = String::from("x");
+    for _ in 0..n {
+        s_dot.push_str(".a");
+    }
+    let res_dot = parse(&s_dot);
+    assert!(res_dot.is_err(), "long .a chain must return an error");
+    assert!(matches!(
+        res_dot.unwrap_err(),
+        ParseError::RecursionLimitExceeded { .. }
+    ));
+
+    // Long (1)(1)(1) chain
+    let mut s_call = String::from("x");
+    for _ in 0..n {
+        s_call.push_str("(1)");
+    }
+    let res_call = parse(&s_call);
+    assert!(res_call.is_err(), "long (1) chain must return an error");
+    assert!(matches!(
+        res_call.unwrap_err(),
+        ParseError::RecursionLimitExceeded { .. }
+    ));
+}

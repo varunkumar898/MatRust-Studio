@@ -1,0 +1,18 @@
+[package]
+name = "mlapp-ffi"
+version = "0.1.0"
+edition = "2021"
+authors = ["mlapp-rs contributors"]
+license = "MIT OR Apache-2.0"
+description = "C ABI and external embedding interface for mlapp-rs"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+mlapp-container = { path = "../mlapp-container" }
+mlapp-lang = { path = "../mlapp-lang" }
+mlapp-host = { path = "../mlapp-host" }
+mlapp-ui = { path = "../mlapp-ui" }
+serde_json = "1.0"
+thiserror = "2.0"

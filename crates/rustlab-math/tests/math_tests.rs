@@ -254,3 +254,47 @@ fn test_a3_sparse_memory_efficiency_10000x10000() {
         memory_bytes
     );
 }
+
+#[test]
+fn test_matmul_zero_dimensions_and_mismatch() {
+    use rustlab_math::ops::matmul_2d;
+
+    // 0x0 * 0x0 -> 0x0
+    let a00 = DenseArray::from_vec(vec![0, 0], Vec::new()).unwrap();
+    let b00 = DenseArray::from_vec(vec![0, 0], Vec::new()).unwrap();
+    let c00 = matmul_2d(&a00, &b00).unwrap();
+    assert_eq!(c00.shape(), &[0, 0]);
+    assert_eq!(c00.numel(), 0);
+
+    // 0x5 * 5x3 -> 0x3
+    let a05 = DenseArray::from_vec(vec![0, 5], Vec::new()).unwrap();
+    let b53 = DenseArray::from_vec(vec![5, 3], vec![1.0; 15]).unwrap();
+    let c03 = matmul_2d(&a05, &b53).unwrap();
+    assert_eq!(c03.shape(), &[0, 3]);
+    assert_eq!(c03.numel(), 0);
+
+    // 4x0 * 0x6 -> 4x6 (all zeros)
+    let a40 = DenseArray::from_vec(vec![4, 0], Vec::new()).unwrap();
+    let b06 = DenseArray::from_vec(vec![0, 6], Vec::new()).unwrap();
+    let c46 = matmul_2d(&a40, &b06).unwrap();
+    assert_eq!(c46.shape(), &[4, 6]);
+    assert_eq!(c46.numel(), 24);
+    assert_eq!(c46.as_slice(), &vec![0.0; 24]);
+
+    // 3x2 * 4x2 -> dimension mismatch (inner dimensions 2 != 4)
+    let a32 = DenseArray::from_vec(vec![3, 2], vec![1.0; 6]).unwrap();
+    let b42 = DenseArray::from_vec(vec![4, 2], vec![1.0; 8]).unwrap();
+    let err = matmul_2d(&a32, &b42).expect_err("inner dimension mismatch must fail");
+    match err {
+        MathError::InnerDimensionMismatch {
+            identifier,
+            cols_a,
+            rows_b,
+        } => {
+            assert_eq!(identifier, "MATLAB:innerdim");
+            assert_eq!(cols_a, 2);
+            assert_eq!(rows_b, 4);
+        }
+        other => panic!("expected InnerDimensionMismatch, got {other:?}"),
+    }
+}

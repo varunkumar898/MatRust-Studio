@@ -431,3 +431,20 @@ fn test_robotics_rotations_and_kinematics() {
         _ => panic!("Expected 101x1 joint trajectory vector"),
     }
 }
+
+#[test]
+fn test_dos_huge_zeros_allocation_cap() {
+    let mut interp = rustlab_eval::Interpreter::new();
+    rustlab_stdlib::register_all(&mut interp);
+
+    // zeros(1e6, 1e6) requires 10^12 elements (8 TB of RAM)
+    // Must return MATLAB:pmaxsize error and not abort or exhaust host RAM
+    let res = interp.eval_script("Z = zeros(1e6, 1e6);");
+    assert!(res.is_err(), "huge zeros allocation must return an error");
+    match res.unwrap_err() {
+        rustlab_eval::EvalError::UserError { identifier, .. } => {
+            assert_eq!(identifier, "MATLAB:pmaxsize");
+        }
+        other => panic!("expected MATLAB:pmaxsize, got {other:?}"),
+    }
+}

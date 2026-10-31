@@ -1,0 +1,20 @@
+[package]
+name = "mlapp-container"
+version = "0.1.0"
+edition = "2021"
+authors = ["mlapp-rs contributors"]
+license = "MIT OR Apache-2.0"
+description = "ZIP/OPC container parsing, zip-slip/bomb defense, and manifest discovery for MATLAB .mlapp and .mlappinstall"
+
+[dependencies]
+zip = { version = "2.2", default-features = false, features = ["deflate"] }
+quick-xml = { version = "0.37", features = ["serialize"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "2.0"
+
+[dev-dependencies]
+tempfile = "3.14"
+mlapp-ui = { path = "../mlapp-ui" }
+mlapp-lang = { path = "../mlapp-lang" }
+insta = { version = "1.41", features = ["yaml"] }

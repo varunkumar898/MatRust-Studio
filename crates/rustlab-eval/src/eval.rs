@@ -56,6 +56,9 @@ pub struct Interpreter {
     pub search_paths: Vec<PathBuf>,
     pub current_nargin: usize,
     pub current_nargout: usize,
+    pub cancel_token: Option<Arc<std::sync::atomic::AtomicBool>>,
+    pub recursion_depth: usize,
+    pub max_recursion_depth: usize,
 }
 
 impl Interpreter {
@@ -71,6 +74,9 @@ impl Interpreter {
             search_paths: vec![std::env::current_dir().unwrap_or_default()],
             current_nargin: 0,
             current_nargout: 0,
+            cancel_token: None,
+            recursion_depth: 0,
+            max_recursion_depth: 32,
         };
         interp.init_constants();
         interp
@@ -121,6 +127,8 @@ impl Interpreter {
             "j",
             Value::ComplexDouble(DenseArray::scalar(rustlab_math::Complex64::new(0.0, 1.0))),
         );
+        self.env.set("on", Value::char_vector("on"));
+        self.env.set("off", Value::char_vector("off"));
     }
 
     /// Parses and evaluates an entire script source text.
@@ -177,8 +185,23 @@ impl Interpreter {
         Ok(Flow::Next)
     }
 
+    /// Checks if a cooperative cancellation request has been signaled.
+    pub fn check_cancellation(&self, span: Span) -> Result<(), EvalError> {
+        if let Some(ref token) = self.cancel_token {
+            if token.load(std::sync::atomic::Ordering::Relaxed) {
+                return Err(EvalError::UserError {
+                    identifier: "RUSTLAB:ExecutionCancelled".to_string(),
+                    message: "Execution cancelled by user request".to_string(),
+                    span,
+                });
+            }
+        }
+        Ok(())
+    }
+
     /// Evaluates a single statement.
     pub fn eval_stmt(&mut self, stmt: &Stmt) -> Result<Flow, EvalError> {
+        self.check_cancellation(stmt.span())?;
         match stmt {
             Stmt::Expr {
                 expr,
@@ -235,6 +258,7 @@ impl Interpreter {
 
                 // In MATLAB: 'for col = matrix' iterates column by column!
                 for c in 1..=cols {
+                    self.check_cancellation(*span)?;
                     let mut col_data = Vec::with_capacity(rows);
                     for r in 1..=rows {
                         let elem =
@@ -264,8 +288,9 @@ impl Interpreter {
                 }
                 Ok(Flow::Next)
             }
-            Stmt::While { cond, body, .. } => {
+            Stmt::While { cond, body, span } => {
                 loop {
+                    self.check_cancellation(*span)?;
                     let cond_val = self.eval_expr(cond)?;
                     if !self.is_truthy(&cond_val)? {
                         break;
@@ -367,6 +392,23 @@ impl Interpreter {
     // --- Expression Evaluation ---
 
     pub fn eval_expr(&mut self, expr: &Expr) -> Result<Value, EvalError> {
+        if self.recursion_depth >= self.max_recursion_depth {
+            return Err(EvalError::UserError {
+                identifier: "MATLAB:recursionLimitExceeded".to_string(),
+                message: format!(
+                    "Maximum recursion limit of {} exceeded.",
+                    self.max_recursion_depth
+                ),
+                span: expr.span(),
+            });
+        }
+        self.recursion_depth += 1;
+        let res = self.eval_expr_inner(expr);
+        self.recursion_depth -= 1;
+        res
+    }
+
+    fn eval_expr_inner(&mut self, expr: &Expr) -> Result<Value, EvalError> {
         match expr {
             Expr::Number(n, _) => Ok(Value::scalar(*n)),
             Expr::Imaginary(i, _) => {
@@ -990,17 +1032,16 @@ impl Interpreter {
                 }
             }
             AssignTarget::Dot { expr, field, .. } => {
-                if let Expr::Ident(var_name, _) = &**expr {
-                    let mut current_struct = match self.env.get(var_name) {
-                        Some(Value::Struct(s)) => s,
-                        _ => StructArray::scalar(HashMap::new()),
-                    };
-                    current_struct.set_field(field, val.clone());
-                    let res_val = Value::Struct(current_struct);
-                    self.env.set(var_name, res_val.clone());
-                    self.last_ans = Some(res_val.clone());
+                if let Some((root_var, path)) = extract_dot_chain(expr, field) {
+                    let mut root_val = self
+                        .env
+                        .get(root_var)
+                        .unwrap_or_else(|| Value::Struct(StructArray::scalar(HashMap::new())));
+                    set_nested_field(&mut root_val, &path, val.clone());
+                    self.env.set(root_var, root_val.clone());
+                    self.last_ans = Some(root_val.clone());
                     if print_result {
-                        let out = format!("{} =\n\n{}\n", var_name, res_val);
+                        let out = format!("{} =\n\n{}\n", root_var, root_val);
                         self.output_log.push(out);
                     }
                 }
@@ -1038,6 +1079,12 @@ impl Interpreter {
             }
             if name == "exist" {
                 return self.eval_exist(args, span);
+            }
+            if name == "feval" {
+                return self.eval_feval(args, span);
+            }
+            if name == "str2func" {
+                return self.eval_str2func(args, span);
             }
             if name == "addpath" {
                 return self.eval_addpath(args, span);
@@ -1087,6 +1134,24 @@ impl Interpreter {
                 name: name.clone(),
                 span,
             });
+        }
+
+        // Method invocation syntax on objects/structs: obj.method(args...)
+        if let Expr::DotAccess {
+            expr: target_expr,
+            field: method_name,
+            ..
+        } = callee
+        {
+            if self.functions.contains_key(method_name) {
+                let target_val = self.eval_expr(target_expr)?;
+                let mut evaluated_args = Vec::with_capacity(args.len() + 1);
+                evaluated_args.push(target_val);
+                for a in args {
+                    evaluated_args.push(self.eval_expr(a)?);
+                }
+                return self.call_user_function(method_name, evaluated_args, 1, span);
+            }
         }
 
         // Callee is a general expression (e.g. s.field(end), C{1}(2), (@(x) x+1)(5))
@@ -1364,6 +1429,65 @@ impl Interpreter {
                 Ok(res)
             }
         }
+    }
+
+    /// Evaluates `feval(func, arg1, ...)`
+    pub fn eval_feval(&mut self, args: &[Expr], span: Span) -> Result<Value, EvalError> {
+        if args.is_empty() {
+            return Err(EvalError::UserError {
+                identifier: "MATLAB:minrhs".to_string(),
+                message: "Not enough input arguments.".to_string(),
+                span,
+            });
+        }
+        let fn_val = self.eval_expr(&args[0])?;
+        let fn_handle = match fn_val {
+            Value::FunctionHandle(h) => (*h).clone(),
+            Value::Char(ca) => FunctionHandle::Named(ca.as_slice().iter().collect()),
+            Value::String(sa) => {
+                FunctionHandle::Named(sa.as_slice().first().cloned().unwrap_or_default())
+            }
+            _ => {
+                return Err(EvalError::UserError {
+                    identifier: "MATLAB:feval:badHandle".to_string(),
+                    message: "First input to feval must be a function name or function handle."
+                        .to_string(),
+                    span,
+                })
+            }
+        };
+
+        let mut evaluated_args = Vec::with_capacity(args.len() - 1);
+        for a in &args[1..] {
+            evaluated_args.push(self.eval_expr(a)?);
+        }
+
+        let mut outs = self.call_function_handle(&fn_handle, evaluated_args, 1, span)?;
+        Ok(outs.pop().unwrap_or_else(Value::empty))
+    }
+
+    /// Evaluates `str2func(name)`
+    pub fn eval_str2func(&mut self, args: &[Expr], span: Span) -> Result<Value, EvalError> {
+        if args.is_empty() {
+            return Err(EvalError::UserError {
+                identifier: "MATLAB:minrhs".to_string(),
+                message: "Not enough input arguments.".to_string(),
+                span,
+            });
+        }
+        let val = self.eval_expr(&args[0])?;
+        let name = match val {
+            Value::Char(ca) => ca.as_slice().iter().collect::<String>(),
+            Value::String(sa) => sa.as_slice().first().cloned().unwrap_or_default(),
+            _ => {
+                return Err(EvalError::UserError {
+                    identifier: "MATLAB:str2func:badInput".to_string(),
+                    message: "Input must be a string or character vector.".to_string(),
+                    span,
+                })
+            }
+        };
+        Ok(Value::function_handle_named(&name))
     }
 
     /// Evaluates `cellfun(@fn, C, ...)`
@@ -1718,6 +1842,29 @@ impl Interpreter {
     }
 
     fn call_user_function_multi(
+        &mut self,
+        name: &str,
+        args: Vec<Value>,
+        nargout: usize,
+        span: Span,
+    ) -> Result<Vec<Value>, EvalError> {
+        if self.recursion_depth >= self.max_recursion_depth {
+            return Err(EvalError::UserError {
+                identifier: "MATLAB:recursionLimitExceeded".to_string(),
+                message: format!(
+                    "Maximum recursion limit of {} exceeded.",
+                    self.max_recursion_depth
+                ),
+                span,
+            });
+        }
+        self.recursion_depth += 1;
+        let res = self.call_user_function_multi_inner(name, args, nargout, span);
+        self.recursion_depth -= 1;
+        res
+    }
+
+    fn call_user_function_multi_inner(
         &mut self,
         name: &str,
         args: Vec<Value>,
@@ -2485,5 +2632,54 @@ fn collect_free_variables(expr: &Expr, bound: &HashSet<String>, out: &mut HashSe
             collect_free_variables(body, &inner_bound, out);
         }
         _ => {}
+    }
+}
+
+fn extract_dot_chain<'a>(expr: &'a Expr, leaf_field: &'a str) -> Option<(&'a str, Vec<&'a str>)> {
+    let mut path = vec![leaf_field];
+    let mut curr = expr;
+    loop {
+        match curr {
+            Expr::Ident(root, _) => {
+                path.reverse();
+                return Some((root.as_str(), path));
+            }
+            Expr::DotAccess {
+                expr: inner, field, ..
+            } => {
+                path.push(field.as_str());
+                curr = inner;
+            }
+            _ => return None,
+        }
+    }
+}
+
+fn set_nested_field(val: &mut Value, path: &[&str], new_val: Value) {
+    if path.is_empty() {
+        return;
+    }
+    if path.len() == 1 {
+        if let Value::Struct(ref mut s) = val {
+            s.set_field(path[0], new_val);
+        } else {
+            let mut s = StructArray::scalar(HashMap::new());
+            s.set_field(path[0], new_val);
+            *val = Value::Struct(s);
+        }
+        return;
+    }
+    let head = path[0];
+    let tail = &path[1..];
+    if let Value::Struct(ref mut s) = val {
+        let mut sub_val = s.get_field(head).cloned().unwrap_or_else(Value::empty);
+        set_nested_field(&mut sub_val, tail, new_val);
+        s.set_field(head, sub_val);
+    } else {
+        let mut s = StructArray::scalar(HashMap::new());
+        let mut sub_val = Value::empty();
+        set_nested_field(&mut sub_val, tail, new_val);
+        s.set_field(head, sub_val);
+        *val = Value::Struct(s);
     }
 }

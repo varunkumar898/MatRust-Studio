@@ -11,8 +11,12 @@ pub struct Parser {
     cursor: usize,
     /// Counter tracking nesting depth inside matrix or cell brackets `[...]` or `{...}`.
     matrix_depth: usize,
+    /// Recursion depth for expression parsing to prevent stack overflow.
+    recursion_depth: usize,
     eof_token: Token,
 }
+
+const MAX_RECURSION_DEPTH: usize = 128;
 
 impl Parser {
     /// Creates a new `Parser` from a slice or vector of tokens.
@@ -23,6 +27,7 @@ impl Parser {
             tokens,
             cursor: 0,
             matrix_depth: 0,
+            recursion_depth: 0,
             eof_token,
         }
     }
@@ -507,7 +512,20 @@ impl Parser {
     }
 
     fn parse_expr_bp(&mut self, min_bp: u8) -> Result<Expr, ParseError> {
+        if self.recursion_depth >= MAX_RECURSION_DEPTH {
+            return Err(ParseError::RecursionLimitExceeded {
+                span: self.peek().span,
+            });
+        }
+        self.recursion_depth += 1;
+        let res = self.parse_expr_bp_inner(min_bp);
+        self.recursion_depth -= 1;
+        res
+    }
+
+    fn parse_expr_bp_inner(&mut self, min_bp: u8) -> Result<Expr, ParseError> {
         let mut left = self.parse_prefix()?;
+        let mut op_count: usize = 0;
 
         loop {
             // Check for range colon operator: start:end or start:step:end
@@ -579,6 +597,13 @@ impl Parser {
                 break;
             }
 
+            op_count += 1;
+            if op_count > MAX_RECURSION_DEPTH {
+                return Err(ParseError::RecursionLimitExceeded {
+                    span: self.peek().span,
+                });
+            }
+
             self.advance();
             let right = self.parse_expr_bp(r_bp)?;
             let span = left.span().merge(right.span());
@@ -632,9 +657,24 @@ impl Parser {
 
     fn parse_postfix(&mut self) -> Result<Expr, ParseError> {
         let mut expr = self.parse_primary()?;
+        let mut chain_depth: usize = 0;
 
         loop {
             let tok = self.peek();
+            if matches!(
+                tok.kind,
+                TokenKind::Transpose
+                    | TokenKind::ConjugateTranspose
+                    | TokenKind::LParen
+                    | TokenKind::LBrace
+                    | TokenKind::Dot
+            ) {
+                chain_depth += 1;
+                if chain_depth > MAX_RECURSION_DEPTH {
+                    return Err(ParseError::RecursionLimitExceeded { span: tok.span });
+                }
+            }
+
             match tok.kind {
                 TokenKind::Transpose => {
                     let end_span = self.advance().span;

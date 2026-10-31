@@ -167,3 +167,22 @@ fn test_global_scoping() {
     interp.eval_script(code).unwrap();
     assert_eq!(interp.env.get("G").unwrap().as_scalar_f64().unwrap(), 150.0);
 }
+
+#[test]
+fn test_dos_runtime_recursion_limit() {
+    let mut interp = Interpreter::new();
+    let code = "
+    function r = rec(x)
+        r = rec(x + 1);
+    end
+    rec(1);
+    ";
+    let res = interp.eval_script(code);
+    assert!(res.is_err(), "infinite recursion must return an error");
+    match res.unwrap_err() {
+        rustlab_eval::EvalError::UserError { identifier, .. } => {
+            assert_eq!(identifier, "MATLAB:recursionLimitExceeded");
+        }
+        other => panic!("expected MATLAB:recursionLimitExceeded, got {other:?}"),
+    }
+}

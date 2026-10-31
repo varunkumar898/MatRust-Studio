@@ -22,6 +22,9 @@ pub enum ParseError {
     #[error("Invalid numeric literal '{literal}' at {span}")]
     InvalidNumberLiteral { literal: String, span: Span },
 
+    #[error("Recursion depth limit exceeded at {span}")]
+    RecursionLimitExceeded { span: Span },
+
     #[error("Invalid assignment target at {span}")]
     InvalidAssignmentTarget { span: Span },
 
@@ -43,6 +46,7 @@ impl ParseError {
             Self::InvalidAssignmentTarget { span } => *span,
             Self::UnrecognizedCharacter { span, .. } => *span,
             Self::EmptyRow { span } => *span,
+            Self::RecursionLimitExceeded { span } => *span,
         }
     }
 }

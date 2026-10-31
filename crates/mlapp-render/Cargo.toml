@@ -1,0 +1,19 @@
+[package]
+name = "mlapp-render"
+version = "0.1.0"
+edition = "2021"
+authors = ["mlapp-rs contributors"]
+license = "MIT OR Apache-2.0"
+description = "Pluggable UI rendering abstraction, egui renderer backend, and headless mock renderer for MATLAB App Designer"
+
+[dependencies]
+mlapp-ui = { path = "../mlapp-ui" }
+mlapp-host = { path = "../mlapp-host" }
+mlapp-plot = { path = "../mlapp-plot" }
+egui = { version = "0.31", optional = true }
+serde = { version = "1.0", features = ["derive"] }
+thiserror = "2.0"
+
+[features]
+default = []
+egui-backend = ["dep:egui"]

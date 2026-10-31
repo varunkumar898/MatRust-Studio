@@ -1,0 +1,882 @@
+Command exited with code 0.
+
+Command output:
+   Compiling rustlab-parse v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-parse)
+   Compiling mlapp-ui v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\mlapp-ui)
+   Compiling mlapp-container v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\mlapp-container)
+   Compiling mlapp-plot v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\mlapp-plot)
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\rustlab_parse-3vj6bb4cml7as\s-hnpyef6eyl-0vmhgmm-working`
+
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\mlapp_container-25ttvt11l67yt\s-hnpyef835i-1it1ux0-working`
+
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\mlapp_plot-2v2nisro0j5ax\s-hnpyef8fel-12fjyzx-working`
+
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\mlapp_ui-2matgajmqyzla\s-hnpyefasdg-0ea885k-working`
+
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\rustlab_parse-2tgv25tx6ps4r\s-hnpyefavja-1p44yzn-working`
+
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\mlapp_ui-263x1s7cr6cyz\s-hnpyef7sdm-1qmtm8s-working`
+
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\mlapp_plot-0kvquzq3u7xrn\s-hnpyefbbfx-09jejyt-working`
+
+   Compiling rustlab-math v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-math)
+warning: `rustlab-parse` (lib test) generated 1 warning
+   Compiling mlapp-lang v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\mlapp-lang)
+warning: `mlapp-plot` (lib test) generated 1 warning
+warning: `mlapp-plot` (lib) generated 1 warning
+warning: `mlapp-ui` (lib test) generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\rustlab_math-2pa2kha8ci2p7\s-hnpyefp35f-04ssg2j-working`
+
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\mlapp_lang-1aey3zm79ka3m\s-hnpyefrqbm-1sarpk8-working`
+
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\plot_tests-2lm7geracv3ej\s-hnpyefvsk0-1u6t1bk-working`
+
+warning: `mlapp-container` (lib) generated 1 warning
+   Compiling rustlab-eval v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-eval)
+warning: `rustlab-parse` (lib) generated 1 warning
+   Compiling rustlab-matio v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-matio)
+warning: `mlapp-plot` (test "plot_tests") generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\rustlab_math-3o3vmzlnm89xt\s-hnpyegbi1p-1ogaxx7-working`
+
+warning: `mlapp-ui` (lib) generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\rustlab_matio-3qxmf5xi2gwr9\s-hnpyegbj33-1xahxxt-working`
+
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\rustlab_eval-3f134hj6l0dmv\s-hnpyegaul2-0nvt50g-working`
+
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\lexer_tests-0vptas6yq26t2\s-hnpyegfhhs-1th60up-working`
+
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\parser_tests-1f499xy4tlre0\s-hnpyeggmie-1ubji7x-working`
+
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\ui_tests-128jcj4r3ssre\s-hnpyegjrav-0vupgke-working`
+
+warning: `mlapp-lang` (lib) generated 1 warning
+   Compiling rustlab-data v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-data)
+warning: `rustlab-parse` (test "lexer_tests") generated 1 warning
+warning: `rustlab-parse` (test "parser_tests") generated 1 warning
+warning: `mlapp-ui` (test "ui_tests") generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\mlapp_container-2we45gzct1dwa\s-hnpyehio6d-1o668ti-working`
+
+warning: `rustlab-math` (lib test) generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\rustlab_data-38uipx8bmovug\s-hnpyeheewa-1eq4aer-working`
+
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\fixture_tests-29ldhyjvtb2aq\s-hnpyehk9qh-1u2gjhw-working`
+
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\container_tests-330gjx42uiksg\s-hnpyehqvag-1956qyu-working`
+
+warning: `rustlab-matio` (lib) generated 1 warning
+   Compiling rustlab-stdlib v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-stdlib)
+warning: `mlapp-container` (lib test) generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\rustlab_stdlib-38qwg4furwyls\s-hnpyei1eaf-1vxgztl-working`
+
+warning: `mlapp-container` (test "container_tests") generated 1 warning
+warning: `mlapp-container` (test "fixture_tests") generated 1 warning
+   Compiling mlapp-runtime v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\mlapp-runtime)
+   Compiling rustlab-cli v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-cli)
+warning: `rustlab-data` (lib) generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\mlapp_runtime-17evp5x6bigxj\s-hnpyek2mfc-170qsst-working`
+
+warning: `rustlab-eval` (lib) generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\rustlab_cli-2rj3uzsbkl4p2\s-hnpyek1ynw-0uukfva-working`
+
+   Compiling mlapp-host v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\mlapp-host)
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\mlapp_host-27phread62don\s-hnpyekkcfv-1lqdb1b-working`
+
+warning: `rustlab-math` (lib) generated 1 warning
+   Compiling matrust_studio v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\apps\desktop)
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\matrust_studio-38es3mbh6ke82\s-hnpyel512m-0lzgz56-working`
+
+warning: `mlapp-runtime` (lib) generated 1 warning
+   Compiling mlapp-render v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\mlapp-render)
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\mlapp_render-378x36g7nzzba\s-hnpyelmn33-15u2iu4-working`
+
+warning: `mlapp-render` (lib) generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\scipy_mat_tests-03swe9kttlg9o\s-hnpyeltvk9-0z9dcsx-working`
+
+warning: `mlapp-host` (lib) generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\rustlab_matio-0890a04jbj51s\s-hnpyelxgqk-0f133c0-working`
+
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\data_tests-2kx6wxgu2rpvt\s-hnpyelztai-03delkc-working`
+
+warning: `rustlab-matio` (lib test) generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\milestone_a1_tests-2nusqkear7sdr\s-hnpyemk9x9-1cziyrl-working`
+
+warning: `rustlab-matio` (test "scipy_mat_tests") generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\rustlab_data-2x342tcezovtb\s-hnpyen41a0-0wuspgz-working`
+
+warning: `rustlab-cli` (lib) generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\rustlab_eval-27b58gkjy958v\s-hnpyen8em9-0u8bca6-working`
+
+warning: `rustlab-data` (test "data_tests") generated 1 warning
+warning: `rustlab-eval` (test "milestone_a1_tests") generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\math_tests-2hh3o4evxfhu1\s-hnpyenhbcf-0nzl0ik-working`
+
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\eval_tests-2bkdxngk4rqoh\s-hnpyeninaa-0r48sm5-working`
+
+warning: `rustlab-data` (lib test) generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\rustlab_stdlib-0ltvi360lrp5n\s-hnpyenonw3-0z360zq-working`
+
+warning: `rustlab-eval` (lib test) generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\g01_verify_tests-3p37lwnz9lz7w\s-hnpyenux3l-17f3afj-working`
+
+warning: `rustlab-eval` (test "eval_tests") generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\stats_reference_tests-1irq4ppo60ftu\s-hnpyeo70e1-17uqfka-working`
+
+warning: `rustlab-math` (test "math_tests") generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\matio_tests-0y8wi8hrwj56q\s-hnpyeoghjc-1u8iy4b-working`
+
+warning: `rustlab-data` (test "g01_verify_tests") generated 1 warning
+warning: `rustlab-data` (test "stats_reference_tests") generated 1 warning
+warning: `rustlab-matio` (test "matio_tests") generated 1 warning
+warning: `rustlab-stdlib` (lib test) generated 1 warning
+warning: `matrust_studio` (lib) generated 1 warning
+warning: `rustlab-stdlib` (lib) generated 1 warning
+   Compiling mlapp-ffi v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\mlapp-ffi)
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\matrust_studio-0erffcpc90k8c\s-hnpyf5nfzd-1da7yzs-working`
+
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\runtime_tests-1iysr35gm7xrb\s-hnpyf5lo8b-0ryd4to-working`
+
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\stdlib_a3_tests-2vgm4ae0k653k\s-hnpyf5kwfw-17mchrv-working`
+
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\matrust_studio-2ipzo5mluqmlo\s-hnpyf5o31s-18h1yqr-working`
+
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\rustlab-1jimswtnceait\s-hnpyf5omm7-034y4gg-working`
+
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\mlapp_ffi-2yeb4iohn5vd5\s-hnpyf5jgw2-05mn469-working`
+
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\mlapp_ffi-1n3pxahqijoyp\s-hnpyf5k633-0wkjfmn-working`
+
+warning: `matrust_studio` (bin "matrust_studio" test) generated 1 warning
+warning: `rustlab-stdlib` (test "stdlib_a3_tests") generated 1 warning
+warning: `mlapp-runtime` (test "runtime_tests") generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\numerical_tests-3vm0i88xyjucd\s-hnpyfa4nnl-0afodah-working`
+
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\render_tests-19jni8nhylufm\s-hnpyfau7e9-0traz6a-working`
+
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\diagnostics_tests-2q807cy9gggav\s-hnpyfav31c-0k7vwoy-working`
+
+warning: `rustlab-cli` (bin "rustlab") generated 1 warning
+warning: `rustlab-stdlib` (test "numerical_tests") generated 1 warning
+   Compiling mlapp-cli v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\mlapp-cli)
+warning: `mlapp-render` (test "render_tests") generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\mlapp_cli-0i9f7wovkx9ni\s-hnpyff46x1-1pdh72w-working`
+
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\cli_tests-1taxjzwgnvqsi\s-hnpyff37c9-0vd23gx-working`
+
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\regression_a312_tests-2xca0jzap2fqn\s-hnpyfg8eht-1tv7b0i-working`
+
+warning: `mlapp-cli` (bin "mlapp-cli" test) generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\desktop_tests-22ikd9u5a9sql\s-hnpyfh3z6e-0axg4mv-working`
+
+warning: `rustlab-cli` (test "diagnostics_tests") generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\rustlab_cli-3betwlee3p64n\s-hnpyfhe7i2-0fkf3qh-working`
+
+warning: `rustlab-cli` (test "cli_tests") generated 1 warning
+warning: `rustlab-cli` (lib test) generated 1 warning
+warning: `mlapp-ffi` (lib test) generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\mlapp_runtime-1njh7rst1h071\s-hnpyfqlb5w-0wxmrkv-working`
+
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\rustlab-1ygbxyeyd81mz\s-hnpyfqm6gr-0r2q4ya-working`
+
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\table_tests-05gb682sth21v\s-hnpyfqm7en-1m0jq3o-working`
+
+warning: `mlapp-ffi` (lib) generated 1 warning
+warning: `matrust_studio` (bin "matrust_studio") generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\ffi_tests-0zwepqe57jkxr\s-hnpyfr085o-1s51lgi-working`
+
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\g01_verify_tests-3mh6farqj7tti\s-hnpyfr1wgj-0dgvkk0-working`
+
+warning: `mlapp-runtime` (lib test) generated 1 warning
+warning: `rustlab-cli` (bin "rustlab" test) generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\extended_capabilities_tests-0na0u8der6rpn\s-hnpyfsz89l-19ddpfj-working`
+
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\stdlib_a1_tests-02su4e38qjus2\s-hnpyfszqdt-049yimv-working`
+
+warning: `rustlab-stdlib` (test "regression_a312_tests") generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\add_probe-26plonrjwzca1\s-hnpyfvxisx-1tkzqv7-working`
+
+warning: `matrust_studio` (test "desktop_tests") generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\stdlib_a2_tests-3lyzzatu3n5u0\s-hnpyfzlcba-0qzfwen-working`
+
+warning: `mlapp-ffi` (test "ffi_tests") generated 1 warning
+warning: `rustlab-stdlib` (test "table_tests") generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\mlapp_render-3jro01wbqhnss\s-hnpyg9g2tx-19gt36g-working`
+
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\stdlib_tests-19g4t0l3lk7tj\s-hnpyg9fw8o-1qr4ajj-working`
+
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\matrust_studio-1vhi7cda5h653\s-hnpyg9jeq9-0ojt9f0-working`
+
+warning: `mlapp-render` (lib test) generated 1 warning
+warning: `rustlab-stdlib` (test "extended_capabilities_tests") generated 1 warning
+warning: `rustlab-stdlib` (test "g01_verify_tests") generated 1 warning
+warning: `rustlab-cli` (example "add_probe") generated 1 warning
+warning: `matrust_studio` (lib test) generated 1 warning
+warning: `rustlab-stdlib` (test "stdlib_a1_tests") generated 1 warning
+warning: `rustlab-stdlib` (test "stdlib_tests") generated 1 warning
+warning: `rustlab-stdlib` (test "stdlib_a2_tests") generated 1 warning
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2m 11s
+     Running unittests src\lib.rs (target\debug\deps\matrust_studio-b77743c12f875e85.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\main.rs (target\debug\deps\matrust_studio-26ad7079f045ddc9.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\desktop_tests.rs (target\debug\deps\desktop_tests-b5be5dc29c937116.exe)
+
+running 14 tests
+test test_code_folding_block_detection ... ok
+test test_dock_tree_move_panel_and_tab_operations ... ok
+test test_dock_tree_presets_and_json_persistence ... ok
+test test_desktop_session_numerical_methods_and_data ... ok
+test test_session_basic_arithmetic_and_matrices ... ok
+test test_session_cancellation_flag ... ok
+test test_desktop_session_simulation_and_robotics ... ok
+test test_session_command_window_disp ... ok
+test test_session_plotting_builtins_and_state ... ok
+test test_session_csv_import ... ok
+test test_breakpoint_execution_pause_inspect_and_continue ... ok
+test test_breakpoint_execution_stop ... ok
+test test_worker_client_async_execution ... ok
+test test_worker_panic_recovery_and_session_reset ... ok
+
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s
+
+     Running unittests src\main.rs (target\debug\deps\mlapp_cli-38df2d0a9b2ae812.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\lib.rs (target\debug\deps\mlapp_container-38d6a654017441b9.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\container_tests.rs (target\debug\deps\container_tests-01f6820c6417128e.exe)
+
+running 6 tests
+test test_zip_slip_protection ... ok
+test test_file_count_limit ... ok
+test test_decompressed_bytes_limit_with_forged_header ... ok
+test test_zip_bomb_protection ... ok
+test test_inspect_mlappinstall_manifest ... ok
+test test_inspect_mlapp_structure ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests\fixture_tests.rs (target\debug\deps\fixture_tests-1ba95ea5597a764a.exe)
+
+running 3 tests
+test test_hazardous_fixture_compatibility ... ok
+test test_fixtures_generation_and_inspection ... ok
+test test_r2018b_release_format ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running unittests src\lib.rs (target\debug\deps\mlapp_ffi-58a70310b10dbe6f.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\ffi_tests.rs (target\debug\deps\ffi_tests-3c168b39296ce217.exe)
+
+running 2 tests
+test test_c_abi_null_and_invalid_inputs ... ok
+test test_c_abi_package_and_session_flow ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+     Running unittests src\lib.rs (target\debug\deps\mlapp_host-66ef43f13438f43d.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\host_tests.rs (target\debug\deps\host_tests-1fb4f72fb7858fba.exe)
+
+running 2 tests
+test test_end_to_end_callback_with_advanced_matlab_features ... ok
+test test_app_host_session_lifecycle ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
+
+     Running unittests src\lib.rs (target\debug\deps\mlapp_lang-4c322921a006cc34.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\lang_tests.rs (target\debug\deps\lang_tests-435265b881fdeb7d.exe)
+
+running 4 tests
+test test_extract_code_from_xml ... ok
+test test_static_compatibility_scanner ... ok
+test test_parse_app_classdef_structure ... ok
+test test_check_compat_deterministic_snapshot ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.18s
+
+     Running unittests src\lib.rs (target\debug\deps\mlapp_plot-e980a2379ce0ac0a.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\plot_tests.rs (target\debug\deps\plot_tests-0496db1783dfd1e9.exe)
+
+running 1 test
+test test_axes_model_plotting_and_svg_export ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\lib.rs (target\debug\deps\mlapp_render-7341522dc3206b2e.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\render_tests.rs (target\debug\deps\render_tests-ff78e62cc0be4709.exe)
+
+running 1 test
+test test_headless_renderer_tree_walk_and_event_dispatch ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\lib.rs (target\debug\deps\mlapp_runtime-1dcf5557ca5f7ce6.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\runtime_tests.rs (target\debug\deps\runtime_tests-a5cb5369a104758f.exe)
+
+running 6 tests
+test test_unsupported_function_diagnostics ... ok
+test test_cooperative_cancellation ... ok
+test test_app_runtime_lifecycle_and_mutations ... ok
+test test_runtime_permission_enforcement ... ok
+test test_comprehensive_runtime_sandbox_policies ... ok
+test test_cancellation_while_loop_and_long_builtin ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s
+
+     Running unittests src\lib.rs (target\debug\deps\mlapp_ui-b9c8d30155e700e1.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\ui_tests.rs (target\debug\deps\ui_tests-6f59103aceaebed8.exe)
+
+running 4 tests
+test test_coordinate_transformation_bidirectional ... ok
+test test_top_level_figure_geometry_exact_values ... ok
+test test_parse_app_xml_component_tree ... ok
+test test_xml_nesting_depth_limit ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running unittests src\lib.rs (target\debug\deps\rustlab_cli-3b63e682b639634a.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\main.rs (target\debug\deps\rustlab-a6b1e45291f89bdb.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\cli_tests.rs (target\debug\deps\cli_tests-58cdd6db3e83b496.exe)
+
+running 4 tests
+test test_incomplete_input_detection ... ok
+test test_semicolon_output_suppression ... ok
+test test_diagnostic_error_formatting ... ok
+test test_g01_singular_inv_warns_on_stderr_and_prints_inf ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.37s
+
+     Running tests\diagnostics_tests.rs (target\debug\deps\diagnostics_tests-ee360799a68b76c2.exe)
+
+running 12 tests
+test parse_error_keeps_location_and_caret ... ok
+test rendered_line_text_never_contains_carriage_return ... ok
+test span_to_location_crlf_bookkeeping ... ok
+test span_to_location_edge_cases ... ok
+test binary_op_error_underlines_whole_expression_lf ... ok
+test span_to_location_lf_bookkeeping ... ok
+test binary_op_caret_lands_on_spanning_line_lf ... ok
+test span_to_location_single_crlf_line ... ok
+test binary_op_caret_is_crlf_insensitive ... ok
+test undefined_symbol_caret_lands_on_symbol_line_lf ... ok
+test undefined_symbol_caret_survives_two_crlf_lines ... ok
+test undefined_symbol_gets_a_single_caret_lf ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\lib.rs (target\debug\deps\rustlab_data-7ed0430400655777.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\data_tests.rs (target\debug\deps\data_tests-626e20e2de56538d.exe)
+
+running 37 tests
+test test_b2_corrcoef_diagonal_one_property ... ok
+test test_b2_cov_and_corrcoef ... ok
+test test_b2_cov_and_corrcoef_edge_cases ... ok
+test test_b2_cummax_and_cummin ... ok
+test test_b2_csv_ragged_row_error_with_line_number ... ok
+test test_b2_csv_large_exponent_bit_exact_double_property ... ok
+test test_b2_csv_nan_inf_roundtrip ... ok
+test test_b2_csv_bom_and_crlf_roundtrip ... ok
+test test_b2_cummax_and_cummin_edge_cases ... ok
+test test_b2_display_mixed_integer_decimals_unverified ... ok
+test test_b2_csv_quoted_embedded_newlines_and_delimiters ... ok
+test test_b2_display_scale_factor_vs_enotation_unverified ... ok
+test test_b2_display_sub_01_scalars_unverified ... ok
+test test_b2_histcounts ... ok
+test test_b2_histcounts_edge_cases ... ok
+test test_b2_median_edge_cases ... ok
+test test_b2_csv_empty_trailing_field_and_header_only ... ok
+test test_b2_median_vector_matrix_nd_omitnan ... ok
+test test_b2_mode_edge_cases ... ok
+test test_b2_movmean_and_movmedian ... ok
+test test_b2_movmean_and_movmedian_edge_cases ... ok
+test test_b2_movmean_of_constants_property ... ok
+test test_b2_mode_tiebreak_smallest ... ok
+test test_b2_percentiles_monotone_property ... ok
+test test_b2_prctile_and_quantile_edge_cases ... ok
+test test_b2_prctile_and_quantile_interpolation ... ok
+test test_b2_prctile_matlab_rule_goldens ... ok
+test test_b2_sortrows_and_unique_edge_cases ... ok
+test test_b2_sortrows_and_unique_ia_ic ... ok
+test test_b2_unique_row_orientation ... ok
+test test_b2_var_and_std_edge_cases ... ok
+test test_b2_var_and_std_flags_dims_integer_classes ... ok
+test test_b2_variance_non_negative_property ... ok
+test test_b2_zscore ... ok
+test test_b2_zscore_edge_cases ... ok
+test test_b2_readmatrix_and_writematrix_roundtrip ... ok
+test test_b2_csv_options_delimiter_header_bom_crlf ... ok
+
+test result: ok. 37 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+
+     Running tests\g01_verify_tests.rs (target\debug\deps\g01_verify_tests-ee8d6fe6ebcc31cb.exe)
+
+running 1 test
+test test_g01_rustlab_only_ids_do_not_use_matlab_prefix ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\stats_reference_tests.rs (target\debug\deps\stats_reference_tests-487f11586af5093b.exe)
+
+running 7 tests
+test test_reference_empty_and_len1 ... ok
+test test_reference_window_edges_and_k_equals_len ... ok
+test test_reference_nan_and_inf_windows ... ok
+test test_reference_constant_data ... ok
+test test_reference_offset_1e8_plus_noise ... ok
+test test_reference_drift_over_100k_elements ... ok
+test test_reference_random_data ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running unittests src\lib.rs (target\debug\deps\rustlab_eval-10418d91e8186de9.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\eval_tests.rs (target\debug\deps\eval_tests-86a11055f9965d34.exe)
+
+running 9 tests
+test test_global_scoping ... ok
+test test_array_growth_on_assignment ... ok
+test test_if_elseif_else ... ok
+test test_for_loop_and_column_iteration ... ok
+test test_basic_arithmetic_evaluation ... ok
+test test_indexing_with_end ... ok
+test test_matrix_creation_and_multiplication ... ok
+test test_user_defined_functions_and_multiple_returns ... ok
+test test_while_loop_with_break ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests\milestone_a1_tests.rs (target\debug\deps\milestone_a1_tests-c4dc5f2bc033856d.exe)
+
+running 6 tests
+test test_try_catch_mexception ... ok
+test test_function_handles_and_lexical_closures ... ok
+test test_varargin_varargout_nargin_nargout ... ok
+test test_boolean_mask_indexing_and_assignment ... ok
+test test_nested_end_contexts ... ok
+test test_cellfun_arrayfun_structfun ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running unittests src\lib.rs (target\debug\deps\rustlab_math-d3e4c6689d0e2658.exe)
+
+running 10 tests
+test array::tests::test_dynamic_array_growth ... ok
+test array::tests::test_dense_array_creation_and_indexing ... ok
+test array::tests::test_transpose ... ok
+test broadcast::tests::test_broadcast_iterator_outer_sum ... ok
+test ops::tests::test_colon_range ... ok
+test ops::tests::test_elementwise_binary_with_broadcasting ... ok
+test broadcast::tests::test_broadcast_shapes ... ok
+test ops::tests::test_matmul_2d ... ok
+test shape::tests::test_column_major_strides ... ok
+test shape::tests::test_normalize_shape ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\math_tests.rs (target\debug\deps\math_tests-4073a919d44f36ea.exe)
+
+running 12 tests
+test test_1_based_indexing_column_major ... ok
+test test_broadcasting_elementwise_binary ... ok
+test test_a3_sparse_csc_duplicate_summing_and_algebra ... ok
+test test_a3_mixed_type_rules_and_errors ... ok
+test test_array_growth_on_assignment ... ok
+test test_a3_saturating_integer_arithmetic ... ok
+test test_a3_exact_int64_uint64 ... ok
+test test_colon_range ... ok
+test test_minimum_2d_and_singleton_stripping ... ok
+test test_matrix_multiplication ... ok
+test test_relational_and_logical_operations ... ok
+test test_a3_sparse_memory_efficiency_10000x10000 ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\lib.rs (target\debug\deps\rustlab_matio-d84dced05425a986.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\matio_tests.rs (target\debug\deps\matio_tests-79e2593b6974d914.exe)
+
+running 7 tests
+test test_char_and_logical_roundtrip ... ok
+test test_uncompressed_roundtrip ... ok
+test test_complex_numbers_roundtrip ... ok
+test test_compressed_roundtrip ... ok
+test test_numeric_classes_roundtrip ... ok
+test test_file_save_and_load ... ok
+test test_matio_image_sparse_and_empty_roundtrip ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+
+     Running tests\scipy_mat_tests.rs (target\debug\deps\scipy_mat_tests-0ce695ad929eb604.exe)
+
+running 1 test
+test test_scipy_generated_files_interop ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.36s
+
+     Running unittests src\lib.rs (target\debug\deps\rustlab_parse-394f8b0235e9e874.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\lexer_tests.rs (target\debug\deps\lexer_tests-698c3ef8a97ebd58.exe)
+
+running 4 tests
+test test_char_and_string_literals ... ok
+test test_comments_and_line_continuations ... ok
+test test_numeric_literals ... ok
+test test_transpose_vs_char_vector ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\parser_tests.rs (target\debug\deps\parser_tests-0205ae76a81447a3.exe)
+
+running 10 tests
+test test_colon_range_expressions ... ok
+test test_function_def ... ok
+test test_anonymous_function ... ok
+test test_indexing_and_end ... ok
+test test_multi_assignment ... ok
+test test_matrix_literals_and_whitespace ... ok
+test test_operator_precedence ... ok
+test test_control_flow ... ok
+test test_power_right_associativity ... ok
+test test_parser_nesting_depth_limit ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
+
+     Running unittests src\lib.rs (target\debug\deps\rustlab_stdlib-df46f724aba31832.exe)
+
+running 7 tests
+test linalg::eig_sym::tests::test_eig_sym_known_2x2 ... ok
+test linalg::expm::tests::test_expm_zero_matrix ... ok
+test linalg::eig_sym::tests::test_eig_sym_diagonal ... ok
+test linalg::eig_sym::tests::test_eig_sym_3x3 ... ok
+test linalg::expm::tests::test_expm_diagonal_matrix ... ok
+test linalg::kron::tests::test_kron_2x2 ... ok
+test signal::radix2::tests::test_radix2_roundtrip ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\extended_capabilities_tests.rs (target\debug\deps\extended_capabilities_tests-db8bc51d6074d547.exe)
+
+running 5 tests
+test test_signal_filters_windows_and_xcorr ... ok
+test test_robotics_rotations_and_kinematics ... ok
+test test_machine_learning_fitlm_predict_kmeans ... ok
+test test_image_processing_rgb2gray_and_filters ... ok
+test test_simulation_tf_and_step ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests\g01_verify_tests.rs (target\debug\deps\g01_verify_tests-cfe96ca7a3b3b867.exe)
+
+running 7 tests
+test test_g01_core_omitnan_sum_mean_min_max ... ok
+test test_g01_lu_residuals_random_5x5 ... ok
+test test_g01_mldivide_singular_returns_inf ... ok
+test test_g01_display_scale_factor_0_001_1000_golden_unverified ... ok
+test test_g01_display_extreme_range_1e_16_1_golden_unverified ... ok
+test test_g01_mask_count_and_size_identifiers_settled ... ok
+test test_g01_lu_residuals_random_50x50 ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests\numerical_tests.rs (target\debug\deps\numerical_tests-87702889f2a5e1f4.exe)
+
+running 6 tests
+test test_polyval_scalar_and_vector ... ok
+test test_interp1_linear_and_nearest ... ok
+test test_roots_linear_and_quadratic ... ok
+test test_trapz_and_cumtrapz ... ok
+test test_gradient ... ok
+test test_polyfit_linear_and_quadratic ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests\regression_a312_tests.rs (target\debug\deps\regression_a312_tests-a287badb8a1d4665.exe)
+
+running 16 tests
+test binary_expression_span_covers_full_expression ... ok
+test matrix_display_common_scale_boundary_unverified ... ok
+test matrix_display_width_is_uniform_across_rows ... ok
+test mixed_integer_assignment_refuses_inconsistent_class ... ok
+test mixed_integer_class_binary_ops_use_exact_matlab_text ... ok
+test matrix_display_parity_goldens_unverified ... ok
+test reshape_empty_bracket_in_higher_dimension ... ok
+test non_integer_class_display_goldens_unverified ... ok
+test reshape_empty_bracket_autodim_matches_explicit_dims ... ok
+test scalar_display_via_env_matches_output_log ... ok
+test scalar_integer_display_goldens ... ok
+test reshape_invalid_size_arguments_keep_matlab_diagnostics ... ok
+test test_num2str_noninteger_matrix_g_style_unverified ... ok
+test scalar_scientific_display_goldens_unverified ... ok
+test test_scientific_notation_threshold_rule_cited_unverified ... ok
+test every_registered_builtin_has_docs_and_help ... ok
+
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.73s
+
+     Running tests\stdlib_a1_tests.rs (target\debug\deps\stdlib_a1_tests-42ee99567116a0bf.exe)
+
+running 13 tests
+test test_boolean_mask_shape_rules_and_deletion ... ok
+test test_nd_array_trailing_end_expansion ... ok
+test test_num2str_and_mat2str ... ok
+test test_ieee754_nan_inf_semantics ... ok
+test test_nan_comparison_semantics_regression ... ok
+test test_nested_anonymous_functions_and_closure_handles ... ok
+test test_number_display_format_short_golden ... ok
+test test_diagnostics_error_and_assert ... ok
+test test_sprintf_format_recycling_golden ... ok
+test test_sprintf_fprintf_edge_cases ... ok
+test test_string_library_core ... ok
+test test_path_which_exist_and_scripts ... ok
+test test_regexp_and_regexprep ... ok
+
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s
+
+     Running tests\stdlib_a2_tests.rs (target\debug\deps\stdlib_a2_tests-522f980c02b34fed.exe)
+
+running 21 tests
+test test_a2_expm_defective_matrix ... ok
+test test_a2_both_native_and_faer_eig_paths_match ... ok
+test test_a2_eigenvector_tie_break_sign_invariant ... ok
+test test_a2_edge_cases_empty_1x1_singular_nan_nonsquare ... ok
+test test_a2_expm_nilpotent_matrix ... ok
+test test_a2_2d_transforms_fft2_ifft2 ... ok
+test test_a2_expm_rotation_generator ... ok
+test test_a2_expm_large_norm_scaling_squaring ... ok
+test test_a2_golden_eig_rotation_complex_conjugate ... ok
+test test_a2_golden_eig_symmetric_ascending_and_sign_normalized ... ok
+test test_a2_golden_expm_zero_and_diagonal ... ok
+test test_a2_golden_pinv_rank_deficient ... ok
+test test_a2_pinv_moore_penrose_condition ... ok
+test test_a2_pivoted_qr_decomposition ... ok
+test test_a2_pivoted_qr_rank_deficient_matrix ... ok
+test test_a2_golden_svd_rank1 ... ok
+test test_a2_symmetric_eig_routes_to_faer_and_canonicalizes ... ok
+test test_a2_rank_cond_null_orth_kron ... ok
+test test_a2_tolerance_rule_max_mn_eps_sigma1 ... ok
+test test_a2_property_av_equals_vd_and_usvt_equals_a ... ok
+test test_a2_property_fft_ifft_roundtrip_various_lengths ... ok
+
+test result: ok. 21 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests\stdlib_a3_tests.rs (target\debug\deps\stdlib_a3_tests-12062a64871fb23a.exe)
+
+running 16 tests
+test test_a3_find_variants_and_short_circuit ... ok
+test test_a3_exact_64bit_integers_and_saturation ... ok
+test test_a3_logical_mask_assignment_errors ... ok
+test test_a3_bitwise_operations ... ok
+test test_a3_nd_deletion_3d_and_growth ... ok
+test test_a3_mixed_type_rules_and_errors ... ok
+test test_a3_nd_reductions_and_integer_preservation ... ok
+test test_a3_class_predicates_and_limits ... ok
+test test_a3_nd_sort_cumsum_prod_and_broadcast ... ok
+test test_a3_nd_operations_cat_permute_meshgrid_reshape ... ok
+test test_a3_reshape_empty_placeholder_and_negative_error ... ok
+test test_a3_nd_slicing_assignment_and_deletion ... ok
+test test_a3_integer_types_and_saturating_arithmetic ... ok
+test test_a3_sparse_parity_and_residual ... ok
+test test_a3_sparse_memory_efficiency ... ok
+test test_a3_sparse_csc_matrices_and_algebra ... ok
+
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+     Running tests\stdlib_tests.rs (target\debug\deps\stdlib_tests-2ada327fbabf5c08.exe)
+
+running 13 tests
+test test_b2_inv_and_mldivide_singular_matrix_returns_inf ... ok
+test test_multiple_return_values ... ok
+test test_cell_arrays ... ok
+test test_elementwise_elementary_math ... ok
+test test_linear_algebra_and_system_solve ... ok
+test test_reductions_and_statistics ... ok
+test test_array_generators ... ok
+test test_search_and_sort ... ok
+test test_signal_and_fft ... ok
+test test_strings_and_chars ... ok
+test test_shape_and_inspection ... ok
+test test_struct_arrays ... ok
+test test_matio_builtin_load_save ... ok
+
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+     Running tests\table_tests.rs (target\debug\deps\table_tests-140b1559a07227fd.exe)
+
+running 3 tests
+test test_readtable_and_dot_indexing ... ok
+test test_head_and_tail_table ... ok
+test test_summary_and_writetable_roundtrip ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+   Doc-tests matrust_studio
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests mlapp_container
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests mlapp_ffi
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests mlapp_host
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests mlapp_lang
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests mlapp_plot
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests mlapp_render
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests mlapp_runtime
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests mlapp_ui
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests rustlab_cli
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests rustlab_data
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests rustlab_eval
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests rustlab_math
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests rustlab_matio
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests rustlab_parse
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests rustlab_stdlib
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

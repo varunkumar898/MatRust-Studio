@@ -8,16 +8,25 @@ members = [
     "crates/rustlab-matio",
     "crates/rustlab-data",
     "crates/rustlab-cli",
+    "crates/mlapp-container",
+    "crates/mlapp-cli",
+    "crates/mlapp-ui",
+    "crates/mlapp-lang",
+    "crates/mlapp-runtime",
+    "crates/mlapp-plot",
+    "crates/mlapp-host",
+    "crates/mlapp-render",
+    "crates/mlapp-ffi",
     "apps/desktop",
 ]
 
 [profile.release]
-# Standalone numerical engine binary uses panic = "abort" to eliminate
+# Standalone numerical engine binary uses panic = "unwind" to eliminate
 # landing pad tables and EH frames, optimizing binary size and vector registers.
 opt-level = 3
 lto = "fat"
 codegen-units = 1
-panic = "abort"
+panic = "unwind"
 
 # Benchmarks inherit optimized release codegen settings.
 [profile.bench]

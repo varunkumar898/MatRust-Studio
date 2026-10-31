@@ -633,23 +633,10 @@ fn register_app_builtins(interp: &mut Interpreter, app_handle: &AppHandle) {
 
 /// Dispatches an unsupported function to the optional GNU Octave bridge if enabled.
 pub fn call_octave_bridge(func_name: &str, _args: &[Value]) -> Result<Vec<Value>, RuntimeError> {
-    #[cfg(feature = "octave-bridge")]
-    {
-        // Spawns `octave-cli` subprocess and marshals arguments
-        Err(RuntimeError::UnsupportedFunction {
-            name: func_name.to_string(),
-            recommendation:
-                "Octave bridge is enabled but external octave-cli was not detected on PATH."
-                    .to_string(),
-        })
-    }
-    #[cfg(not(feature = "octave-bridge"))]
-    {
-        Err(RuntimeError::UnsupportedFunction {
-            name: func_name.to_string(),
-            recommendation: format!(
-                "Function '{func_name}' is not currently implemented in the native runtime."
-            ),
-        })
-    }
+    Err(RuntimeError::UnsupportedFunction {
+        name: func_name.to_string(),
+        recommendation: format!(
+            "Function '{func_name}' is not currently implemented in the native runtime."
+        ),
+    })
 }

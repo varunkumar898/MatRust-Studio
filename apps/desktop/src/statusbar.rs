@@ -1,70 +1,93 @@
-//! Bottom status bar: execution state, active file, working directory,
-//! cursor position, last run duration, theme indicator.
+//! Bottom status bar displaying engine status, cursor location, and working directory.
 
-use std::time::Duration;
+use crate::theme::Theme;
+use egui::Ui;
+use std::path::PathBuf;
+use std::time::Instant;
 
-use crate::theme::{self, ThemeKind};
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum RunState {
+#[derive(Clone, Debug)]
+pub enum EngineStatus {
     Ready,
-    Running,
-    Error,
+    Running(Instant),
+    Paused(usize),
+    Error(String),
 }
 
-impl Default for RunState {
-    fn default() -> Self {
-        RunState::Ready
-    }
-}
-
-impl RunState {
-    fn dot_color(&self, kind: ThemeKind) -> egui::Color32 {
-        match self {
-            RunState::Ready => theme::success_color(kind),
-            RunState::Running => theme::accent(kind),
-            RunState::Error => theme::error_color(kind),
-        }
-    }
-
-    fn label(&self) -> &'static str {
-        match self {
-            RunState::Ready => "Ready",
-            RunState::Running => "Running…",
-            RunState::Error => "Error",
-        }
-    }
-}
-
-#[derive(Debug, Default)]
-pub struct StatusLine {
-    pub run_state: RunState,
-    pub active_file: Option<String>,
-    pub modified: bool,
-    pub working_dir: String,
+pub struct StatusBar {
+    pub status: EngineStatus,
+    pub active_file: Option<PathBuf>,
     pub cursor_line: usize,
     pub cursor_col: usize,
-    pub last_duration: Option<Duration>,
-    pub theme_name: &'static str,
+    pub working_dir: PathBuf,
 }
 
-pub fn show(ui: &mut egui::Ui, s: &StatusLine, kind: ThemeKind) {
-    ui.spacing_mut().item_spacing.x = 10.0;
-    ui.horizontal(|ui| {
-        let (dot_rect, _) = ui.allocate_exact_size(egui::vec2(9.0, 9.0), egui::Sense::hover());
-        ui.painter()
-            .rect_filled(dot_rect, 4.5, s.run_state.dot_color(kind));
-        ui.weak(s.run_state.label());
-        ui.weak(s.working_dir.clone());
-        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-            ui.weak(s.theme_name);
-            if let Some(d) = s.last_duration {
-                ui.weak(format!("last run {:.1} ms", d.as_secs_f64() * 1000.0));
+impl Default for StatusBar {
+    fn default() -> Self {
+        Self {
+            status: EngineStatus::Ready,
+            active_file: None,
+            cursor_line: 1,
+            cursor_col: 1,
+            working_dir: std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")),
+        }
+    }
+}
+
+impl StatusBar {
+    pub fn show(&self, ui: &mut Ui, theme: &Theme) {
+        ui.horizontal(|ui| {
+            ui.spacing_mut().item_spacing.x = 16.0;
+
+            // Engine status indicator
+            match &self.status {
+                EngineStatus::Ready => {
+                    ui.colored_label(theme.success, "● Ready");
+                }
+                EngineStatus::Running(start) => {
+                    let elapsed = start.elapsed().as_secs_f32();
+                    ui.colored_label(theme.warning, format!("⏳ Busy ({elapsed:.1}s)"));
+                }
+                EngineStatus::Paused(line) => {
+                    ui.colored_label(theme.accent, format!("⏸ Paused (Line {line})"));
+                }
+                EngineStatus::Error(err) => {
+                    let short_err = if err.len() > 40 { &err[..37] } else { err };
+                    ui.colored_label(theme.error, format!("✕ Error: {short_err}"));
+                }
             }
-            ui.weak(format!("Ln {}, Col {}", s.cursor_line, s.cursor_col));
-            let file_prefix = if s.modified { "* " } else { "" };
-            let file = s.active_file.as_deref().unwrap_or("no file");
-            ui.weak(format!("{}{}", file_prefix, file));
+
+            ui.separator();
+
+            // Working directory
+            let dir_display = self
+                .working_dir
+                .file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or(self.working_dir.to_str().unwrap_or("."));
+            ui.label(format!("📁 {}", dir_display));
+
+            ui.separator();
+
+            // Active file
+            if let Some(ref path) = self.active_file {
+                let name = path
+                    .file_name()
+                    .and_then(|n| n.to_str())
+                    .unwrap_or("Untitled.m");
+                ui.label(format!("📄 {name}"));
+            } else {
+                ui.label("📄 No active file");
+            }
+
+            // Right-aligned cursor position and theme
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                ui.label(match theme.mode {
+                    crate::theme::ThemeMode::Dark => "🌙 Dark",
+                    crate::theme::ThemeMode::Light => "☀️ Light",
+                });
+                ui.separator();
+                ui.label(format!("Ln {}, Col {}", self.cursor_line, self.cursor_col));
+            });
         });
-    });
+    }
 }

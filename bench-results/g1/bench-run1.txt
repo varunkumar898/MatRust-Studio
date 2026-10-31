@@ -1,0 +1,71 @@
+﻿
+===============================================================
+              RustLab Numerical Performance Suite              
+===============================================================
+
+--- 1. Dense Matrix Multiplication (2D Gemm) ---
+Size         Samples         Median Time (ms)   Throughput (GFLOPS)
+--------------------------------------------------------------
+  Backend: matrixmultiply::dgemm (single-threaded; no thread pool). Host available_parallelism=Ok(8)
+64x64        20 (┬▒0.003)     0.047              11.08          
+128x128      20 (┬▒0.145)     0.331              12.68          
+256x256      20 (┬▒1.562)     1.667              20.13          
+384x384      20 (┬▒1.441)     4.461              25.39          
+
+--- 2. Linear System Solver (A \ b with LU / Gaussian Elim) ---
+Size         Samples            Median Time (ms)  
+--------------------------------------------------
+50x50        20 (┬▒0.000)        0.027             
+100x100      20 (┬▒0.059)        0.245             
+200x200      20 (┬▒0.126)        1.294             
+
+--- 3. 1D FFT Scaling Across Problem Sizes (RustFFT Backend) ---
+Points       Samples            Median Time (┬╡s)  
+--------------------------------------------------
+1024         20 (┬▒4.20)         29.90             
+4096         20 (┬▒83.40)        283.30            
+16384        20 (┬▒328.05)       1192.10           
+65536        20 (┬▒728.90)       4596.70           
+
+--- 4. Elementwise & Broadcasting Operations (1,000,000 Elements) ---
+Operation            Samples            Median Time (ms)   Throughput (MEl/s)
+----------------------------------------------------------------------------
+A + B                30 (┬▒0.520)        3.303              302.7               [min: 3.049 ms, max: 4.089 ms]
+A .* B               20 (┬▒0.406)        3.293              303.6             
+sin(A)               20 (┬▒0.774)        18.660             53.6              
+
+--- 5. Symmetric Eigenvalue: Native Householder+QL vs Faer Self-Adjoint ---
+Size       Samples      Native QL (ms)         Faer Self-Adjoint (ms)
+--------------------------------------------------------------------
+30x30      20           0.142                  0.069                 
+60x60      20           0.735                  0.359                 
+100x100    20           4.718                  1.558                 
+
+--- 6. Architectural FFT Comparison (RustFFT vs Radix-2 Ref vs Naive O(N^2)) ---
+Length (N)      RustFFT (┬╡s)       Radix-2 Ref (┬╡s)   Naive O(N^2) (┬╡s) 
+------------------------------------------------------------------------
+1024 (pow2)     109.8              345.2              32029.3           
+1000 (non-pow2) 84.7               N/A (non-pow2)     22669.4           
+1009 (prime)    164.1              N/A (non-pow2)     25960.9           
+65536 (pow2)    4273.9             23911.0            Omitted (>10^8 ops)
+
+--- 7. Sparse vs Dense Scaling (N = 1,000, Density 1%) ---
+Operation            Sparse Time (ms)   Dense Time (ms)    Dense/Sparse      
+----------------------------------------------------------------------------
+Matvec (S * b)       0.016              5.262              326.83            x
+Matrix Add (S + S)   0.063              4.264              67.58             x
+
+--- 8. Milestone B2.1: 1,000,000-Element Statistics & CSV Matrix I/O ---
+Benchmark                 Median (ms)        Spread (ms)       
+-----------------------------------------------------------------
+movmean(1M, 3)            16.739             4.795             
+cummax(1M)                11.556             3.266             
+zscore(1M)                9.942              0.538             
+writematrix(1M floats)    262.188            81.300            
+readmatrix(1M floats)     136.510            31.570            
+writematrix(1M rows)      130.493            10.243            
+readmatrix(1M rows)       212.050            41.364            
+
+
+All benchmarks completed successfully.
+===============================================================

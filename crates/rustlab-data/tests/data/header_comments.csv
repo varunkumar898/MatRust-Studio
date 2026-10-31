@@ -1,0 +1,5 @@
+# Simulation Output Data
+# Time (s), Voltage (V), Current (A)
+0.0,12.5,0.1
+0.5,12.4,0.15
+1.0,12.2,0.22

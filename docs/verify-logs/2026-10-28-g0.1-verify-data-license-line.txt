@@ -1,0 +1,19 @@
+commit 95dcbca241e22c94d23cc69401180c5fb9284cbc
+Author: RustLab Architect <architect@rustlab.local>
+Date:   Mon Oct 26 18:11:59 2026 +0530
+
+    feat(milestone-g0.1): review closeout, owed items, rea r-check, and evidence verification
+
+diff --git a/crates/rustlab-data/Cargo.toml b/crates/rustlab-data/Cargo.toml
+index e773ddc..09fff8d 100644
+--- a/crates/rustlab-data/Cargo.toml
++++ b/crates/rustlab-data/Cargo.toml
+@@ -2,6 +2,8 @@
+ name = "rustlab-data"
+ version = "0.1.0"
+ edition = "2021"
++description = "Summary statistics, windowing, rankings, and CSV matrix I/O for RustLab"
++license = "MIT OR Apache-2.0"
+ 
+ [dependencies]
+ rustlab-parse = { path = "../rustlab-parse" }

@@ -1,23 +1,38 @@
 [workspace]
-members = [
-    "crates/diagnostics",
-    "crates/syntax",
-    "crates/values",
-    "crates/linalg",
-    "crates/runtime",
-    "apps/cli",
-    "apps/desktop",
-    "tests/language",
-    "tests/matrices",
-    "tests/compatibility",
-]
 resolver = "2"
+members = [
+    "crates/rustlab-parse",
+    "crates/rustlab-math",
+    "crates/rustlab-eval",
+    "crates/rustlab-stdlib",
+    "crates/rustlab-matio",
+    "crates/rustlab-data",
+    "crates/rustlab-cli",
+    "crates/mlapp-container",
+    "crates/mlapp-cli",
+    "crates/mlapp-ui",
+    "crates/mlapp-lang",
+    "crates/mlapp-runtime",
+    "crates/mlapp-plot",
+    "crates/mlapp-host",
+    "crates/mlapp-render",
+    "crates/mlapp-ffi",
+    "apps/desktop",
+]
 
 [workspace.package]
-version = "0.1.0"
+rust-version = "1.80.0"
 edition = "2021"
-authors = ["Cherry <cherry@local>"]
 license = "MIT OR Apache-2.0"
 
-[workspace.dependencies]
-thiserror = "1.0"
+[profile.release]
+# Standalone numerical engine binary uses panic = "unwind" to eliminate
+# landing pad tables and EH frames, optimizing binary size and vector registers.
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+panic = "unwind"
+
+# Benchmarks inherit optimized release codegen settings.
+[profile.bench]
+inherits = "release"

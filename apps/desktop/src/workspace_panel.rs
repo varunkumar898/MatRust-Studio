@@ -1,298 +1,161 @@
-//! Workspace panel + variable inspector: live view of the interpreter
-//! environment. Data comes from `variable_rows()` on the environment
-//! snapshot; the inspector reads actual variable values.
+//! Workspace variable browser and detailed matrix inspector.
 
-use egui::Color32;
+use crate::execution::VariableRow;
+use crate::theme::Theme;
+use egui::{RichText, ScrollArea, Ui, Window};
 
-use matlab_runtime::VarRow;
-use matlab_values::{ComplexDenseMatrix, DenseMatrix, Value};
-
-use crate::theme::{accent, error_color, text_color, text_color_faint, ThemeKind};
-
-#[derive(Debug, Default)]
-pub struct WorkspaceState {
-    pub rows: Vec<VarRow>,
-    pub selected: Option<String>,
-    /// Name of the variable shown in the inspector window (if any).
-    pub inspector: Option<String>,
+#[derive(Default)]
+pub struct WorkspacePanel {
+    pub search_query: String,
+    pub selected_variable: Option<VariableRow>,
+    pub inspector_open: bool,
 }
 
-impl WorkspaceState {
-    pub fn update_from(&mut self, rows: Vec<VarRow>) {
-        self.rows = rows;
-        if let Some(sel) = &self.selected {
-            if !self.rows.iter().any(|r| &r.name == sel) {
-                self.selected = None;
-            }
-        }
-        if let Some(ins) = &self.inspector {
-            if !self.rows.iter().any(|r| &r.name == ins) {
-                self.inspector = None;
-            }
-        }
-    }
-}
-
-pub enum WorkspaceAction {
-    None,
-    ClearWorkspace,
-}
-
-/// Header row: title, count, and actions. Shown above the listing.
-pub fn show_header(
-    ui: &mut egui::Ui,
-    state: &mut WorkspaceState,
-    _kind: ThemeKind,
-) -> WorkspaceAction {
-    let mut action = WorkspaceAction::None;
-    ui.horizontal(|ui| {
-        ui.label(egui::RichText::new("Workspace").strong());
-        ui.weak(if state.rows.is_empty() {
-            String::new()
-        } else {
-            format!("{}", state.rows.len())
-        });
-        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-            if ui
-                .add(egui::Button::new("Clear").small())
-                .on_hover_text("clear — remove all variables")
-                .clicked()
-            {
-                action = WorkspaceAction::ClearWorkspace;
-            }
-            let enabled = state.selected.is_some();
-            let inspect = ui
-                .add_enabled(enabled, egui::Button::new("Inspect…").small())
-                .on_hover_text(if enabled {
-                    "Open the variable viewer for the selected variable"
-                } else {
-                    "Select a variable first"
+impl WorkspacePanel {
+    pub fn show(
+        &mut self,
+        ui: &mut Ui,
+        theme: &Theme,
+        variables: &[VariableRow],
+        on_clear: &mut bool,
+        on_refresh: &mut bool,
+    ) {
+        ui.vertical(|ui| {
+            // Header toolbar
+            ui.horizontal(|ui| {
+                ui.heading("Workspace");
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    if ui
+                        .button("🗑 Clear")
+                        .on_hover_text("Clear workspace variables (clear)")
+                        .clicked()
+                    {
+                        *on_clear = true;
+                    }
+                    if ui
+                        .button("🔄")
+                        .on_hover_text("Refresh variable list")
+                        .clicked()
+                    {
+                        *on_refresh = true;
+                    }
                 });
-            if enabled && inspect.clicked() {
-                state.inspector = state.selected.clone();
-            }
-        });
-    });
-    action
-}
+            });
 
-/// Rows only (no header). The caller supplies the scroll container; nothing
-/// after the listing, so the panel content always fits.
-pub fn show_body(ui: &mut egui::Ui, state: &mut WorkspaceState, kind: ThemeKind) -> Option<String> {
-    if state.rows.is_empty() {
-        ui.weak("No variables. Run a script or type assignments.");
-        return None;
-    }
+            ui.add_space(4.0);
 
-    let mut opened: Option<String> = None;
-    egui::Grid::new("workspace_table")
-        .num_columns(4)
-        .spacing([6.0, 2.0])
-        .striped(true)
-        .show(ui, |ui| {
-            ui.strong("Name");
-            ui.strong("Value");
-            ui.strong("Size");
-            ui.strong("Type");
-            ui.end_row();
-            for row in &state.rows {
-                let is_selected = state.selected.as_deref() == Some(row.name.as_str());
-                let b = egui::Button::new(egui::RichText::new(row.name.clone()).monospace().color(
-                    if is_selected {
-                        text_color(kind)
+            // Filter search box
+            ui.horizontal(|ui| {
+                ui.label("🔍");
+                ui.text_edit_singleline(&mut self.search_query);
+                if !self.search_query.is_empty() && ui.small_button("✕").clicked() {
+                    self.search_query.clear();
+                }
+            });
+
+            ui.separator();
+
+            // Variable table headers
+            ui.horizontal(|ui| {
+                ui.label(RichText::new("Name").strong().color(theme.text_secondary));
+                ui.separator();
+                ui.label(RichText::new("Value").strong().color(theme.text_secondary));
+                ui.separator();
+                ui.label(RichText::new("Size").strong().color(theme.text_secondary));
+                ui.separator();
+                ui.label(RichText::new("Class").strong().color(theme.text_secondary));
+            });
+            ui.separator();
+
+            let query = self.search_query.to_lowercase();
+            let filtered: Vec<&VariableRow> = variables
+                .iter()
+                .filter(|v| query.is_empty() || v.name.to_lowercase().contains(&query))
+                .collect();
+
+            if filtered.is_empty() {
+                ui.centered_and_justified(|ui| {
+                    if variables.is_empty() {
+                        ui.label(
+                            RichText::new("No variables in workspace")
+                                .italics()
+                                .color(theme.text_secondary),
+                        );
                     } else {
-                        text_color_faint(kind)
-                    },
-                ))
-                .fill(if is_selected {
-                    crate::theme::tint(accent(kind), 0.45)
-                } else {
-                    Color32::TRANSPARENT
-                });
-                let resp = ui.add(b);
-                if resp.clicked() {
-                    state.selected = Some(row.name.clone());
-                }
-                if resp.double_clicked() {
-                    state.selected = Some(row.name.clone());
-                    opened = Some(row.name.clone());
-                }
-                let value_color = if state.selected.as_deref() == Some(row.name.as_str()) {
-                    text_color(kind)
-                } else {
-                    text_color_faint(kind)
-                };
-                ui.monospace(egui::RichText::new(shorten(&row.preview, 22)).color(value_color));
-                ui.weak(if row.rows == 1 && row.cols == 1 {
-                    "1x1".to_string()
-                } else {
-                    format!("{}x{}", row.rows, row.cols)
-                });
-                ui.weak(row.kind.clone());
-                ui.end_row();
-            }
-        });
-    opened
-}
-
-fn shorten(s: &str, max_chars: usize) -> String {
-    if s.chars().count() <= max_chars {
-        s.to_string()
-    } else {
-        let truncated: String = s.chars().take(max_chars).collect();
-        format!("{}…", truncated)
-    }
-}
-
-/// Inspector: grid of a single variable's contents.
-pub fn show_inspector(ui: &mut egui::Ui, name: &str, value: Option<&Value>, kind: ThemeKind) {
-    egui::Window::new(format!("Variable viewer — {}", name))
-        .id(egui::Id::unique(("var_inspector", name.to_string())))
-        .resizable(true)
-        .default_width(560.0)
-        .show(ui.ctx(), |ui| match value {
-            None => {
-                ui.label(format!("Variable '{}' no longer exists.", name));
-            }
-            Some(Value::Matrix(m)) => matrix_grid(ui, m, kind),
-            Some(Value::ComplexMatrix(c)) => complex_matrix_grid(ui, c, kind),
-            Some(Value::String(s)) => {
-                ui.monospace(format!("'{}'", s));
-                ui.weak(format!("char ({})", s.chars().count()));
-            }
-            Some(Value::Boolean(b)) => {
-                ui.monospace(if *b { "1" } else { "0" });
-                ui.weak("logical");
-            }
-        });
-}
-
-const MAX_ROWS: usize = 200;
-const MAX_COLS: usize = 60;
-
-fn matrix_grid(ui: &mut egui::Ui, m: &DenseMatrix, kind: ThemeKind) {
-    ui.label(format!(
-        "double matrix, {}x{} ({} values)",
-        m.rows,
-        m.cols,
-        m.data.len()
-    ));
-    if m.data.is_empty() {
-        ui.weak("[] (empty)");
-        return;
-    }
-    if m.is_scalar() {
-        ui.monospace(m.format_matlab());
-        return;
-    }
-    let disp_rows = m.rows.min(MAX_ROWS);
-    let disp_cols = m.cols.min(MAX_COLS);
-    egui::ScrollArea::both().show(ui, |ui| {
-        let grid_id = egui::Id::unique(("var_grid", m.rows, m.cols));
-        egui::Grid::new(grid_id)
-            .striped(true)
-            .spacing([10.0, 2.0])
-            .show(ui, |grid| {
-                grid.weak("   ");
-                for c in 0..disp_cols {
-                    grid.weak(format!("{}", c + 1));
-                }
-                grid.end_row();
-                for r in 0..disp_rows {
-                    grid.weak(format!("{}", r + 1));
-                    for c in 0..disp_cols {
-                        let v = m.data[r * m.cols + c];
-                        let cell = cell_text(v);
-                        grid.monospace(egui::RichText::new(cell).color(cell_color(v, kind)));
+                        ui.label(
+                            RichText::new("No matching variables")
+                                .italics()
+                                .color(theme.text_secondary),
+                        );
                     }
-                    grid.end_row();
-                }
-            });
-        if m.rows > disp_rows || m.cols > disp_cols {
-            ui.weak(format!(
-                "… showing {}x{} of {}x{} (scroll or increase view limits later)",
-                disp_rows, disp_cols, m.rows, m.cols
-            ));
-        }
-    });
-}
+                });
+                return;
+            }
 
-fn complex_matrix_grid(ui: &mut egui::Ui, c: &ComplexDenseMatrix, kind: ThemeKind) {
-    ui.label(format!(
-        "complex matrix, {}x{} ({} values)",
-        c.rows,
-        c.cols,
-        c.data.len()
-    ));
-    if c.data.is_empty() {
-        ui.weak("[] (empty)");
-        return;
-    }
-    if c.is_scalar() {
-        ui.monospace(c.format_matlab());
-        return;
-    }
-    let disp_rows = c.rows.min(MAX_ROWS);
-    let disp_cols = c.cols.min(MAX_COLS);
-    egui::ScrollArea::both().show(ui, |ui| {
-        let grid_id = egui::Id::unique(("var_grid_complex", c.rows, c.cols));
-        egui::Grid::new(grid_id)
-            .striped(true)
-            .spacing([10.0, 2.0])
-            .show(ui, |grid| {
-                grid.weak("   ");
-                for col in 0..disp_cols {
-                    grid.weak(format!("{}", col + 1));
-                }
-                grid.end_row();
-                for r in 0..disp_rows {
-                    grid.weak(format!("{}", r + 1));
-                    for col in 0..disp_cols {
-                        let z = c.data[r * c.cols + col];
-                        let cell = z.to_string();
-                        let color = if !z.is_finite() {
-                            error_color(kind)
-                        } else if z.is_zero() {
-                            text_color_faint(kind)
-                        } else {
-                            text_color(kind)
-                        };
-                        grid.monospace(egui::RichText::new(cell).color(color));
+            ScrollArea::vertical()
+                .auto_shrink([false, false])
+                .show(ui, |ui| {
+                    for var in filtered {
+                        let is_selected =
+                            self.selected_variable.as_ref().map(|s| &s.name) == Some(&var.name);
+
+                        let row_resp = ui.horizontal(|ui| {
+                            let name_label = RichText::new(&var.name)
+                                .color(if is_selected {
+                                    theme.accent
+                                } else {
+                                    theme.text_primary
+                                })
+                                .strong();
+                            ui.label(name_label);
+
+                            ui.label(RichText::new(&var.preview).color(theme.text_secondary));
+                            ui.label(RichText::new(&var.size_str).color(theme.text_secondary));
+                            ui.label(RichText::new(&var.type_name).color(theme.syn_builtin));
+                        });
+
+                        if row_resp.response.interact(egui::Sense::click()).clicked() {
+                            self.selected_variable = Some(var.clone());
+                        }
+
+                        if row_resp.response.double_clicked() {
+                            self.selected_variable = Some(var.clone());
+                            self.inspector_open = true;
+                        }
                     }
-                    grid.end_row();
-                }
-            });
-        if c.rows > disp_rows || c.cols > disp_cols {
-            ui.weak(format!(
-                "… showing {}x{} of {}x{} (scroll or increase view limits later)",
-                disp_rows, disp_cols, c.rows, c.cols
-            ));
-        }
-    });
-}
-
-fn cell_text(v: f64) -> String {
-    if v.is_nan() {
-        "NaN".to_string()
-    } else if v.is_infinite() {
-        if v > 0.0 {
-            "Inf".to_string()
-        } else {
-            "-Inf".to_string()
-        }
-    } else if v == v.trunc() && v.abs() < 1e15 {
-        format!("{}", v as i64)
-    } else {
-        format!("{}", v)
+                });
+        });
     }
-}
 
-fn cell_color(v: f64, kind: ThemeKind) -> Color32 {
-    if v.is_nan() || v.is_infinite() {
-        error_color(kind)
-    } else if v == 0.0 {
-        text_color_faint(kind)
-    } else {
-        text_color(kind)
+    pub fn show_inspector(&mut self, ctx: &egui::Context, _theme: &Theme) {
+        if !self.inspector_open {
+            return;
+        }
+
+        let mut open = self.inspector_open;
+        if let Some(ref var) = self.selected_variable {
+            Window::new(format!("Variable: {}", var.name))
+                .open(&mut open)
+                .default_size([400.0, 300.0])
+                .show(ctx, |ui| {
+                    ui.horizontal(|ui| {
+                        ui.label(RichText::new("Class:").strong());
+                        ui.label(&var.type_name);
+                        ui.separator();
+                        ui.label(RichText::new("Size:").strong());
+                        ui.label(&var.size_str);
+                        ui.separator();
+                        ui.label(RichText::new("Bytes:").strong());
+                        ui.label(format!("{} B", var.bytes));
+                    });
+                    ui.separator();
+
+                    ui.label(RichText::new("Value Preview:").strong());
+                    ScrollArea::both().show(ui, |ui| {
+                        ui.monospace(&var.preview);
+                    });
+                });
+        }
+        self.inspector_open = open;
     }
 }

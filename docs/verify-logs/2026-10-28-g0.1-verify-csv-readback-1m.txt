@@ -1,0 +1,5 @@
+Command: rustlab.exe -e "x=(1:1000000)'; writematrix(...); Rrows=readmatrix(...); disp(size(Rrows)); disp(Rrows(1)); disp(Rrows(end));"
+cli_output:
+    1000000        1
+    1
+    1000000

@@ -1,0 +1,67 @@
+commit 2b7ea4362f5edd20ca0f1b07c9169dc08ffd4abc
+Author: RustLab Architect <architect@rustlab.local>
+Date:   Sun Oct 25 15:40:43 2026 +0530
+
+    feat(milestone-a3.1.4): complete integrity pass, native jacobi svd, test manifest CI check, error catalog, and b2 design revision
+
+diff --git a/Cargo.toml b/Cargo.toml
+index 2e70898..989c4ae 100644
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -10,16 +10,15 @@ members = [
+ ]
+ 
+ [profile.release]
++# Standalone numerical engine binary uses panic = "abort" to eliminate
++# landing pad tables and EH frames, optimizing binary size and vector registers.
+ opt-level = 3
+ lto = "fat"
+ codegen-units = 1
+ panic = "abort"
+ 
+-# Benchmarks must run under the *same* codegen as the shipped binary. The bench
+-# profile does not inherit user [profile.release] overrides automatically, so it
+-# is pinned explicitly; panic stays unwind because criterion's sampling loop
+-# requires unwinding.
++# Benchmarks inherit optimized release codegen settings.
+ [profile.bench]
+ inherits = "release"
+-panic = "unwind"
++
+ 
+diff --git a/crates/rustlab-cli/Cargo.toml b/crates/rustlab-cli/Cargo.toml
+index 65b0eb2..9fc6d8c 100644
+--- a/crates/rustlab-cli/Cargo.toml
++++ b/crates/rustlab-cli/Cargo.toml
+@@ -3,6 +3,7 @@ name = "rustlab-cli"
+ version = "0.1.0"
+ edition = "2021"
+ description = "Interactive REPL, CLI runner, diagnostic printer, and benchmark suite for RustLab"
++license = "MIT OR Apache-2.0"
+ 
+ [lib]
+ name = "rustlab_cli"
+diff --git a/crates/rustlab-matio/Cargo.toml b/crates/rustlab-matio/Cargo.toml
+index c10f45e..2b4066c 100644
+--- a/crates/rustlab-matio/Cargo.toml
++++ b/crates/rustlab-matio/Cargo.toml
+@@ -3,6 +3,7 @@ name = "rustlab-matio"
+ version = "0.1.0"
+ edition = "2021"
+ description = "Clean-room Level 5 and v7 MAT-file reader and writer for RustLab"
++license = "MIT OR Apache-2.0"
+ 
+ [dependencies]
+ rustlab-math = { path = "../rustlab-math" }
+diff --git a/crates/rustlab-stdlib/Cargo.toml b/crates/rustlab-stdlib/Cargo.toml
+index eba4531..4b73872 100644
+--- a/crates/rustlab-stdlib/Cargo.toml
++++ b/crates/rustlab-stdlib/Cargo.toml
+@@ -3,6 +3,7 @@ name = "rustlab-stdlib"
+ version = "0.1.0"
+ edition = "2021"
+ description = "MATLAB-compatible standard library for RustLab (linear algebra, statistics, transforms, generators)"
++license = "MIT OR Apache-2.0"
+ 
+ [dependencies]
+ rustlab-parse = { path = "../rustlab-parse" }

@@ -1,0 +1,39 @@
+﻿cargo :     Blocking waiting for file lock on build directory
+At line:1 char:1
++ cargo build -p rustlab-cli 2>&1 | Out-File -FilePath .\build_debug.lo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (    Blocking wa...build directory:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+   Compiling rustlab-math v0.1.0 (C:\Users\varun\.antigravity\rustlab\crates\rustlab-math)
+   Compiling nano-gemm-f32 v0.2.1
+   Compiling nano-gemm-c64 v0.2.1
+   Compiling nano-gemm-c32 v0.2.1
+   Compiling regex-automata v0.4.18
+   Compiling clap_builder v4.6.7
+   Compiling radix_trie v0.2.1
+   Compiling clipboard-win v5.4.3
+   Compiling rustlab-matio v0.1.0 (C:\Users\varun\.antigravity\rustlab\crates\rustlab-matio)
+   Compiling rustlab-eval v0.1.0 (C:\Users\varun\.antigravity\rustlab\crates\rustlab-eval)
+   Compiling regex v1.13.1
+   Compiling fd-lock v4.0.4
+   Compiling rustfft v6.4.1
+   Compiling home v0.5.12
+   Compiling log v0.4.34
+   Compiling unicode-segmentation v1.13.3
+   Compiling unicode-width v0.2.2
+   Compiling clap v4.6.7
+   Compiling rustyline v15.0.0
+   Compiling nano-gemm v0.2.2
+   Compiling faer v0.24.4
+   Compiling rustlab-stdlib v0.1.0 (C:\Users\varun\.antigravity\rustlab\crates\rustlab-stdlib)
+error: failed to write 
+`C:\Users\varun\.antigravity\rustlab\target\debug\.fingerprint\rustlab-stdlib-59ed21f4dd7c7f24\invoked.timestamp`
+
+Caused by:
+  The system cannot find the path specified. (os error 3)
+warning: build failed, waiting for other jobs to finish...
+error: failed to write `C:\Users\varun\.antigravity\rustlab\target\debug\.fingerprint\faer-a0b05e26d7a74863\lib-faer`
+
+Caused by:
+  The system cannot find the path specified. (os error 3)

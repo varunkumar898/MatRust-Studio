@@ -1,72 +1,115 @@
-//! User preferences and window-layout persistence (eframe storage).
+//! User preferences, layout presets, and panel visibility states.
 
-use crate::theme::ThemeKind;
-use serde::{Deserialize, Serialize};
+use crate::theme::ThemeMode;
+use std::path::PathBuf;
 
-pub const STORAGE_KEY: &str = "matrust_prefs_v2";
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum LayoutPreset {
+    Standard,
+    EditorFocus,
+    DataAnalysis,
+    Plotting,
+}
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
-pub struct LayoutPrefs {
-    #[serde(default = "yes")]
-    pub show_left: bool,
-    /// Figures panel; hidden by default so an empty panel never reserves
-    /// space. Auto-opens when the session creates a figure.
-    #[serde(default)]
-    pub show_right: bool,
-    #[serde(default = "yes")]
+#[derive(Clone, Debug)]
+pub struct Preferences {
+    pub theme_mode: ThemeMode,
+    pub current_preset: LayoutPreset,
+
+    // Panel Visibilities
+    pub show_current_folder: bool,
+    pub show_editor: bool,
+    pub show_workspace: bool,
     pub show_command_window: bool,
-    /// Editor-focused vs standard preset display density, etc.
-    pub left_width: Option<f32>,
-    pub right_width: Option<f32>,
-    pub command_height: Option<f32>,
-}
+    pub show_figures: bool,
+    pub show_history: bool,
 
-fn yes() -> bool {
-    true
-}
+    // Panel Split Dimensions
+    pub left_panel_width: f32,
+    pub right_panel_width: f32,
+    pub bottom_panel_height: f32,
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Prefs {
-    pub theme: ThemeKind,
+    // Editor Font Size
     pub font_size: f32,
-    pub working_dir: Option<String>,
-    /// Paths of script tabs to reopen (files that still exist).
-    pub open_files: Vec<String>,
-    pub active_file: Option<String>,
-    pub layout: LayoutPrefs,
-    /// Last `n` successfully submitted command-window commands.
-    pub command_history: Vec<String>,
+
+    // Recent Files
+    pub recent_files: Vec<PathBuf>,
 }
 
-impl Default for Prefs {
+impl Default for Preferences {
     fn default() -> Self {
         Self {
-            theme: ThemeKind::Dark,
-            font_size: 13.5,
-            working_dir: None,
-            open_files: Vec::new(),
-            active_file: None,
-            layout: LayoutPrefs {
-                show_left: true,
-                show_right: false,
-                show_command_window: true,
-                left_width: None,
-                right_width: None,
-                command_height: None,
-            },
-            command_history: Vec::new(),
+            theme_mode: ThemeMode::Dark,
+            current_preset: LayoutPreset::Standard,
+
+            show_current_folder: true,
+            show_editor: true,
+            show_workspace: true,
+            show_command_window: true,
+            show_figures: true,
+            show_history: true,
+
+            left_panel_width: 230.0,
+            right_panel_width: 280.0,
+            bottom_panel_height: 220.0,
+
+            font_size: 13.0,
+            recent_files: Vec::new(),
         }
     }
 }
 
-impl Prefs {
-    pub fn load(storage: Option<&dyn eframe::Storage>) -> Self {
-        storage
-            .and_then(|s| eframe::get_value::<Prefs>(s, STORAGE_KEY))
-            .unwrap_or_default()
+impl Preferences {
+    pub fn apply_preset(&mut self, preset: LayoutPreset) {
+        self.current_preset = preset;
+        match preset {
+            LayoutPreset::Standard => {
+                self.show_current_folder = true;
+                self.show_editor = true;
+                self.show_workspace = true;
+                self.show_command_window = true;
+                self.show_figures = true;
+                self.show_history = true;
+                self.left_panel_width = 230.0;
+                self.right_panel_width = 280.0;
+                self.bottom_panel_height = 220.0;
+            }
+            LayoutPreset::EditorFocus => {
+                self.show_current_folder = false;
+                self.show_editor = true;
+                self.show_workspace = false;
+                self.show_command_window = true;
+                self.show_figures = false;
+                self.show_history = false;
+                self.bottom_panel_height = 140.0;
+            }
+            LayoutPreset::DataAnalysis => {
+                self.show_current_folder = true;
+                self.show_editor = false;
+                self.show_workspace = true;
+                self.show_command_window = true;
+                self.show_figures = true;
+                self.show_history = true;
+                self.right_panel_width = 380.0;
+                self.bottom_panel_height = 280.0;
+            }
+            LayoutPreset::Plotting => {
+                self.show_current_folder = false;
+                self.show_editor = true;
+                self.show_workspace = true;
+                self.show_command_window = true;
+                self.show_figures = true;
+                self.show_history = false;
+                self.right_panel_width = 460.0;
+            }
+        }
     }
 
-    pub fn save(&self, storage: &mut dyn eframe::Storage) {
-        eframe::set_value(storage, STORAGE_KEY, self);
+    pub fn add_recent_file(&mut self, path: PathBuf) {
+        self.recent_files.retain(|p| p != &path);
+        self.recent_files.insert(0, path);
+        if self.recent_files.len() > 10 {
+            self.recent_files.truncate(10);
+        }
     }
 }

@@ -1,0 +1,8 @@
+cargo.exe :    Compiling rustlab-cli v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-cli)
+At line:1 char:8
++ $out = & cargo build --release -p rustlab-cli 2>&1 | Out-String; [IO. ...
++        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (   Compiling ru...es\rustlab-cli):String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+    Finished `release` profile [optimized] target(s) in 2m 08s

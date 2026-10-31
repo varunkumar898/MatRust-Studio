@@ -1,0 +1,16 @@
+[package]
+name = "rustlab-data"
+version = "0.1.0"
+edition = "2021"
+description = "Summary statistics, windowing, rankings, and CSV matrix I/O for RustLab"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+rustlab-parse = { path = "../rustlab-parse" }
+rustlab-math = { path = "../rustlab-math" }
+rustlab-eval = { path = "../rustlab-eval" }
+csv = "1.4"
+ryu = "1.0"
+
+[dev-dependencies]
+tempfile = "3.10"

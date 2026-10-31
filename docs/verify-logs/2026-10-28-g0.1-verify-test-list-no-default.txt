@@ -1,0 +1,294 @@
+cargo.exe :     Finished `test` profile [unoptimized + debuginfo] target(s) in 0.27s
+At line:1 char:8
++ $out = & cargo test --workspace --no-default-features -- --list 2>&1  ...
++        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (    Finished `t...get(s) in 0.27s:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+     Running unittests src\lib.rs (target\debug\deps\rustlab_cli-272be421a359a1d4.exe)
+0 tests, 0 benchmarks
+     Running unittests src\main.rs (target\debug\deps\rustlab-d8da2e2ff3bf2a08.exe)
+0 tests, 0 benchmarks
+     Running tests\cli_tests.rs (target\debug\deps\cli_tests-fddaae1f0b9bbae2.exe)
+test_diagnostic_error_formatting: test
+test_g01_singular_inv_warns_on_stderr_and_prints_inf: test
+test_incomplete_input_detection: test
+test_semicolon_output_suppression: test
+
+4 tests, 0 benchmarks
+     Running tests\diagnostics_tests.rs (target\debug\deps\diagnostics_tests-c38962e39b908f9c.exe)
+binary_op_caret_is_crlf_insensitive: test
+binary_op_caret_lands_on_spanning_line_lf: test
+binary_op_error_underlines_whole_expression_lf: test
+parse_error_keeps_location_and_caret: test
+rendered_line_text_never_contains_carriage_return: test
+span_to_location_crlf_bookkeeping: test
+span_to_location_edge_cases: test
+span_to_location_lf_bookkeeping: test
+span_to_location_single_crlf_line: test
+undefined_symbol_caret_lands_on_symbol_line_lf: test
+undefined_symbol_caret_survives_two_crlf_lines: test
+undefined_symbol_gets_a_single_caret_lf: test
+
+12 tests, 0 benchmarks
+     Running unittests src\lib.rs (target\debug\deps\rustlab_data-5284ff9e71965a72.exe)
+0 tests, 0 benchmarks
+     Running tests\data_tests.rs (target\debug\deps\data_tests-8076f2198f8c2fc1.exe)
+test_b2_corrcoef_diagonal_one_property: test
+test_b2_cov_and_corrcoef: test
+test_b2_cov_and_corrcoef_edge_cases: test
+test_b2_csv_bom_and_crlf_roundtrip: test
+test_b2_csv_empty_trailing_field_and_header_only: test
+test_b2_csv_large_exponent_bit_exact_double_property: test
+test_b2_csv_nan_inf_roundtrip: test
+test_b2_csv_options_delimiter_header_bom_crlf: test
+test_b2_csv_quoted_embedded_newlines_and_delimiters: test
+test_b2_csv_ragged_row_error_with_line_number: test
+test_b2_cummax_and_cummin: test
+test_b2_cummax_and_cummin_edge_cases: test
+test_b2_display_mixed_integer_decimals_unverified: test
+test_b2_display_scale_factor_vs_enotation_unverified: test
+test_b2_display_sub_01_scalars_unverified: test
+test_b2_histcounts: test
+test_b2_histcounts_edge_cases: test
+test_b2_median_edge_cases: test
+test_b2_median_vector_matrix_nd_omitnan: test
+test_b2_mode_edge_cases: test
+test_b2_mode_tiebreak_smallest: test
+test_b2_movmean_and_movmedian: test
+test_b2_movmean_and_movmedian_edge_cases: test
+test_b2_movmean_of_constants_property: test
+test_b2_percentiles_monotone_property: test
+test_b2_prctile_and_quantile_edge_cases: test
+test_b2_prctile_and_quantile_interpolation: test
+test_b2_prctile_matlab_rule_goldens: test
+test_b2_readmatrix_and_writematrix_roundtrip: test
+test_b2_sortrows_and_unique_edge_cases: test
+test_b2_sortrows_and_unique_ia_ic: test
+test_b2_unique_row_orientation: test
+test_b2_var_and_std_edge_cases: test
+test_b2_var_and_std_flags_dims_integer_classes: test
+test_b2_variance_non_negative_property: test
+test_b2_zscore: test
+test_b2_zscore_edge_cases: test
+
+37 tests, 0 benchmarks
+     Running tests\g01_verify_tests.rs (target\debug\deps\g01_verify_tests-7193983fc0bb676b.exe)
+test_g01_rustlab_only_ids_do_not_use_matlab_prefix: test
+
+1 test, 0 benchmarks
+     Running unittests src\lib.rs (target\debug\deps\rustlab_eval-fab0b25bf423cf3f.exe)
+0 tests, 0 benchmarks
+     Running tests\eval_tests.rs (target\debug\deps\eval_tests-b69154ce4931b062.exe)
+test_array_growth_on_assignment: test
+test_basic_arithmetic_evaluation: test
+test_for_loop_and_column_iteration: test
+test_global_scoping: test
+test_if_elseif_else: test
+test_indexing_with_end: test
+test_matrix_creation_and_multiplication: test
+test_user_defined_functions_and_multiple_returns: test
+test_while_loop_with_break: test
+
+9 tests, 0 benchmarks
+     Running tests\milestone_a1_tests.rs (target\debug\deps\milestone_a1_tests-80d507de74dcb3b1.exe)
+test_boolean_mask_indexing_and_assignment: test
+test_cellfun_arrayfun_structfun: test
+test_function_handles_and_lexical_closures: test
+test_nested_end_contexts: test
+test_try_catch_mexception: test
+test_varargin_varargout_nargin_nargout: test
+
+6 tests, 0 benchmarks
+     Running unittests src\lib.rs (target\debug\deps\rustlab_math-d5ac054528d77d0a.exe)
+array::tests::test_dense_array_creation_and_indexing: test
+array::tests::test_dynamic_array_growth: test
+array::tests::test_transpose: test
+broadcast::tests::test_broadcast_iterator_outer_sum: test
+broadcast::tests::test_broadcast_shapes: test
+ops::tests::test_colon_range: test
+ops::tests::test_elementwise_binary_with_broadcasting: test
+ops::tests::test_matmul_2d: test
+shape::tests::test_column_major_strides: test
+shape::tests::test_normalize_shape: test
+
+10 tests, 0 benchmarks
+     Running tests\math_tests.rs (target\debug\deps\math_tests-3a9f59953e4a34dc.exe)
+test_1_based_indexing_column_major: test
+test_a3_exact_int64_uint64: test
+test_a3_mixed_type_rules_and_errors: test
+test_a3_saturating_integer_arithmetic: test
+test_a3_sparse_csc_duplicate_summing_and_algebra: test
+test_a3_sparse_memory_efficiency_10000x10000: test
+test_array_growth_on_assignment: test
+test_broadcasting_elementwise_binary: test
+test_colon_range: test
+test_matrix_multiplication: test
+test_minimum_2d_and_singleton_stripping: test
+test_relational_and_logical_operations: test
+
+12 tests, 0 benchmarks
+     Running unittests src\lib.rs (target\debug\deps\rustlab_matio-e56b982f1296df84.exe)
+0 tests, 0 benchmarks
+     Running tests\matio_tests.rs (target\debug\deps\matio_tests-3b388418eadc5384.exe)
+test_char_and_logical_roundtrip: test
+test_complex_numbers_roundtrip: test
+test_compressed_roundtrip: test
+test_file_save_and_load: test
+test_matio_image_sparse_and_empty_roundtrip: test
+test_numeric_classes_roundtrip: test
+test_uncompressed_roundtrip: test
+
+7 tests, 0 benchmarks
+     Running tests\scipy_mat_tests.rs (target\debug\deps\scipy_mat_tests-3cac732b82cf3848.exe)
+test_scipy_generated_files_interop: test
+
+1 test, 0 benchmarks
+     Running unittests src\lib.rs (target\debug\deps\rustlab_parse-8a532cf2d3d4d5ca.exe)
+0 tests, 0 benchmarks
+     Running tests\lexer_tests.rs (target\debug\deps\lexer_tests-f47e64f171073e14.exe)
+test_char_and_string_literals: test
+test_comments_and_line_continuations: test
+test_numeric_literals: test
+test_transpose_vs_char_vector: test
+
+4 tests, 0 benchmarks
+     Running tests\parser_tests.rs (target\debug\deps\parser_tests-4e9007abf6c8cf56.exe)
+test_anonymous_function: test
+test_colon_range_expressions: test
+test_control_flow: test
+test_function_def: test
+test_indexing_and_end: test
+test_matrix_literals_and_whitespace: test
+test_multi_assignment: test
+test_operator_precedence: test
+test_power_right_associativity: test
+
+9 tests, 0 benchmarks
+     Running unittests src\lib.rs (target\debug\deps\rustlab_stdlib-281a8350eb45d119.exe)
+linalg::eig_sym::tests::test_eig_sym_3x3: test
+linalg::eig_sym::tests::test_eig_sym_diagonal: test
+linalg::eig_sym::tests::test_eig_sym_known_2x2: test
+linalg::expm::tests::test_expm_diagonal_matrix: test
+linalg::expm::tests::test_expm_zero_matrix: test
+linalg::kron::tests::test_kron_2x2: test
+signal::radix2::tests::test_radix2_roundtrip: test
+
+7 tests, 0 benchmarks
+     Running tests\g01_verify_tests.rs (target\debug\deps\g01_verify_tests-9548ba77ee6d70d0.exe)
+test_g01_core_omitnan_sum_mean_min_max: test
+test_g01_display_extreme_range_1e_16_1_golden_unverified: test
+test_g01_display_scale_factor_0_001_1000_golden_unverified: test
+test_g01_lu_residuals_random_50x50: test
+test_g01_lu_residuals_random_5x5: test
+test_g01_mask_count_and_size_identifiers_settled: test
+test_g01_mldivide_singular_returns_inf: test
+
+7 tests, 0 benchmarks
+     Running tests\regression_a312_tests.rs (target\debug\deps\regression_a312_tests-92711e26f04372c0.exe)
+binary_expression_span_covers_full_expression: test
+every_registered_builtin_has_docs_and_help: test
+matrix_display_common_scale_boundary_unverified: test
+matrix_display_parity_goldens_unverified: test
+matrix_display_width_is_uniform_across_rows: test
+mixed_integer_assignment_refuses_inconsistent_class: test
+mixed_integer_class_binary_ops_use_exact_matlab_text: test
+non_integer_class_display_goldens_unverified: test
+reshape_empty_bracket_autodim_matches_explicit_dims: test
+reshape_empty_bracket_in_higher_dimension: test
+reshape_invalid_size_arguments_keep_matlab_diagnostics: test
+scalar_display_via_env_matches_output_log: test
+scalar_integer_display_goldens: test
+scalar_scientific_display_goldens_unverified: test
+test_num2str_noninteger_matrix_g_style_unverified: test
+test_scientific_notation_threshold_rule_cited_unverified: test
+
+16 tests, 0 benchmarks
+     Running tests\stdlib_a1_tests.rs (target\debug\deps\stdlib_a1_tests-31323c97e5741b04.exe)
+test_boolean_mask_shape_rules_and_deletion: test
+test_diagnostics_error_and_assert: test
+test_ieee754_nan_inf_semantics: test
+test_nan_comparison_semantics_regression: test
+test_nd_array_trailing_end_expansion: test
+test_nested_anonymous_functions_and_closure_handles: test
+test_num2str_and_mat2str: test
+test_number_display_format_short_golden: test
+test_path_which_exist_and_scripts: test
+test_regexp_and_regexprep: test
+test_sprintf_format_recycling_golden: test
+test_sprintf_fprintf_edge_cases: test
+test_string_library_core: test
+
+13 tests, 0 benchmarks
+     Running tests\stdlib_a2_tests.rs (target\debug\deps\stdlib_a2_tests-2243e775e6a9a51d.exe)
+test_a2_2d_transforms_fft2_ifft2: test
+test_a2_edge_cases_empty_1x1_singular_nan_nonsquare: test
+test_a2_eigenvector_tie_break_sign_invariant: test
+test_a2_expm_defective_matrix: test
+test_a2_expm_large_norm_scaling_squaring: test
+test_a2_expm_nilpotent_matrix: test
+test_a2_expm_rotation_generator: test
+test_a2_faer_feature_off_returns_clear_error: test
+test_a2_golden_eig_symmetric_ascending_and_sign_normalized: test
+test_a2_golden_expm_zero_and_diagonal: test
+test_a2_golden_pinv_rank_deficient: test
+test_a2_golden_svd_rank1: test
+test_a2_native_eig_path_without_faer: test
+test_a2_pinv_moore_penrose_condition: test
+test_a2_pivoted_qr_decomposition: test
+test_a2_pivoted_qr_rank_deficient_matrix: test
+test_a2_property_av_equals_vd_and_usvt_equals_a: test
+test_a2_property_fft_ifft_roundtrip_various_lengths: test
+test_a2_rank_cond_null_orth_kron: test
+test_a2_tolerance_rule_max_mn_eps_sigma1: test
+
+20 tests, 0 benchmarks
+     Running tests\stdlib_a3_tests.rs (target\debug\deps\stdlib_a3_tests-701d094d0d427a05.exe)
+test_a3_bitwise_operations: test
+test_a3_class_predicates_and_limits: test
+test_a3_exact_64bit_integers_and_saturation: test
+test_a3_find_variants_and_short_circuit: test
+test_a3_integer_types_and_saturating_arithmetic: test
+test_a3_logical_mask_assignment_errors: test
+test_a3_mixed_type_rules_and_errors: test
+test_a3_nd_deletion_3d_and_growth: test
+test_a3_nd_operations_cat_permute_meshgrid_reshape: test
+test_a3_nd_reductions_and_integer_preservation: test
+test_a3_nd_slicing_assignment_and_deletion: test
+test_a3_nd_sort_cumsum_prod_and_broadcast: test
+test_a3_reshape_empty_placeholder_and_negative_error: test
+test_a3_sparse_csc_matrices_and_algebra: test
+test_a3_sparse_memory_efficiency: test
+test_a3_sparse_parity_and_residual: test
+
+16 tests, 0 benchmarks
+     Running tests\stdlib_tests.rs (target\debug\deps\stdlib_tests-798935a2ee4085e5.exe)
+test_array_generators: test
+test_b2_inv_and_mldivide_singular_matrix_returns_inf: test
+test_cell_arrays: test
+test_elementwise_elementary_math: test
+test_linear_algebra_and_system_solve: test
+test_matio_builtin_load_save: test
+test_multiple_return_values: test
+test_reductions_and_statistics: test
+test_search_and_sort: test
+test_shape_and_inspection: test
+test_signal_and_fft: test
+test_strings_and_chars: test
+test_struct_arrays: test
+
+13 tests, 0 benchmarks
+   Doc-tests rustlab_cli
+0 tests, 0 benchmarks
+   Doc-tests rustlab_data
+0 tests, 0 benchmarks
+   Doc-tests rustlab_eval
+0 tests, 0 benchmarks
+   Doc-tests rustlab_math
+0 tests, 0 benchmarks
+   Doc-tests rustlab_matio
+0 tests, 0 benchmarks
+   Doc-tests rustlab_parse
+0 tests, 0 benchmarks
+   Doc-tests rustlab_stdlib
+0 tests, 0 benchmarks

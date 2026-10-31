@@ -1,243 +1,238 @@
-//! Command window: the interactive numerical prompt (`>>`), transcript, and
-//! command history. Everything displayed comes from executions of the
-//! persistent session; no fake state.
-//!
-//! Layout contract for the bottom panel: the ENTIRE content is one scroll
-//! block (transcript + the inline `>>` prompt as its last row) — the prompt
-//! scrolls with the history and sits at the bottom exactly like in the
-//! numerical desktop being reproduced. Nothing may be painted after the
-//! scroll area: if a widget follows the scroll inside a resizable bottom
-//! panel, the panel's outer rect is expanded by the overflow, persisted, and
-//! grows unboundedly across frames (egui 0.37 `Panel::show` uses the frame's
-//! content rect as the panel's outer rect). Keeping the whole body inside a
-//! single scroll block is load-bearing, not cosmetic. Widgets BEFORE the
-//! scroll (a header row) are safe: the scroll then fills the exact remaining
-//! height.
+//! Command Window interactive console and execution command history.
 
-use egui::{Color32, Event, Key, TextEdit, TextStyle};
+use crate::theme::Theme;
+use egui::{Key, RichText, ScrollArea, TextEdit, Ui};
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Line {
-    /// Echo of the submitted command.
-    Echo(String),
-    /// Regular interpreter output (`disp`, `ans`, assignments).
-    Out(String),
-    /// Execution/parse diagnostics.
-    Err(String),
-    /// Informational (hints, `who` output, run banners).
-    Info(String),
+#[derive(Clone, Debug)]
+pub enum ConsoleLogKind {
+    Input,
+    Output,
+    Error,
 }
 
-#[derive(Debug, Default)]
-pub struct CommandWindowState {
-    pub lines: Vec<Line>,
-    /// The current, not-yet-submitted command line.
-    pub input: String,
+#[derive(Clone, Debug)]
+pub struct ConsoleLogEntry {
+    pub kind: ConsoleLogKind,
+    pub text: String,
+}
+
+pub struct CommandWindow {
+    pub logs: Vec<ConsoleLogEntry>,
+    pub input_buffer: String,
     pub history: Vec<String>,
-    /// Index into `history` while browsing with the arrow keys.
-    history_pos: Option<usize>,
-    /// The in-progress draft saved when history browsing starts.
-    input_saved: Option<String>,
-    /// Focus the input on this frame (set after a reply arrives).
-    pub wants_focus: bool,
-    /// Whether the prompt widget had keyboard focus during the previous pass
-    /// (used to gate pre-read Enter/arrow keys; see `show_body`).
-    prompt_focus: bool,
+    pub history_cursor: Option<usize>,
+    pub auto_scroll: bool,
 }
 
-impl CommandWindowState {
-    pub fn push(&mut self, line: Line) {
-        self.lines.push(line);
-        if self.lines.len() > 2000 {
-            self.lines.drain(..self.lines.len() - 2000);
-        }
-    }
-
-    pub fn remember_history(&mut self, command: &str) {
-        if command.is_empty() {
-            return;
-        }
-        if self.history.last().map(|h| h == command).unwrap_or(false) {
-            return;
-        }
-        self.history.push(command.to_string());
-        if self.history.len() > 200 {
-            self.history.remove(0);
-        }
-        self.history_pos = None;
-    }
-
-    fn browse_history(&mut self, up: bool) {
-        if self.history.is_empty() {
-            return;
-        }
-        if up {
-            if self.history_pos.is_none() {
-                self.input_saved = Some(self.input.clone());
-            }
-            let idx = match self.history_pos {
-                None => self.history.len() - 1,
-                Some(i) => i.saturating_sub(1),
-            };
-            self.history_pos = Some(idx);
-            self.input = self.history[idx].clone();
-        } else if let Some(i) = self.history_pos {
-            if i + 1 < self.history.len() {
-                self.history_pos = Some(i + 1);
-                self.input = self.history[i + 1].clone();
-            } else {
-                self.history_pos = None;
-                self.input = self.input_saved.take().unwrap_or_default();
-            }
+impl Default for CommandWindow {
+    fn default() -> Self {
+        let welcome = vec![
+            ConsoleLogEntry {
+                kind: ConsoleLogKind::Output,
+                text: "MatRust Studio Numerical Computing Environment\n".to_string(),
+            },
+            ConsoleLogEntry {
+                kind: ConsoleLogKind::Output,
+                text: "Type commands at the >> prompt. Type 'help' for builtins.\n\n".to_string(),
+            },
+        ];
+        Self {
+            logs: welcome,
+            input_buffer: String::new(),
+            history: Vec::new(),
+            history_cursor: None,
+            auto_scroll: true,
         }
     }
 }
 
-/// What the app should do after Enter was pressed.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Submitted {
-    /// Execute the command in the persistent session.
-    Command(String),
-    /// `who` — handled by the app from the workspace snapshot.
-    Who,
-    /// `clear` — clear all variables.
-    ClearWorkspace,
-    /// `exit` / `quit`.
-    Exit,
-}
-
-/// Render the transcript + inline prompt as ONE scroll block. Callers may put
-/// a header row before this, but must not add widgets after it.
-/// Returns an action when a command was submitted.
-pub fn show_body(
-    ui: &mut egui::Ui,
-    state: &mut CommandWindowState,
-    kind: crate::theme::ThemeKind,
-) -> Option<Submitted> {
-    let mut submitted: Option<Submitted> = None;
-
-    // The singleline TextEdit consumes the Enter event while it is shown
-    // (egui 0.37 gives it a default `return_key`), so the press must be read
-    // BEFORE the widget is added. Gated on the prompt widget's focus from the
-    // previous pass, tracked in `prompt_focus`.
-    let was_focused = state.prompt_focus;
-    let (enter_pressed, up_pressed, down_pressed) = if was_focused {
-        ui.input(|i| {
-            let enter = i.events.iter().any(|e| {
-                matches!(
-                    e,
-                    Event::Key {
-                        key: Key::Enter,
-                        pressed: true,
-                        modifiers,
-                        ..
-                    } if !modifiers.shift
-                )
+impl CommandWindow {
+    pub fn push_output(&mut self, text: String) {
+        if !text.is_empty() {
+            self.logs.push(ConsoleLogEntry {
+                kind: ConsoleLogKind::Output,
+                text,
             });
-            let up = i.events.iter().any(|e| {
-                matches!(
-                    e,
-                    Event::Key {
-                        key: Key::ArrowUp,
-                        pressed: true,
-                        ..
-                    }
-                )
-            });
-            let down = i.events.iter().any(|e| {
-                matches!(
-                    e,
-                    Event::Key {
-                        key: Key::ArrowDown,
-                        pressed: true,
-                        ..
-                    }
-                )
-            });
-            (enter, up, down)
-        })
-    } else {
-        (false, false, false)
-    };
-    state.prompt_focus = false; // refreshed by the widget pass below
+            self.auto_scroll = true;
+        }
+    }
 
-    egui::ScrollArea::vertical()
-        .id_salt("matrust_cmd_transcript")
-        .auto_shrink([false, false])
-        .stick_to_bottom(true)
-        .show(ui, |ui| {
-            ui.spacing_mut().item_spacing.y = 1.0;
-            if state.lines.is_empty() {
-                ui.monospace(
-                    egui::RichText::new("Enter commands below, e.g. C = A * B.")
-                        .color(crate::theme::text_color_faint(kind)),
-                );
-            }
-            for line in &state.lines {
-                let (text, color): (String, Color32) = match line {
-                    Line::Echo(t) => (format!(">> {}", t), crate::theme::accent(kind)),
-                    Line::Out(t) => (t.clone(), crate::theme::text_color(kind)),
-                    Line::Err(t) => (t.clone(), crate::theme::error_color(kind)),
-                    Line::Info(t) => (t.clone(), crate::theme::text_color_faint(kind)),
-                };
-                ui.monospace(egui::RichText::new(text).color(color));
-            }
+    pub fn push_error(&mut self, text: String) {
+        if !text.is_empty() {
+            self.logs.push(ConsoleLogEntry {
+                kind: ConsoleLogKind::Error,
+                text,
+            });
+            self.auto_scroll = true;
+        }
+    }
 
-            // ---- inline prompt: the last row of the same scroll block ----
-            ui.add_space(3.0);
+    pub fn clear(&mut self) {
+        self.logs.clear();
+    }
+
+    pub fn show(&mut self, ui: &mut Ui, theme: &Theme, on_execute: &mut Option<String>) {
+        ui.vertical(|ui| {
+            // Header bar
             ui.horizontal(|ui| {
-                ui.spacing_mut().item_spacing.x = 2.0;
-                ui.monospace(
-                    egui::RichText::new(">> ")
-                        .monospace()
-                        .color(crate::theme::accent(kind)),
+                ui.heading("Command Window");
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    if ui
+                        .button("Clear Console")
+                        .on_hover_text("Clear console buffer (clc)")
+                        .clicked()
+                    {
+                        self.clear();
+                    }
+                });
+            });
+
+            ui.separator();
+
+            // Scrollable console log area
+            let available_height = ui.available_height() - 36.0;
+            let mut scroll = ScrollArea::vertical()
+                .auto_shrink([false, false])
+                .max_height(available_height);
+
+            if self.auto_scroll {
+                scroll = scroll.stick_to_bottom(true);
+            }
+
+            scroll.show(ui, |ui| {
+                for entry in &self.logs {
+                    match entry.kind {
+                        ConsoleLogKind::Input => {
+                            ui.horizontal(|ui| {
+                                ui.colored_label(theme.accent, ">>");
+                                ui.monospace(RichText::new(&entry.text).color(theme.text_primary));
+                            });
+                        }
+                        ConsoleLogKind::Output => {
+                            ui.monospace(RichText::new(&entry.text).color(theme.text_primary));
+                        }
+                        ConsoleLogKind::Error => {
+                            ui.monospace(RichText::new(&entry.text).color(theme.error));
+                        }
+                    }
+                }
+            });
+
+            ui.separator();
+
+            // Interactive input line: `>> `
+            ui.horizontal(|ui| {
+                ui.colored_label(theme.accent, ">>");
+
+                // History navigation
+                let up_pressed = ui.input(|i| i.key_pressed(Key::ArrowUp));
+                let down_pressed = ui.input(|i| i.key_pressed(Key::ArrowDown));
+
+                if up_pressed && !self.history.is_empty() {
+                    let next_cursor = match self.history_cursor {
+                        None => self.history.len().saturating_sub(1),
+                        Some(0) => 0,
+                        Some(c) => c - 1,
+                    };
+                    self.history_cursor = Some(next_cursor);
+                    self.input_buffer = self.history[next_cursor].clone();
+                } else if down_pressed {
+                    if let Some(c) = self.history_cursor {
+                        if c + 1 < self.history.len() {
+                            let next = c + 1;
+                            self.history_cursor = Some(next);
+                            self.input_buffer = self.history[next].clone();
+                        } else {
+                            self.history_cursor = None;
+                            self.input_buffer.clear();
+                        }
+                    }
+                }
+
+                let response = ui.add_sized(
+                    [ui.available_width() - 80.0, 24.0],
+                    TextEdit::singleline(&mut self.input_buffer)
+                        .font(egui::TextStyle::Monospace)
+                        .hint_text("Enter expression or statement..."),
                 );
-                let response = ui.add(
-                    TextEdit::singleline(&mut state.input)
-                        .id_salt("matrust_cmd_prompt")
-                        .font(TextStyle::Monospace)
-                        .frame(egui::Frame::NONE)
-                        .desired_width(ui.available_width().max(80.0)),
-                );
-                state.prompt_focus = response.has_focus();
-                if state.wants_focus {
-                    state.wants_focus = false;
+
+                let enter_pressed =
+                    response.lost_focus() && ui.input(|i| i.key_pressed(Key::Enter));
+                let run_clicked = ui.button("▶ Run").clicked();
+
+                if enter_pressed || run_clicked {
+                    let trimmed = self.input_buffer.trim().to_string();
+                    if !trimmed.is_empty() {
+                        // Handle `clc` builtin directly
+                        if trimmed == "clc" {
+                            self.clear();
+                            self.input_buffer.clear();
+                            self.history_cursor = None;
+                            return;
+                        }
+
+                        // Echo into console
+                        self.logs.push(ConsoleLogEntry {
+                            kind: ConsoleLogKind::Input,
+                            text: trimmed.clone(),
+                        });
+
+                        // Record in history
+                        self.history.push(trimmed.clone());
+                        self.history_cursor = None;
+
+                        *on_execute = Some(trimmed);
+                        self.input_buffer.clear();
+                        self.auto_scroll = true;
+                    }
+                }
+
+                if !response.has_focus() && self.input_buffer.is_empty() {
                     response.request_focus();
-                }
-                // Apply the pre-read navigation keys.
-                if up_pressed {
-                    state.browse_history(true);
-                }
-                if down_pressed {
-                    state.browse_history(false);
-                }
-                if enter_pressed {
-                    submitted = Some(Submitted::Command(String::new()));
                 }
             });
         });
-
-    let Some(Submitted::Command(_)) = submitted else {
-        return None;
-    };
-
-    // Enter was pressed: gather the line, echo it, and classify it.
-    let command = state.input.trim().to_string();
-    state.input.clear();
-    state.history_pos = None;
-    if command.is_empty() {
-        return None;
     }
-    state.push(Line::Echo(command.clone()));
-    state.remember_history(&command);
-    match command.as_str() {
-        "who" => Some(Submitted::Who),
-        "clear" => Some(Submitted::ClearWorkspace),
-        "clc" => {
-            state.lines.clear();
-            None
-        }
-        "exit" | "quit" => Some(Submitted::Exit),
-        _ => Some(Submitted::Command(command)),
+
+    /// Renders the standalone Command History panel.
+    pub fn show_history_panel(
+        &mut self,
+        ui: &mut Ui,
+        theme: &Theme,
+        on_execute: &mut Option<String>,
+    ) {
+        ui.vertical(|ui| {
+            ui.horizontal(|ui| {
+                ui.heading("Command History");
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    if ui.button("Clear").clicked() {
+                        self.history.clear();
+                    }
+                });
+            });
+            ui.separator();
+
+            if self.history.is_empty() {
+                ui.centered_and_justified(|ui| {
+                    ui.label(
+                        RichText::new("No command history")
+                            .italics()
+                            .color(theme.text_secondary),
+                    );
+                });
+                return;
+            }
+
+            ScrollArea::vertical()
+                .auto_shrink([false, false])
+                .show(ui, |ui| {
+                    for cmd in self.history.iter().rev() {
+                        let resp = ui.selectable_label(false, RichText::new(cmd).monospace());
+                        if resp.double_clicked() {
+                            *on_execute = Some(cmd.clone());
+                        }
+                    }
+                });
+        });
     }
 }

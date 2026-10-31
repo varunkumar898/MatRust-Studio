@@ -1,0 +1,17 @@
+﻿diff --git a/Cargo.toml b/Cargo.toml
+index 75d7dc4..476ad2d 100644
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -13,10 +13,12 @@ members = [
+ [profile.release]
+ # Standalone numerical engine binary uses panic = "abort" to eliminate
+ # landing pad tables and EH frames, optimizing binary size and vector registers.
++# G0.1-VERIFY step 2 adds strip = true for a smaller reproducible-build target.
+ opt-level = 3
+ lto = "fat"
+ codegen-units = 1
+ panic = "abort"
++strip = true
+ 
+ # Benchmarks inherit optimized release codegen settings.
+ [profile.bench]

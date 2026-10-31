@@ -1,0 +1,22 @@
+[package]
+name = "mlapp-runtime"
+version = "0.1.0"
+edition = "2021"
+authors = ["mlapp-rs contributors"]
+license = "MIT OR Apache-2.0"
+description = "MATLAB App Designer runtime engine: App handle semantics, callback execution, and built-in registry"
+
+[dependencies]
+rustlab-math = { path = "../rustlab-math" }
+rustlab-eval = { path = "../rustlab-eval" }
+rustlab-parse = { path = "../rustlab-parse" }
+rustlab-stdlib = { path = "../rustlab-stdlib" }
+mlapp-ui = { path = "../mlapp-ui" }
+mlapp-lang = { path = "../mlapp-lang" }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "2.0"
+
+[features]
+default = []
+octave-bridge = []

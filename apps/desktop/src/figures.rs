@@ -1,252 +1,360 @@
-//! Figures panel: renders the runtime `GraphicsState` snapshot with
-//! egui_plot. Purely presentational — all data comes from `RunResult::figures`
-//! (the interpreter never touches GUI types).
-//!
-//! The panel is a right-hand column that is only materialized when the user
-//! opens it or when the session creates a figure (see `MatRustApp`). With no
-//! figures it takes no space at all — the editor keeps the room.
+//! Scientific graphics and interactive figure canvas.
 
-use egui::Color32;
-use egui_plot::{Bar, BarChart, Legend, Line, Plot, PlotPoints, Points};
+use crate::execution::{GraphicsState, PlotItem};
+use crate::theme::Theme;
+use egui::{Color32, Pos2, Rect, RichText, Sense, Stroke, StrokeKind, Ui, Vec2};
 
-use matlab_runtime::{FigureState, PlotItem};
-
-use crate::theme::{self, SyntaxPalette, ThemeKind};
-
-#[derive(Debug, Default)]
-pub struct FiguresState {
-    /// Mirror of the session's figures from the last execution.
-    pub figures: Vec<FigureState>,
-    /// Index of the figure currently displayed.
-    pub view_index: usize,
+pub struct FiguresPanel {
+    pub selected_figure_id: usize,
+    pub view_offset: Vec2,
+    pub view_zoom: f32,
 }
 
-/// What the header row asked the app to do.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum HeaderAction {
-    None,
-    /// `close all` in the persistent session.
-    ClearAll,
-    /// Hide the Figures panel (space returns to the editor).
-    HidePanel,
-}
-
-impl FiguresState {
-    pub fn replace_from(&mut self, figures: Vec<FigureState>) {
-        self.figures = figures;
-        self.view_index = self.view_index.min(self.figures.len().saturating_sub(1));
+impl Default for FiguresPanel {
+    fn default() -> Self {
+        Self {
+            selected_figure_id: 1,
+            view_offset: Vec2::ZERO,
+            view_zoom: 1.0,
+        }
     }
 }
 
-/// Compact header: figure selector tabs on the left, `Close All` and the
-/// panel-close button on the right.
-pub fn show_header(ui: &mut egui::Ui, state: &mut FiguresState, kind: ThemeKind) -> HeaderAction {
-    let mut action = HeaderAction::None;
-    ui.horizontal(|ui| {
-        ui.label(egui::RichText::new("Figures").strong());
-        for (i, fig) in state.figures.clone().into_iter().enumerate() {
-            let selected = i == state.view_index;
-            let label = format!("Figure {}", fig.handle);
-            let fill = if selected {
-                theme::tint(theme::accent(kind), 0.4)
-            } else {
-                Color32::TRANSPARENT
+impl FiguresPanel {
+    pub fn show(&mut self, ui: &mut Ui, theme: &Theme, graphics: &mut GraphicsState) {
+        ui.vertical(|ui| {
+            // Figure Tabs header
+            ui.horizontal(|ui| {
+                ui.heading("Figures");
+                ui.separator();
+
+                if graphics.figures.is_empty() {
+                    // Provide a default empty figure
+                    graphics.get_or_create_figure(1);
+                }
+
+                let mut to_close = None;
+
+                for fig in &graphics.figures {
+                    let is_selected = self.selected_figure_id == fig.id;
+                    let tab_title = if is_selected {
+                        format!("● {}", fig.title)
+                    } else {
+                        fig.title.clone()
+                    };
+
+                    let btn = ui.selectable_label(is_selected, tab_title);
+                    if btn.clicked() {
+                        self.selected_figure_id = fig.id;
+                        graphics.current_figure = Some(fig.id);
+                    }
+                    if ui.small_button("✕").on_hover_text("Close figure").clicked() {
+                        to_close = Some(fig.id);
+                    }
+                }
+
+                if let Some(id) = to_close {
+                    graphics.close_figure(id);
+                    if let Some(first) = graphics.figures.first() {
+                        self.selected_figure_id = first.id;
+                    }
+                }
+
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    if ui
+                        .button("+ New")
+                        .on_hover_text("Create new figure (figure)")
+                        .clicked()
+                    {
+                        let next_id = graphics.figures.iter().map(|f| f.id).max().unwrap_or(0) + 1;
+                        graphics.get_or_create_figure(next_id);
+                        self.selected_figure_id = next_id;
+                    }
+                    if ui.button("Reset View").clicked() {
+                        self.view_offset = Vec2::ZERO;
+                        self.view_zoom = 1.0;
+                    }
+                });
+            });
+
+            ui.separator();
+
+            let fig = match graphics
+                .figures
+                .iter_mut()
+                .find(|f| f.id == self.selected_figure_id)
+            {
+                Some(f) => f,
+                None => {
+                    if let Some(first) = graphics.figures.first_mut() {
+                        self.selected_figure_id = first.id;
+                        first
+                    } else {
+                        ui.centered_and_justified(|ui| {
+                            ui.label("No active figures");
+                        });
+                        return;
+                    }
+                }
             };
-            if ui
-                .add(egui::Button::new(label).small().fill(fill))
-                .clicked()
-            {
-                state.view_index = i;
+
+            // Plot controls bar
+            ui.horizontal(|ui| {
+                ui.label(RichText::new(&fig.title).strong().color(theme.accent));
+                ui.separator();
+                ui.checkbox(&mut fig.grid, "Grid");
+                ui.separator();
+                ui.label(format!("Series: {}", fig.items.len()));
+            });
+
+            ui.add_space(4.0);
+
+            // Render interactive plot canvas
+            let (canvas_rect, response) =
+                ui.allocate_exact_size(ui.available_size(), Sense::click_and_drag());
+
+            // Pan and zoom interaction
+            if response.dragged() {
+                self.view_offset += response.drag_delta();
             }
-        }
-        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-            if ui
-                .add(egui::Button::new("×").small())
-                .on_hover_text(
-                    "Hide the Figures panel (Window ▸ Figures re-opens it; so does a new plot)",
+
+            let painter = ui.painter_at(canvas_rect);
+
+            // Background fill
+            painter.rect_filled(canvas_rect, 0.0, theme.editor_bg);
+            painter.rect_stroke(
+                canvas_rect,
+                0.0,
+                Stroke::new(1.0_f32, theme.border),
+                StrokeKind::Inside,
+            );
+
+            if fig.items.is_empty() {
+                painter.text(
+                    canvas_rect.center(),
+                    egui::Align2::CENTER_CENTER,
+                    "Empty Figure (Run plot(x, y), scatter(x, y), or bar(x, y) to display data)",
+                    egui::FontId::proportional(14.0),
+                    theme.text_secondary,
+                );
+                return;
+            }
+
+            // Determine data bounds
+            let mut min_x = f64::INFINITY;
+            let mut max_x = f64::NEG_INFINITY;
+            let mut min_y = f64::INFINITY;
+            let mut max_y = f64::NEG_INFINITY;
+
+            for item in &fig.items {
+                match item {
+                    PlotItem::Line { x, y, .. }
+                    | PlotItem::Scatter { x, y, .. }
+                    | PlotItem::Bar { x, y, .. } => {
+                        for (&vx, &vy) in x.iter().zip(y.iter()) {
+                            if vx.is_finite() && vy.is_finite() {
+                                min_x = min_x.min(vx);
+                                max_x = max_x.max(vx);
+                                min_y = min_y.min(vy);
+                                max_y = max_y.max(vy);
+                            }
+                        }
+                    }
+                    PlotItem::Histogram { values, .. } => {
+                        for &v in values {
+                            if v.is_finite() {
+                                min_x = min_x.min(v);
+                                max_x = max_x.max(v);
+                            }
+                        }
+                        min_y = 0.0;
+                        max_y = max_y.max(10.0);
+                    }
+                }
+            }
+
+            if !min_x.is_finite() || !max_x.is_finite() || min_x == max_x {
+                min_x = 0.0;
+                max_x = 10.0;
+            }
+            if !min_y.is_finite() || !max_y.is_finite() || min_y == max_y {
+                min_y = 0.0;
+                max_y = 10.0;
+            }
+
+            // Margin for plot axes
+            let plot_box = Rect::from_min_max(
+                Pos2::new(canvas_rect.min.x + 50.0, canvas_rect.min.y + 20.0),
+                Pos2::new(canvas_rect.max.x - 20.0, canvas_rect.max.y - 40.0),
+            );
+
+            // Coordinate mapping: data (x, y) -> screen (px, py)
+            let to_screen = |dx: f64, dy: f64| -> Pos2 {
+                let norm_x = (dx - min_x) / (max_x - min_x);
+                let norm_y = (dy - min_y) / (max_y - min_y);
+                Pos2::new(
+                    plot_box.min.x + (norm_x as f32) * plot_box.width() + self.view_offset.x,
+                    plot_box.max.y - (norm_y as f32) * plot_box.height() + self.view_offset.y,
                 )
-                .clicked()
-            {
-                action = HeaderAction::HidePanel;
-            }
-            if ui
-                .add(egui::Button::new("Close All").small())
-                .on_hover_text("close all — clears every figure in the session")
-                .clicked()
-            {
-                action = HeaderAction::ClearAll;
-            }
-        });
-    });
-    ui.spacing_mut().item_spacing.y = 4.0;
-    action
-}
+            };
 
-/// Figure area: actual plot rendering, pan/zoom with the mouse. When the
-/// session has no figures this stays a compact two-line state — no big
-/// placeholder canvas.
-pub fn show_body(
-    ui: &mut egui::Ui,
-    state: &mut FiguresState,
-    kind: ThemeKind,
-    _palette: &SyntaxPalette,
-) {
-    let Some(fig) = state.figures.get(state.view_index).cloned() else {
-        ui.weak("No figures open.");
-        ui.monospace(
-            egui::RichText::new("Try: plot([1 2 3], [1 4 9]);")
-                .color(theme::text_color_faint(kind)),
-        );
-        return;
-    };
-
-    if let Some(title) = &fig.title {
-        ui.vertical_centered_justified(|ui| {
-            ui.strong(title.clone());
-        });
-    }
-    if let Some(ylabel) = &fig.ylabel {
-        ui.vertical_centered_justified(|ui| {
-            ui.weak(format!("y: {}", ylabel));
-        });
-    }
-
-    let figure_plot = Plot::new(("figure_plot", fig.handle))
-        .show_grid(fig.grid)
-        .grid_color(grid_color(kind))
-        .show_background(false)
-        .show_axes(true);
-    let figure_plot = if fig.legend_shown {
-        figure_plot.legend(Legend::default())
-    } else {
-        figure_plot
-    };
-
-    figure_plot.show(ui, |plot_ui| {
-        for (i, item) in fig.items.iter().enumerate() {
-            let color = theme::plot_series_color(i, kind);
-            let name = item.label().to_string();
-            match item {
-                PlotItem::Line { x, y, .. } => {
-                    let pts: Vec<[f64; 2]> =
-                        x.iter().zip(y.iter()).map(|(a, b)| [*a, *b]).collect();
-                    if !pts.is_empty() {
-                        plot_ui.line(
-                            Line::new(name.clone(), PlotPoints::from(pts))
-                                .color(color)
-                                .width(1.6),
-                        );
-                    }
-                }
-                PlotItem::Scatter { x, y, .. } => {
-                    let pts: Vec<[f64; 2]> =
-                        x.iter().zip(y.iter()).map(|(a, b)| [*a, *b]).collect();
-                    if !pts.is_empty() {
-                        plot_ui.points(
-                            Points::new(name.clone(), PlotPoints::from(pts))
-                                .color(color)
-                                .radius(2.5)
-                                .filled(true),
-                        );
-                    }
-                }
-                PlotItem::Bar {
-                    positions, values, ..
-                } => {
-                    let bars: Vec<Bar> = positions
-                        .iter()
-                        .zip(values.iter())
-                        .map(|(p, v)| Bar::new(*p, *v).width(0.75).fill(color))
-                        .collect();
-                    if !bars.is_empty() {
-                        plot_ui.bar_chart(BarChart::new(name.clone(), bars).color(color));
-                    }
-                }
-                PlotItem::Histogram { values, bins, .. } => {
-                    let bar_color = theme::tint(color, 0.85);
-                    let (centers, heights) = histogram_bins(values, *bins);
-                    let bars: Vec<Bar> = centers
-                        .iter()
-                        .zip(heights.iter())
-                        .map(|(c, h)| Bar::new(*c, *h).width(bar_width(*bins)).fill(bar_color))
-                        .collect();
-                    if !bars.is_empty() {
-                        plot_ui.bar_chart(
-                            BarChart::new(name.clone(), bars)
-                                .color(bar_color)
-                                .vertical(),
-                        );
-                    }
+            // Draw grid lines
+            if fig.grid {
+                let grid_stroke =
+                    Stroke::new(1.0_f32, Color32::from_rgba_unmultiplied(80, 80, 80, 70));
+                for i in 0..=5 {
+                    let frac = i as f32 / 5.0;
+                    let gx = plot_box.min.x + frac * plot_box.width();
+                    let gy = plot_box.min.y + frac * plot_box.height();
+                    painter.line_segment(
+                        [Pos2::new(gx, plot_box.min.y), Pos2::new(gx, plot_box.max.y)],
+                        grid_stroke,
+                    );
+                    painter.line_segment(
+                        [Pos2::new(plot_box.min.x, gy), Pos2::new(plot_box.max.x, gy)],
+                        grid_stroke,
+                    );
                 }
             }
-        }
-    });
 
-    if let Some(xlabel) = &fig.xlabel {
-        ui.vertical_centered_justified(|ui| {
-            ui.weak(xlabel.clone());
+            // Draw Axes border
+            painter.rect_stroke(
+                plot_box,
+                0.0,
+                Stroke::new(1.5_f32, theme.border),
+                StrokeKind::Inside,
+            );
+
+            // Axis labels & tick numbers
+            for i in 0..=5 {
+                let frac = i as f64 / 5.0;
+                let val_x = min_x + frac * (max_x - min_x);
+                let val_y = min_y + frac * (max_y - min_y);
+                let pt_x = to_screen(val_x, min_y);
+                let pt_y = to_screen(min_x, val_y);
+
+                painter.text(
+                    Pos2::new(pt_x.x, plot_box.max.y + 8.0),
+                    egui::Align2::CENTER_TOP,
+                    format!("{val_x:.1}"),
+                    egui::FontId::monospace(10.0),
+                    theme.text_secondary,
+                );
+                painter.text(
+                    Pos2::new(plot_box.min.x - 8.0, pt_y.y),
+                    egui::Align2::RIGHT_CENTER,
+                    format!("{val_y:.1}"),
+                    egui::FontId::monospace(10.0),
+                    theme.text_secondary,
+                );
+            }
+
+            // Axis titles
+            painter.text(
+                Pos2::new(plot_box.center().x, plot_box.max.y + 24.0),
+                egui::Align2::CENTER_TOP,
+                &fig.x_label,
+                egui::FontId::proportional(12.0),
+                theme.text_primary,
+            );
+            painter.text(
+                Pos2::new(plot_box.min.x - 36.0, plot_box.center().y),
+                egui::Align2::CENTER_CENTER,
+                &fig.y_label,
+                egui::FontId::proportional(12.0),
+                theme.text_primary,
+            );
+
+            // Draw plot items
+            for item in &fig.items {
+                match item {
+                    PlotItem::Line {
+                        x, y, color, width, ..
+                    } => {
+                        let stroke = Stroke::new(
+                            *width,
+                            Color32::from_rgba_unmultiplied(color[0], color[1], color[2], color[3]),
+                        );
+                        let points: Vec<Pos2> = x
+                            .iter()
+                            .zip(y.iter())
+                            .filter(|(&vx, &vy)| vx.is_finite() && vy.is_finite())
+                            .map(|(&vx, &vy)| to_screen(vx, vy))
+                            .collect();
+
+                        for pair in points.windows(2) {
+                            if plot_box.contains(pair[0]) || plot_box.contains(pair[1]) {
+                                painter.line_segment([pair[0], pair[1]], stroke);
+                            }
+                        }
+                    }
+                    PlotItem::Scatter {
+                        x,
+                        y,
+                        color,
+                        radius,
+                        ..
+                    } => {
+                        let fill =
+                            Color32::from_rgba_unmultiplied(color[0], color[1], color[2], color[3]);
+                        for (&vx, &vy) in x.iter().zip(y.iter()) {
+                            let pt = to_screen(vx, vy);
+                            if plot_box.contains(pt) {
+                                painter.circle_filled(pt, *radius, fill);
+                            }
+                        }
+                    }
+                    PlotItem::Bar { x, y, color, .. } => {
+                        let fill =
+                            Color32::from_rgba_unmultiplied(color[0], color[1], color[2], color[3]);
+                        let bar_width = (plot_box.width() / (x.len() as f32).max(1.0)) * 0.6;
+                        for (&vx, &vy) in x.iter().zip(y.iter()) {
+                            let top = to_screen(vx, vy);
+                            let bottom = to_screen(vx, 0.0);
+                            let bar_rect = Rect::from_min_max(
+                                Pos2::new(top.x - bar_width / 2.0, top.y),
+                                Pos2::new(top.x + bar_width / 2.0, bottom.y),
+                            );
+                            painter.rect_filled(bar_rect, 0.0, fill);
+                        }
+                    }
+                    PlotItem::Histogram {
+                        values,
+                        bins,
+                        color,
+                        ..
+                    } => {
+                        let fill =
+                            Color32::from_rgba_unmultiplied(color[0], color[1], color[2], color[3]);
+                        let num_bins = (*bins).max(5);
+                        let _bin_width_data = (max_x - min_x) / num_bins as f64;
+                        let mut counts = vec![0usize; num_bins];
+
+                        for &v in values {
+                            if v >= min_x && v <= max_x {
+                                let b = (((v - min_x) / (max_x - min_x)) * (num_bins as f64 - 1.0))
+                                    as usize;
+                                if b < num_bins {
+                                    counts[b] += 1;
+                                }
+                            }
+                        }
+                        let max_count = counts.iter().copied().max().unwrap_or(1) as f64;
+                        let screen_bin_w = plot_box.width() / num_bins as f32;
+
+                        for (i, &cnt) in counts.iter().enumerate() {
+                            let h = (cnt as f64 / max_count) * (plot_box.height() as f64);
+                            let rx = plot_box.min.x + i as f32 * screen_bin_w;
+                            let ry = plot_box.max.y - h as f32;
+                            let r = Rect::from_min_max(
+                                Pos2::new(rx, ry),
+                                Pos2::new(rx + screen_bin_w * 0.9, plot_box.max.y),
+                            );
+                            painter.rect_filled(r, 0.0, fill);
+                        }
+                    }
+                }
+            }
         });
-    }
-    if !fig.items.is_empty() && fig.items.len() > 1 && !fig.legend_shown {
-        ui.weak(format!(
-            "{} series (legend() to label them)",
-            fig.items.len()
-        ));
-    }
-}
-
-fn grid_color(kind: ThemeKind) -> Color32 {
-    match kind {
-        ThemeKind::Dark => Color32::from_rgb(0x30, 0x33, 0x3a),
-        ThemeKind::Light => Color32::from_rgb(0xd3, 0xda, 0xe2),
-    }
-}
-
-fn bar_width(bins: usize) -> f64 {
-    (0.8 / bins.max(1) as f64).min(0.8).max(0.05)
-}
-
-/// Uniform binning on the range min..max (histogram default behavior).
-fn histogram_bins(values: &[f64], bins: usize) -> (Vec<f64>, Vec<f64>) {
-    let bins = bins.max(1);
-    if values.is_empty() {
-        return (Vec::new(), Vec::new());
-    }
-    let min = values.iter().cloned().fold(f64::INFINITY, f64::min);
-    let max = values.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
-    if (max - min).abs() < f64::EPSILON {
-        return (vec![min, max], vec![values.len() as f64]);
-    }
-    let width = (max - min) / bins as f64;
-    let mut counts = vec![0usize; bins];
-    for v in values {
-        let mut idx = (((v - min) / width) as usize).min(bins - 1);
-        if *v == max {
-            idx = bins - 1;
-        }
-        counts[idx] += 1;
-    }
-    let centers: Vec<f64> = (0..bins).map(|i| min + (i as f64 + 0.5) * width).collect();
-    let heights: Vec<f64> = counts.into_iter().map(|c| c as f64).collect();
-    (centers, heights)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn histogram_bins_count_and_spacing() {
-        let (centers, heights) = histogram_bins(&[1.0, 2.0, 3.0, 3.0, 5.0], 4);
-        assert_eq!(centers.len(), 4);
-        assert_eq!(heights.iter().map(|h| *h as usize).sum::<usize>(), 5);
-        assert!(centers.windows(2).all(|w| w[1] > w[0]));
-    }
-
-    #[test]
-    fn histogram_all_equal_values() {
-        let (centers, heights) = histogram_bins(&[7.0, 7.0], 3);
-        assert_eq!(heights.iter().map(|h| *h as usize).sum::<usize>(), 2);
-        assert_eq!(centers.len(), 2);
     }
 }

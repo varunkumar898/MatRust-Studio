@@ -1,0 +1,11 @@
+[package]
+name = "rustlab-matio"
+version = "0.1.0"
+edition = "2021"
+description = "Clean-room Level 5 and v7 MAT-file reader and writer for RustLab"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+rustlab-math = { path = "../rustlab-math" }
+thiserror = "2.0"
+flate2 = "1.0"

@@ -1,0 +1,1547 @@
+# G0.1-VERIFY clean verification log
+# Command: cargo clean; powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verify.ps1
+# Exit code: 0
+# stdout:
+=== 1. Checking formatting ===
+=== 2. Running clippy (all features) ===
+=== 3. Running clippy (no default features) ===
+=== 4. Running tests (default features) ===
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 4 tests
+test test_incomplete_input_detection ... ok
+test test_semicolon_output_suppression ... ok
+test test_diagnostic_error_formatting ... ok
+test test_g01_singular_inv_warns_on_stderr_and_prints_inf ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s
+
+
+running 12 tests
+test span_to_location_crlf_bookkeeping ... ok
+test span_to_location_lf_bookkeeping ... ok
+test parse_error_keeps_location_and_caret ... ok
+test span_to_location_edge_cases ... ok
+test rendered_line_text_never_contains_carriage_return ... ok
+test binary_op_error_underlines_whole_expression_lf ... ok
+test binary_op_caret_lands_on_spanning_line_lf ... ok
+test binary_op_caret_is_crlf_insensitive ... ok
+test span_to_location_single_crlf_line ... ok
+test undefined_symbol_caret_lands_on_symbol_line_lf ... ok
+test undefined_symbol_caret_survives_two_crlf_lines ... ok
+test undefined_symbol_gets_a_single_caret_lf ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 37 tests
+test test_b2_corrcoef_diagonal_one_property ... ok
+test test_b2_cov_and_corrcoef ... ok
+test test_b2_cov_and_corrcoef_edge_cases ... ok
+test test_b2_cummax_and_cummin ... ok
+test test_b2_csv_nan_inf_roundtrip ... ok
+test test_b2_csv_large_exponent_bit_exact_double_property ... ok
+test test_b2_csv_quoted_embedded_newlines_and_delimiters ... ok
+test test_b2_cummax_and_cummin_edge_cases ... ok
+test test_b2_display_mixed_integer_decimals_unverified ... ok
+test test_b2_display_scale_factor_vs_enotation_unverified ... ok
+test test_b2_display_sub_01_scalars_unverified ... ok
+test test_b2_histcounts ... ok
+test test_b2_histcounts_edge_cases ... ok
+test test_b2_median_edge_cases ... ok
+test test_b2_median_vector_matrix_nd_omitnan ... ok
+test test_b2_mode_edge_cases ... ok
+test test_b2_mode_tiebreak_smallest ... ok
+test test_b2_movmean_and_movmedian ... ok
+test test_b2_movmean_and_movmedian_edge_cases ... ok
+test test_b2_movmean_of_constants_property ... ok
+test test_b2_percentiles_monotone_property ... ok
+test test_b2_prctile_and_quantile_edge_cases ... ok
+test test_b2_csv_bom_and_crlf_roundtrip ... ok
+test test_b2_prctile_and_quantile_interpolation ... ok
+test test_b2_prctile_matlab_rule_goldens ... ok
+test test_b2_csv_ragged_row_error_with_line_number ... ok
+test test_b2_sortrows_and_unique_edge_cases ... ok
+test test_b2_sortrows_and_unique_ia_ic ... ok
+test test_b2_unique_row_orientation ... ok
+test test_b2_var_and_std_edge_cases ... ok
+test test_b2_var_and_std_flags_dims_integer_classes ... ok
+test test_b2_variance_non_negative_property ... ok
+test test_b2_csv_empty_trailing_field_and_header_only ... ok
+test test_b2_zscore ... ok
+test test_b2_zscore_edge_cases ... ok
+test test_b2_readmatrix_and_writematrix_roundtrip ... ok
+test test_b2_csv_options_delimiter_header_bom_crlf ... ok
+
+test result: ok. 37 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+
+
+running 1 test
+test test_g01_rustlab_only_ids_do_not_use_matlab_prefix ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 9 tests
+test test_array_growth_on_assignment ... ok
+test test_basic_arithmetic_evaluation ... ok
+test test_if_elseif_else ... ok
+test test_for_loop_and_column_iteration ... ok
+test test_global_scoping ... ok
+test test_indexing_with_end ... ok
+test test_matrix_creation_and_multiplication ... ok
+test test_user_defined_functions_and_multiple_returns ... ok
+test test_while_loop_with_break ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 6 tests
+test test_try_catch_mexception ... ok
+test test_boolean_mask_indexing_and_assignment ... ok
+test test_function_handles_and_lexical_closures ... ok
+test test_varargin_varargout_nargin_nargout ... ok
+test test_nested_end_contexts ... ok
+test test_cellfun_arrayfun_structfun ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 10 tests
+test ops::tests::test_colon_range ... ok
+test array::tests::test_dynamic_array_growth ... ok
+test array::tests::test_dense_array_creation_and_indexing ... ok
+test broadcast::tests::test_broadcast_iterator_outer_sum ... ok
+test array::tests::test_transpose ... ok
+test broadcast::tests::test_broadcast_shapes ... ok
+test ops::tests::test_elementwise_binary_with_broadcasting ... ok
+test ops::tests::test_matmul_2d ... ok
+test shape::tests::test_column_major_strides ... ok
+test shape::tests::test_normalize_shape ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 12 tests
+test test_1_based_indexing_column_major ... ok
+test test_a3_exact_int64_uint64 ... ok
+test test_a3_sparse_csc_duplicate_summing_and_algebra ... ok
+test test_a3_mixed_type_rules_and_errors ... ok
+test test_a3_saturating_integer_arithmetic ... ok
+test test_array_growth_on_assignment ... ok
+test test_broadcasting_elementwise_binary ... ok
+test test_colon_range ... ok
+test test_matrix_multiplication ... ok
+test test_minimum_2d_and_singleton_stripping ... ok
+test test_relational_and_logical_operations ... ok
+test test_a3_sparse_memory_efficiency_10000x10000 ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 7 tests
+test test_char_and_logical_roundtrip ... ok
+test test_compressed_roundtrip ... ok
+test test_complex_numbers_roundtrip ... ok
+test test_uncompressed_roundtrip ... ok
+test test_numeric_classes_roundtrip ... ok
+test test_file_save_and_load ... ok
+test test_matio_image_sparse_and_empty_roundtrip ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+
+running 1 test
+test test_scipy_generated_files_interop ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.31s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 4 tests
+test test_char_and_string_literals ... ok
+test test_comments_and_line_continuations ... ok
+test test_numeric_literals ... ok
+test test_transpose_vs_char_vector ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 9 tests
+test test_anonymous_function ... ok
+test test_indexing_and_end ... ok
+test test_function_def ... ok
+test test_colon_range_expressions ... ok
+test test_operator_precedence ... ok
+test test_control_flow ... ok
+test test_multi_assignment ... ok
+test test_matrix_literals_and_whitespace ... ok
+test test_power_right_associativity ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 7 tests
+test linalg::eig_sym::tests::test_eig_sym_known_2x2 ... ok
+test linalg::eig_sym::tests::test_eig_sym_3x3 ... ok
+test linalg::eig_sym::tests::test_eig_sym_diagonal ... ok
+test linalg::expm::tests::test_expm_diagonal_matrix ... ok
+test linalg::expm::tests::test_expm_zero_matrix ... ok
+test linalg::kron::tests::test_kron_2x2 ... ok
+test signal::radix2::tests::test_radix2_roundtrip ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 7 tests
+test test_g01_lu_residuals_random_5x5 ... ok
+test test_g01_display_extreme_range_1e_16_1_golden_unverified ... ok
+test test_g01_mldivide_singular_returns_inf ... ok
+test test_g01_display_scale_factor_0_001_1000_golden_unverified ... ok
+test test_g01_mask_count_and_size_identifiers_settled ... ok
+test test_g01_core_omitnan_sum_mean_min_max ... ok
+test test_g01_lu_residuals_random_50x50 ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+
+running 16 tests
+test binary_expression_span_covers_full_expression ... ok
+test matrix_display_width_is_uniform_across_rows ... ok
+test mixed_integer_assignment_refuses_inconsistent_class ... ok
+test matrix_display_common_scale_boundary_unverified ... ok
+test mixed_integer_class_binary_ops_use_exact_matlab_text ... ok
+test matrix_display_parity_goldens_unverified ... ok
+test reshape_empty_bracket_in_higher_dimension ... ok
+test non_integer_class_display_goldens_unverified ... ok
+test reshape_empty_bracket_autodim_matches_explicit_dims ... ok
+test scalar_display_via_env_matches_output_log ... ok
+test scalar_integer_display_goldens ... ok
+test reshape_invalid_size_arguments_keep_matlab_diagnostics ... ok
+test test_num2str_noninteger_matrix_g_style_unverified ... ok
+test scalar_scientific_display_goldens_unverified ... ok
+test test_scientific_notation_threshold_rule_cited_unverified ... ok
+test every_registered_builtin_has_docs_and_help ... ok
+
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.38s
+
+
+running 13 tests
+test test_nan_comparison_semantics_regression ... ok
+test test_ieee754_nan_inf_semantics ... ok
+test test_diagnostics_error_and_assert ... ok
+test test_boolean_mask_shape_rules_and_deletion ... ok
+test test_nested_anonymous_functions_and_closure_handles ... ok
+test test_num2str_and_mat2str ... ok
+test test_nd_array_trailing_end_expansion ... ok
+test test_number_display_format_short_golden ... ok
+test test_sprintf_format_recycling_golden ... ok
+test test_sprintf_fprintf_edge_cases ... ok
+test test_string_library_core ... ok
+test test_path_which_exist_and_scripts ... ok
+test test_regexp_and_regexprep ... ok
+
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+
+
+running 21 tests
+test test_a2_both_native_and_faer_eig_paths_match ... ok
+test test_a2_edge_cases_empty_1x1_singular_nan_nonsquare ... ok
+test test_a2_eigenvector_tie_break_sign_invariant ... ok
+test test_a2_expm_defective_matrix ... ok
+test test_a2_2d_transforms_fft2_ifft2 ... ok
+test test_a2_expm_rotation_generator ... ok
+test test_a2_expm_nilpotent_matrix ... ok
+test test_a2_expm_large_norm_scaling_squaring ... ok
+test test_a2_golden_eig_rotation_complex_conjugate ... ok
+test test_a2_golden_eig_symmetric_ascending_and_sign_normalized ... ok
+test test_a2_golden_expm_zero_and_diagonal ... ok
+test test_a2_golden_pinv_rank_deficient ... ok
+test test_a2_pinv_moore_penrose_condition ... ok
+test test_a2_golden_svd_rank1 ... ok
+test test_a2_pivoted_qr_rank_deficient_matrix ... ok
+test test_a2_pivoted_qr_decomposition ... ok
+test test_a2_property_av_equals_vd_and_usvt_equals_a ... ok
+test test_a2_symmetric_eig_routes_to_faer_and_canonicalizes ... ok
+test test_a2_rank_cond_null_orth_kron ... ok
+test test_a2_tolerance_rule_max_mn_eps_sigma1 ... ok
+test test_a2_property_fft_ifft_roundtrip_various_lengths ... ok
+
+test result: ok. 21 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+
+running 16 tests
+test test_a3_logical_mask_assignment_errors ... ok
+test test_a3_nd_deletion_3d_and_growth ... ok
+test test_a3_exact_64bit_integers_and_saturation ... ok
+test test_a3_find_variants_and_short_circuit ... ok
+test test_a3_bitwise_operations ... ok
+test test_a3_mixed_type_rules_and_errors ... ok
+test test_a3_nd_reductions_and_integer_preservation ... ok
+test test_a3_nd_sort_cumsum_prod_and_broadcast ... ok
+test test_a3_reshape_empty_placeholder_and_negative_error ... ok
+test test_a3_nd_operations_cat_permute_meshgrid_reshape ... ok
+test test_a3_nd_slicing_assignment_and_deletion ... ok
+test test_a3_class_predicates_and_limits ... ok
+test test_a3_sparse_parity_and_residual ... ok
+test test_a3_sparse_memory_efficiency ... ok
+test test_a3_sparse_csc_matrices_and_algebra ... ok
+test test_a3_integer_types_and_saturating_arithmetic ... ok
+
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+
+running 13 tests
+test test_b2_inv_and_mldivide_singular_matrix_returns_inf ... ok
+test test_multiple_return_values ... ok
+test test_cell_arrays ... ok
+test test_reductions_and_statistics ... ok
+test test_linear_algebra_and_system_solve ... ok
+test test_elementwise_elementary_math ... ok
+test test_search_and_sort ... ok
+test test_array_generators ... ok
+test test_signal_and_fft ... ok
+test test_strings_and_chars ... ok
+test test_shape_and_inspection ... ok
+test test_struct_arrays ... ok
+test test_matio_builtin_load_save ... ok
+
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+=== 5. Running tests (all features) ===
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 4 tests
+test test_incomplete_input_detection ... ok
+test test_semicolon_output_suppression ... ok
+test test_diagnostic_error_formatting ... ok
+test test_g01_singular_inv_warns_on_stderr_and_prints_inf ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+
+running 12 tests
+test span_to_location_crlf_bookkeeping ... ok
+test span_to_location_edge_cases ... ok
+test rendered_line_text_never_contains_carriage_return ... ok
+test span_to_location_lf_bookkeeping ... ok
+test binary_op_caret_lands_on_spanning_line_lf ... ok
+test binary_op_caret_is_crlf_insensitive ... ok
+test binary_op_error_underlines_whole_expression_lf ... ok
+test parse_error_keeps_location_and_caret ... ok
+test span_to_location_single_crlf_line ... ok
+test undefined_symbol_caret_lands_on_symbol_line_lf ... ok
+test undefined_symbol_caret_survives_two_crlf_lines ... ok
+test undefined_symbol_gets_a_single_caret_lf ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 37 tests
+test test_b2_cov_and_corrcoef ... ok
+test test_b2_corrcoef_diagonal_one_property ... ok
+test test_b2_cov_and_corrcoef_edge_cases ... ok
+test test_b2_csv_options_delimiter_header_bom_crlf ... ok
+test test_b2_csv_ragged_row_error_with_line_number ... ok
+test test_b2_csv_large_exponent_bit_exact_double_property ... ok
+test test_b2_cummax_and_cummin_edge_cases ... ok
+test test_b2_display_mixed_integer_decimals_unverified ... ok
+test test_b2_cummax_and_cummin ... ok
+test test_b2_csv_nan_inf_roundtrip ... ok
+test test_b2_csv_quoted_embedded_newlines_and_delimiters ... ok
+test test_b2_display_scale_factor_vs_enotation_unverified ... ok
+test test_b2_display_sub_01_scalars_unverified ... ok
+test test_b2_csv_empty_trailing_field_and_header_only ... ok
+test test_b2_histcounts ... ok
+test test_b2_histcounts_edge_cases ... ok
+test test_b2_median_edge_cases ... ok
+test test_b2_median_vector_matrix_nd_omitnan ... ok
+test test_b2_mode_edge_cases ... ok
+test test_b2_mode_tiebreak_smallest ... ok
+test test_b2_movmean_and_movmedian ... ok
+test test_b2_movmean_and_movmedian_edge_cases ... ok
+test test_b2_movmean_of_constants_property ... ok
+test test_b2_percentiles_monotone_property ... ok
+test test_b2_prctile_and_quantile_edge_cases ... ok
+test test_b2_prctile_and_quantile_interpolation ... ok
+test test_b2_prctile_matlab_rule_goldens ... ok
+test test_b2_sortrows_and_unique_edge_cases ... ok
+test test_b2_sortrows_and_unique_ia_ic ... ok
+test test_b2_unique_row_orientation ... ok
+test test_b2_var_and_std_edge_cases ... ok
+test test_b2_readmatrix_and_writematrix_roundtrip ... ok
+test test_b2_variance_non_negative_property ... ok
+test test_b2_var_and_std_flags_dims_integer_classes ... ok
+test test_b2_zscore ... ok
+test test_b2_zscore_edge_cases ... ok
+test test_b2_csv_bom_and_crlf_roundtrip ... ok
+
+test result: ok. 37 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+
+running 1 test
+test test_g01_rustlab_only_ids_do_not_use_matlab_prefix ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 9 tests
+test test_if_elseif_else ... ok
+test test_global_scoping ... ok
+test test_user_defined_functions_and_multiple_returns ... ok
+test test_indexing_with_end ... ok
+test test_matrix_creation_and_multiplication ... ok
+test test_array_growth_on_assignment ... ok
+test test_for_loop_and_column_iteration ... ok
+test test_basic_arithmetic_evaluation ... ok
+test test_while_loop_with_break ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 6 tests
+test test_boolean_mask_indexing_and_assignment ... ok
+test test_function_handles_and_lexical_closures ... ok
+test test_nested_end_contexts ... ok
+test test_try_catch_mexception ... ok
+test test_varargin_varargout_nargin_nargout ... ok
+test test_cellfun_arrayfun_structfun ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 10 tests
+test broadcast::tests::test_broadcast_iterator_outer_sum ... ok
+test broadcast::tests::test_broadcast_shapes ... ok
+test ops::tests::test_elementwise_binary_with_broadcasting ... ok
+test array::tests::test_dense_array_creation_and_indexing ... ok
+test array::tests::test_transpose ... ok
+test ops::tests::test_colon_range ... ok
+test array::tests::test_dynamic_array_growth ... ok
+test ops::tests::test_matmul_2d ... ok
+test shape::tests::test_column_major_strides ... ok
+test shape::tests::test_normalize_shape ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 12 tests
+test test_1_based_indexing_column_major ... ok
+test test_a3_mixed_type_rules_and_errors ... ok
+test test_a3_sparse_csc_duplicate_summing_and_algebra ... ok
+test test_a3_exact_int64_uint64 ... ok
+test test_array_growth_on_assignment ... ok
+test test_a3_saturating_integer_arithmetic ... ok
+test test_broadcasting_elementwise_binary ... ok
+test test_colon_range ... ok
+test test_matrix_multiplication ... ok
+test test_minimum_2d_and_singleton_stripping ... ok
+test test_a3_sparse_memory_efficiency_10000x10000 ... ok
+test test_relational_and_logical_operations ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 7 tests
+test test_char_and_logical_roundtrip ... ok
+test test_compressed_roundtrip ... ok
+test test_complex_numbers_roundtrip ... ok
+test test_uncompressed_roundtrip ... ok
+test test_numeric_classes_roundtrip ... ok
+test test_file_save_and_load ... ok
+test test_matio_image_sparse_and_empty_roundtrip ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+
+running 1 test
+test test_scipy_generated_files_interop ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 4 tests
+test test_char_and_string_literals ... ok
+test test_numeric_literals ... ok
+test test_comments_and_line_continuations ... ok
+test test_transpose_vs_char_vector ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 9 tests
+test test_colon_range_expressions ... ok
+test test_function_def ... ok
+test test_indexing_and_end ... ok
+test test_anonymous_function ... ok
+test test_matrix_literals_and_whitespace ... ok
+test test_control_flow ... ok
+test test_multi_assignment ... ok
+test test_operator_precedence ... ok
+test test_power_right_associativity ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 7 tests
+test linalg::eig_sym::tests::test_eig_sym_known_2x2 ... ok
+test linalg::eig_sym::tests::test_eig_sym_diagonal ... ok
+test linalg::expm::tests::test_expm_diagonal_matrix ... ok
+test linalg::eig_sym::tests::test_eig_sym_3x3 ... ok
+test linalg::expm::tests::test_expm_zero_matrix ... ok
+test linalg::kron::tests::test_kron_2x2 ... ok
+test signal::radix2::tests::test_radix2_roundtrip ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 7 tests
+test test_g01_core_omitnan_sum_mean_min_max ... ok
+test test_g01_lu_residuals_random_5x5 ... ok
+test test_g01_display_extreme_range_1e_16_1_golden_unverified ... ok
+test test_g01_display_scale_factor_0_001_1000_golden_unverified ... ok
+test test_g01_mldivide_singular_returns_inf ... ok
+test test_g01_mask_count_and_size_identifiers_settled ... ok
+test test_g01_lu_residuals_random_50x50 ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+
+running 16 tests
+test binary_expression_span_covers_full_expression ... ok
+test matrix_display_common_scale_boundary_unverified ... ok
+test matrix_display_width_is_uniform_across_rows ... ok
+test matrix_display_parity_goldens_unverified ... ok
+test mixed_integer_class_binary_ops_use_exact_matlab_text ... ok
+test mixed_integer_assignment_refuses_inconsistent_class ... ok
+test non_integer_class_display_goldens_unverified ... ok
+test reshape_empty_bracket_in_higher_dimension ... ok
+test reshape_empty_bracket_autodim_matches_explicit_dims ... ok
+test scalar_display_via_env_matches_output_log ... ok
+test reshape_invalid_size_arguments_keep_matlab_diagnostics ... ok
+test scalar_integer_display_goldens ... ok
+test scalar_scientific_display_goldens_unverified ... ok
+test test_num2str_noninteger_matrix_g_style_unverified ... ok
+test test_scientific_notation_threshold_rule_cited_unverified ... ok
+test every_registered_builtin_has_docs_and_help ... ok
+
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+
+running 13 tests
+test test_nan_comparison_semantics_regression ... ok
+test test_ieee754_nan_inf_semantics ... ok
+test test_nd_array_trailing_end_expansion ... ok
+test test_diagnostics_error_and_assert ... ok
+test test_number_display_format_short_golden ... ok
+test test_nested_anonymous_functions_and_closure_handles ... ok
+test test_boolean_mask_shape_rules_and_deletion ... ok
+test test_num2str_and_mat2str ... ok
+test test_sprintf_format_recycling_golden ... ok
+test test_sprintf_fprintf_edge_cases ... ok
+test test_string_library_core ... ok
+test test_path_which_exist_and_scripts ... ok
+test test_regexp_and_regexprep ... ok
+
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+
+
+running 21 tests
+test test_a2_expm_defective_matrix ... ok
+test test_a2_both_native_and_faer_eig_paths_match ... ok
+test test_a2_expm_nilpotent_matrix ... ok
+test test_a2_expm_large_norm_scaling_squaring ... ok
+test test_a2_expm_rotation_generator ... ok
+test test_a2_eigenvector_tie_break_sign_invariant ... ok
+test test_a2_edge_cases_empty_1x1_singular_nan_nonsquare ... ok
+test test_a2_2d_transforms_fft2_ifft2 ... ok
+test test_a2_golden_eig_rotation_complex_conjugate ... ok
+test test_a2_golden_eig_symmetric_ascending_and_sign_normalized ... ok
+test test_a2_golden_expm_zero_and_diagonal ... ok
+test test_a2_golden_pinv_rank_deficient ... ok
+test test_a2_golden_svd_rank1 ... ok
+test test_a2_pinv_moore_penrose_condition ... ok
+test test_a2_pivoted_qr_decomposition ... ok
+test test_a2_pivoted_qr_rank_deficient_matrix ... ok
+test test_a2_symmetric_eig_routes_to_faer_and_canonicalizes ... ok
+test test_a2_tolerance_rule_max_mn_eps_sigma1 ... ok
+test test_a2_property_av_equals_vd_and_usvt_equals_a ... ok
+test test_a2_rank_cond_null_orth_kron ... ok
+test test_a2_property_fft_ifft_roundtrip_various_lengths ... ok
+
+test result: ok. 21 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+
+running 16 tests
+test test_a3_find_variants_and_short_circuit ... ok
+test test_a3_logical_mask_assignment_errors ... ok
+test test_a3_mixed_type_rules_and_errors ... ok
+test test_a3_exact_64bit_integers_and_saturation ... ok
+test test_a3_nd_deletion_3d_and_growth ... ok
+test test_a3_bitwise_operations ... ok
+test test_a3_class_predicates_and_limits ... ok
+test test_a3_integer_types_and_saturating_arithmetic ... ok
+test test_a3_nd_reductions_and_integer_preservation ... ok
+test test_a3_nd_operations_cat_permute_meshgrid_reshape ... ok
+test test_a3_reshape_empty_placeholder_and_negative_error ... ok
+test test_a3_nd_sort_cumsum_prod_and_broadcast ... ok
+test test_a3_nd_slicing_assignment_and_deletion ... ok
+test test_a3_sparse_csc_matrices_and_algebra ... ok
+test test_a3_sparse_parity_and_residual ... ok
+test test_a3_sparse_memory_efficiency ... ok
+
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+
+running 13 tests
+test test_b2_inv_and_mldivide_singular_matrix_returns_inf ... ok
+test test_elementwise_elementary_math ... ok
+test test_cell_arrays ... ok
+test test_multiple_return_values ... ok
+test test_array_generators ... ok
+test test_reductions_and_statistics ... ok
+test test_linear_algebra_and_system_solve ... ok
+test test_search_and_sort ... ok
+test test_signal_and_fft ... ok
+test test_shape_and_inspection ... ok
+test test_matio_builtin_load_save ... ok
+test test_strings_and_chars ... ok
+test test_struct_arrays ... ok
+
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+=== 6. Running tests (no default features) ===
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 4 tests
+test test_incomplete_input_detection ... ok
+test test_diagnostic_error_formatting ... ok
+test test_semicolon_output_suppression ... ok
+test test_g01_singular_inv_warns_on_stderr_and_prints_inf ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s
+
+
+running 12 tests
+test binary_op_error_underlines_whole_expression_lf ... ok
+test binary_op_caret_lands_on_spanning_line_lf ... ok
+test binary_op_caret_is_crlf_insensitive ... ok
+test span_to_location_crlf_bookkeeping ... ok
+test span_to_location_lf_bookkeeping ... ok
+test span_to_location_edge_cases ... ok
+test rendered_line_text_never_contains_carriage_return ... ok
+test parse_error_keeps_location_and_caret ... ok
+test span_to_location_single_crlf_line ... ok
+test undefined_symbol_caret_lands_on_symbol_line_lf ... ok
+test undefined_symbol_caret_survives_two_crlf_lines ... ok
+test undefined_symbol_gets_a_single_caret_lf ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 37 tests
+test test_b2_corrcoef_diagonal_one_property ... ok
+test test_b2_cov_and_corrcoef ... ok
+test test_b2_cov_and_corrcoef_edge_cases ... ok
+test test_b2_csv_options_delimiter_header_bom_crlf ... ok
+test test_b2_csv_bom_and_crlf_roundtrip ... ok
+test test_b2_csv_large_exponent_bit_exact_double_property ... ok
+test test_b2_csv_nan_inf_roundtrip ... ok
+test test_b2_cummax_and_cummin ... ok
+test test_b2_csv_ragged_row_error_with_line_number ... ok
+test test_b2_csv_quoted_embedded_newlines_and_delimiters ... ok
+test test_b2_cummax_and_cummin_edge_cases ... ok
+test test_b2_display_mixed_integer_decimals_unverified ... ok
+test test_b2_display_scale_factor_vs_enotation_unverified ... ok
+test test_b2_display_sub_01_scalars_unverified ... ok
+test test_b2_histcounts ... ok
+test test_b2_histcounts_edge_cases ... ok
+test test_b2_median_edge_cases ... ok
+test test_b2_median_vector_matrix_nd_omitnan ... ok
+test test_b2_mode_edge_cases ... ok
+test test_b2_mode_tiebreak_smallest ... ok
+test test_b2_movmean_and_movmedian ... ok
+test test_b2_movmean_and_movmedian_edge_cases ... ok
+test test_b2_movmean_of_constants_property ... ok
+test test_b2_percentiles_monotone_property ... ok
+test test_b2_prctile_and_quantile_edge_cases ... ok
+test test_b2_prctile_and_quantile_interpolation ... ok
+test test_b2_prctile_matlab_rule_goldens ... ok
+test test_b2_csv_empty_trailing_field_and_header_only ... ok
+test test_b2_sortrows_and_unique_edge_cases ... ok
+test test_b2_sortrows_and_unique_ia_ic ... ok
+test test_b2_unique_row_orientation ... ok
+test test_b2_var_and_std_edge_cases ... ok
+test test_b2_var_and_std_flags_dims_integer_classes ... ok
+test test_b2_variance_non_negative_property ... ok
+test test_b2_zscore ... ok
+test test_b2_zscore_edge_cases ... ok
+test test_b2_readmatrix_and_writematrix_roundtrip ... ok
+
+test result: ok. 37 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+
+running 1 test
+test test_g01_rustlab_only_ids_do_not_use_matlab_prefix ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 9 tests
+test test_array_growth_on_assignment ... ok
+test test_basic_arithmetic_evaluation ... ok
+test test_for_loop_and_column_iteration ... ok
+test test_global_scoping ... ok
+test test_if_elseif_else ... ok
+test test_indexing_with_end ... ok
+test test_matrix_creation_and_multiplication ... ok
+test test_user_defined_functions_and_multiple_returns ... ok
+test test_while_loop_with_break ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+
+running 6 tests
+test test_try_catch_mexception ... ok
+test test_boolean_mask_indexing_and_assignment ... ok
+test test_nested_end_contexts ... ok
+test test_function_handles_and_lexical_closures ... ok
+test test_varargin_varargout_nargin_nargout ... ok
+test test_cellfun_arrayfun_structfun ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 10 tests
+test array::tests::test_dense_array_creation_and_indexing ... ok
+test ops::tests::test_elementwise_binary_with_broadcasting ... ok
+test array::tests::test_transpose ... ok
+test broadcast::tests::test_broadcast_iterator_outer_sum ... ok
+test broadcast::tests::test_broadcast_shapes ... ok
+test ops::tests::test_colon_range ... ok
+test array::tests::test_dynamic_array_growth ... ok
+test ops::tests::test_matmul_2d ... ok
+test shape::tests::test_column_major_strides ... ok
+test shape::tests::test_normalize_shape ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 12 tests
+test test_1_based_indexing_column_major ... ok
+test test_a3_exact_int64_uint64 ... ok
+test test_a3_mixed_type_rules_and_errors ... ok
+test test_a3_sparse_csc_duplicate_summing_and_algebra ... ok
+test test_a3_saturating_integer_arithmetic ... ok
+test test_array_growth_on_assignment ... ok
+test test_broadcasting_elementwise_binary ... ok
+test test_colon_range ... ok
+test test_matrix_multiplication ... ok
+test test_minimum_2d_and_singleton_stripping ... ok
+test test_a3_sparse_memory_efficiency_10000x10000 ... ok
+test test_relational_and_logical_operations ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 7 tests
+test test_char_and_logical_roundtrip ... ok
+test test_uncompressed_roundtrip ... ok
+test test_complex_numbers_roundtrip ... ok
+test test_compressed_roundtrip ... ok
+test test_numeric_classes_roundtrip ... ok
+test test_file_save_and_load ... ok
+test test_matio_image_sparse_and_empty_roundtrip ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+
+running 1 test
+test test_scipy_generated_files_interop ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 4 tests
+test test_char_and_string_literals ... ok
+test test_transpose_vs_char_vector ... ok
+test test_numeric_literals ... ok
+test test_comments_and_line_continuations ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 9 tests
+test test_function_def ... ok
+test test_colon_range_expressions ... ok
+test test_matrix_literals_and_whitespace ... ok
+test test_anonymous_function ... ok
+test test_indexing_and_end ... ok
+test test_control_flow ... ok
+test test_multi_assignment ... ok
+test test_operator_precedence ... ok
+test test_power_right_associativity ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 7 tests
+test linalg::eig_sym::tests::test_eig_sym_3x3 ... ok
+test linalg::eig_sym::tests::test_eig_sym_diagonal ... ok
+test linalg::eig_sym::tests::test_eig_sym_known_2x2 ... ok
+test linalg::expm::tests::test_expm_diagonal_matrix ... ok
+test linalg::kron::tests::test_kron_2x2 ... ok
+test linalg::expm::tests::test_expm_zero_matrix ... ok
+test signal::radix2::tests::test_radix2_roundtrip ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+
+running 7 tests
+test test_g01_mldivide_singular_returns_inf ... ok
+test test_g01_lu_residuals_random_5x5 ... ok
+test test_g01_core_omitnan_sum_mean_min_max ... ok
+test test_g01_display_extreme_range_1e_16_1_golden_unverified ... ok
+test test_g01_display_scale_factor_0_001_1000_golden_unverified ... ok
+test test_g01_mask_count_and_size_identifiers_settled ... ok
+test test_g01_lu_residuals_random_50x50 ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+
+running 16 tests
+test binary_expression_span_covers_full_expression ... ok
+test matrix_display_common_scale_boundary_unverified ... ok
+test matrix_display_parity_goldens_unverified ... ok
+test matrix_display_width_is_uniform_across_rows ... ok
+test mixed_integer_assignment_refuses_inconsistent_class ... ok
+test mixed_integer_class_binary_ops_use_exact_matlab_text ... ok
+test non_integer_class_display_goldens_unverified ... ok
+test reshape_empty_bracket_autodim_matches_explicit_dims ... ok
+test reshape_empty_bracket_in_higher_dimension ... ok
+test every_registered_builtin_has_docs_and_help ... ok
+test reshape_invalid_size_arguments_keep_matlab_diagnostics ... ok
+test scalar_display_via_env_matches_output_log ... ok
+test scalar_integer_display_goldens ... ok
+test test_num2str_noninteger_matrix_g_style_unverified ... ok
+test scalar_scientific_display_goldens_unverified ... ok
+test test_scientific_notation_threshold_rule_cited_unverified ... ok
+
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
+
+
+running 13 tests
+test test_diagnostics_error_and_assert ... ok
+test test_boolean_mask_shape_rules_and_deletion ... ok
+test test_nan_comparison_semantics_regression ... ok
+test test_ieee754_nan_inf_semantics ... ok
+test test_nd_array_trailing_end_expansion ... ok
+test test_nested_anonymous_functions_and_closure_handles ... ok
+test test_number_display_format_short_golden ... ok
+test test_num2str_and_mat2str ... ok
+test test_sprintf_format_recycling_golden ... ok
+test test_sprintf_fprintf_edge_cases ... ok
+test test_string_library_core ... ok
+test test_path_which_exist_and_scripts ... ok
+test test_regexp_and_regexprep ... ok
+
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s
+
+
+running 20 tests
+test test_a2_edge_cases_empty_1x1_singular_nan_nonsquare ... ok
+test test_a2_2d_transforms_fft2_ifft2 ... ok
+test test_a2_eigenvector_tie_break_sign_invariant ... ok
+test test_a2_expm_defective_matrix ... ok
+test test_a2_expm_nilpotent_matrix ... ok
+test test_a2_expm_large_norm_scaling_squaring ... ok
+test test_a2_expm_rotation_generator ... ok
+test test_a2_faer_feature_off_returns_clear_error ... ok
+test test_a2_golden_eig_symmetric_ascending_and_sign_normalized ... ok
+test test_a2_golden_expm_zero_and_diagonal ... ok
+test test_a2_golden_pinv_rank_deficient ... ok
+test test_a2_native_eig_path_without_faer ... ok
+test test_a2_golden_svd_rank1 ... ok
+test test_a2_pinv_moore_penrose_condition ... ok
+test test_a2_pivoted_qr_decomposition ... ok
+test test_a2_pivoted_qr_rank_deficient_matrix ... ok
+test test_a2_property_av_equals_vd_and_usvt_equals_a ... ok
+test test_a2_property_fft_ifft_roundtrip_various_lengths ... ok
+test test_a2_tolerance_rule_max_mn_eps_sigma1 ... ok
+test test_a2_rank_cond_null_orth_kron ... ok
+
+test result: ok. 20 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+
+running 16 tests
+test test_a3_bitwise_operations ... ok
+test test_a3_class_predicates_and_limits ... ok
+test test_a3_exact_64bit_integers_and_saturation ... ok
+test test_a3_logical_mask_assignment_errors ... ok
+test test_a3_find_variants_and_short_circuit ... ok
+test test_a3_mixed_type_rules_and_errors ... ok
+test test_a3_integer_types_and_saturating_arithmetic ... ok
+test test_a3_nd_deletion_3d_and_growth ... ok
+test test_a3_nd_operations_cat_permute_meshgrid_reshape ... ok
+test test_a3_nd_reductions_and_integer_preservation ... ok
+test test_a3_nd_sort_cumsum_prod_and_broadcast ... ok
+test test_a3_nd_slicing_assignment_and_deletion ... ok
+test test_a3_reshape_empty_placeholder_and_negative_error ... ok
+test test_a3_sparse_parity_and_residual ... ok
+test test_a3_sparse_csc_matrices_and_algebra ... ok
+test test_a3_sparse_memory_efficiency ... ok
+
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s
+
+
+running 13 tests
+test test_multiple_return_values ... ok
+test test_b2_inv_and_mldivide_singular_matrix_returns_inf ... ok
+test test_cell_arrays ... ok
+test test_elementwise_elementary_math ... ok
+test test_linear_algebra_and_system_solve ... ok
+test test_array_generators ... ok
+test test_search_and_sort ... ok
+test test_signal_and_fft ... ok
+test test_shape_and_inspection ... ok
+test test_strings_and_chars ... ok
+test test_reductions_and_statistics ... ok
+test test_struct_arrays ... ok
+test test_matio_builtin_load_save ... ok
+
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+=== 7. Verifying test manifest integrity ===
+Test manifest check passed: all 205 manifest entries are present.
+=== All verification steps passed successfully! ===
+
+# stderr:
+   Compiling autocfg v1.5.1
+   Compiling proc-macro2 v1.0.107
+   Compiling quote v1.0.47
+   Compiling unicode-ident v1.0.27
+    Checking cfg-if v1.0.5
+    Checking bytemuck v1.25.2
+    Checking windows-link v0.2.1
+    Checking once_cell v1.21.4
+   Compiling thiserror v2.0.21
+    Checking windows-sys v0.61.2
+    Checking bitflags v2.13.2
+    Checking rawpointer v0.2.1
+   Compiling nano-gemm-codegen v0.2.1
+    Checking memchr v2.8.3
+   Compiling num-traits v0.2.19
+   Compiling matrixmultiply v0.3.11
+   Compiling libm v0.2.16
+    Checking regex-syntax v0.8.11
+   Compiling version_check v0.9.5
+   Compiling paste v1.0.15
+   Compiling serde_core v1.0.229
+   Compiling pulp v0.22.3
+    Checking rand_core v0.10.1
+    Checking pulp-wasm-simd-flag v0.1.1
+    Checking num-complex v0.4.6
+   Compiling syn v3.0.9
+   Compiling syn v2.0.119
+    Checking reborrow v0.5.5
+   Compiling getrandom v0.4.3
+   Compiling dyn-stack-macros v0.1.3
+    Checking itoa v1.0.18
+    Checking raw-cpuid v11.6.0
+    Checking dyn-stack v0.13.2
+   Compiling seq-macro v0.3.6
+   Compiling crc32fast v1.5.3
+    Checking simd-adler32 v0.3.10
+    Checking adler2 v2.0.1
+    Checking fastrand v2.5.0
+    Checking nano-gemm-core v0.2.1
+    Checking miniz_oxide v0.9.1
+    Checking tempfile v3.27.0
+    Checking csv-core v0.1.13
+    Checking ryu v1.0.23
+   Compiling nano-gemm-f64 v0.2.1
+    Checking flate2 v1.1.10
+   Compiling nano-gemm-f32 v0.2.1
+   Compiling nano-gemm-c64 v0.2.1
+    Checking csv v1.4.0
+   Compiling nano-gemm-c32 v0.2.1
+    Checking once_cell_polyfill v1.70.2
+    Checking utf8parse v0.2.2
+    Checking anstyle v1.0.14
+    Checking anstyle-parse v1.0.0
+    Checking anstyle-wincon v3.0.11
+    Checking num-integer v0.1.47
+    Checking anstyle-query v1.1.5
+    Checking aho-corasick v1.1.5
+    Checking is_terminal_polyfill v1.70.2
+    Checking colorchoice v1.0.5
+    Checking anstream v1.0.0
+    Checking regex-automata v0.4.18
+    Checking strsim v0.11.1
+   Compiling equator-macro v0.6.0
+    Checking clap_lex v1.1.1
+    Checking generativity v1.2.1
+   Compiling heck v0.5.0
+    Checking gemm-common v0.19.0
+   Compiling equator-macro v0.2.1
+    Checking qd v0.8.0
+    Checking gemm-f32 v0.19.0
+    Checking gemm-c32 v0.19.0
+    Checking gemm-f64 v0.19.0
+    Checking equator v0.2.2
+    Checking gemm-c64 v0.19.0
+    Checking strength_reduce v0.2.4
+    Checking faer-traits v0.24.0
+   Compiling thiserror-impl v2.0.21
+    Checking transpose v0.2.3
+   Compiling clap_derive v4.6.7
+    Checking clap_builder v4.6.7
+    Checking gemm v0.19.0
+    Checking equator v0.6.0
+    Checking regex v1.13.1
+    Checking primal-check v0.3.4
+   Compiling crossbeam-utils v0.8.23
+    Checking rustfft v6.4.1
+    Checking rustlab-parse v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-parse)
+   Compiling zerocopy v0.8.63
+   Compiling crossbeam-epoch v0.9.21
+    Checking rustlab-math v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-math)
+   Compiling zerocopy-derive v0.8.63
+   Compiling zmij v1.0.23
+   Compiling crossbeam-deque v0.8.8
+   Compiling serde v1.0.229
+    Checking rustlab-eval v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-eval)
+    Checking rustlab-matio v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-matio)
+   Compiling serde_derive v1.0.229
+    Checking either v1.19.0
+    Checking rustlab-data v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-data)
+   Compiling serde_json v1.0.154
+   Compiling rayon-core v1.13.0
+   Compiling windows_aarch64_gnullvm v0.52.6
+    Checking clap v4.6.7
+    Checking winapi-util v0.1.11
+    Checking ciborium-io v0.2.2
+    Checking plotters-backend v0.3.7
+    Checking same-file v1.0.6
+    Checking itertools v0.10.5
+    Checking plotters-svg v0.3.7
+    Checking cast v0.3.0
+    Checking rayon v1.12.0
+    Checking plotters v0.3.7
+    Checking walkdir v2.5.0
+    Checking windows-targets v0.52.6
+    Checking is-terminal v0.4.17
+    Checking fnv v1.0.7
+    Checking smallvec v1.16.4
+    Checking oorandom v11.1.5
+    Checking bit-vec v0.10.1
+    Checking criterion-plot v0.5.0
+    Checking quick-error v1.2.3
+    Checking wait-timeout v0.2.1
+    Checking anes v0.1.6
+   Compiling libc v0.2.191
+    Checking rusty-fork v0.3.1
+    Checking bit-set v0.11.1
+    Checking nibble_vec v0.1.0
+    Checking windows-sys v0.59.0
+    Checking rand v0.10.3
+    Checking chacha20 v0.10.2
+    Checking rand_xorshift v0.5.0
+    Checking error-code v3.4.0
+    Checking unarray v0.1.4
+    Checking endian-type v0.1.2
+    Checking core_detect v1.0.0
+    Checking radix_trie v0.2.1
+    Checking clipboard-win v5.4.3
+    Checking proptest v1.12.0
+    Checking home v0.5.12
+    Checking fd-lock v4.0.4
+    Checking log v0.4.34
+    Checking unicode-segmentation v1.13.3
+    Checking unicode-width v0.2.2
+    Checking rustyline v15.0.0
+    Checking tinytemplate v1.2.1
+    Checking nano-gemm v0.2.2
+    Checking faer v0.24.4
+    Checking half v2.7.1
+    Checking ciborium-ll v0.2.2
+    Checking ciborium v0.2.2
+    Checking criterion v0.5.1
+    Checking rustlab-stdlib v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-stdlib)
+    Checking rustlab-cli v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-cli)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1m 24s
+    Checking num-complex v0.4.6
+    Checking rustlab-math v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-math)
+    Checking rustfft v6.4.1
+    Checking rustlab-eval v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-eval)
+    Checking rustlab-matio v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-matio)
+    Checking rustlab-data v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-data)
+    Checking rustlab-stdlib v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-stdlib)
+    Checking rustlab-cli v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-cli)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 8.05s
+   Compiling cfg-if v1.0.5
+   Compiling bytemuck v1.25.2
+   Compiling windows-link v0.2.1
+   Compiling once_cell v1.21.4
+   Compiling num-traits v0.2.19
+   Compiling bitflags v2.13.2
+   Compiling rawpointer v0.2.1
+   Compiling thiserror v2.0.21
+   Compiling windows-sys v0.61.2
+   Compiling rustlab-parse v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-parse)
+   Compiling matrixmultiply v0.3.11
+   Compiling regex-syntax v0.8.11
+   Compiling memchr v2.8.3
+   Compiling rand_core v0.10.1
+   Compiling serde_core v1.0.229
+   Compiling getrandom v0.4.3
+   Compiling num-complex v0.4.6
+   Compiling libm v0.2.16
+   Compiling pulp-wasm-simd-flag v0.1.1
+   Compiling reborrow v0.5.5
+   Compiling itoa v1.0.18
+   Compiling fastrand v2.5.0
+   Compiling rustlab-math v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-math)
+   Compiling dyn-stack v0.13.2
+   Compiling raw-cpuid v11.6.0
+   Compiling pulp v0.22.3
+   Compiling tempfile v3.27.0
+   Compiling simd-adler32 v0.3.10
+   Compiling rustlab-eval v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-eval)
+   Compiling adler2 v2.0.1
+   Compiling crc32fast v1.5.3
+   Compiling miniz_oxide v0.9.1
+   Compiling csv-core v0.1.13
+   Compiling ryu v1.0.23
+   Compiling nano-gemm-core v0.2.1
+   Compiling flate2 v1.1.10
+   Compiling once_cell_polyfill v1.70.2
+   Compiling csv v1.4.0
+   Compiling utf8parse v0.2.2
+   Compiling anstyle v1.0.14
+   Compiling anstyle-parse v1.0.0
+   Compiling anstyle-wincon v3.0.11
+   Compiling rustlab-data v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-data)
+   Compiling rustlab-matio v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-matio)
+   Compiling anstyle-query v1.1.5
+   Compiling aho-corasick v1.1.5
+   Compiling num-integer v0.1.47
+   Compiling is_terminal_polyfill v1.70.2
+   Compiling colorchoice v1.0.5
+   Compiling anstream v1.0.0
+   Compiling regex-automata v0.4.18
+   Compiling equator v0.2.2
+   Compiling nano-gemm-f32 v0.2.1
+   Compiling nano-gemm-f64 v0.2.1
+   Compiling nano-gemm-c32 v0.2.1
+   Compiling nano-gemm-c64 v0.2.1
+   Compiling strsim v0.11.1
+   Compiling gemm-common v0.19.0
+   Compiling qd v0.8.0
+   Compiling gemm-f32 v0.19.0
+   Compiling gemm-f64 v0.19.0
+   Compiling gemm-c64 v0.19.0
+   Compiling gemm-c32 v0.19.0
+   Compiling generativity v1.2.1
+   Compiling strength_reduce v0.2.4
+   Compiling clap_lex v1.1.1
+   Compiling clap_builder v4.6.7
+   Compiling equator v0.6.0
+   Compiling gemm v0.19.0
+   Compiling transpose v0.2.3
+   Compiling faer-traits v0.24.0
+   Compiling nano-gemm v0.2.2
+   Compiling regex v1.13.1
+   Compiling primal-check v0.3.4
+   Compiling rustfft v6.4.1
+   Compiling clap v4.6.7
+   Compiling faer v0.24.4
+   Compiling crossbeam-utils v0.8.23
+   Compiling quick-error v1.2.3
+   Compiling bit-vec v0.10.1
+   Compiling wait-timeout v0.2.1
+   Compiling fnv v1.0.7
+   Compiling rusty-fork v0.3.1
+   Compiling bit-set v0.11.1
+   Compiling zerocopy v0.8.63
+   Compiling crossbeam-epoch v0.9.21
+   Compiling windows_aarch64_gnullvm v0.52.6
+   Compiling rand v0.10.3
+   Compiling chacha20 v0.10.2
+   Compiling rand_xorshift v0.5.0
+   Compiling core_detect v1.0.0
+   Compiling unarray v0.1.4
+   Compiling either v1.19.0
+   Compiling serde v1.0.229
+   Compiling proptest v1.12.0
+   Compiling windows-targets v0.52.6
+   Compiling crossbeam-deque v0.8.8
+   Compiling zmij v1.0.23
+   Compiling winapi-util v0.1.11
+   Compiling plotters-backend v0.3.7
+   Compiling ciborium-io v0.2.2
+   Compiling smallvec v1.16.4
+   Compiling plotters-svg v0.3.7
+   Compiling nibble_vec v0.1.0
+   Compiling serde_json v1.0.154
+   Compiling same-file v1.0.6
+   Compiling rayon-core v1.13.0
+   Compiling windows-sys v0.59.0
+   Compiling itertools v0.10.5
+   Compiling error-code v3.4.0
+   Compiling cast v0.3.0
+   Compiling endian-type v0.1.2
+   Compiling radix_trie v0.2.1
+   Compiling clipboard-win v5.4.3
+   Compiling fd-lock v4.0.4
+   Compiling criterion-plot v0.5.0
+   Compiling tinytemplate v1.2.1
+   Compiling rayon v1.12.0
+   Compiling walkdir v2.5.0
+   Compiling plotters v0.3.7
+   Compiling libc v0.2.191
+   Compiling home v0.5.12
+   Compiling is-terminal v0.4.17
+   Compiling unicode-segmentation v1.13.3
+   Compiling half v2.7.1
+   Compiling ciborium-ll v0.2.2
+   Compiling oorandom v11.1.5
+   Compiling unicode-width v0.2.2
+   Compiling ciborium v0.2.2
+   Compiling log v0.4.34
+   Compiling anes v0.1.6
+   Compiling rustyline v15.0.0
+   Compiling criterion v0.5.1
+   Compiling rustlab-stdlib v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-stdlib)
+   Compiling rustlab-cli v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-cli)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2m 03s
+     Running unittests src\lib.rs (target\debug\deps\rustlab_cli-b9a5be6c43c11dea.exe)
+     Running unittests src\main.rs (target\debug\deps\rustlab-ced90d951dda6661.exe)
+     Running tests\cli_tests.rs (target\debug\deps\cli_tests-5897c73f7246914e.exe)
+     Running tests\diagnostics_tests.rs (target\debug\deps\diagnostics_tests-98447e0061f26558.exe)
+     Running unittests src\lib.rs (target\debug\deps\rustlab_data-b545f466073d19f1.exe)
+     Running tests\data_tests.rs (target\debug\deps\data_tests-a56653297b6a7555.exe)
+     Running tests\g01_verify_tests.rs (target\debug\deps\g01_verify_tests-0af8655700808330.exe)
+     Running unittests src\lib.rs (target\debug\deps\rustlab_eval-eebf4942dd9683ee.exe)
+     Running tests\eval_tests.rs (target\debug\deps\eval_tests-c093fedd721e8797.exe)
+     Running tests\milestone_a1_tests.rs (target\debug\deps\milestone_a1_tests-7e652bf9515041ab.exe)
+     Running unittests src\lib.rs (target\debug\deps\rustlab_math-51da0728c7bb5e70.exe)
+     Running tests\math_tests.rs (target\debug\deps\math_tests-37326c8d7401dea2.exe)
+     Running unittests src\lib.rs (target\debug\deps\rustlab_matio-233b33b216b19da2.exe)
+     Running tests\matio_tests.rs (target\debug\deps\matio_tests-209599b9027493d1.exe)
+     Running tests\scipy_mat_tests.rs (target\debug\deps\scipy_mat_tests-8d102e6333ce49ba.exe)
+     Running unittests src\lib.rs (target\debug\deps\rustlab_parse-8a532cf2d3d4d5ca.exe)
+     Running tests\lexer_tests.rs (target\debug\deps\lexer_tests-f47e64f171073e14.exe)
+     Running tests\parser_tests.rs (target\debug\deps\parser_tests-4e9007abf6c8cf56.exe)
+     Running unittests src\lib.rs (target\debug\deps\rustlab_stdlib-2891052b8e30018d.exe)
+     Running tests\g01_verify_tests.rs (target\debug\deps\g01_verify_tests-8da8eec4470538c6.exe)
+     Running tests\regression_a312_tests.rs (target\debug\deps\regression_a312_tests-da40bee2e38554f5.exe)
+     Running tests\stdlib_a1_tests.rs (target\debug\deps\stdlib_a1_tests-4a47f2b1ed1aa951.exe)
+     Running tests\stdlib_a2_tests.rs (target\debug\deps\stdlib_a2_tests-8e5db45b3f6eacda.exe)
+     Running tests\stdlib_a3_tests.rs (target\debug\deps\stdlib_a3_tests-28b8b386547a1a4d.exe)
+     Running tests\stdlib_tests.rs (target\debug\deps\stdlib_tests-258c9b15385f20c2.exe)
+   Doc-tests rustlab_cli
+   Doc-tests rustlab_data
+   Doc-tests rustlab_eval
+   Doc-tests rustlab_math
+   Doc-tests rustlab_matio
+   Doc-tests rustlab_parse
+   Doc-tests rustlab_stdlib
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.32s
+     Running unittests src\lib.rs (target\debug\deps\rustlab_cli-b9a5be6c43c11dea.exe)
+     Running unittests src\main.rs (target\debug\deps\rustlab-ced90d951dda6661.exe)
+     Running tests\cli_tests.rs (target\debug\deps\cli_tests-5897c73f7246914e.exe)
+     Running tests\diagnostics_tests.rs (target\debug\deps\diagnostics_tests-98447e0061f26558.exe)
+     Running unittests src\lib.rs (target\debug\deps\rustlab_data-b545f466073d19f1.exe)
+     Running tests\data_tests.rs (target\debug\deps\data_tests-a56653297b6a7555.exe)
+     Running tests\g01_verify_tests.rs (target\debug\deps\g01_verify_tests-0af8655700808330.exe)
+     Running unittests src\lib.rs (target\debug\deps\rustlab_eval-eebf4942dd9683ee.exe)
+     Running tests\eval_tests.rs (target\debug\deps\eval_tests-c093fedd721e8797.exe)
+     Running tests\milestone_a1_tests.rs (target\debug\deps\milestone_a1_tests-7e652bf9515041ab.exe)
+     Running unittests src\lib.rs (target\debug\deps\rustlab_math-51da0728c7bb5e70.exe)
+     Running tests\math_tests.rs (target\debug\deps\math_tests-37326c8d7401dea2.exe)
+     Running unittests src\lib.rs (target\debug\deps\rustlab_matio-233b33b216b19da2.exe)
+     Running tests\matio_tests.rs (target\debug\deps\matio_tests-209599b9027493d1.exe)
+     Running tests\scipy_mat_tests.rs (target\debug\deps\scipy_mat_tests-8d102e6333ce49ba.exe)
+     Running unittests src\lib.rs (target\debug\deps\rustlab_parse-8a532cf2d3d4d5ca.exe)
+     Running tests\lexer_tests.rs (target\debug\deps\lexer_tests-f47e64f171073e14.exe)
+     Running tests\parser_tests.rs (target\debug\deps\parser_tests-4e9007abf6c8cf56.exe)
+     Running unittests src\lib.rs (target\debug\deps\rustlab_stdlib-2891052b8e30018d.exe)
+     Running tests\g01_verify_tests.rs (target\debug\deps\g01_verify_tests-8da8eec4470538c6.exe)
+     Running tests\regression_a312_tests.rs (target\debug\deps\regression_a312_tests-da40bee2e38554f5.exe)
+     Running tests\stdlib_a1_tests.rs (target\debug\deps\stdlib_a1_tests-4a47f2b1ed1aa951.exe)
+     Running tests\stdlib_a2_tests.rs (target\debug\deps\stdlib_a2_tests-8e5db45b3f6eacda.exe)
+     Running tests\stdlib_a3_tests.rs (target\debug\deps\stdlib_a3_tests-28b8b386547a1a4d.exe)
+     Running tests\stdlib_tests.rs (target\debug\deps\stdlib_tests-258c9b15385f20c2.exe)
+   Doc-tests rustlab_cli
+   Doc-tests rustlab_data
+   Doc-tests rustlab_eval
+   Doc-tests rustlab_math
+   Doc-tests rustlab_matio
+   Doc-tests rustlab_parse
+   Doc-tests rustlab_stdlib
+   Compiling num-complex v0.4.6
+   Compiling rustlab-math v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-math)
+   Compiling rustfft v6.4.1
+   Compiling rustlab-eval v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-eval)
+   Compiling rustlab-matio v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-matio)
+   Compiling rustlab-data v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-data)
+   Compiling rustlab-stdlib v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-stdlib)
+   Compiling rustlab-cli v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-cli)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 40.23s
+     Running unittests src\lib.rs (target\debug\deps\rustlab_cli-272be421a359a1d4.exe)
+     Running unittests src\main.rs (target\debug\deps\rustlab-d8da2e2ff3bf2a08.exe)
+     Running tests\cli_tests.rs (target\debug\deps\cli_tests-fddaae1f0b9bbae2.exe)
+     Running tests\diagnostics_tests.rs (target\debug\deps\diagnostics_tests-c38962e39b908f9c.exe)
+     Running unittests src\lib.rs (target\debug\deps\rustlab_data-5284ff9e71965a72.exe)
+     Running tests\data_tests.rs (target\debug\deps\data_tests-8076f2198f8c2fc1.exe)
+     Running tests\g01_verify_tests.rs (target\debug\deps\g01_verify_tests-7193983fc0bb676b.exe)
+     Running unittests src\lib.rs (target\debug\deps\rustlab_eval-fab0b25bf423cf3f.exe)
+     Running tests\eval_tests.rs (target\debug\deps\eval_tests-b69154ce4931b062.exe)
+     Running tests\milestone_a1_tests.rs (target\debug\deps\milestone_a1_tests-80d507de74dcb3b1.exe)
+     Running unittests src\lib.rs (target\debug\deps\rustlab_math-d5ac054528d77d0a.exe)
+     Running tests\math_tests.rs (target\debug\deps\math_tests-3a9f59953e4a34dc.exe)
+     Running unittests src\lib.rs (target\debug\deps\rustlab_matio-e56b982f1296df84.exe)
+     Running tests\matio_tests.rs (target\debug\deps\matio_tests-3b388418eadc5384.exe)
+     Running tests\scipy_mat_tests.rs (target\debug\deps\scipy_mat_tests-3cac732b82cf3848.exe)
+     Running unittests src\lib.rs (target\debug\deps\rustlab_parse-8a532cf2d3d4d5ca.exe)
+     Running tests\lexer_tests.rs (target\debug\deps\lexer_tests-f47e64f171073e14.exe)
+     Running tests\parser_tests.rs (target\debug\deps\parser_tests-4e9007abf6c8cf56.exe)
+     Running unittests src\lib.rs (target\debug\deps\rustlab_stdlib-281a8350eb45d119.exe)
+     Running tests\g01_verify_tests.rs (target\debug\deps\g01_verify_tests-9548ba77ee6d70d0.exe)
+     Running tests\regression_a312_tests.rs (target\debug\deps\regression_a312_tests-92711e26f04372c0.exe)
+     Running tests\stdlib_a1_tests.rs (target\debug\deps\stdlib_a1_tests-31323c97e5741b04.exe)
+     Running tests\stdlib_a2_tests.rs (target\debug\deps\stdlib_a2_tests-2243e775e6a9a51d.exe)
+     Running tests\stdlib_a3_tests.rs (target\debug\deps\stdlib_a3_tests-701d094d0d427a05.exe)
+     Running tests\stdlib_tests.rs (target\debug\deps\stdlib_tests-798935a2ee4085e5.exe)
+   Doc-tests rustlab_cli
+   Doc-tests rustlab_data
+   Doc-tests rustlab_eval
+   Doc-tests rustlab_math
+   Doc-tests rustlab_matio
+   Doc-tests rustlab_parse
+   Doc-tests rustlab_stdlib
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.32s
+     Running unittests src\lib.rs (target\debug\deps\rustlab_cli-b9a5be6c43c11dea.exe)
+     Running unittests src\main.rs (target\debug\deps\rustlab-ced90d951dda6661.exe)
+     Running tests\cli_tests.rs (target\debug\deps\cli_tests-5897c73f7246914e.exe)
+     Running tests\diagnostics_tests.rs (target\debug\deps\diagnostics_tests-98447e0061f26558.exe)
+     Running unittests src\lib.rs (target\debug\deps\rustlab_data-b545f466073d19f1.exe)
+     Running tests\data_tests.rs (target\debug\deps\data_tests-a56653297b6a7555.exe)
+     Running tests\g01_verify_tests.rs (target\debug\deps\g01_verify_tests-0af8655700808330.exe)
+     Running unittests src\lib.rs (target\debug\deps\rustlab_eval-eebf4942dd9683ee.exe)
+     Running tests\eval_tests.rs (target\debug\deps\eval_tests-c093fedd721e8797.exe)
+     Running tests\milestone_a1_tests.rs (target\debug\deps\milestone_a1_tests-7e652bf9515041ab.exe)
+     Running unittests src\lib.rs (target\debug\deps\rustlab_math-51da0728c7bb5e70.exe)
+     Running tests\math_tests.rs (target\debug\deps\math_tests-37326c8d7401dea2.exe)
+     Running unittests src\lib.rs (target\debug\deps\rustlab_matio-233b33b216b19da2.exe)
+     Running tests\matio_tests.rs (target\debug\deps\matio_tests-209599b9027493d1.exe)
+     Running tests\scipy_mat_tests.rs (target\debug\deps\scipy_mat_tests-8d102e6333ce49ba.exe)
+     Running unittests src\lib.rs (target\debug\deps\rustlab_parse-8a532cf2d3d4d5ca.exe)
+     Running tests\lexer_tests.rs (target\debug\deps\lexer_tests-f47e64f171073e14.exe)
+     Running tests\parser_tests.rs (target\debug\deps\parser_tests-4e9007abf6c8cf56.exe)
+     Running unittests src\lib.rs (target\debug\deps\rustlab_stdlib-2891052b8e30018d.exe)
+     Running tests\g01_verify_tests.rs (target\debug\deps\g01_verify_tests-8da8eec4470538c6.exe)
+     Running tests\regression_a312_tests.rs (target\debug\deps\regression_a312_tests-da40bee2e38554f5.exe)
+     Running tests\stdlib_a1_tests.rs (target\debug\deps\stdlib_a1_tests-4a47f2b1ed1aa951.exe)
+     Running tests\stdlib_a2_tests.rs (target\debug\deps\stdlib_a2_tests-8e5db45b3f6eacda.exe)
+     Running tests\stdlib_a3_tests.rs (target\debug\deps\stdlib_a3_tests-28b8b386547a1a4d.exe)
+     Running tests\stdlib_tests.rs (target\debug\deps\stdlib_tests-258c9b15385f20c2.exe)
+   Doc-tests rustlab_cli
+   Doc-tests rustlab_data
+   Doc-tests rustlab_eval
+   Doc-tests rustlab_math
+   Doc-tests rustlab_matio
+   Doc-tests rustlab_parse
+   Doc-tests rustlab_stdlib

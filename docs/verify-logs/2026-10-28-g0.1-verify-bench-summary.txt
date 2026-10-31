@@ -1,0 +1,10 @@
+gemm_384_ms: runs=[4.725, 6.663, 5.924] median=5.924 spread=0.969
+gemm_384_gflops: runs=[23.97, 17, 19.12] median=19.12 spread=3.485
+lu_100_ms: runs=[0.195, 0.291, 0.274] median=0.274 spread=0.048
+a_plus_b_ms: runs=[0.631, 4.112, 3.766] median=3.766 spread=1.7405
+a_times_b_ms: runs=[0.609, 3.947, 3.497] median=3.497 spread=1.669
+movmean_1m_ms: runs=[13.787, 18.057, 13.865] median=13.865 spread=2.135
+cummax_1m_ms: runs=[9.237, 11.129, 9.916] median=9.916 spread=0.946
+zscore_1m_ms: runs=[9.544, 12.135, 13.049] median=12.135 spread=1.7525
+write_1m_rows_ms: runs=[211.635, 133.258, 123.685] median=133.258 spread=43.975
+read_1m_rows_ms: runs=[228.269, 261.212, 261.101] median=261.101 spread=16.4715

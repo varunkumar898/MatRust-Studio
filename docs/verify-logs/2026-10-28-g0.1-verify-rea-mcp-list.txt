@@ -1,0 +1,9 @@
+G0.1-VERIFY REA availability probe (OpenCode, 2026-10-28)
+
+Command: opencode mcp list
+Output:
+No MCP servers configured
+
+Tool: tools.opencode.list_mcp_resources({ server: "rea" })
+Output:
+MCP server not found: rea

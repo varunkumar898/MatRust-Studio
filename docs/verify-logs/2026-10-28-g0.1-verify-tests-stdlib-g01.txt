@@ -1,0 +1,50 @@
+cargo :    Compiling memchr v2.8.3
+At line:1 char:1
++ cargo test -p rustlab-stdlib --test g01_verify_tests 2>&1 | Tee-Objec ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (   Compiling memchr v2.8.3:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+   Compiling syn v3.0.9
+   Compiling windows-sys v0.61.2
+   Compiling getrandom v0.4.3
+   Compiling clap_builder v4.6.7
+   Compiling aho-corasick v1.1.5
+   Compiling csv-core v0.1.13
+   Compiling serde_json v1.0.154
+   Compiling csv v1.4.0
+   Compiling winapi-util v0.1.11
+   Compiling regex-automata v0.4.18
+   Compiling same-file v1.0.6
+   Compiling is-terminal v0.4.17
+   Compiling walkdir v2.5.0
+   Compiling tempfile v3.27.0
+   Compiling clap v4.6.7
+   Compiling regex v1.13.1
+   Compiling thiserror-impl v2.0.21
+   Compiling serde_derive v1.0.229
+   Compiling thiserror v2.0.21
+   Compiling rustlab-parse v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-parse)
+   Compiling rustlab-math v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-math)
+   Compiling serde v1.0.229
+   Compiling tinytemplate v1.2.1
+   Compiling ciborium v0.2.2
+   Compiling criterion v0.5.1
+   Compiling rustlab-eval v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-eval)
+   Compiling rustlab-matio v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-matio)
+   Compiling rustlab-data v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-data)
+   Compiling rustlab-stdlib v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-stdlib)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1m 03s
+     Running tests\g01_verify_tests.rs (target\debug\deps\g01_verify_tests-c7ab19a6efdd6765.exe)
+
+running 7 tests
+test test_g01_core_omitnan_sum_mean_min_max ... ok
+test test_g01_display_scale_factor_0_001_1000_golden_unverified ... ok
+test test_g01_display_extreme_range_1e_16_1_golden_unverified ... ok
+test test_g01_lu_residuals_random_5x5 ... ok
+test test_g01_mask_count_and_size_identifiers_settled ... ok
+test test_g01_lu_residuals_random_50x50 ... ok
+test test_g01_mldivide_singular_returns_inf ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+

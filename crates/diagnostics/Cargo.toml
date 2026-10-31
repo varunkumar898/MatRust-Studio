@@ -1,8 +1,0 @@
-[package]
-name = "matlab_diagnostics"
-version.workspace = true
-edition.workspace = true
-license.workspace = true
-
-[dependencies]
-thiserror.workspace = true

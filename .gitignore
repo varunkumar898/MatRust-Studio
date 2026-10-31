@@ -1,3 +1,27 @@
 /target
-Cargo.lock.bak
+**/*.rs.bk
+*.mat_tmp
+re/targets/*.exe
+
+# Environment and secrets
+.env
+.env.*
+*.pem
+*.key
+
+# IDE and editor files
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
 *.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+
+# Logs: ignore root and temporary logs, but track formal verify logs
+*.log
+!docs/verify-logs/*.log

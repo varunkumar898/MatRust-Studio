@@ -1,0 +1,6 @@
+Command: rustlab.exe -e "x=(1:1000000)'; writematrix(x, 'target/verify_1m_rows.csv');"
+cli_output:
+
+csv_path=target/verify_1m_rows.csv
+csv_size_bytes=8888896
+csv_line_count=1000000

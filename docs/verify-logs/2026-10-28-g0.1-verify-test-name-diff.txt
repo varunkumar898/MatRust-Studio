@@ -1,0 +1,8 @@
+only in default:
+test_a2_both_native_and_faer_eig_paths_match: test
+test_a2_golden_eig_rotation_complex_conjugate: test
+test_a2_symmetric_eig_routes_to_faer_and_canonicalizes: test
+
+only in no-default:
+test_a2_faer_feature_off_returns_clear_error: test
+test_a2_native_eig_path_without_faer: test

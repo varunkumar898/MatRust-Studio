@@ -1,0 +1,144 @@
+cargo :    Compiling autocfg v1.5.1
+At line:1 char:1
++ cargo bench -p rustlab-stdlib --bench a312 -- "a312/elementwise_add"  ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (   Compiling autocfg v1.5.1:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+   Compiling proc-macro2 v1.0.107
+   Compiling unicode-ident v1.0.27
+   Compiling quote v1.0.47
+   Compiling bytemuck v1.25.2
+   Compiling cfg-if v1.0.5
+   Compiling nano-gemm-codegen v0.2.1
+   Compiling version_check v0.9.5
+   Compiling paste v1.0.15
+   Compiling libm v0.2.16
+   Compiling reborrow v0.5.5
+   Compiling pulp v0.22.3
+   Compiling num-traits v0.2.19
+   Compiling pulp-wasm-simd-flag v0.1.1
+   Compiling once_cell v1.21.4
+   Compiling dyn-stack-macros v0.1.3
+   Compiling serde_core v1.0.229
+   Compiling memchr v2.8.3
+   Compiling dyn-stack v0.13.2
+   Compiling bitflags v2.13.2
+   Compiling raw-cpuid v11.6.0
+   Compiling thiserror v2.0.21
+   Compiling seq-macro v0.3.6
+   Compiling matrixmultiply v0.3.11
+   Compiling syn v3.0.9
+   Compiling syn v2.0.119
+   Compiling num-complex v0.4.6
+   Compiling nano-gemm-core v0.2.1
+   Compiling windows-link v0.2.1
+   Compiling crossbeam-utils v0.8.23
+   Compiling windows-sys v0.61.2
+   Compiling zerocopy v0.8.63
+   Compiling rawpointer v0.2.1
+   Compiling crossbeam-epoch v0.9.21
+   Compiling itoa v1.0.18
+   Compiling nano-gemm-f64 v0.2.1
+   Compiling nano-gemm-f32 v0.2.1
+   Compiling nano-gemm-c32 v0.2.1
+   Compiling nano-gemm-c64 v0.2.1
+   Compiling serde v1.0.229
+   Compiling crc32fast v1.5.3
+   Compiling zmij v1.0.23
+   Compiling crossbeam-deque v0.8.8
+   Compiling num-integer v0.1.47
+   Compiling aho-corasick v1.1.5
+   Compiling adler2 v2.0.1
+   Compiling rayon-core v1.13.0
+   Compiling regex-syntax v0.8.11
+   Compiling either v1.19.0
+   Compiling simd-adler32 v0.3.10
+   Compiling serde_json v1.0.154
+   Compiling regex-automata v0.4.18
+   Compiling miniz_oxide v0.9.1
+   Compiling thiserror-impl v2.0.21
+   Compiling rustlab-parse v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-parse)
+   Compiling rustlab-math v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-math)
+   Compiling zerocopy-derive v0.8.63
+   Compiling gemm-common v0.19.0
+   Compiling equator-macro v0.2.1
+   Compiling serde_derive v1.0.229
+   Compiling equator v0.2.2
+   Compiling gemm-c32 v0.19.0
+   Compiling gemm-f64 v0.19.0
+   Compiling gemm-f32 v0.19.0
+   Compiling gemm-c64 v0.19.0
+   Compiling qd v0.8.0
+   Compiling winapi-util v0.1.11
+   Compiling csv-core v0.1.13
+   Compiling generativity v1.2.1
+   Compiling anstyle v1.0.14
+   Compiling clap_lex v1.1.1
+   Compiling equator-macro v0.6.0
+   Compiling strength_reduce v0.2.4
+   Compiling half v2.7.1
+   Compiling plotters-backend v0.3.7
+   Compiling getrandom v0.4.3
+   Compiling ryu v1.0.23
+   Compiling ciborium-io v0.2.2
+   Compiling ciborium-ll v0.2.2
+   Compiling csv v1.4.0
+   Compiling plotters-svg v0.3.7
+   Compiling equator v0.6.0
+   Compiling transpose v0.2.3
+   Compiling clap_builder v4.6.7
+   Compiling faer-traits v0.24.0
+   Compiling same-file v1.0.6
+   Compiling flate2 v1.1.10
+   Compiling gemm v0.19.0
+   Compiling regex v1.13.1
+   Compiling rustlab-eval v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-eval)
+   Compiling itertools v0.10.5
+   Compiling primal-check v0.3.4
+   Compiling cast v0.3.0
+   Compiling rustfft v6.4.1
+   Compiling rayon v1.12.0
+   Compiling criterion-plot v0.5.0
+   Compiling tinytemplate v1.2.1
+   Compiling rustlab-data v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-data)
+   Compiling clap v4.6.7
+   Compiling rustlab-matio v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-matio)
+   Compiling nano-gemm v0.2.2
+   Compiling faer v0.24.4
+   Compiling walkdir v2.5.0
+   Compiling plotters v0.3.7
+   Compiling ciborium v0.2.2
+   Compiling is-terminal v0.4.17
+   Compiling anes v0.1.6
+   Compiling fastrand v2.5.0
+   Compiling oorandom v11.1.5
+   Compiling tempfile v3.27.0
+   Compiling criterion v0.5.1
+   Compiling rustlab-stdlib v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-stdlib)
+    Finished `bench` profile [optimized] target(s) in 7m 57s
+     Running benches\a312.rs (target\release\deps\a312-87e64ef7c456014d.exe)
+Gnuplot not found, using plotters backend
+Benchmarking a312/elementwise_add/raw_Value_add/1e6
+Benchmarking a312/elementwise_add/raw_Value_add/1e6: Warming up for 3.0000 s
+Benchmarking a312/elementwise_add/raw_Value_add/1e6: Collecting 100 samples in estimated 5.5095 s (900 iterations)
+Benchmarking a312/elementwise_add/raw_Value_add/1e6: Analyzing
+a312/elementwise_add/raw_Value_add/1e6
+                        time:   [5.9065 ms 6.0169 ms 6.1281 ms]
+                        thrpt:  [163.18 Melem/s 166.20 Melem/s 169.31 Melem/s]
+Found 9 outliers among 100 measurements (9.00%)
+  2 (2.00%) low mild
+  7 (7.00%) high mild
+Benchmarking a312/elementwise_add/eval_pipeline/1e6
+Benchmarking a312/elementwise_add/eval_pipeline/1e6: Warming up for 3.0000 s
+
+Warning: Unable to complete 100 samples in 5.0s. You may wish to increase target time to 5.3s, enable flat sampling, 
+or reduce sample count to 60.
+Benchmarking a312/elementwise_add/eval_pipeline/1e6: Collecting 100 samples in estimated 5.3394 s (5050 iterations)
+Benchmarking a312/elementwise_add/eval_pipeline/1e6: Analyzing
+a312/elementwise_add/eval_pipeline/1e6
+                        time:   [1.0400 ms 1.0834 ms 1.1326 ms]
+                        thrpt:  [882.89 Melem/s 923.00 Melem/s 961.55 Melem/s]
+Found 1 outliers among 100 measurements (1.00%)
+  1 (1.00%) high mild
+

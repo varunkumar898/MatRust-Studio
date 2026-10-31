@@ -1,0 +1,21 @@
+﻿=== MATRUST STUDIO DESKTOP PERFORMANCE BENCHMARK ===
+Date: 2026-10-30 22:52:30
+Release Exe: target\release\matrust_studio.exe
+Release Size: 8605696 bytes (8.21 MB)
+Release SHA256: 1822004DF8B26FF23F985211482AC376B4D09BD2AABE78BAB8FCA2C35AFA01B7
+Debug Size: 232890880 bytes (222.1 MB)
+
+--- 1. STARTUP TIME AND MEMORY FOOTPRINT (5 RUNS) ---
+Run 1 : Startup = 178 ms, Working Set = 6.55 MB
+Run 2 : Startup = 121 ms, Working Set = 6.56 MB
+Run 3 : Startup = 121 ms, Working Set = 6.55 MB
+Run 4 : Startup = 123 ms, Working Set = 6.55 MB
+Run 5 : Startup = 122 ms, Working Set = 6.55 MB
+
+Startup Median: 122 ms (Min: 121 ms, Max: 178 ms)
+Working Set Median: 6.55 MB
+
+--- 2. EXECUTION ENGINE LATENCY ---
+Integration engine tests: 12 tests executed in 0.06s (~5.0 ms per test including full interpreter setup and teardown)
+Breakpoints pause/resume latency: < 2.0 ms
+Worker panic recovery latency: < 5.0 ms

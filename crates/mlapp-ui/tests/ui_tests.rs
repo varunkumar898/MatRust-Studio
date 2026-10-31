@@ -106,12 +106,18 @@ fn test_parse_app_xml_component_tree() {
         .expect("find FrequencyField");
     assert_eq!(freq_field.kind, ComponentKind::NumericEditField);
     freq_field
-        .set_property("Value", PropertyValue::String("10.0".to_string()))
+        .set_property("Value", PropertyValue::Number(10.0))
         .expect("set property");
     assert_eq!(
         freq_field.get_property("Value"),
-        Some(&PropertyValue::String("10.0".to_string()))
+        Some(&PropertyValue::Number(10.0))
     );
+
+    // Verify type safety: setting a String on a NumericEditField must fail
+    let err = freq_field
+        .set_property("Value", PropertyValue::String("invalid".to_string()))
+        .expect_err("string on numeric field must fail type mismatch");
+    assert!(matches!(err, mlapp_ui::UiError::TypeMismatch { .. }));
 }
 
 #[test]

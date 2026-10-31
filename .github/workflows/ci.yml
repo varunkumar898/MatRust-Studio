@@ -96,7 +96,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - name: Run Fuzz Smoke Test Suite
-        run: cargo test --manifest-path fuzz/Cargo.toml
+        run: cargo test --manifest-path fuzz/Cargo.toml --test fuzz_smoke
 
   security:
     name: Security & License Checks

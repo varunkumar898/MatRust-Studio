@@ -92,14 +92,22 @@ fn test_supported_functions_doc_parity_and_coverage() {
             ));
         }
 
-        generated.push_str("\n---\n\n## 2. App Designer UI & Graphics Built-Ins (`mlapp-runtime`)\n\n");
+        generated
+            .push_str("\n---\n\n## 2. App Designer UI & Graphics Built-Ins (`mlapp-runtime`)\n\n");
         generated.push_str("The App Designer runtime environment provides dedicated built-in functions for interactive UI figure control and Cartesian 2D plotting:\n\n");
         generated.push_str("| Built-In | Description | Dispatched UI Mutation |\n");
         generated.push_str("| :--- | :--- | :--- |\n");
-        generated.push_str("| `plot` | 2D Cartesian line plotting on `UIAxes` | `UiMutation::PlotCall` |\n");
-        generated.push_str("| `hold` | Toggles plot hold mode ('on'/'off') | `UiMutation::PlotCall` |\n");
-        generated.push_str("| `uialert` | Modal diagnostic dialog prompt | `UiMutation::Alert` |\n");
-        generated.push_str("| `drawnow` | Flushes pending UI mutation queue | Synchronous event flush |\n");
+        generated.push_str(
+            "| `plot` | 2D Cartesian line plotting on `UIAxes` | `UiMutation::PlotCall` |\n",
+        );
+        generated.push_str(
+            "| `hold` | Toggles plot hold mode ('on'/'off') | `UiMutation::PlotCall` |\n",
+        );
+        generated
+            .push_str("| `uialert` | Modal diagnostic dialog prompt | `UiMutation::Alert` |\n");
+        generated.push_str(
+            "| `drawnow` | Flushes pending UI mutation queue | Synchronous event flush |\n",
+        );
         generated.push_str("| `pause` | Cooperatively yields execution with cancellation checks | Yield / Sleep |\n\n");
         generated.push_str("---\n\n## 3. Unsupported Function Policy\n\n");
         generated.push_str("Unsupported functions **never fail silently**. Calling an unrecognized function immediately raises a loud diagnostic:\n\n");

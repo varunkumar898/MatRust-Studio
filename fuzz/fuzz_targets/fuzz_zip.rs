@@ -1,3 +1,5 @@
+#![cfg_attr(not(target_os = "windows"), no_main)]
+
 use std::io::Cursor;
 
 pub fn fuzz_one(data: &[u8]) {

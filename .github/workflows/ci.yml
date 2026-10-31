@@ -99,7 +99,9 @@ jobs:
       - name: Run Corpus Smoke Test Suite
         run: cargo test --manifest-path fuzz/Cargo.toml --test corpus_smoke
       - name: Install cargo-fuzz
-        uses: taiki-e/install-action@cargo-fuzz
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-fuzz
       - name: Run Fuzz Targets (60s per target)
         run: |
           cargo +nightly fuzz run fuzz_parser -- -max_total_time=60

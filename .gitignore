@@ -1,3 +1,5 @@
 /target
 **/*.rs.bk
 *.mat_tmp
+re/targets/*.exe
+

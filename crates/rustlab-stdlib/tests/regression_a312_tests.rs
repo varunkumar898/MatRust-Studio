@@ -390,6 +390,11 @@ fn every_registered_builtin_has_docs_and_help() {
         "sortrows",
         "readmatrix",
         "writematrix",
+        "readtable",
+        "writetable",
+        "head",
+        "tail",
+        "summary",
     ];
     for entry in std::fs::read_dir(&docs_dir).expect("failed to read docs_dir") {
         let entry = entry.expect("valid entry");

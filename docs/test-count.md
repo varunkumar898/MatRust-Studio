@@ -19,13 +19,17 @@ This document tracks the cumulative and per-suite test counts across milestones,
 | **Milestone B2.1.1** | **196** | **195** | +24 `rustlab-data` tests (depth, properties, CSV edge cases, display goldens), +1 `rustlab-stdlib` singular matrix inv/mldivide Inf test | B2.1.1 corrective pass: display goldens, MATLAB percentile rule, singular matrix warning + Inf, $O(n)$ movmean/cummax/zscore |
 | **Milestone G0.1-VERIFY** | **205** | **204** | +7 `rustlab-stdlib` G0.1 regressions, +1 `rustlab-data` RUSTLAB-id scan, +1 CLI singular-warning integration test | Verification-only pass: LU residuals, singular warning, core `omitnan`, mask ids, display goldens, test-manifest refresh |
 | **Milestone G1** | **212** | **211** | +7 `rustlab-data` stats reference tests | Stats contract optimization & reproducible build validation |
+| **Branch wip/backend-expansion** | **240** | **240** | +14 desktop tests, +6 numerical tests, +5 extended capabilities tests, +3 table tests | Unified Rust backend expansion across 8 capability areas & MatRust Studio desktop IDE |
 
 ---
 
-## 2. Comprehensive Suite Breakdown (Milestone G1)
+## 2. Comprehensive Suite Breakdown (wip/backend-expansion)
 
 | Crate | Unit (cargo header) | Default Passed | No-Default Passed | Status |
 | :--- | :--- | :---: | :---: | :--- |
+| **matrust_studio** | `unittests src\lib.rs` | 0 | 0 | clean |
+| **matrust_studio** | `unittests src\main.rs` | 0 | 0 | clean |
+| **matrust_studio** | `tests/desktop_tests.rs` | 14 | 14 | PASSED |
 | **rustlab-cli** | `unittests src\lib.rs` | 0 | 0 | clean |
 | **rustlab-cli** | `unittests src\main.rs` | 0 | 0 | clean |
 | **rustlab-cli** | `tests/cli_tests.rs` | 4 | 4 | PASSED |
@@ -46,14 +50,17 @@ This document tracks the cumulative and per-suite test counts across milestones,
 | **rustlab-parse** | `tests/lexer_tests.rs` | 4 | 4 | PASSED |
 | **rustlab-parse** | `tests/parser_tests.rs` | 9 | 9 | PASSED |
 | **rustlab-stdlib** | `unittests src\lib.rs` | 7 | 7 | PASSED |
+| **rustlab-stdlib** | `tests/extended_capabilities_tests.rs` | 5 | 5 | PASSED |
 | **rustlab-stdlib** | `tests/g01_verify_tests.rs` | 7 | 7 | PASSED |
+| **rustlab-stdlib** | `tests/numerical_tests.rs` | 6 | 6 | PASSED |
 | **rustlab-stdlib** | `tests/regression_a312_tests.rs` | 16 | 16 | PASSED |
 | **rustlab-stdlib** | `tests/stdlib_tests.rs` | 13 | 13 | PASSED |
 | **rustlab-stdlib** | `tests/stdlib_a1_tests.rs` | 13 | 13 | PASSED |
-| **rustlab-stdlib** | `tests/stdlib_a2_tests.rs` | 21 | 20 | PASSED |
+| **rustlab-stdlib** | `tests/stdlib_a2_tests.rs` | 21 | 21 | PASSED |
 | **rustlab-stdlib** | `tests/stdlib_a3_tests.rs` | 16 | 16 | PASSED |
-| *Doc-tests* | all 7 crates | 0 | 0 | clean |
-| **TOTAL** | 34 units incl. doc-tests | **212** | **211** | **100% PASSED** |
+| **rustlab-stdlib** | `tests/table_tests.rs` | 3 | 3 | PASSED |
+| *Doc-tests* | all 8 crates | 0 | 0 | clean |
+| **TOTAL** | 41 units incl. doc-tests | **240** | **240** | **100% PASSED** |
 
 ---
 

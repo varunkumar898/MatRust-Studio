@@ -20,15 +20,21 @@ pub mod diagnostics;
 pub mod generators;
 pub mod help;
 pub mod helpers;
+pub mod image_proc;
 pub mod io_format;
 pub mod linalg;
 pub mod math_elem;
 pub mod matio_builtins;
+pub mod ml;
 pub mod nd_ops;
 pub mod numeric_types;
+pub mod numerical;
+pub mod robotics;
 pub mod search_sort;
 pub mod shape_inspect;
 pub mod signal;
+pub mod signal_proc;
+pub mod simulation;
 pub mod sparse_builtins;
 pub mod stats;
 pub mod strings;
@@ -134,6 +140,15 @@ pub fn register_all(interp: &mut Interpreter) {
     interp.register_builtin("expm", linalg::expm_fn);
     interp.register_builtin("kron", linalg::kron_fn);
 
+    // Numerical Methods & Calculus (Tier 6b)
+    interp.register_builtin("roots", numerical::roots_fn);
+    interp.register_builtin("polyval", numerical::polyval_fn);
+    interp.register_builtin("polyfit", numerical::polyfit_fn);
+    interp.register_builtin("trapz", numerical::trapz_fn);
+    interp.register_builtin("cumtrapz", numerical::cumtrapz_fn);
+    interp.register_builtin("gradient", numerical::gradient_fn);
+    interp.register_builtin("interp1", numerical::interp1_fn);
+
     // Transforms & Complex (Tier 7)
     interp.register_builtin("fft", signal::fft_fn);
     interp.register_builtin("ifft", signal::ifft_fn);
@@ -232,6 +247,39 @@ pub fn register_all(interp: &mut Interpreter) {
     interp.register_builtin("nonzeros", sparse_builtins::nonzeros);
     interp.register_builtin("spones", sparse_builtins::spones);
 
+    // Engineering Simulation (Priority 3)
+    interp.register_builtin("tf", simulation::tf_fn);
+    interp.register_builtin("step", simulation::step_fn);
+
+    // Signal & Image Processing (Priority 4)
+    interp.register_builtin("filter", signal_proc::filter_fn);
+    interp.register_builtin("filtfilt", signal_proc::filtfilt_fn);
+    interp.register_builtin("hamming", signal_proc::hamming_fn);
+    interp.register_builtin("hann", signal_proc::hann_fn);
+    interp.register_builtin("blackman", signal_proc::blackman_fn);
+    interp.register_builtin("xcorr", signal_proc::xcorr_fn);
+    interp.register_builtin("rgb2gray", image_proc::rgb2gray_fn);
+    interp.register_builtin("imresize", image_proc::imresize_fn);
+    interp.register_builtin("imfilter", image_proc::imfilter_fn);
+
+    // AI & Machine Learning (Priority 5)
+    interp.register_builtin("fitlm", ml::fitlm_fn);
+    interp.register_builtin("predict", ml::predict_fn);
+    interp.register_builtin("kmeans", ml::kmeans_fn);
+    interp.register_builtin("confusionmat", ml::confusionmat_fn);
+
+    // Robotics & Kinematics (Priority 6)
+    interp.register_builtin("rotx", robotics::rotx_fn);
+    interp.register_builtin("roty", robotics::roty_fn);
+    interp.register_builtin("rotz", robotics::rotz_fn);
+    interp.register_builtin("trotx", robotics::trotx_fn);
+    interp.register_builtin("troty", robotics::troty_fn);
+    interp.register_builtin("trotz", robotics::trotz_fn);
+    interp.register_builtin("transl", robotics::transl_fn);
+    interp.register_builtin("fkine_2link", robotics::fkine_2link_fn);
+    interp.register_builtin("ikine_2link", robotics::ikine_2link_fn);
+    interp.register_builtin("jtraj", robotics::jtraj_fn);
+
     // Data & Statistics (Milestone B2.1)
     #[cfg(feature = "data")]
     {
@@ -253,6 +301,11 @@ pub fn register_all(interp: &mut Interpreter) {
         interp.register_builtin("std", rustlab_data::stats::std_fn);
         interp.register_builtin("readmatrix", rustlab_data::csv_io::readmatrix);
         interp.register_builtin("writematrix", rustlab_data::csv_io::writematrix);
+        interp.register_builtin("readtable", rustlab_data::tables::readtable);
+        interp.register_builtin("writetable", rustlab_data::tables::writetable);
+        interp.register_builtin("head", rustlab_data::tables::head_fn);
+        interp.register_builtin("tail", rustlab_data::tables::tail_fn);
+        interp.register_builtin("summary", rustlab_data::tables::summary_fn);
     }
 }
 

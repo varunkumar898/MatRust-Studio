@@ -1,0 +1,26 @@
+[package]
+name = "matrust_studio"
+version = "0.1.0"
+edition = "2021"
+description = "MATSTUDIO / MatRust Studio: MATLAB-compatible scientific computing desktop IDE in Rust"
+license = "MIT OR Apache-2.0"
+
+[lib]
+name = "matrust_studio"
+path = "src/lib.rs"
+
+[[bin]]
+name = "matrust_studio"
+path = "src/main.rs"
+
+[dependencies]
+rustlab-parse = { path = "../../crates/rustlab-parse" }
+rustlab-math = { path = "../../crates/rustlab-math" }
+rustlab-eval = { path = "../../crates/rustlab-eval" }
+rustlab-stdlib = { path = "../../crates/rustlab-stdlib" }
+rustlab-data = { path = "../../crates/rustlab-data" }
+rustlab-cli = { path = "../../crates/rustlab-cli" }
+eframe = { version = "0.31.1", default-features = false, features = ["default_fonts", "glow"] }
+egui = "0.31.1"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"

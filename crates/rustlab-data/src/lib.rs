@@ -9,6 +9,7 @@
 
 pub mod csv_io;
 pub mod stats;
+pub mod tables;
 
 pub(crate) fn user_err(identifier: &str, message: &str) -> rustlab_eval::EvalError {
     rustlab_eval::EvalError::UserError {

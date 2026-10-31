@@ -1031,6 +1031,283 @@ pub fn get_help_text(name: &str) -> Option<&'static str> {
                writematrix(A, filename) writes a 2-D matrix A to a delimited file.\n\
                Floats are written using shortest round-trip representation.\n"
         ),
+        "roots" => Some(
+            "ROOTS  Polynomial roots.\n\n\
+             Syntax:\n\
+               r = roots(p)\n\n\
+             Description:\n\
+               r = roots(p) returns a column vector whose elements are the roots of the polynomial\n\
+               whose coefficients are the elements of vector p.\n"
+        ),
+        "polyval" => Some(
+            "POLYVAL  Evaluate polynomial.\n\n\
+             Syntax:\n\
+               y = polyval(p, x)\n\n\
+             Description:\n\
+               y = polyval(p, x) evaluates the polynomial p at points in array x using Horner's method.\n"
+        ),
+        "polyfit" => Some(
+            "POLYFIT  Polynomial curve fitting.\n\n\
+             Syntax:\n\
+               p = polyfit(x, y, n)\n\n\
+             Description:\n\
+               p = polyfit(x, y, n) finds the coefficients of a polynomial p(x) of degree n that fits\n\
+               the data y best in a least-squares sense.\n"
+        ),
+        "trapz" => Some(
+            "TRAPZ  Trapezoidal numerical integration.\n\n\
+             Syntax:\n\
+               z = trapz(y)\n\
+               z = trapz(x, y)\n\n\
+             Description:\n\
+               z = trapz(y) computes the approximate integral of y via the trapezoidal method with unit spacing.\n\
+               z = trapz(x, y) integrates with respect to coordinates x.\n"
+        ),
+        "cumtrapz" => Some(
+            "CUMTRAPZ  Cumulative trapezoidal numerical integration.\n\n\
+             Syntax:\n\
+               z = cumtrapz(y)\n\
+               z = cumtrapz(x, y)\n\n\
+             Description:\n\
+               z = cumtrapz(y) computes the cumulative integral of y with unit spacing.\n\
+               z = cumtrapz(x, y) integrates with respect to coordinates x.\n"
+        ),
+        "gradient" => Some(
+            "GRADIENT  Numerical gradient.\n\n\
+             Syntax:\n\
+               g = gradient(f)\n\
+               g = gradient(f, h)\n\n\
+             Description:\n\
+               g = gradient(f) calculates the central difference numerical gradient along vector f.\n\
+               g = gradient(f, h) uses spacing h.\n"
+        ),
+        "interp1" => Some(
+            "INTERP1  1-D data interpolation.\n\n\
+             Syntax:\n\
+               yq = interp1(x, y, xq)\n\
+               yq = interp1(x, y, xq, method)\n\n\
+             Description:\n\
+               yq = interp1(x, y, xq) returns interpolated values of a 1-D function at query points xq.\n\
+               Supported methods are 'linear' and 'nearest'.\n"
+        ),
+        "readtable" => Some(
+            "READTABLE  Read tabular data from file into table struct.\n\n\
+             Syntax:\n\
+               T = readtable(filename)\n\n\
+             Description:\n\
+               T = readtable(filename) creates a table by reading column-oriented data from a text file.\n"
+        ),
+        "writetable" => Some(
+            "WRITETABLE  Write table struct to delimited file.\n\n\
+             Syntax:\n\
+               writetable(T, filename)\n\n\
+             Description:\n\
+               writetable(T, filename) writes the table T to a comma-delimited text file.\n"
+        ),
+        "head" => Some(
+            "HEAD  Return first rows of table or matrix.\n\n\
+             Syntax:\n\
+               head(T)\n\
+               head(T, k)\n\n\
+             Description:\n\
+               head(T) returns the first 8 rows of table or matrix T.\n\
+               head(T, k) returns the first k rows.\n"
+        ),
+        "tail" => Some(
+            "TAIL  Return last rows of table or matrix.\n\n\
+             Syntax:\n\
+               tail(T)\n\
+               tail(T, k)\n\n\
+             Description:\n\
+               tail(T) returns the last 8 rows of table or matrix T.\n\
+               tail(T, k) returns the last k rows.\n"
+        ),
+        "summary" => Some(
+            "SUMMARY  Summary statistics of table variables.\n\n\
+             Syntax:\n\
+               s = summary(T)\n\n\
+             Description:\n\
+               s = summary(T) returns summary statistics for each variable in table T.\n"
+        ),
+        "tf" => Some(
+            "TF  Create transfer function model.\n\n\
+             Syntax:\n\
+               sys = tf(num, den)\n\n\
+             Description:\n\
+               sys = tf(num, den) creates a continuous-time transfer function model with numerator\n\
+               num and denominator den.\n"
+        ),
+        "step" => Some(
+            "STEP  Step response of dynamic system.\n\n\
+             Syntax:\n\
+               [y, t] = step(sys)\n\
+               [y, t] = step(sys, tfinal)\n\n\
+             Description:\n\
+               step(sys) calculates the step response of dynamic system sys.\n"
+        ),
+        "filter" => Some(
+            "FILTER  1-D digital filter.\n\n\
+             Syntax:\n\
+               y = filter(b, a, x)\n\n\
+             Description:\n\
+               y = filter(b, a, x) filters input data x using a rational transfer function defined by\n\
+               numerator and denominator coefficients b and a (Direct Form II Transposed).\n"
+        ),
+        "filtfilt" => Some(
+            "FILTFILT  Zero-phase digital filtering.\n\n\
+             Syntax:\n\
+               y = filtfilt(b, a, x)\n\n\
+             Description:\n\
+               y = filtfilt(b, a, x) performs forward and backward digital filtering to eliminate phase distortion.\n"
+        ),
+        "hamming" => Some(
+            "HAMMING  Hamming window.\n\n\
+             Syntax:\n\
+               w = hamming(N)\n\n\
+             Description:\n\
+               w = hamming(N) returns an N-point symmetric Hamming window.\n"
+        ),
+        "hann" => Some(
+            "HANN  Hann window.\n\n\
+             Syntax:\n\
+               w = hann(N)\n\n\
+             Description:\n\
+               w = hann(N) returns an N-point symmetric Hann window.\n"
+        ),
+        "blackman" => Some(
+            "BLACKMAN  Blackman window.\n\n\
+             Syntax:\n\
+               w = blackman(N)\n\n\
+             Description:\n\
+               w = blackman(N) returns an N-point symmetric Blackman window.\n"
+        ),
+        "xcorr" => Some(
+            "XCORR  Cross-correlation.\n\n\
+             Syntax:\n\
+               c = xcorr(x, y)\n\
+               c = xcorr(x)\n\n\
+             Description:\n\
+               c = xcorr(x, y) returns the cross-correlation sequence of vectors x and y.\n"
+        ),
+        "rgb2gray" => Some(
+            "RGB2GRAY  Convert RGB image to grayscale.\n\n\
+             Syntax:\n\
+               I = rgb2gray(RGB)\n\n\
+             Description:\n\
+               I = rgb2gray(RGB) converts the truecolor image RGB to grayscale using standard ITU-R luminance weights.\n"
+        ),
+        "imresize" => Some(
+            "IMRESIZE  Resize image.\n\n\
+             Syntax:\n\
+               J = imresize(I, scale)\n\n\
+             Description:\n\
+               J = imresize(I, scale) resizes image I by scaling factor scale.\n"
+        ),
+        "imfilter" => Some(
+            "IMFILTER  N-D filtering of multidimensional images.\n\n\
+             Syntax:\n\
+               J = imfilter(I, h)\n\n\
+             Description:\n\
+               J = imfilter(I, h) filters array I with correlation kernel h.\n"
+        ),
+        "fitlm" => Some(
+            "FITLM  Fit linear regression model.\n\n\
+             Syntax:\n\
+               model = fitlm(X, y)\n\n\
+             Description:\n\
+               model = fitlm(X, y) returns a full linear regression model fit to predictor variables X and response y.\n"
+        ),
+        "predict" => Some(
+            "PREDICT  Predict responses using trained model.\n\n\
+             Syntax:\n\
+               y_pred = predict(model, X)\n\n\
+             Description:\n\
+               y_pred = predict(model, X) computes predicted values for predictor data X using trained model.\n"
+        ),
+        "kmeans" => Some(
+            "KMEANS  k-means clustering.\n\n\
+             Syntax:\n\
+               [idx, C] = kmeans(X, k)\n\n\
+             Description:\n\
+               [idx, C] = kmeans(X, k) partitions the observations in X into k clusters.\n"
+        ),
+        "confusionmat" => Some(
+            "CONFUSIONMAT  Confusion matrix for classification algorithms.\n\n\
+             Syntax:\n\
+               C = confusionmat(group, grouphat)\n\n\
+             Description:\n\
+               C = confusionmat(group, grouphat) computes the confusion matrix between true and predicted classes.\n"
+        ),
+        "rotx" => Some(
+            "ROTX  3x3 rotation matrix about X-axis.\n\n\
+             Syntax:\n\
+               R = rotx(theta)\n\n\
+             Description:\n\
+               R = rotx(theta) returns a 3-by-3 rotation matrix for rotation around X-axis by angle theta (radians).\n"
+        ),
+        "roty" => Some(
+            "ROTY  3x3 rotation matrix about Y-axis.\n\n\
+             Syntax:\n\
+               R = roty(theta)\n\n\
+             Description:\n\
+               R = roty(theta) returns a 3-by-3 rotation matrix for rotation around Y-axis by angle theta (radians).\n"
+        ),
+        "rotz" => Some(
+            "ROTZ  3x3 rotation matrix about Z-axis.\n\n\
+             Syntax:\n\
+               R = rotz(theta)\n\n\
+             Description:\n\
+               R = rotz(theta) returns a 3-by-3 rotation matrix for rotation around Z-axis by angle theta (radians).\n"
+        ),
+        "trotx" => Some(
+            "TROTX  4x4 homogeneous transform rotation about X-axis.\n\n\
+             Syntax:\n\
+               T = trotx(theta)\n\n\
+             Description:\n\
+               T = trotx(theta) returns a 4-by-4 homogeneous transformation matrix for rotation around X-axis.\n"
+        ),
+        "troty" => Some(
+            "TROTY  4x4 homogeneous transform rotation about Y-axis.\n\n\
+             Syntax:\n\
+               T = troty(theta)\n\n\
+             Description:\n\
+               T = troty(theta) returns a 4-by-4 homogeneous transformation matrix for rotation around Y-axis.\n"
+        ),
+        "trotz" => Some(
+            "TROTZ  4x4 homogeneous transform rotation about Z-axis.\n\n\
+             Syntax:\n\
+               T = trotz(theta)\n\n\
+             Description:\n\
+               T = trotz(theta) returns a 4-by-4 homogeneous transformation matrix for rotation around Z-axis.\n"
+        ),
+        "transl" => Some(
+            "TRANSL  4x4 homogeneous translational transform.\n\n\
+             Syntax:\n\
+               T = transl(x, y, z)\n\n\
+             Description:\n\
+               T = transl(x, y, z) returns a 4-by-4 homogeneous translation matrix for displacements x, y, and z.\n"
+        ),
+        "fkine_2link" => Some(
+            "FKINE_2LINK  Forward kinematics for 2-link planar arm.\n\n\
+             Syntax:\n\
+               [x, y] = fkine_2link(l1, l2, q1, q2)\n\n\
+             Description:\n\
+               fkine_2link(l1, l2, q1, q2) calculates end-effector Cartesian coordinates for a 2-link planar arm.\n"
+        ),
+        "ikine_2link" => Some(
+            "IKINE_2LINK  Inverse kinematics for 2-link planar arm.\n\n\
+             Syntax:\n\
+               [q1, q2] = ikine_2link(l1, l2, x, y)\n\n\
+             Description:\n\
+               ikine_2link(l1, l2, x, y) calculates joint angles for a 2-link planar arm given end-effector coordinates.\n"
+        ),
+        "jtraj" => Some(
+            "JTRAJ  Compute a joint trajectory between two configurations.\n\n\
+             Syntax:\n\
+               q = jtraj(q0, q1, n)\n\n\
+             Description:\n\
+               q = jtraj(q0, q1, n) computes a smooth quintic polynomial trajectory between joint coordinates q0 and q1.\n"
+        ),
         _ => None,
     }
 }

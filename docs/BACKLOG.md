@@ -64,7 +64,22 @@ From official benchmark runs on 1,000,000 elements against original G0.1 contrac
 
 ---
 
-## 4. Planned Roadmapped Milestones
+## 4. Backend Expansion Backlog & Open Items (`wip/backend-expansion`)
+
+1. **B2.2 Plotting Alignment (`rustlab-plot`)**:
+   - Interactive GUI plotting currently implemented via `egui_plot` in MatRust Studio figures panel.
+   - Milestone B2.2 contract requires a standalone, renderer-independent plot-description model with a deterministic headless SVG renderer (`figure`, `plot`, `saveas('x.svg')`).
+
+2. **Stiff ODE Solvers & Advanced Simulation**:
+   - First- and second-order analytical and numerical step responses implemented in `simulation.rs`.
+   - Variable-step stiff ODE solvers (e.g. Radau IIA / BDF) and full state-space block diagram simulation engine tracked for milestone B3.
+
+3. **REA ARM64 Decompilation Support**:
+   - REA PE import and hygiene checks verified. Deep instruction-level decompilation of hot loops (`Value::add`, GEMM, FFT) awaits ARM64 decompiler backend support.
+
+---
+
+## 5. Planned Roadmapped Milestones
 
 - **G1**: Built-in Self-Debug Tools (`--dump-tokens`, `--dump-ast`, `--trace`, `doctor`, `selftest`, `explain`) and `tests/golden` corpus (I1..I15).
 - **B2.2**: `rustlab-plot` plot-description model and deterministic SVG renderer.

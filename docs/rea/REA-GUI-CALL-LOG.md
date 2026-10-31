@@ -1,0 +1,16 @@
+# REA MCP Desktop GUI Call Log
+
+This log documents every Reverse Engineering Analysis (REA) MCP tool call executed during the research, inspection, and verification of the MatRust Studio desktop GUI.
+
+| Timestamp (UTC) | Tool Name | Arguments | Target / Subject | SHA-256 / Identifier | Result Summary | Purpose |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| 2026-10-30 16:15:20 | `open_binary` | `{"target": "C:\\Program Files\\MATLAB\\R2025a\\bin\\win64\\MATLABWindow.exe"}` | MATLABWindow.exe | `69e2233fce9c243849e642a03af7c2dd898a9fe7e9859b26e502ea9651c8c0f9` | Session opened. Format: PE32+ (x86_64), Size: 798,304 bytes. | Initialize reverse-engineering inspection session for MATLAB GUI container. |
+| 2026-10-30 16:15:45 | `inspect_pe_imports` | `{}` | MATLABWindow.exe | `69e2233fce9c243849e642a03af7c2dd898a9fe7e9859b26e502ea9651c8c0f9` | Discovered imports: `libcef.dll` (CEF web runtime), `libprotobuf3.dll` (IPC protocol), `matlabwindowlib.dll`, `USER32.dll`, `KERNEL32.dll`. | Analyze desktop architecture, process isolation, and UI event pump. |
+| 2026-10-30 16:16:10 | `close_binary` | `{}` | MATLABWindow.exe | `69e2233fce9c243849e642a03af7c2dd898a9fe7e9859b26e502ea9651c8c0f9` | Session closed cleanly. | Hygiene and resource release following REA session protocol. |
+| 2026-10-30 16:22:15 | `inspect_desktop_application` | `{"executable_name": "matlab.exe"}` | matlab.exe (runtime) | Dynamic PID query | Process not currently active in test runner session (reported idle). | Confirm process tree state before live observation attempts. |
+| 2026-10-30 16:45:00 | `open_binary` | `{"target": "C:\\Users\\varun\\Desktop\\MATSTUDIO\\target\\debug\\matrust_studio.exe"}` | matrust_studio.exe | Debug target hash verified | Session opened. Format: PE32+ (ARM64 Windows), Size: 230,095,360 bytes. | Verify binary hygiene and imports of our own desktop executable. |
+| 2026-10-30 16:45:30 | `inspect_pe_imports` | `{}` | matrust_studio.exe | Target executable | Discovered imports: `USER32.dll`, `GDI32.dll`, `SHELL32.dll`, `OPENGL32.dll`, `KERNEL32.dll`. No network or browser runtimes. | Verify desktop GUI dependency hygiene: native immediate-mode OpenGL only. |
+| 2026-10-30 16:46:00 | `close_binary` | `{}` | matrust_studio.exe | Target executable | Session closed cleanly. | Finalize binary verification session. |
+| 2026-10-30 17:19:08 | `inspect_pe_imports` | `{"path": "target\\release\\matrust_studio.exe"}` | matrust_studio.exe (release) | `1822004df8b26ff23f985211482ac376b4d09bd2aabe78bab8fca2c35afa01b7` | Verified 23 imported DLLs (287 APIs). Standard Windows native GUI: KERNEL32, USER32, GDI32, ole32, OPENGL32, dwmapi, imm32. No web runtime. | Verify release binary structure, imports, and lack of web bloat. |
+| 2026-10-30 17:19:45 | `open_binary` | `{"path": "target\\release\\matrust_studio.exe"}` | matrust_studio.exe (release) | `1822004df8b26ff23f985211482ac376b4d09bd2aabe78bab8fca2c35afa01b7` | Session opened. Format: PE32+ (ARM64 Windows), 8,605,696 bytes. | Deep analysis session initialization for release binary. |
+| 2026-10-30 17:21:34 | `close_binary` | `{}` | matrust_studio.exe (release) | `1822004df8b26ff23f985211482ac376b4d09bd2aabe78bab8fca2c35afa01b7` | Session closed cleanly. | REA session hygiene and resource release. |

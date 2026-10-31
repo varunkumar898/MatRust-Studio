@@ -1,16 +1,16 @@
 # RustLab Project State (docs/STATE.md)
 
-**Current Milestone:** G1 (reproducible builds, stats contracts, tool verification; fix tag `g1-fix`)  
-**Next Milestone:** B2.2 (rustlab-plot: plot-description model, SVG renderer; wait for owner approval)  
+**Current Branch:** `wip/backend-expansion` (Backend expansion across 8 capability areas & MatRust Studio desktop IDE)  
+**Baseline Tag:** `g1-verified` (commit `5667f83`), fix commit `ca3c325` (`g1-fix`)  
 **Root Path:** `C:\Users\varun\Desktop\MATSTUDIO`  
-**Date:** 2026-10-30  
-**Repository Commit:** tag `g1-verified` (commit `5667f83`), fix tag `g1-fix`  
+**Date:** 2026-10-31  
 **Platform:** Windows 11 ARM64 (`aarch64-pc-windows-gnullvm`), Rust 1.99.1 stable  
-**Verification Status:** `scripts/verify.ps1` clean gate run passed; log: `docs/verify-logs/2026-10-30-g1-verify-clean.log`.  
+**Verification Status:** `scripts/verify.ps1` clean gate run passed; log: `docs/verify-logs/2026-10-31-verify.log` (SHA-256: `9662F445512731E237C167CEA3C0F30371648FD9F2B81430E96EC019DEECB133`).  
 **Total Tests:**
-- Default features: **212** passed
-- All features: **212** passed
-- No-default features: **211** passed (`test_a2_both_native_and_faer_eig_paths_match`, `test_a2_golden_eig_rotation_complex_conjugate`, and `test_a2_symmetric_eig_routes_to_faer_and_canonicalizes` replaced by `test_a2_faer_feature_off_returns_clear_error` and `test_a2_native_eig_path_without_faer`)
+- Default features: **240** passed (0 failed, across 24 test binaries)
+- All features: **240** passed
+- No-default features: **240** passed
+- Test manifest integrity: all **212** historical manifest tests present and passing; 28 new tests added (14 desktop, 6 numerical, 5 extended capabilities, 3 tables).
 
 > **Note on historical paths:** Paths recorded before milestone M0 refer to the old repository location (`C:\Users\varun\.antigravity\rustlab`). Live configuration, RE targets, and project roots are relocated to `C:\Users\varun\Desktop\MATSTUDIO`.
 
@@ -23,10 +23,11 @@
 | `crates/rustlab-parse` | Lexer, AST definitions with `Span`, recursive-descent parser | `thiserror` | None |
 | `crates/rustlab-math` | Column-major `DenseArray`, `Value` enum, CSC sparse matrix, integer classes | `rustlab-parse`, `matrixmultiply`, `num-complex`, `num-traits` | `matrixmultiply` |
 | `crates/rustlab-eval` | AST evaluator, runtime `Environment`, closure handles | `rustlab-parse`, `rustlab-math`, `thiserror` | None |
-| `crates/rustlab-stdlib` | Standard library builtins (elementary math, linalg, FFT, string, IO) | `rustlab-parse`, `rustlab-math`, `rustlab-eval`, `rustlab-matio`, `rustlab-data` (opt) | `faer`, `data` |
+| `crates/rustlab-stdlib` | Standard library builtins (elementary math, linalg, FFT, string, IO, numerical methods, simulation, signal/image processing, ML, robotics) | `rustlab-parse`, `rustlab-math`, `rustlab-eval`, `rustlab-matio`, `rustlab-data` (opt) | `faer`, `data` |
 | `crates/rustlab-matio` | Level 5 MAT-file read/write | `rustlab-math`, `flate2` | None |
-| `crates/rustlab-data` | Summary statistics, windowing, rankings, CSV matrix I/O | `rustlab-parse`, `rustlab-math`, `rustlab-eval`, `csv = "1.4"`, `ryu = "1.0"` | None |
+| `crates/rustlab-data` | Summary statistics, windowing, rankings, CSV matrix I/O, tabular datasets (`readtable`, `writetable`, `head`, `tail`, `summary`) | `rustlab-parse`, `rustlab-math`, `rustlab-eval`, `csv = "1.4"`, `ryu = "1.0"` | None |
 | `crates/rustlab-cli` | REPL, line-editor, diagnostic error reporting, benchmark suite | `rustlab-eval`, `rustlab-stdlib`, `rustyline`, `clap` | `faer`, `data` |
+| `apps/desktop` | MatRust Studio desktop IDE (custom DockTree, code folding, breakpoints, worker execution thread, interactive command window, workspace panel, figures viewer, status bar) | `rustlab-eval`, `rustlab-stdlib`, `rustlab-data`, `rustlab-matio`, `eframe = "0.31"`, `egui = "0.31"`, `egui_plot = "0.31"` | None |
 
 ---
 
@@ -88,4 +89,5 @@ Build command: `powershell.exe -File scripts/build-release.ps1`
 - **Milestone G0.1**: Unverified baseline only. Added owed-items review, a REA R-check claim, a REPL transcript at the wrong path, and a release benchmark triplet; rejected by the owner as not sufficient evidence.
 - **Milestone R0**: Added `docs/ROADMAP.md` with status from git tags; recorded next milestone as G0.1. Documentation only; no feature code.
 - **Milestone G0.1-VERIFY**: Verification-only closeout. Added nine missing regressions, settled the mask-count error id, corrected display rules and LU backlog notes, reconciled binary hashes, re-ran release benchmarks with a 1,000,000-row CSV and single-thread GEMM proof, regenerated the 19-prompt REPL transcript at `bench-results/g0.1/repl.txt`, and passed `scripts/verify.ps1` from `cargo clean` at 205/205/204. Tag: `g0.1-verified`.
-- **Milestone G1**: Bit-for-bit reproducible release build (0-byte diff across clones), stats routine optimizations with 7 reference tests (212/212/211 tests), REA PE import hygiene audit, cargo-deny license verification, release benchmark triplet with detailed min/median/spread reporting. Benchmark results: LU MET, movmean MISSED (regressed to 16.739 ms), cummax UNSTABLE (16.8 ms spread), A+B MISSED on cross-run median (3.533 ms), zscore MARGINAL (10.197 ms). Misses logged to `docs/BACKLOG.md` §3. Tag: `g1-verified`, fix tag: `g1-fix`.
+- **Milestone G1**: Bit-for-bit reproducible release build (0-byte diff across clones), stats routine optimizations with 7 reference tests (212/212/211 tests), REA PE import hygiene audit, cargo-deny license verification, release benchmark triplet with detailed min/median/spread reporting. Benchmark results: LU MET, movmean MISSED (regressed to 16.739 ms), cummax UNSTABLE (16.8 ms spread), A+B MISSED on cross-run median (3.533 ms), zscore MARGINAL (10.197 ms). Misses logged to `docs/BACKLOG.md` §3. Tag: `g1-verified`, fix commit: `ca3c325` (`g1-fix`).
+- **Branch `wip/backend-expansion`**: Unified Rust backend expansion across 8 scientific computing capability areas + MatRust Studio desktop IDE. Implemented 32 new clean-room builtins (`roots`, `polyval`, `polyfit` with QR decomposition, `trapz`, `cumtrapz`, `gradient`, `interp1`, `readtable`, `writetable`, `head`, `tail`, `summary`, `tf`, `step`, `filter`, `filtfilt`, `hamming`, `hann`, `blackman`, `xcorr`, `rgb2gray`, `imresize`, `imfilter`, `fitlm`, `predict`, `kmeans`, `confusionmat`, `rotx`, `roty`, `rotz`, `trotx`, `troty`, `trotz`, `transl`, `fkine_2link`, `ikine_2link`, `jtraj`). Added extensive architectural specifications under `docs/backend/` and `docs/compatibility/`. Total tests: 240/240/240. Manifest integrity: 212/212 preserved. Status: in progress on branch `wip/backend-expansion`.

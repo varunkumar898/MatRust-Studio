@@ -1,16 +1,17 @@
 # RustLab Project State (docs/STATE.md)
 
-**Current Branch:** `main` (Merged PR #1; published to `https://github.com/varunkumar898/MatRust-Studio.git`)  
+**Current Branch:** `hardening` (PR #11 into `main`; repository: `https://github.com/varunkumar898/MatRust-Studio.git`)  
 **Baseline Tag:** `ci-setup-green` (commit `e79b522`)  
 **Root Path:** `C:\Users\varun\Desktop\MATSTUDIO`  
 **Date:** 2026-10-31  
 **Platform:** Windows 11 ARM64 (`aarch64-pc-windows-gnullvm`), Rust 1.99.1 stable  
-**CI Status:** 100% GREEN on GitHub Actions across Ubuntu, Windows, and macOS (Run ID `41215345222` on `main`, Run ID `41215030511` on PR #1).  
+**CI Status:** GREEN on GitHub Actions across Ubuntu, Windows, and macOS (Push Run ID `41222873156`, PR #11 Run ID `41222878479`).  
 **Verification Status:** Cargo workspace quality gates passed (clippy -D warnings with all-features & no-default-features, fmt check, cargo doc -D warnings, cargo deny check licenses bans advisories, cargo audit).  
 **Total Tests:**
-- Default features: **302** passed (0 failed, across 35 test suites)
-- All features: **302** passed
-- No-default features: **302** passed
+- Default features: **309** passed (0 failed, across 37 test suites)
+- All features: **309** passed
+- No-default features: **309** passed
+- Fuzz Smoke Suite: **3** passed (`fuzz/tests/fuzz_smoke.rs`)
 - Test manifest integrity: all historical tests present and passing; 62 new tests added across `mlapp-*`, `proptest_math`, and CLI suites. Zero regressions.
 
 > **Note on historical paths:** Paths recorded before milestone M0 refer to the old repository location (`C:\Users\varun\.antigravity\rustlab`). Live configuration, RE targets, and project roots are relocated to `C:\Users\varun\Desktop\MATSTUDIO`.

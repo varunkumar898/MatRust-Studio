@@ -1,6 +1,11 @@
-# RustLab: Clean-Room MATLAB-Compatible Numerical Engine in Rust
+# MatRust Studio (RustLab)
 
-**RustLab** is a clean-room, high-performance, MATLAB-compatible numerical computing engine written from scratch in idiomatic Rust. It features a complete pipeline: Lexer & Pratt Parser $\rightarrow$ Interpreter & Scope Manager $\rightarrow$ Pure Column-Major Tensor Math Core $\rightarrow$ Standard Library $\rightarrow$ Level 5 `.mat` File I/O $\rightarrow$ Interactive Rustyline REPL & CLI.
+[![CI](https://github.com/varunkumar898/MatRust-Studio/actions/workflows/ci.yml/badge.svg)](https://github.com/varunkumar898/MatRust-Studio/actions/workflows/ci.yml)
+[![License: MIT OR Apache-2.0](https://img.shields.io/badge/License-MIT%20OR%20Apache--2.0-blue.svg)](#license)
+
+> **Notice**: MatRust Studio is an independent clean-room implementation and is not affiliated with, endorsed by, or sponsored by The MathWorks, Inc. MATLAB® is a registered trademark of The MathWorks, Inc.
+
+**MatRust Studio** (powered by the **RustLab** engine) is a clean-room, high-performance, MATLAB-compatible numerical computing engine and App Designer runtime written from scratch in idiomatic Rust. It features a complete pipeline: Lexer & Pratt Parser $\rightarrow$ Interpreter & Scope Manager $\rightarrow$ Pure Column-Major Tensor Math Core $\rightarrow$ Standard Library $\rightarrow$ Level 5 `.mat` File I/O $\rightarrow$ Interactive REPL & CLI $\rightarrow$ App Designer (`.mlapp`) Container & UI Host.
 
 ---
 
@@ -121,19 +126,18 @@ cargo run --release --bin rustlab -- bench
 > **Explicitly Unimplemented Features**:
 > The following components are **NOT IMPLEMENTED**:
 > 1. **Octave Bridge**: Subprocess bridge to `octave-cli` is NOT implemented.
-> 2. **Python Bindings (PyO3)**: Native PyO3 extension is NOT implemented (C ABI available via `mlapp-ffi`).
-> 3. **Property Testing (`proptest`)**: Property-based randomized test suite is NOT implemented.
-> 4. **Fuzz Testing (`cargo-fuzz`)**: LibFuzzer targets are NOT implemented.
-> 5. **Criterion Benchmarks**: Microbenchmarks for container/UI are NOT implemented (core math benchmarks exist via `rustlab-cli bench`).
+> 2. **Python Bindings (PyO3)**: Native PyO3 extension is NOT implemented (C ABI with integer handles available via `mlapp-ffi`).
+> 3. **Fuzz Testing (`cargo-fuzz`)**: LibFuzzer targets are NOT implemented.
 
 | Capability Area | Feature | Status | Proving Test | Notes |
-| :--- | :--- | :---: | :--- | :--- |
+| :--- | :--- | :--- | :--- | :--- |
 | **Container & Security** | Zip-Slip path sanitization | **Implemented** | [container_tests.rs](crates/mlapp-container/tests/container_tests.rs) `test_zip_slip_protection` | Rejects `..`, root `/`, and drive prefixes |
 | **Container & Security** | Zip-Bomb compression ratio caps | **Implemented** | [container_tests.rs](crates/mlapp-container/tests/container_tests.rs) `test_zip_bomb_protection` | Rejects compression ratios > threshold |
 | **Container & Security** | Actual decompressed byte accounting | **Implemented** | [container_tests.rs](crates/mlapp-container/tests/container_tests.rs) `test_decompressed_bytes_limit_with_forged_header` | Enforces `.take(limit)` on stream; catches forged header sizes |
 | **Container & Security** | Maximum archive file quota | **Implemented** | [container_tests.rs](crates/mlapp-container/tests/container_tests.rs) `test_file_count_limit` | Default 2,048 file cap |
 | **Container & Security** | Entry role & `.mat` detection | **Implemented** | [container_tests.rs](crates/mlapp-container/tests/container_tests.rs) `test_inspect_mlapp_structure` | Flags binary data as `unsupported-binary` |
 | **Container & Security** | Installer `.mlappinstall` discovery | **Implemented** | [container_tests.rs](crates/mlapp-container/tests/container_tests.rs) `test_inspect_mlappinstall_manifest` | Extracts title, author, version, toolboxes |
+| **Container & Security** | Opt-in Real-App Validation | **Implemented** | [container_tests.rs](crates/mlapp-container/tests/container_tests.rs) `test_opt_in_real_apps_validation` | Discovers and validates all `.mlapp` files when `MLAPP_REAL_APPS_DIR` is set |
 | **UI Model** | App Designer XML parser | **Implemented** | [ui_tests.rs](crates/mlapp-ui/tests/ui_tests.rs) `test_parse_app_xml_component_tree` | Parses `UIFigure`, `Panel`, `Button`, `UIAxes` |
 | **UI Model** | XML nesting depth limit | **Implemented** | [ui_tests.rs](crates/mlapp-ui/tests/ui_tests.rs) `test_xml_nesting_depth_limit` | Rejects > 1,000 nested XML elements with `MaxDepthExceeded` |
 | **UI Model** | Bottom-Left to Top-Left geometry | **Implemented** | [ui_tests.rs](crates/mlapp-ui/tests/ui_tests.rs) `test_coordinate_transformation_bidirectional` | Tested bidirectional round-trip |
@@ -161,11 +165,10 @@ cargo run --release --bin rustlab -- bench
 | **Plotting & 2D Graphics**| Deterministic SVG renderer | **Implemented** | [plot_tests.rs](crates/mlapp-plot/tests/plot_tests.rs) `test_axes_model_plotting_and_svg_export` | Headless SVG output tested |
 | **Host & Threading** | Worker thread lifecycle & channels | **Implemented** | [host_tests.rs](crates/mlapp-host/tests/host_tests.rs) `test_app_host_session_lifecycle` | Worker evaluates callbacks, dispatches notifications |
 | **Rendering Backends** | Pluggable `RenderBackend` trait | **Implemented** | [render_tests.rs](crates/mlapp-render/tests/render_tests.rs) `test_headless_renderer_tree_walk_and_event_dispatch` | Headless backend tested; egui backend behind feature |
-| **Embedding C ABI** | C API headers, null safety & unwind | **Implemented** | [ffi_tests.rs](crates/mlapp-ffi/tests/ffi_tests.rs) `test_c_abi_package_and_session_flow`, `test_c_abi_null_and_invalid_inputs` | String free functions, null safety checks, `catch_unwind` at all extern fns |
-| **CLI Tooling** | `inspect`, `extract`, `check-compat`, `run` | **Implemented** | [fixture_tests.rs](crates/mlapp-container/tests/fixture_tests.rs) `test_fixtures_generation_and_inspection` | Verified inspection and compatibility execution |
-| **CI Workflow** | GitHub Actions Workflow | **Workflow present, not yet run** | [.github/workflows/verify.yml](.github/workflows/verify.yml) | Tests workspace across default, all, and no-default features |
+| **Embedding C ABI** | C API headers, null safety & handle IDs | **Implemented** | [ffi_tests.rs](crates/mlapp-ffi/tests/ffi_tests.rs) `test_c_abi_package_and_session_flow_with_handle_ids` | `mlapp.h` header parity, integer IDs, null checks, `catch_unwind` |
+| **CLI Tooling** | `inspect`, `extract`, `check-compat`, `run` | **Implemented** | [cli_tests.rs](crates/mlapp-cli/tests/cli_tests.rs) `test_cli_run_command`, `test_cli_run_gui_flag` | Verified inspection, compatibility, execution, and `--gui` flag |
+| **Property Testing** | Property-based tests (`proptest`) | **Implemented** | [proptest_math.rs](crates/rustlab-math/tests/proptest_math.rs) `prop_addition_is_commutative` | Tensor addition commutativity and transpose involution properties |
 | **Octave Bridge** | Subprocess bridge to `octave-cli` | **Missing** | N/A | Subprocess bridge not implemented |
 | **Python Bindings** | PyO3 Python package | **Missing** | N/A | C ABI is available via `mlapp-ffi`; native PyO3 module not implemented |
-| **Property Testing** | Property-based tests (`proptest`) | **Missing** | N/A | Exhaustive unit/integration tests present; proptest suites not implemented |
 | **Fuzz Testing** | `cargo-fuzz` targets | **Missing** | N/A | Format validation unit tests present; libFuzzer harness not implemented |
-| **Criterion Benches**| Criterion benchmarks for container/UI | **Missing** | N/A | Benchmarks exist for math core (`rustlab-cli bench`); container benchmarks missing |
+| **Criterion Benches**| Criterion benchmarks for numerical engine | **Implemented** | [a312.rs](crates/rustlab-stdlib/benches/a312.rs) `bench_elementwise_add` | Microbenchmarks for GEMM, FFT, and A+B; container benchmarks missing |

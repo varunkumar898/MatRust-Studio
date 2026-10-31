@@ -58,7 +58,7 @@ R8 PERFORMANCE. Release profile only. Say for each number: Rust-API level or
 R9 ENVIRONMENT (Windows ARM64, PowerShell). Run once:
    git config --global core.pager cat. Never run a command that opens a pager.
    Do not put Ghidra projects or RE targets under any path whose element
-   starts with a dot (use C:\Users\varun\Desktop\MATSTUDIO\re\targets, C:\Users\varun\Desktop\MATSTUDIO\re\projects). Logs are UTF-8.
+   starts with a dot (use <workspace>/re/targets, <workspace>/re/projects). Logs are UTF-8.
    If your tools are in "plan mode" and reject writes, say so and ask the
    owner to switch; do not pretend the write happened.
 R10 DEPENDENCIES. MIT/Apache-2.0/BSD/ISC/Zlib/Unicode only. Every new crate:
@@ -141,8 +141,8 @@ R15 SMALL STEPS. Work in steps of at most ~150 lines of change; run the
 ====================================================================
 3. REA (reverse-engineering analysis MCP) - HOW TO USE IT
 ====================================================================
-REA runs in ANTIGRAVITY (config C:\Users\varun\.gemini\config\mcp_config.json,
-command: node C:\Users\varun\.antigravity\rea\scripts\rea.mjs mcp). It is not
+REA runs in ANTIGRAVITY (config ~/.gemini/config/mcp_config.json,
+command: node ~/.antigravity/rea/scripts/rea.mjs mcp). It is not
 configured in opencode. Tool names seen so far: open_binary, binary_session,
 close_binary, analyze_function, address_name, compare_bundles,
 inspect_sqlite_database (about 116 tools; list the real names first).
@@ -154,7 +154,7 @@ SESSION PROTOCOL (an "R-check"):
  1 List tool names (paste exact names or the exact error). If the server is
    unavailable, report the exact error, mark the R-check SKIPPED (reason),
    and continue the milestone. Never substitute another tool silently.
- 2 Copy the binary to C:\Users\varun\Desktop\MATSTUDIO\re\targets\ (no dotted path elements). Compute
+ 2 Copy the binary to re/targets\ (no dotted path elements). Compute
    SHA-256 and size in the shell.
  3 open_binary. The session hash must equal the shell hash. If not: STOP and
    report; do not continue with a mismatched binary.

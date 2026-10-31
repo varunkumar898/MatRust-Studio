@@ -1,6 +1,8 @@
 //! MATLAB App Designer Language Frontend: classdef parser, AST extraction,
 //! code extractor from XML containers, and static compatibility scanner.
 
+#![deny(clippy::unwrap_used)]
+
 use rustlab_parse::ast::Stmt;
 use rustlab_parse::span::Span;
 use serde::{Deserialize, Serialize};

@@ -573,3 +573,40 @@ fn test_extract_security_symlink_not_allowed() {
         other => panic!("expected SymlinkNotAllowed, got {other:?}"),
     }
 }
+
+#[test]
+fn test_opt_in_real_apps_validation() {
+    let dir = match std::env::var("MLAPP_REAL_APPS_DIR") {
+        Ok(val) if !val.trim().is_empty() => std::path::PathBuf::from(val),
+        _ => {
+            eprintln!("[INFO] MLAPP_REAL_APPS_DIR not set; skipping real-app external validation (0 external apps tested).");
+            return;
+        }
+    };
+
+    if !dir.exists() {
+        eprintln!("[WARN] MLAPP_REAL_APPS_DIR directory does not exist: {dir:?}; skipping.");
+        return;
+    }
+
+    let entries = std::fs::read_dir(&dir).expect("failed to read MLAPP_REAL_APPS_DIR");
+    let mut tested_count = 0;
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.extension().and_then(|ext| ext.to_str()) == Some("mlapp") {
+            println!("Validating real .mlapp: {path:?}");
+            let file = std::fs::File::open(&path).expect("open file failed");
+            let mut container = AppContainer::open(file).expect("AppContainer::open failed");
+            if let Ok(doc_xml) = container.read_entry_to_string("matlab/document.xml") {
+                if let Ok(code) = mlapp_lang::extract_code_from_document_xml(&doc_xml) {
+                    let _ = mlapp_lang::parse_app_classdef(&code);
+                }
+            }
+            if let Ok(app_xml) = container.read_entry_to_string("appdesigner/app.xml") {
+                let _ = mlapp_ui::parse_app_xml(&app_xml);
+            }
+            tested_count += 1;
+        }
+    }
+    println!("MLAPP_REAL_APPS_DIR tested {tested_count} external application(s).");
+}

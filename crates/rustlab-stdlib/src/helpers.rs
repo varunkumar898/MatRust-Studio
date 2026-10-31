@@ -77,7 +77,7 @@ pub fn parse_dims(args: &[Value]) -> Result<Vec<usize>, EvalError> {
     validate_dims(dims)
 }
 
-/// Extracts a DenseArray<f64> from a Value, returning an error if incompatible.
+/// Extracts a `DenseArray<f64>` from a Value, returning an error if incompatible.
 pub fn extract_f64_array(val: &Value) -> Result<DenseArray<f64>, EvalError> {
     val.to_double_array().map_err(math_err)
 }

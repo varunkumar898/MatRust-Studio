@@ -3,6 +3,8 @@
 //! Exposes integer-based handle IDs (`u64`) instead of raw pointers to guarantee memory safety,
 //! eliminate dangling pointers, and prevent use-after-free or pointer forgery across the FFI boundary.
 
+#![deny(clippy::unwrap_used)]
+
 use mlapp_container::AppContainer;
 use mlapp_host::{AppSession, HostConfig, UiEvent};
 use mlapp_lang::{analyze_compatibility, extract_code_from_document_xml, parse_app_classdef};

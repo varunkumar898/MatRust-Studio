@@ -139,3 +139,34 @@ fn test_c_abi_null_and_invalid_inputs_with_handle_ids() {
         assert_eq!(mlapp_session_send_button_click(999999, ptr::null()), -1);
     }
 }
+
+#[test]
+fn test_c_header_parity_and_declarations() {
+    let header_candidates = [
+        "crates/mlapp-ffi/include/mlapp.h",
+        "include/mlapp.h",
+        "../mlapp-ffi/include/mlapp.h",
+    ];
+    let mut header_content = None;
+    for path in header_candidates {
+        if let Ok(content) = std::fs::read_to_string(path) {
+            header_content = Some(content);
+            break;
+        }
+    }
+    let header = header_content.expect("include/mlapp.h must exist");
+
+    // Check header guards and core symbols
+    assert!(header.contains("MLAPP_H"));
+    assert!(header.contains("uint64_t"));
+    assert!(header.contains("mlapp_package_open_bytes"));
+    assert!(header.contains("mlapp_package_get_manifest_json"));
+    assert!(header.contains("mlapp_package_get_manifest_string"));
+    assert!(header.contains("mlapp_package_check_compat_json"));
+    assert!(header.contains("mlapp_package_check_compat_string"));
+    assert!(header.contains("mlapp_package_free"));
+    assert!(header.contains("mlapp_session_launch"));
+    assert!(header.contains("mlapp_session_send_button_click"));
+    assert!(header.contains("mlapp_session_shutdown"));
+    assert!(header.contains("mlapp_string_free"));
+}

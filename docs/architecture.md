@@ -143,5 +143,5 @@ graph TD
 - **`mlapp-plot`**: Renderer-agnostic 2D `AxesModel` and `FigureModel` supporting line, scatter, bar, limits, titles, and deterministic SVG output.
 - **`mlapp-host`**: Worker thread lifecycle, event-driven callback execution, batched UI mutation dispatching, timeouts, and cancellation.
 - **`mlapp-render`**: Pluggable `RenderBackend` trait with headless and egui implementations.
-- **`mlapp-ffi`**: Stable C ABI (`mlapp_ffi.h`) for embedding in C, C++, and Python hosts.
+- **`mlapp-ffi`**: Stable C ABI (`mlapp.h`) for embedding in C, C++, and Python hosts with integer-based handles.
 - **`mlapp-cli`**: Headless developer tool offering `inspect`, `extract`, `check-compat`, and `run` commands.

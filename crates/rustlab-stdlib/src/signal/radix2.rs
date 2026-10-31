@@ -5,10 +5,11 @@
 //! whose length N is a power of 2, based on the Danielson-Lanczos lemma (1942):
 //!
 //! A DFT of length N can be decomposed into two interleaved DFTs of length N/2:
+//! ```text
 //! X[k] = E[k] + e^(-2*pi*i*k/N) * O[k]
 //! X[k + N/2] = E[k] - e^(-2*pi*i*k/N) * O[k]
-//!
-//! where E[k] is the DFT of even-indexed elements, and O[k] is the DFT of odd-indexed elements.
+//! ```
+//! where `E[k]` is the DFT of even-indexed elements, and `O[k]` is the DFT of odd-indexed elements.
 
 use num_complex::Complex64;
 use std::f64::consts::PI;

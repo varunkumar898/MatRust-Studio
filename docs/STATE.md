@@ -5,12 +5,12 @@
 **Root Path:** `C:\Users\varun\Desktop\MATSTUDIO`  
 **Date:** 2026-10-31  
 **Platform:** Windows 11 ARM64 (`aarch64-pc-windows-gnullvm`), Rust 1.99.1 stable  
-**Verification Status:** `scripts/verify.ps1` clean gate run passed; log: `docs/verify-logs/2026-10-31-verify.log` (SHA-256: `9662F445512731E237C167CEA3C0F30371648FD9F2B81430E96EC019DEECB133`).  
+**Verification Status:** Cargo workspace quality gates passed (clippy -D warnings, fmt check, cargo doc -D warnings, cargo deny check licenses bans).  
 **Total Tests:**
-- Default features: **240** passed (0 failed, across 24 test binaries)
-- All features: **240** passed
-- No-default features: **240** passed
-- Test manifest integrity: all **212** historical manifest tests present and passing; 28 new tests added (14 desktop, 6 numerical, 5 extended capabilities, 3 tables).
+- Default features: **302** passed (0 failed, across 35 test suites)
+- All features: **302** passed
+- No-default features: **302** passed
+- Test manifest integrity: all historical tests present and passing; 62 new tests added across `mlapp-*`, `proptest_math`, and CLI suites. Zero regressions.
 
 > **Note on historical paths:** Paths recorded before milestone M0 refer to the old repository location (`C:\Users\varun\.antigravity\rustlab`). Live configuration, RE targets, and project roots are relocated to `C:\Users\varun\Desktop\MATSTUDIO`.
 

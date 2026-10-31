@@ -30,16 +30,11 @@ This document details the built-in function library available in the native runt
 Unsupported functions **never fail silently**. Calling an unrecognized function immediately raises a loud diagnostic:
 
 ```
-RuntimeError: Unsupported MATLAB function 'besselk'.
-Recommendation: Enable the 'octave-bridge' cargo feature to forward unimplemented functions to GNU Octave.
+RuntimeError: Unsupported MATLAB function '<name>' (not implemented in native runtime).
 ```
 
 ---
 
-## 3. Optional GNU Octave Bridge (Tier 4)
+## 3. GNU Octave Bridge (Tier 4) — NOT IMPLEMENTED
 
-Behind cargo feature `octave-bridge`:
-- Spawns a sandboxed `octave-cli` subprocess.
-- Marshals inputs and outputs via JSON / binary pipe.
-- Does **not** link against GPL code: process boundary preserves clean license isolation.
-- Used strictly as an on-demand fallback when the native runtime does not yet implement a specialized toolbox function.
+The GNU Octave bridge is currently **NOT IMPLEMENTED**. In current versions, unsupported functions fail loudly with a runtime error diagnostic. Future tiers may provide an optional sandboxed process bridge to external open-source engines.

@@ -92,6 +92,23 @@ fn test_cli_run_command() {
 }
 
 #[test]
+fn test_cli_run_gui_flag() {
+    let fixture = get_fixture_path("r2021a_sample.mlapp");
+    let mut cmd = Command::cargo_bin("mlapp-cli").expect("binary mlapp-cli exists");
+
+    cmd.arg("run")
+        .arg("--gui")
+        .arg(&fixture)
+        .assert()
+        .success()
+        .stdout(predicate::str::contains(
+            "[GUI Mode]: Initializing GUI window",
+        ))
+        .stdout(predicate::str::contains("App Name: FixtureApp_R2021a"))
+        .stdout(predicate::str::contains("App session closed successfully."));
+}
+
+#[test]
 fn test_cli_invalid_path_fails() {
     let mut cmd = Command::cargo_bin("mlapp-cli").expect("binary mlapp-cli exists");
 

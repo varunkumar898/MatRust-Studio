@@ -1,5 +1,5 @@
-$logPath = 'C:\Users\varun\.antigravity\rustlab\bench-results\a312\verify-a312-final.log'
-$base = 'C:\Users\varun\.antigravity\rustlab\bench-results\a312'
+$base = $PSScriptRoot
+$logPath = Join-Path $base "verify-a312-final.log"
 $log = Get-Content $logPath
 
 $step = ''

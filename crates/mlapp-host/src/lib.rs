@@ -1,5 +1,7 @@
 //! Host lifecycle, asynchronous worker thread, event loop, and callback dispatch.
 
+#![deny(clippy::unwrap_used)]
+
 use mlapp_container::{AppContainer, AppManifest, ContainerError};
 use mlapp_lang::{extract_code_from_document_xml, parse_app_classdef, AppClassDef, LangError};
 use mlapp_runtime::{AppHandle, AppRuntime, RuntimeError, UiMutation};

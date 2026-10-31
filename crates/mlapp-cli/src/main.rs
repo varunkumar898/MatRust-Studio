@@ -1,3 +1,5 @@
+#![deny(clippy::unwrap_used)]
+
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 use mlapp_container::AppContainer;
@@ -70,6 +72,10 @@ enum Commands {
         /// Allow external language interop (Java, Python, C libraries)
         #[arg(long, default_value_t = false)]
         allow_interop: bool,
+
+        /// Launch GUI window instead of headless mode
+        #[arg(long, default_value_t = false)]
+        gui: bool,
 
         /// Execution timeout per callback in milliseconds
         #[arg(long, default_value_t = 5000)]
@@ -154,6 +160,7 @@ fn main() -> Result<()> {
             allow_system,
             allow_eval,
             allow_interop,
+            gui,
             timeout_ms,
         } => {
             let file = File::open(&package_path)
@@ -174,6 +181,13 @@ fn main() -> Result<()> {
 
             println!("App Name: {}", session.manifest.app_name);
             println!("Release: {:?}", session.manifest.detected_matlab_release);
+
+            if gui {
+                println!(
+                    "[GUI Mode]: Initializing GUI window for '{}'...",
+                    session.manifest.app_name
+                );
+            }
 
             // Render layout statically with HeadlessRenderer
             let mut renderer = HeadlessRenderer::new();

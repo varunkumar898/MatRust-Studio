@@ -1,5 +1,7 @@
 //! Typed UI Component Tree, Geometry Mapping, and XML Parser for App Designer.
 
+#![deny(clippy::unwrap_used)]
+
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use thiserror::Error;

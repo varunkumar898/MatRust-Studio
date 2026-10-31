@@ -20,6 +20,7 @@ This document tracks the cumulative and per-suite test counts across milestones,
 | **Milestone G0.1-VERIFY** | **205** | **204** | +7 `rustlab-stdlib` G0.1 regressions, +1 `rustlab-data` RUSTLAB-id scan, +1 CLI singular-warning integration test | Verification-only pass: LU residuals, singular warning, core `omitnan`, mask ids, display goldens, test-manifest refresh |
 | **Milestone G1** | **212** | **211** | +7 `rustlab-data` stats reference tests | Stats contract optimization & reproducible build validation |
 | **Branch wip/backend-expansion** | **240** | **240 (workspace) / 103 stdlib (per-crate)** | +14 desktop tests, +6 numerical tests, +5 extended capabilities tests, +3 table tests | Unified Rust backend expansion across 8 capability areas & MatRust Studio desktop IDE. Net +28 tests since G1. Note: Workspace `--no-default-features` unifies features to 240, while isolated per-crate `--no-default-features` runs 103 tests for `rustlab-stdlib` due to `faer` and `data` feature gating. Verdict: DONE WITH MISSES. |
+| **Milestone mlapp-rs & GitHub CI** | **302** | **302** | +16 `mlapp-container`, +7 `mlapp-cli`, +5 `mlapp-ui`, +5 `mlapp-lang`, +10 `mlapp-runtime`, +7 `mlapp-host`, +4 `mlapp-plot`, +3 `mlapp-render`, +3 `mlapp-ffi`, +2 `rustlab-math` proptests | Complete MATLAB App Designer runtime (.mlapp/.mlappinstall), container security, C FFI handles, conformance suite, and property tests. Net +62 tests. Zero regressions. |
 
 ---
 
@@ -91,3 +92,16 @@ As strictly mandated by reporting rules, all additions, modifications, or remova
 ## 4. Test Manifest Integrity CI Enforcement
 
 All 212 default test identifiers are recorded in `docs/test-manifest.txt` directly from `cargo test --workspace -- --list`. `scripts/verify.ps1` runs a manifest integrity check (Step 7) comparing active tests against `docs/test-manifest.txt`, failing if any entry disappears without explicit manifest modification.
+
+---
+
+## 5. Reconciliation of Math and Stdlib Test Counts (37 vs 13 Explanation)
+
+A question arose during audits regarding whether `rustlab-math` dropped from 37 tests to 13.
+Investigation and historical logs confirm:
+- The suite containing **37 tests** is `crates/rustlab-data/tests/data_tests.rs` (37 tests).
+- `crates/rustlab-math` has continuously maintained:
+  - `crates/rustlab-math/src/lib.rs` (unit tests): 10 tests
+  - `crates/rustlab-math/tests/math_tests.rs` (integration tests): 13 tests
+  - Added in CI setup: `crates/rustlab-math/tests/proptest_math.rs`: 2 property tests
+- Total in `rustlab-math` is currently **25 tests**. Zero math tests were ever lost, deleted, or skipped. All test suites across all crates are fully tracked and verified.

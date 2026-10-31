@@ -35,7 +35,7 @@ Using the REA MCP server tools (`open_binary`, `inspect_pe_imports`, `close_bina
 ```json
 {
   "artifact": {
-    "path": "C:\\Users\\varun\\Desktop\\MATSTUDIO\\target\\release\\matrust_studio.exe",
+    "path": "target\\release\\matrust_studio.exe",
     "sha256": "1822004df8b26ff23f985211482ac376b4d09bd2aabe78bab8fca2c35afa01b7",
     "bytes": 8605696
   },

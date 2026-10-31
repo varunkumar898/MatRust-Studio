@@ -1,6 +1,8 @@
 //! MATLAB App Designer Runtime Engine: Handle object semantics for `app`,
 //! UI state synchronization, callback invocation, and built-in function registry.
 
+#![deny(clippy::unwrap_used)]
+
 use mlapp_lang::{AppClassDef, AppMethod};
 use mlapp_ui::{Component, PropertyValue};
 use rustlab_eval::Interpreter;

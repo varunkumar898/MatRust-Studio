@@ -1,0 +1,137 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master, ci-setup, wip/** ]
+  pull_request:
+    branches: [ main, master ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  fmt:
+    name: Code Formatting
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - name: Verify Formatting
+        run: cargo fmt --all -- --check
+
+  test-matrix:
+    name: Build & Test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Linux system dependencies for GUI / egui
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libasound2-dev libudev-dev libxkbcommon-dev libwayland-dev
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Clippy (--all-targets --all-features)
+        run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+
+      - name: Clippy (--all-targets --no-default-features)
+        run: cargo clippy --workspace --all-targets --no-default-features -- -D warnings
+
+      - name: Cargo Test (default features)
+        run: |
+          mkdir -p target/test-logs
+          cargo test --workspace -- --nocapture | tee target/test-logs/test-default-${{ matrix.os }}.log
+        shell: bash
+
+      - name: Cargo Test (--all-features)
+        run: cargo test --workspace --all-features
+
+      - name: Cargo Test (--no-default-features)
+        run: cargo test --workspace --no-default-features
+
+      - name: Cargo Doc (no broken links / warnings)
+        run: cargo doc --workspace --no-deps
+        env:
+          RUSTDOCFLAGS: "-D warnings"
+
+      - name: Test Count Guard (anti-regression check)
+        run: |
+          COUNT=$(cargo test --workspace -- --list | grep -E ': test$' | wc -l)
+          echo "Active workspace test count: $COUNT"
+          if [ "$COUNT" -lt 302 ]; then
+            echo "ERROR: Test count regression detected ($COUNT < 302)!"
+            exit 1
+          fi
+        shell: bash
+
+      - name: Upload Test Logs Artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-logs-${{ matrix.os }}
+          path: target/test-logs/
+
+  security:
+    name: Security & License Checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Run cargo-deny (licenses and bans)
+        uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          command: check
+          arguments: licenses bans
+
+      - name: Install cargo-audit
+        run: cargo install cargo-audit --locked
+
+      - name: Run cargo-audit
+        run: cargo audit
+
+  msrv:
+    name: MSRV Check (Rust 1.80.0)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Linux system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libasound2-dev libudev-dev libxkbcommon-dev libwayland-dev
+      - uses: dtolnay/rust-toolchain@1.80.0
+      - uses: Swatinem/rust-cache@v2
+      - name: Check workspace under MSRV
+        run: cargo check --workspace --all-targets
+
+  geiger:
+    name: Unsafe Code Audit (cargo-geiger)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Install cargo-geiger
+        run: cargo install cargo-geiger --locked
+      - name: Generate Geiger Report
+        run: |
+          mkdir -p target/geiger
+          cargo geiger --all-features > target/geiger/geiger-report.txt || true
+      - name: Upload Geiger Report Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: geiger-report
+          path: target/geiger/geiger-report.txt

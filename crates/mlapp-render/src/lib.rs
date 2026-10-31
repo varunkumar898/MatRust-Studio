@@ -1,5 +1,7 @@
 //! Rendering abstraction and backend implementations (headless mock & egui).
 
+#![deny(clippy::unwrap_used)]
+
 use mlapp_host::UiEvent;
 use mlapp_ui::{
     figure_to_top_left_geometry, matlab_to_top_left_geometry, Component, ComponentKind,
@@ -76,6 +78,7 @@ impl RenderBackend for HeadlessRenderer {
 #[cfg(feature = "egui-backend")]
 pub mod egui_backend {
     use super::*;
+    use mlapp_ui::PropertyValue;
 
     /// Egui UI renderer backend
     pub struct EguiRenderer {
@@ -90,7 +93,7 @@ pub mod egui_backend {
         }
 
         pub fn render(&mut self, ui: &mut egui::Ui, comp: &Component, parent_height: f64) {
-            let top_left = matlab_to_top_left_geometry(comp.position, parent_height);
+            let _top_left = matlab_to_top_left_geometry(comp.position, parent_height);
 
             match comp.kind {
                 ComponentKind::Button => {
@@ -131,6 +134,12 @@ pub mod egui_backend {
                     }
                 }
             }
+        }
+    }
+
+    impl Default for EguiRenderer {
+        fn default() -> Self {
+            Self::new()
         }
     }
 

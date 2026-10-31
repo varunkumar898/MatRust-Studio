@@ -1,5 +1,7 @@
 //! Renderer-agnostic 2D plotting model for UIAxes and Figure in App Designer.
 
+#![deny(clippy::unwrap_used)]
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

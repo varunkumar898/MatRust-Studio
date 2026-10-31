@@ -2,6 +2,8 @@
 //! and metadata/manifest extraction for MATLAB App Designer (.mlapp)
 //! and App Installer (.mlappinstall) files.
 
+#![deny(clippy::unwrap_used)]
+
 use serde::{Deserialize, Serialize};
 use std::io::{Read, Seek};
 use std::path::{Component as PathComponent, Path};

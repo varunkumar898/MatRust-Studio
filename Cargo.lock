@@ -1662,7 +1662,6 @@ dependencies = [
  "eframe",
  "egui",
  "rustlab-cli",
- "rustlab-data",
  "rustlab-eval",
  "rustlab-math",
  "rustlab-parse",

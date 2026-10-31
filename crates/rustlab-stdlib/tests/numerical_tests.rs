@@ -185,6 +185,40 @@ fn test_polyfit_linear_and_quadratic() {
         err8 < 1e-5,
         "Degree-8 fit max residual {err8:e} must be < 1e-5"
     );
+
+    // Degree-8 fit against polynomial with exactly representable dyadic float coefficients:
+    // p_true(x) = 1*x^8 - 2*x^6 + 0.5*x^4 - 0.25*x^2 + 1
+    // p_true vector: [1, 0, -2, 0, 0.5, 0, -0.25, 0, 1] (length 9)
+    // Sample at 13 distinct points in [-1.0, 1.0]
+    let script_deg8_exact = "
+        p_true = [1.0, 0.0, -2.0, 0.0, 0.5, 0.0, -0.25, 0.0, 1.0];
+        x_pts = [-1.0, -0.8, -0.6, -0.4, -0.2, -0.1, 0.0, 0.1, 0.2, 0.4, 0.6, 0.8, 1.0];
+        y_pts = polyval(p_true, x_pts);
+        p8_fit = polyfit(x_pts, y_pts, 8);
+        fit_resid = max(abs(y_pts - polyval(p8_fit, x_pts)));
+        coeff_err = max(abs(p8_fit - p_true));
+    ";
+    interp.eval_script(script_deg8_exact).unwrap();
+    let fit_resid = interp
+        .env
+        .get("fit_resid")
+        .unwrap()
+        .as_scalar_f64()
+        .unwrap();
+    let coeff_err = interp
+        .env
+        .get("coeff_err")
+        .unwrap()
+        .as_scalar_f64()
+        .unwrap();
+    assert!(
+        fit_resid < 1e-10,
+        "Degree-8 exact fit residual {fit_resid:e} must be < 1e-10"
+    );
+    assert!(
+        coeff_err < 1e-7,
+        "Degree-8 coefficient error {coeff_err:e} must be < 1e-7"
+    );
 }
 
 #[test]

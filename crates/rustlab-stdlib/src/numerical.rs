@@ -14,7 +14,7 @@ fn extract_f64_slice(val: &Value) -> Result<Vec<f64>, EvalError> {
         Value::Int64(i) => Ok(i.as_slice().iter().map(|&x| x as f64).collect()),
         Value::UInt64(u) => Ok(u.as_slice().iter().map(|&x| x as f64).collect()),
         _ => Err(user_err(
-            "MATLAB:invalidType",
+            "RUSTLAB:invalidType",
             "Expected numeric vector input.",
         )),
     }
@@ -162,7 +162,7 @@ pub fn polyfit_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalErr
         Value::UInt32(u) if u.numel() == 1 => u.as_slice()[0] as usize,
         _ => {
             return Err(user_err(
-                "MATLAB:polyfit:degNotScalar",
+                "RUSTLAB:polyfit:degNotScalar",
                 "Degree n must be a positive integer scalar.",
             ))
         }
@@ -170,14 +170,14 @@ pub fn polyfit_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalErr
 
     if x.len() != y.len() {
         return Err(user_err(
-            "MATLAB:polyfit:XYSizeMismatch",
+            "RUSTLAB:polyfit:XYSizeMismatch",
             "X and Y vectors must have the same length.",
         ));
     }
     let m = x.len();
     if m < deg + 1 {
         return Err(user_err(
-            "MATLAB:polyfit:PolyNotUnique",
+            "RUSTLAB:polyfit:PolyNotUnique",
             "Polynomial degree must be less than the number of data points.",
         ));
     }
@@ -209,7 +209,7 @@ pub fn polyfit_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalErr
         let norm_x = sum_sq.sqrt();
         if norm_x < 1e-15 {
             return Err(user_err(
-                "MATLAB:polyfit:RepeatedPointsOrCollinear",
+                "RUSTLAB:polyfit:RepeatedPointsOrCollinear",
                 "Matrix is close to singular or points are collinear.",
             ));
         }
@@ -260,7 +260,7 @@ pub fn polyfit_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalErr
         let diag = a_work[k + k * m];
         if diag.abs() < 1e-15 {
             return Err(user_err(
-                "MATLAB:polyfit:RepeatedPointsOrCollinear",
+                "RUSTLAB:polyfit:RepeatedPointsOrCollinear",
                 "Matrix is close to singular or points are collinear.",
             ));
         }
@@ -289,7 +289,7 @@ pub fn trapz_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError
 
     if x.len() != y.len() {
         return Err(user_err(
-            "MATLAB:trapz:lengthMismatch",
+            "RUSTLAB:trapz:lengthMismatch",
             "X and Y vectors must have the same length.",
         ));
     }
@@ -328,7 +328,7 @@ pub fn cumtrapz_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalEr
 
     if x.len() != y.len() {
         return Err(user_err(
-            "MATLAB:cumtrapz:lengthMismatch",
+            "RUSTLAB:cumtrapz:lengthMismatch",
             "X and Y vectors must have the same length.",
         ));
     }
@@ -363,7 +363,7 @@ pub fn gradient_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalEr
 
     if h <= 0.0 {
         return Err(user_err(
-            "MATLAB:gradient:invalidSpacing",
+            "RUSTLAB:gradient:invalidSpacing",
             "Spacing h must be positive.",
         ));
     }
@@ -418,13 +418,13 @@ pub fn interp1_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalErr
 
     if x.len() != y.len() {
         return Err(user_err(
-            "MATLAB:interp1:XYLengthMismatch",
+            "RUSTLAB:interp1:XYLengthMismatch",
             "X and Y vectors must have the same length.",
         ));
     }
     if x.len() < 2 {
         return Err(user_err(
-            "MATLAB:interp1:NotEnoughPoints",
+            "RUSTLAB:interp1:NotEnoughPoints",
             "There should be at least two data points.",
         ));
     }

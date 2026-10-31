@@ -70,11 +70,16 @@ From official benchmark runs on 1,000,000 elements against original G0.1 contrac
    - Interactive GUI plotting currently implemented via `egui_plot` in MatRust Studio figures panel.
    - Milestone B2.2 contract requires a standalone, renderer-independent plot-description model with a deterministic headless SVG renderer (`figure`, `plot`, `saveas('x.svg')`).
 
-2. **Stiff ODE Solvers & Advanced Simulation**:
+2. **Hardware and Embedded Systems (B8) — PLANNED / BLOCKED**:
+   - Status: PLANNED / BLOCKED.
+   - Milestone B8 requires serial communications (`serialport`), ring buffers with timestamps, TCP/UDP sockets, and MISRA-friendly C99 code generation behind hardware traits with mocks (so tests need no physical devices).
+   - Hardware interfaces are currently blocked pending completion of foundational milestones (B2.2 plot model, B2.3 tables, B1 math tools, B4 signal, B3 simulation, B5 ML, B6 robotics, B7 language).
+
+3. **Stiff ODE Solvers & Advanced Simulation**:
    - First- and second-order analytical and numerical step responses implemented in `simulation.rs`.
    - Variable-step stiff ODE solvers (e.g. Radau IIA / BDF) and full state-space block diagram simulation engine tracked for milestone B3.
 
-3. **REA ARM64 Decompilation Support**:
+4. **REA ARM64 Decompilation Support**:
    - REA PE import and hygiene checks verified. Deep instruction-level decompilation of hot loops (`Value::add`, GEMM, FFT) awaits ARM64 decompiler backend support.
 
 ---

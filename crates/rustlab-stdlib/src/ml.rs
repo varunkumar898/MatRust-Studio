@@ -12,7 +12,7 @@ fn extract_f64_matrix(val: &Value) -> Result<(Vec<usize>, Vec<f64>), EvalError> 
             s.shape().to_vec(),
             s.as_slice().iter().map(|&x| x as f64).collect(),
         )),
-        _ => Err(user_err("MATLAB:invalidType", "Expected numeric matrix.")),
+        _ => Err(user_err("RUSTLAB:invalidType", "Expected numeric matrix.")),
     }
 }
 
@@ -32,7 +32,7 @@ pub fn fitlm_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError
 
     if n != y_data.len() || n == 0 {
         return Err(user_err(
-            "MATLAB:fitlm:lengthMismatch",
+            "RUSTLAB:fitlm:lengthMismatch",
             "Number of rows in X must match length of y.",
         ));
     }
@@ -88,7 +88,7 @@ pub fn fitlm_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError
         }
         if max_val < 1e-15 {
             return Err(user_err(
-                "MATLAB:fitlm:singularMatrix",
+                "RUSTLAB:fitlm:singularMatrix",
                 "Design matrix X is rank-deficient or singular.",
             ));
         }
@@ -179,14 +179,14 @@ pub fn predict_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalErr
         Value::Struct(sa) => {
             if sa.data.is_empty() {
                 return Err(user_err(
-                    "MATLAB:predict:invalidModel",
+                    "RUSTLAB:predict:invalidModel",
                     "Invalid model struct.",
                 ));
             }
             let map = &sa.data[0];
             let coef_val = map.get("Coefficients").ok_or_else(|| {
                 user_err(
-                    "MATLAB:predict:invalidModel",
+                    "RUSTLAB:predict:invalidModel",
                     "Missing 'Coefficients' field.",
                 )
             })?;
@@ -194,7 +194,7 @@ pub fn predict_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalErr
                 Value::Double(d) => d.as_slice().to_vec(),
                 _ => {
                     return Err(user_err(
-                        "MATLAB:predict:invalidModel",
+                        "RUSTLAB:predict:invalidModel",
                         "Coefficients must be double.",
                     ))
                 }
@@ -202,7 +202,7 @@ pub fn predict_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalErr
         }
         _ => {
             return Err(user_err(
-                "MATLAB:predict:invalidModel",
+                "RUSTLAB:predict:invalidModel",
                 "First argument must be a trained model struct from fitlm.",
             ))
         }
@@ -214,7 +214,7 @@ pub fn predict_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalErr
 
     if beta.len() != p + 1 {
         return Err(user_err(
-            "MATLAB:predict:featureMismatch",
+            "RUSTLAB:predict:featureMismatch",
             &format!(
                 "Model expects {} features, but X has {}.",
                 beta.len() - 1,
@@ -247,7 +247,7 @@ pub fn kmeans_fn(args: &[Value], nargout: usize) -> Result<Vec<Value>, EvalError
     let (x_shp, x_data) = extract_f64_matrix(&args[0])?;
     let k = args[1].as_scalar_f64().map_err(|_| {
         user_err(
-            "MATLAB:kmeans:invalidK",
+            "RUSTLAB:kmeans:invalidK",
             "k must be a positive integer scalar.",
         )
     })? as usize;
@@ -257,7 +257,7 @@ pub fn kmeans_fn(args: &[Value], nargout: usize) -> Result<Vec<Value>, EvalError
 
     if n < k || k == 0 {
         return Err(user_err(
-            "MATLAB:kmeans:tooFewDataPoints",
+            "RUSTLAB:kmeans:tooFewDataPoints",
             "Number of points n must be at least k.",
         ));
     }
@@ -347,7 +347,7 @@ pub fn confusionmat_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, Ev
 
     if g1.len() != g2.len() {
         return Err(user_err(
-            "MATLAB:confusionmat:lengthMismatch",
+            "RUSTLAB:confusionmat:lengthMismatch",
             "Group vectors must have the same length.",
         ));
     }

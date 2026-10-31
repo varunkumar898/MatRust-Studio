@@ -92,6 +92,58 @@ MathWorks identifier verification is made.
 | `RUSTLAB:data:badOption` | `Unsupported option '{name}'.` | RustLab-specific option error | unverified |
 | `MATLAB:error` | `{user_message}` | [MathWorks: error](https://www.mathworks.com/help/matlab/ref/error.html) | unverified |
 
+### 3.1 Extended Capabilities Errors (RustLab-Only / UNVERIFIED)
+
+| Identifier | Exact Message | Citation / Source URL | Verification |
+| :--- | :--- | :--- | :--- |
+| `RUSTLAB:invalidType` | `Expected numeric vector input.` / `Expected numeric matrix.` / `Polynomial coefficients must be double.` / `Input must be a double array.` | RustLab-specific type validation error | UNVERIFIED / rustlab-only |
+| `RUSTLAB:readtable:badPath` | `Empty filename.` / `Filename must be a character vector or string scalar.` | RustLab-specific path error | UNVERIFIED / rustlab-only |
+| `RUSTLAB:readtable:fileNotFound` | `File '{path_str}' not found.` | RustLab-specific file error | UNVERIFIED / rustlab-only |
+| `RUSTLAB:readtable:ioError` | `Cannot open file '{path_str}': {e}` | RustLab-specific I/O error | UNVERIFIED / rustlab-only |
+| `RUSTLAB:writetable:ioError` | `Cannot create file '{path_str}': {e}` | RustLab-specific I/O error | UNVERIFIED / rustlab-only |
+| `RUSTLAB:writetable:invalidInput` | `First argument must be a table or struct.` | RustLab-specific input validation error | UNVERIFIED / rustlab-only |
+| `RUSTLAB:head:invalidK` | `Row count k must be a positive integer scalar.` | RustLab-specific input validation error | UNVERIFIED / rustlab-only |
+| `RUSTLAB:head:invalidInput` | `Input must be a table or matrix.` | RustLab-specific input validation error | UNVERIFIED / rustlab-only |
+| `RUSTLAB:tail:invalidK` | `Row count k must be a positive integer scalar.` | RustLab-specific input validation error | UNVERIFIED / rustlab-only |
+| `RUSTLAB:tail:invalidInput` | `Input must be a table or matrix.` | RustLab-specific input validation error | UNVERIFIED / rustlab-only |
+| `RUSTLAB:summary:invalidInput` | `Input must be a table.` | RustLab-specific input validation error | UNVERIFIED / rustlab-only |
+| `RUSTLAB:polyfit:degNotScalar` | `Degree n must be a positive integer scalar.` | RustLab-specific polynomial error | UNVERIFIED / rustlab-only |
+| `RUSTLAB:polyfit:XYSizeMismatch` | `X and Y vectors must have the same length.` | RustLab-specific input length error | UNVERIFIED / rustlab-only |
+| `RUSTLAB:polyfit:PolyNotUnique` | `Polynomial degree must be less than the number of data points.` | RustLab-specific least-squares error | UNVERIFIED / rustlab-only |
+| `RUSTLAB:polyfit:RepeatedPointsOrCollinear` | `Matrix is close to singular or points are collinear.` | RustLab-specific rank deficiency error | UNVERIFIED / rustlab-only |
+| `RUSTLAB:trapz:lengthMismatch` | `X and Y vectors must have the same length.` | RustLab-specific quadrature error | UNVERIFIED / rustlab-only |
+| `RUSTLAB:cumtrapz:lengthMismatch` | `X and Y vectors must have the same length.` | RustLab-specific quadrature error | UNVERIFIED / rustlab-only |
+| `RUSTLAB:gradient:invalidSpacing` | `Spacing h must be positive.` | RustLab-specific gradient error | UNVERIFIED / rustlab-only |
+| `RUSTLAB:interp1:XYLengthMismatch` | `X and Y vectors must have the same length.` | RustLab-specific interpolation error | UNVERIFIED / rustlab-only |
+| `RUSTLAB:interp1:NotEnoughPoints` | `There should be at least two data points.` | RustLab-specific interpolation error | UNVERIFIED / rustlab-only |
+| `RUSTLAB:tf:emptyPoly` | `Numerator and denominator polynomials cannot be empty.` | RustLab-specific transfer function error | UNVERIFIED / rustlab-only |
+| `RUSTLAB:tf:zeroDen` | `Denominator polynomial cannot be zero.` | RustLab-specific transfer function error | UNVERIFIED / rustlab-only |
+| `RUSTLAB:step:invalidSys` | `Input must be a valid transfer function struct.` / `Missing 'num' field in sys.` / `Missing 'den' field in sys.` | RustLab-specific step response error | UNVERIFIED / rustlab-only |
+| `RUSTLAB:step:invalidTfinal` | `tfinal must be a scalar.` | RustLab-specific simulation parameter error | UNVERIFIED / rustlab-only |
+| `RUSTLAB:filter:emptyCoeffs` | `Filter coefficients b and a must not be empty.` | RustLab-specific filter error | UNVERIFIED / rustlab-only |
+| `RUSTLAB:filter:zeroFirstDenCoeff` | `First denominator coefficient a(1) cannot be zero.` | RustLab-specific filter error | UNVERIFIED / rustlab-only |
+| `RUSTLAB:hamming:invalidN` | `N must be a positive integer scalar.` | RustLab-specific window error | UNVERIFIED / rustlab-only |
+| `RUSTLAB:hann:invalidN` | `N must be a positive integer scalar.` | RustLab-specific window error | UNVERIFIED / rustlab-only |
+| `RUSTLAB:blackman:invalidN` | `N must be a positive integer scalar.` | RustLab-specific window error | UNVERIFIED / rustlab-only |
+| `RUSTLAB:rgb2gray:invalidSizeRGB` | `Input RGB image must be HxWx3 array.` | RustLab-specific image dimension error | UNVERIFIED / rustlab-only |
+| `RUSTLAB:rgb2gray:invalidType` | `Input must be uint8 or double array.` | RustLab-specific image type error | UNVERIFIED / rustlab-only |
+| `RUSTLAB:imresize:invalidScale` | `Scale must be a scalar.` / `Scale must be positive.` | RustLab-specific resize error | UNVERIFIED / rustlab-only |
+| `RUSTLAB:imresize:invalidType` | `Currently only 2D double matrices are supported.` | RustLab-specific image type error | UNVERIFIED / rustlab-only |
+| `RUSTLAB:imfilter:invalidType` | `Image and kernel must be double matrices.` | RustLab-specific filter type error | UNVERIFIED / rustlab-only |
+| `RUSTLAB:fitlm:lengthMismatch` | `Number of rows in X must match length of y.` | RustLab-specific regression error | UNVERIFIED / rustlab-only |
+| `RUSTLAB:fitlm:singularMatrix` | `Design matrix X is rank-deficient or singular.` | RustLab-specific regression error | UNVERIFIED / rustlab-only |
+| `RUSTLAB:predict:invalidModel` | `Invalid model struct.` / `Missing 'Coefficients' field.` / `Coefficients must be double.` / `First argument must be a trained model struct from fitlm.` | RustLab-specific prediction error | UNVERIFIED / rustlab-only |
+| `RUSTLAB:predict:featureMismatch` | `Model expects {} features, but X has {}.` | RustLab-specific feature dimension error | UNVERIFIED / rustlab-only |
+| `RUSTLAB:kmeans:invalidK` | `k must be a positive integer scalar.` | RustLab-specific clustering parameter error | UNVERIFIED / rustlab-only |
+| `RUSTLAB:kmeans:tooFewDataPoints` | `Number of points n must be at least k.` | RustLab-specific clustering error | UNVERIFIED / rustlab-only |
+| `RUSTLAB:confusionmat:lengthMismatch` | `Group vectors must have the same length.` | RustLab-specific classification error | UNVERIFIED / rustlab-only |
+| `RUSTLAB:robotics:invalidAngle` | `Angle must be a scalar in radians.` | RustLab-specific kinematics error | UNVERIFIED / rustlab-only |
+| `RUSTLAB:transl:invalid` | `x must be scalar.` / `y must be scalar.` / `z must be scalar.` | RustLab-specific translation error | UNVERIFIED / rustlab-only |
+| `RUSTLAB:fkine:invalid` | `l1 must be scalar.` / `l2 must be scalar.` / `q1 must be scalar.` / `q2 must be scalar.` | RustLab-specific kinematics error | UNVERIFIED / rustlab-only |
+| `RUSTLAB:ikine:invalid` | `l1 must be scalar.` / `l2 must be scalar.` / `x must be scalar.` / `y must be scalar.` | RustLab-specific kinematics error | UNVERIFIED / rustlab-only |
+| `RUSTLAB:ikine:targetUnreachable` | `Target position is outside robot workspace.` | RustLab-specific kinematics reachability error | UNVERIFIED / rustlab-only |
+| `RUSTLAB:jtraj:invalid` | `q0 must be scalar.` / `q1 must be scalar.` / `n must be positive integer.` | RustLab-specific trajectory planning error | UNVERIFIED / rustlab-only |
+
 ---
 
 ## 4. Evaluation & Parser Errors (`rustlab-eval` / `rustlab-parse`)

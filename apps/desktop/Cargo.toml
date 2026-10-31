@@ -17,10 +17,14 @@ path = "src/main.rs"
 rustlab-parse = { path = "../../crates/rustlab-parse" }
 rustlab-math = { path = "../../crates/rustlab-math" }
 rustlab-eval = { path = "../../crates/rustlab-eval" }
-rustlab-stdlib = { path = "../../crates/rustlab-stdlib" }
-rustlab-data = { path = "../../crates/rustlab-data" }
+rustlab-stdlib = { path = "../../crates/rustlab-stdlib", default-features = false }
 rustlab-cli = { path = "../../crates/rustlab-cli" }
 eframe = { version = "0.31.1", default-features = false, features = ["default_fonts", "glow"] }
 egui = "0.31.1"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+
+[features]
+default = ["faer", "data"]
+faer = ["rustlab-stdlib/faer"]
+data = ["rustlab-stdlib/data"]

@@ -11,7 +11,7 @@ fn extract_f64_slice(val: &Value) -> Result<Vec<f64>, EvalError> {
         Value::Single(s) => Ok(s.as_slice().iter().map(|&x| x as f64).collect()),
         Value::Int32(i) => Ok(i.as_slice().iter().map(|&x| x as f64).collect()),
         Value::UInt32(u) => Ok(u.as_slice().iter().map(|&x| x as f64).collect()),
-        _ => Err(user_err("MATLAB:invalidType", "Expected numeric vector.")),
+        _ => Err(user_err("RUSTLAB:invalidType", "Expected numeric vector.")),
     }
 }
 
@@ -28,13 +28,13 @@ pub fn tf_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError> {
 
     if num.is_empty() || den.is_empty() {
         return Err(user_err(
-            "MATLAB:tf:emptyPoly",
+            "RUSTLAB:tf:emptyPoly",
             "Numerator and denominator polynomials cannot be empty.",
         ));
     }
     if den.iter().all(|&c| c == 0.0) {
         return Err(user_err(
-            "MATLAB:tf:zeroDen",
+            "RUSTLAB:tf:zeroDen",
             "Denominator polynomial cannot be zero.",
         ));
     }
@@ -60,24 +60,24 @@ pub fn step_fn(args: &[Value], nargout: usize) -> Result<Vec<Value>, EvalError> 
         Value::Struct(sa) => {
             if sa.data.is_empty() {
                 return Err(user_err(
-                    "MATLAB:step:invalidSys",
+                    "RUSTLAB:step:invalidSys",
                     "Input must be a valid transfer function struct.",
                 ));
             }
             let map = &sa.data[0];
             let num = map
                 .get("num")
-                .ok_or_else(|| user_err("MATLAB:step:invalidSys", "Missing 'num' field in sys."))
+                .ok_or_else(|| user_err("RUSTLAB:step:invalidSys", "Missing 'num' field in sys."))
                 .and_then(extract_f64_slice)?;
             let den = map
                 .get("den")
-                .ok_or_else(|| user_err("MATLAB:step:invalidSys", "Missing 'den' field in sys."))
+                .ok_or_else(|| user_err("RUSTLAB:step:invalidSys", "Missing 'den' field in sys."))
                 .and_then(extract_f64_slice)?;
             (num, den)
         }
         _ => {
             return Err(user_err(
-                "MATLAB:step:invalidSys",
+                "RUSTLAB:step:invalidSys",
                 "Input must be a transfer function struct from tf(num, den).",
             ))
         }
@@ -86,7 +86,7 @@ pub fn step_fn(args: &[Value], nargout: usize) -> Result<Vec<Value>, EvalError> 
     let tfinal = if args.len() >= 2 {
         args[1]
             .as_scalar_f64()
-            .map_err(|_| user_err("MATLAB:step:invalidTfinal", "tfinal must be a scalar."))?
+            .map_err(|_| user_err("RUSTLAB:step:invalidTfinal", "tfinal must be a scalar."))?
     } else {
         10.0
     };

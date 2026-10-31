@@ -7,7 +7,7 @@ use rustlab_math::{DenseArray, Value};
 fn extract_scalar_angle(val: &Value) -> Result<f64, EvalError> {
     val.as_scalar_f64().map_err(|_| {
         user_err(
-            "MATLAB:robotics:invalidAngle",
+            "RUSTLAB:robotics:invalidAngle",
             "Angle must be a scalar in radians.",
         )
     })
@@ -129,13 +129,13 @@ pub fn transl_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalErro
     }
     let x = args[0]
         .as_scalar_f64()
-        .map_err(|_| user_err("MATLAB:transl:invalid", "x must be scalar."))?;
+        .map_err(|_| user_err("RUSTLAB:transl:invalid", "x must be scalar."))?;
     let y = args[1]
         .as_scalar_f64()
-        .map_err(|_| user_err("MATLAB:transl:invalid", "y must be scalar."))?;
+        .map_err(|_| user_err("RUSTLAB:transl:invalid", "y must be scalar."))?;
     let z = args[2]
         .as_scalar_f64()
-        .map_err(|_| user_err("MATLAB:transl:invalid", "z must be scalar."))?;
+        .map_err(|_| user_err("RUSTLAB:transl:invalid", "z must be scalar."))?;
 
     let data = vec![
         1.0, 0.0, 0.0, 0.0, // Col 0
@@ -157,16 +157,16 @@ pub fn fkine_2link_fn(args: &[Value], nargout: usize) -> Result<Vec<Value>, Eval
     }
     let l1 = args[0]
         .as_scalar_f64()
-        .map_err(|_| user_err("MATLAB:fkine:invalid", "l1 must be scalar."))?;
+        .map_err(|_| user_err("RUSTLAB:fkine:invalid", "l1 must be scalar."))?;
     let l2 = args[1]
         .as_scalar_f64()
-        .map_err(|_| user_err("MATLAB:fkine:invalid", "l2 must be scalar."))?;
+        .map_err(|_| user_err("RUSTLAB:fkine:invalid", "l2 must be scalar."))?;
     let q1 = args[2]
         .as_scalar_f64()
-        .map_err(|_| user_err("MATLAB:fkine:invalid", "q1 must be scalar."))?;
+        .map_err(|_| user_err("RUSTLAB:fkine:invalid", "q1 must be scalar."))?;
     let q2 = args[3]
         .as_scalar_f64()
-        .map_err(|_| user_err("MATLAB:fkine:invalid", "q2 must be scalar."))?;
+        .map_err(|_| user_err("RUSTLAB:fkine:invalid", "q2 must be scalar."))?;
 
     let x = l1 * q1.cos() + l2 * (q1 + q2).cos();
     let y = l1 * q1.sin() + l2 * (q1 + q2).sin();
@@ -189,22 +189,22 @@ pub fn ikine_2link_fn(args: &[Value], nargout: usize) -> Result<Vec<Value>, Eval
     }
     let l1 = args[0]
         .as_scalar_f64()
-        .map_err(|_| user_err("MATLAB:ikine:invalid", "l1 must be scalar."))?;
+        .map_err(|_| user_err("RUSTLAB:ikine:invalid", "l1 must be scalar."))?;
     let l2 = args[1]
         .as_scalar_f64()
-        .map_err(|_| user_err("MATLAB:ikine:invalid", "l2 must be scalar."))?;
+        .map_err(|_| user_err("RUSTLAB:ikine:invalid", "l2 must be scalar."))?;
     let x = args[2]
         .as_scalar_f64()
-        .map_err(|_| user_err("MATLAB:ikine:invalid", "x must be scalar."))?;
+        .map_err(|_| user_err("RUSTLAB:ikine:invalid", "x must be scalar."))?;
     let y = args[3]
         .as_scalar_f64()
-        .map_err(|_| user_err("MATLAB:ikine:invalid", "y must be scalar."))?;
+        .map_err(|_| user_err("RUSTLAB:ikine:invalid", "y must be scalar."))?;
 
     let r_sq = x * x + y * y;
     let cos_q2 = (r_sq - l1 * l1 - l2 * l2) / (2.0 * l1 * l2);
     if cos_q2.abs() > 1.0 {
         return Err(user_err(
-            "MATLAB:ikine:targetUnreachable",
+            "RUSTLAB:ikine:targetUnreachable",
             "Target position is outside robot workspace.",
         ));
     }
@@ -230,13 +230,13 @@ pub fn jtraj_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError
     }
     let q0 = args[0]
         .as_scalar_f64()
-        .map_err(|_| user_err("MATLAB:jtraj:invalid", "q0 must be scalar."))?;
+        .map_err(|_| user_err("RUSTLAB:jtraj:invalid", "q0 must be scalar."))?;
     let q1 = args[1]
         .as_scalar_f64()
-        .map_err(|_| user_err("MATLAB:jtraj:invalid", "q1 must be scalar."))?;
+        .map_err(|_| user_err("RUSTLAB:jtraj:invalid", "q1 must be scalar."))?;
     let n = args[2]
         .as_scalar_f64()
-        .map_err(|_| user_err("MATLAB:jtraj:invalid", "n must be positive integer."))?
+        .map_err(|_| user_err("RUSTLAB:jtraj:invalid", "n must be positive integer."))?
         as usize;
 
     if n < 2 {

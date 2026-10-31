@@ -1,3 +1,5 @@
+#![cfg(feature = "data")]
+
 //! Integration tests for table operations: readtable, writetable, head, tail, summary.
 
 use rustlab_math::Value;

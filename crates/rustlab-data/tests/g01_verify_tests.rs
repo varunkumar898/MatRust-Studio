@@ -8,6 +8,13 @@
 
 const DATA_STATS: &str = include_str!("../src/stats.rs");
 const DATA_CSV_IO: &str = include_str!("../src/csv_io.rs");
+const DATA_TABLES: &str = include_str!("../src/tables.rs");
+const STDLIB_NUMERICAL: &str = include_str!("../../rustlab-stdlib/src/numerical.rs");
+const STDLIB_SIMULATION: &str = include_str!("../../rustlab-stdlib/src/simulation.rs");
+const STDLIB_SIGNAL_PROC: &str = include_str!("../../rustlab-stdlib/src/signal_proc.rs");
+const STDLIB_IMAGE_PROC: &str = include_str!("../../rustlab-stdlib/src/image_proc.rs");
+const STDLIB_ML: &str = include_str!("../../rustlab-stdlib/src/ml.rs");
+const STDLIB_ROBOTICS: &str = include_str!("../../rustlab-stdlib/src/robotics.rs");
 
 /// Generic MATLAB identifiers retained in the data crate. They describe
 /// argument-count errors, not RustLab-only behavior, and are documented in
@@ -32,7 +39,17 @@ fn quoted_identifiers(source: &str) -> Vec<&str> {
 fn test_g01_rustlab_only_ids_do_not_use_matlab_prefix() {
     let mut saw_rustlab_id = false;
 
-    for (file, source) in [("stats.rs", DATA_STATS), ("csv_io.rs", DATA_CSV_IO)] {
+    for (file, source) in [
+        ("stats.rs", DATA_STATS),
+        ("csv_io.rs", DATA_CSV_IO),
+        ("tables.rs", DATA_TABLES),
+        ("numerical.rs", STDLIB_NUMERICAL),
+        ("simulation.rs", STDLIB_SIMULATION),
+        ("signal_proc.rs", STDLIB_SIGNAL_PROC),
+        ("image_proc.rs", STDLIB_IMAGE_PROC),
+        ("ml.rs", STDLIB_ML),
+        ("robotics.rs", STDLIB_ROBOTICS),
+    ] {
         for id in quoted_identifiers(source) {
             if id.starts_with("MATLAB:") {
                 assert!(

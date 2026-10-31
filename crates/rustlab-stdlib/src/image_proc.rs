@@ -14,7 +14,7 @@ pub fn rgb2gray_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalEr
             let shp = d.shape();
             if shp.len() < 3 || shp[2] != 3 {
                 return Err(user_err(
-                    "MATLAB:rgb2gray:invalidSizeRGB",
+                    "RUSTLAB:rgb2gray:invalidSizeRGB",
                     "Input RGB image must be HxWx3 array.",
                 ));
             }
@@ -39,7 +39,7 @@ pub fn rgb2gray_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalEr
             let shp = u.shape();
             if shp.len() < 3 || shp[2] != 3 {
                 return Err(user_err(
-                    "MATLAB:rgb2gray:invalidSizeRGB",
+                    "RUSTLAB:rgb2gray:invalidSizeRGB",
                     "Input RGB image must be HxWx3 array.",
                 ));
             }
@@ -63,7 +63,7 @@ pub fn rgb2gray_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalEr
             Ok(vec![Value::UInt8(da)])
         }
         _ => Err(user_err(
-            "MATLAB:rgb2gray:invalidType",
+            "RUSTLAB:rgb2gray:invalidType",
             "Input must be uint8 or double array.",
         )),
     }
@@ -79,10 +79,10 @@ pub fn imresize_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalEr
     }
     let scale = args[1]
         .as_scalar_f64()
-        .map_err(|_| user_err("MATLAB:imresize:invalidScale", "Scale must be a scalar."))?;
+        .map_err(|_| user_err("RUSTLAB:imresize:invalidScale", "Scale must be a scalar."))?;
     if scale <= 0.0 {
         return Err(user_err(
-            "MATLAB:imresize:invalidScale",
+            "RUSTLAB:imresize:invalidScale",
             "Scale must be positive.",
         ));
     }
@@ -112,7 +112,7 @@ pub fn imresize_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalEr
             Ok(vec![Value::Double(da)])
         }
         _ => Err(user_err(
-            "MATLAB:imresize:invalidType",
+            "RUSTLAB:imresize:invalidType",
             "Currently only 2D double matrices are supported.",
         )),
     }
@@ -165,7 +165,7 @@ pub fn imfilter_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalEr
             Ok(vec![Value::Double(da)])
         }
         _ => Err(user_err(
-            "MATLAB:imfilter:invalidType",
+            "RUSTLAB:imfilter:invalidType",
             "Image and kernel must be double matrices.",
         )),
     }

@@ -15,9 +15,9 @@ fn extract_path(v: &Value) -> Result<String, EvalError> {
             .as_slice()
             .first()
             .cloned()
-            .ok_or_else(|| user_err("MATLAB:readtable:badPath", "Empty filename.")),
+            .ok_or_else(|| user_err("RUSTLAB:readtable:badPath", "Empty filename.")),
         _ => Err(user_err(
-            "MATLAB:readtable:badPath",
+            "RUSTLAB:readtable:badPath",
             "Filename must be a character vector or string scalar.",
         )),
     }
@@ -56,14 +56,14 @@ pub fn readtable(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalErro
     let path = Path::new(&path_str);
     if !path.exists() {
         return Err(user_err(
-            "MATLAB:readtable:fileNotFound",
+            "RUSTLAB:readtable:fileNotFound",
             &format!("File '{path_str}' not found."),
         ));
     }
 
     let file = File::open(path).map_err(|e| {
         user_err(
-            "MATLAB:readtable:ioError",
+            "RUSTLAB:readtable:ioError",
             &format!("Cannot open file '{path_str}': {e}"),
         )
     })?;
@@ -72,7 +72,7 @@ pub fn readtable(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalErro
 
     let first_line = match lines.next() {
         Some(Ok(l)) => l,
-        Some(Err(e)) => return Err(user_err("MATLAB:readtable:ioError", &format!("{e}"))),
+        Some(Err(e)) => return Err(user_err("RUSTLAB:readtable:ioError", &format!("{e}"))),
         None => {
             return Ok(vec![Value::Struct(StructArray::empty())]);
         }
@@ -99,7 +99,7 @@ pub fn readtable(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalErro
 
     let mut raw_rows: Vec<Vec<String>> = Vec::new();
     for line_res in lines {
-        let line = line_res.map_err(|e| user_err("MATLAB:readtable:ioError", &format!("{e}")))?;
+        let line = line_res.map_err(|e| user_err("RUSTLAB:readtable:ioError", &format!("{e}")))?;
         let trimmed = line.trim();
         if trimmed.is_empty() {
             continue;
@@ -178,7 +178,7 @@ pub fn writetable(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalErr
     let path = Path::new(&path_str);
     let file = File::create(path).map_err(|e| {
         user_err(
-            "MATLAB:writetable:ioError",
+            "RUSTLAB:writetable:ioError",
             &format!("Cannot create file '{path_str}': {e}"),
         )
     })?;
@@ -200,10 +200,10 @@ pub fn writetable(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalErr
                 .join(",");
             writer
                 .write_all(header_line.as_bytes())
-                .map_err(|e| user_err("MATLAB:writetable:ioError", &format!("{e}")))?;
+                .map_err(|e| user_err("RUSTLAB:writetable:ioError", &format!("{e}")))?;
             writer
                 .write_all(b"\n")
-                .map_err(|e| user_err("MATLAB:writetable:ioError", &format!("{e}")))?;
+                .map_err(|e| user_err("RUSTLAB:writetable:ioError", &format!("{e}")))?;
 
             let num_rows = if let Some(Value::Double(d)) = map.get("_NumRows") {
                 d.as_slice().first().copied().unwrap_or(0.0) as usize
@@ -241,15 +241,15 @@ pub fn writetable(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalErr
                 let line = row_items.join(",") + "\n";
                 writer
                     .write_all(line.as_bytes())
-                    .map_err(|e| user_err("MATLAB:writetable:ioError", &format!("{e}")))?;
+                    .map_err(|e| user_err("RUSTLAB:writetable:ioError", &format!("{e}")))?;
             }
             writer
                 .flush()
-                .map_err(|e| user_err("MATLAB:writetable:ioError", &format!("{e}")))?;
+                .map_err(|e| user_err("RUSTLAB:writetable:ioError", &format!("{e}")))?;
             Ok(vec![Value::Double(DenseArray::empty())])
         }
         _ => Err(user_err(
-            "MATLAB:writetable:invalidInput",
+            "RUSTLAB:writetable:invalidInput",
             "First argument must be a table or struct.",
         )),
     }
@@ -263,7 +263,7 @@ pub fn head_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError>
     let k = if args.len() >= 2 {
         args[1].as_scalar_f64().map_err(|_| {
             user_err(
-                "MATLAB:head:invalidK",
+                "RUSTLAB:head:invalidK",
                 "Row count k must be a positive integer scalar.",
             )
         })? as usize
@@ -343,7 +343,7 @@ pub fn head_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError>
             ))])
         }
         _ => Err(user_err(
-            "MATLAB:head:invalidInput",
+            "RUSTLAB:head:invalidInput",
             "Input must be a table or matrix.",
         )),
     }
@@ -357,7 +357,7 @@ pub fn tail_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError>
     let k = if args.len() >= 2 {
         args[1].as_scalar_f64().map_err(|_| {
             user_err(
-                "MATLAB:tail:invalidK",
+                "RUSTLAB:tail:invalidK",
                 "Row count k must be a positive integer scalar.",
             )
         })? as usize
@@ -446,7 +446,7 @@ pub fn tail_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError>
             ))])
         }
         _ => Err(user_err(
-            "MATLAB:tail:invalidInput",
+            "RUSTLAB:tail:invalidInput",
             "Input must be a table or matrix.",
         )),
     }
@@ -507,7 +507,7 @@ pub fn summary_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalErr
             ))])
         }
         _ => Err(user_err(
-            "MATLAB:summary:invalidInput",
+            "RUSTLAB:summary:invalidInput",
             "Input must be a table.",
         )),
     }

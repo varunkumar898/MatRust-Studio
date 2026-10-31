@@ -18,25 +18,17 @@ fn test_simulation_tf_and_step() {
         (Value::Double(y), Value::Double(t)) => {
             let t_slice = t.as_slice();
             let y_slice = y.as_slice();
-            for &(target_t, expected_y) in &[
-                (2.0, 5.0 * (1.0 - (-1.0_f64).exp())),  // ~ 3.1606
-                (4.0, 5.0 * (1.0 - (-2.0_f64).exp())),  // ~ 4.3233
-                (10.0, 5.0 * (1.0 - (-5.0_f64).exp())), // ~ 4.9663
-            ] {
-                let mut best_diff = f64::INFINITY;
-                let mut best_idx = 0;
-                for (i, &ti) in t_slice.iter().enumerate() {
-                    let diff = (ti - target_t).abs();
-                    if diff < best_diff {
-                        best_diff = diff;
-                        best_idx = i;
-                    }
-                }
+            // Confirmation of purely analytical closed-form equations:
+            // For 1st order systems H(s) = K / (tau*s + 1), step evaluates
+            // y(t) = K * (1 - exp(-t / tau)) in closed form at every sampled point.
+            // Pointwise error against analytical closed-form formula must be < 1e-12:
+            let k_gain = 5.0;
+            let tau = 2.0;
+            for (&ti, &yi) in t_slice.iter().zip(y_slice.iter()) {
+                let y_exact = k_gain * (1.0 - (-ti / tau).exp());
                 assert!(
-                    (y_slice[best_idx] - expected_y).abs() < 2e-2,
-                    "1st order response at t={target_t}: got {}, expected {}",
-                    y_slice[best_idx],
-                    expected_y
+                    (yi - y_exact).abs() < 1e-12,
+                    "Exact analytical 1st-order mismatch at t={ti}: got {yi}, expected {y_exact}"
                 );
             }
         }
@@ -60,23 +52,13 @@ fn test_simulation_tf_and_step() {
             let phi = (1.0 - zeta * zeta).sqrt().atan2(zeta);
             let t_slice = t.as_slice();
             let y_slice = y.as_slice();
-            for &test_t in &[0.5, 1.0, 2.0] {
-                let mut best_idx = 0;
-                let mut min_diff = f64::INFINITY;
-                for (i, &ti) in t_slice.iter().enumerate() {
-                    if (ti - test_t).abs() < min_diff {
-                        min_diff = (ti - test_t).abs();
-                        best_idx = i;
-                    }
-                }
+            // Confirmation of analytical closed-form at all sampled points:
+            for (&ti, &yi) in t_slice.iter().zip(y_slice.iter()) {
                 let expected = 1.0
-                    - (-zeta * wn * test_t).exp() / (1.0 - zeta * zeta).sqrt()
-                        * (wd * test_t + phi).sin();
+                    - (-zeta * wn * ti).exp() / (1.0 - zeta * zeta).sqrt() * (wd * ti + phi).sin();
                 assert!(
-                    (y_slice[best_idx] - expected).abs() < 2e-2,
-                    "Underdamped mismatch at t={test_t}: got {}, expected {}",
-                    y_slice[best_idx],
-                    expected
+                    (yi - expected).abs() < 1e-12,
+                    "Exact analytical underdamped mismatch at t={ti}: got {yi}, expected {expected}"
                 );
             }
         }
@@ -95,21 +77,12 @@ fn test_simulation_tf_and_step() {
             let wn = 3.0_f64;
             let t_slice = t.as_slice();
             let y_slice = y.as_slice();
-            for &test_t in &[0.5, 1.0] {
-                let mut best_idx = 0;
-                let mut min_diff = f64::INFINITY;
-                for (i, &ti) in t_slice.iter().enumerate() {
-                    if (ti - test_t).abs() < min_diff {
-                        min_diff = (ti - test_t).abs();
-                        best_idx = i;
-                    }
-                }
-                let expected = 1.0 - (1.0 + wn * test_t) * (-wn * test_t).exp();
+            // Confirmation of analytical closed-form at all sampled points:
+            for (&ti, &yi) in t_slice.iter().zip(y_slice.iter()) {
+                let expected = 1.0 - (1.0 + wn * ti) * (-wn * ti).exp();
                 assert!(
-                    (y_slice[best_idx] - expected).abs() < 2e-2,
-                    "Critically damped mismatch at t={test_t}: got {}, expected {}",
-                    y_slice[best_idx],
-                    expected
+                    (yi - expected).abs() < 1e-12,
+                    "Exact analytical critically-damped mismatch at t={ti}: got {yi}, expected {expected}"
                 );
             }
         }
@@ -127,21 +100,12 @@ fn test_simulation_tf_and_step() {
         (Value::Double(y), Value::Double(t)) => {
             let t_slice = t.as_slice();
             let y_slice = y.as_slice();
-            for &test_t in &[0.5, 1.0, 2.0] {
-                let mut best_idx = 0;
-                let mut min_diff = f64::INFINITY;
-                for (i, &ti) in t_slice.iter().enumerate() {
-                    if (ti - test_t).abs() < min_diff {
-                        min_diff = (ti - test_t).abs();
-                        best_idx = i;
-                    }
-                }
-                let expected = 1.0 - 2.0 * (-test_t).exp() + (-2.0 * test_t).exp();
+            // Confirmation of analytical closed-form at all sampled points:
+            for (&ti, &yi) in t_slice.iter().zip(y_slice.iter()) {
+                let expected = 1.0 - 2.0 * (-ti).exp() + (-2.0 * ti).exp();
                 assert!(
-                    (y_slice[best_idx] - expected).abs() < 2e-2,
-                    "Overdamped mismatch at t={test_t}: got {}, expected {}",
-                    y_slice[best_idx],
-                    expected
+                    (yi - expected).abs() < 1e-12,
+                    "Exact analytical overdamped mismatch at t={ti}: got {yi}, expected {expected}"
                 );
             }
         }
@@ -317,24 +281,56 @@ fn test_machine_learning_fitlm_predict_kmeans() {
     let y_hat = interp.env.get("y_hat").unwrap();
     assert!((y_hat.as_scalar_f64().unwrap() - 16.0).abs() < 1e-10);
 
-    // 2. Deterministic k-means with fixed seed / initialization
+    // 2. Deterministic k-means on well-separated clusters with exact known centres and assignments:
+    // Cluster A points: 0, 1 -> Known analytical centre = (0 + 1) / 2 = 0.5
+    // Cluster B points: 100, 101 -> Known analytical centre = (100 + 101) / 2 = 100.5
     let script_kmeans =
         "data = [0; 1; 100; 101]; [idx1, C1] = kmeans(data, 2); [idx2, C2] = kmeans(data, 2);";
     interp.eval_script(script_kmeans).unwrap();
     let idx1 = interp.env.get("idx1").unwrap();
     let idx2 = interp.env.get("idx2").unwrap();
-    match (idx1, idx2) {
-        (Value::Double(d1), Value::Double(d2)) => {
+    let c1 = interp.env.get("C1").unwrap();
+    match (idx1, idx2, c1) {
+        (Value::Double(d1), Value::Double(d2), Value::Double(c)) => {
             assert_eq!(
                 d1.as_slice(),
                 d2.as_slice(),
                 "K-means must be deterministic across calls"
             );
+            // Assert known cluster assignments: points 0, 1 together; points 100, 101 together
             assert_eq!(d1.as_slice()[0], d1.as_slice()[1]);
             assert_eq!(d1.as_slice()[2], d1.as_slice()[3]);
             assert_ne!(d1.as_slice()[0], d1.as_slice()[2]);
+
+            // Assert exact known cluster centres: {0.5, 100.5}
+            let centers = c.as_slice();
+            assert_eq!(centers.len(), 2, "Must produce 2 cluster centers");
+            let mut sorted_c = centers.to_vec();
+            sorted_c.sort_by(|a, b| a.partial_cmp(b).unwrap());
+            assert!(
+                (sorted_c[0] - 0.5).abs() < 1e-12,
+                "Known cluster centre 0.5 mismatch: {}",
+                sorted_c[0]
+            );
+            assert!(
+                (sorted_c[1] - 100.5).abs() < 1e-12,
+                "Known cluster centre 100.5 mismatch: {}",
+                sorted_c[1]
+            );
+
+            // Verify point assignments correspond exactly to the respective center
+            let cluster_0 = (d1.as_slice()[0] - 1.0) as usize;
+            let cluster_100 = (d1.as_slice()[2] - 1.0) as usize;
+            assert!(
+                (centers[cluster_0] - 0.5).abs() < 1e-12,
+                "Point [0, 1] must map to center 0.5"
+            );
+            assert!(
+                (centers[cluster_100] - 100.5).abs() < 1e-12,
+                "Point [100, 101] must map to center 100.5"
+            );
         }
-        _ => panic!("Expected double indices"),
+        _ => panic!("Expected double indices and centers"),
     }
 
     // 3. Hand-checked confusion matrix:

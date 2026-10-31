@@ -12,7 +12,7 @@ fn extract_f64_slice(val: &Value) -> Result<Vec<f64>, EvalError> {
         Value::Single(s) => Ok(s.as_slice().iter().map(|&x| x as f64).collect()),
         Value::Int32(i) => Ok(i.as_slice().iter().map(|&x| x as f64).collect()),
         Value::UInt32(u) => Ok(u.as_slice().iter().map(|&x| x as f64).collect()),
-        _ => Err(user_err("MATLAB:invalidType", "Expected numeric vector.")),
+        _ => Err(user_err("RUSTLAB:invalidType", "Expected numeric vector.")),
     }
 }
 
@@ -30,14 +30,14 @@ pub fn filter_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalErro
 
     if b.is_empty() || a.is_empty() {
         return Err(user_err(
-            "MATLAB:filter:emptyCoeffs",
+            "RUSTLAB:filter:emptyCoeffs",
             "Filter coefficients b and a must not be empty.",
         ));
     }
     let a0 = a[0];
     if a0.abs() < 1e-15 {
         return Err(user_err(
-            "MATLAB:filter:zeroFirstDenCoeff",
+            "RUSTLAB:filter:zeroFirstDenCoeff",
             "First denominator coefficient a(1) cannot be zero.",
         ));
     }
@@ -114,7 +114,7 @@ pub fn hamming_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalErr
     }
     let n = args[0].as_scalar_f64().map_err(|_| {
         user_err(
-            "MATLAB:hamming:invalidN",
+            "RUSTLAB:hamming:invalidN",
             "N must be a positive integer scalar.",
         )
     })? as usize;
@@ -145,7 +145,7 @@ pub fn hann_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError>
     }
     let n = args[0].as_scalar_f64().map_err(|_| {
         user_err(
-            "MATLAB:hann:invalidN",
+            "RUSTLAB:hann:invalidN",
             "N must be a positive integer scalar.",
         )
     })? as usize;
@@ -176,7 +176,7 @@ pub fn blackman_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalEr
     }
     let n = args[0].as_scalar_f64().map_err(|_| {
         user_err(
-            "MATLAB:blackman:invalidN",
+            "RUSTLAB:blackman:invalidN",
             "N must be a positive integer scalar.",
         )
     })? as usize;

@@ -169,7 +169,7 @@ impl<R: Read + Seek> AppContainer<R> {
 
         for i in 0..file_count {
             let file = archive.by_index(i)?;
-            let raw_name = file.name().to_string();
+            let raw_name = file.name()?.to_string();
 
             // Zip-Slip, UNC, drive letter, and reserved device sanitization
             sanitize_path(&raw_name)?;
@@ -605,25 +605,27 @@ fn parse_manifest_xml(xml: &str, manifest: &mut AppManifest) {
                 current_tag = String::from_utf8_lossy(e.name().as_ref()).to_lowercase();
             }
             Event::Text(e) => {
-                if let Ok(text) = e.unescape() {
-                    let val = text.trim().to_string();
-                    if !val.is_empty() {
-                        match current_tag.as_str() {
-                            "name" | "appname" | "title" => {
-                                if manifest.app_name.is_empty() {
-                                    manifest.app_name = val;
+                if let Ok(raw_str) = std::str::from_utf8(e.as_ref()) {
+                    if let Ok(text) = quick_xml::escape::unescape(raw_str) {
+                        let val = text.trim().to_string();
+                        if !val.is_empty() {
+                            match current_tag.as_str() {
+                                "name" | "appname" | "title" => {
+                                    if manifest.app_name.is_empty() {
+                                        manifest.app_name = val;
+                                    }
                                 }
+                                "version" => manifest.version = val,
+                                "author" | "creator" => manifest.author = val,
+                                "summary" => manifest.summary = val,
+                                "description" => manifest.description = val,
+                                "toolbox" | "product" | "requiredtoolbox"
+                                    if !manifest.required_toolboxes.contains(&val) =>
+                                {
+                                    manifest.required_toolboxes.push(val);
+                                }
+                                _ => {}
                             }
-                            "version" => manifest.version = val,
-                            "author" | "creator" => manifest.author = val,
-                            "summary" => manifest.summary = val,
-                            "description" => manifest.description = val,
-                            "toolbox" | "product" | "requiredtoolbox"
-                                if !manifest.required_toolboxes.contains(&val) =>
-                            {
-                                manifest.required_toolboxes.push(val);
-                            }
-                            _ => {}
                         }
                     }
                 }
@@ -655,15 +657,17 @@ fn parse_core_properties_xml(xml: &str, manifest: &mut AppManifest) {
                 current_tag = local;
             }
             Event::Text(e) => {
-                if let Ok(text) = e.unescape() {
-                    let val = text.trim().to_string();
-                    if !val.is_empty() {
-                        match current_tag.as_str() {
-                            "title" => manifest.app_name = val,
-                            "creator" => manifest.author = val,
-                            "description" => manifest.description = val,
-                            "version" => manifest.version = val,
-                            _ => {}
+                if let Ok(raw_str) = std::str::from_utf8(e.as_ref()) {
+                    if let Ok(text) = quick_xml::escape::unescape(raw_str) {
+                        let val = text.trim().to_string();
+                        if !val.is_empty() {
+                            match current_tag.as_str() {
+                                "title" => manifest.app_name = val,
+                                "creator" => manifest.author = val,
+                                "description" => manifest.description = val,
+                                "version" => manifest.version = val,
+                                _ => {}
+                            }
                         }
                     }
                 }

@@ -1,0 +1,37 @@
+[package]
+name = "mlapp-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[workspace]
+
+[dependencies]
+rustlab-parse = { path = "../crates/rustlab-parse" }
+mlapp-lang = { path = "../crates/mlapp-lang" }
+mlapp-ui = { path = "../crates/mlapp-ui" }
+mlapp-container = { path = "../crates/mlapp-container" }
+
+[target.'cfg(not(windows))'.dependencies]
+libfuzzer-sys = "0.4"
+
+[[bin]]
+name = "fuzz_parser"
+path = "fuzz_targets/fuzz_parser.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_xml"
+path = "fuzz_targets/fuzz_xml.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_zip"
+path = "fuzz_targets/fuzz_zip.rs"
+test = false
+doc = false

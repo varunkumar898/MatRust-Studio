@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [ main, master, ci-setup, wip/** ]
+    branches: [ main, master, ci-setup, hardening, wip/** ]
   pull_request:
     branches: [ main, master ]
 
@@ -18,7 +18,6 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt
-      - name: Verify Formatting
         run: cargo fmt --all -- --check
 
   test-matrix:
@@ -61,6 +60,9 @@ jobs:
       - name: Cargo Test (--no-default-features)
         run: cargo test --workspace --no-default-features
 
+      - name: Check Workspace Benchmarks
+        run: cargo bench --workspace --no-run
+
       - name: Cargo Doc (no broken links / warnings)
         run: cargo doc --workspace --no-deps
         env:
@@ -68,10 +70,12 @@ jobs:
 
       - name: Test Count Guard (anti-regression check)
         run: |
-          COUNT=$(cargo test --workspace -- --list | grep -E ': test$' | wc -l)
-          echo "Active workspace test count: $COUNT"
-          if [ "$COUNT" -lt 302 ]; then
-            echo "ERROR: Test count regression detected ($COUNT < 302)!"
+          ACTIVE_COUNT=$(cargo test --workspace -- --list | grep -E ': test$' | wc -l)
+          echo "Active workspace test count: $ACTIVE_COUNT"
+          MANIFEST_COUNT=$(grep -E ': test$' docs/test-manifest.txt | wc -l)
+          echo "Manifest baseline test count: $MANIFEST_COUNT"
+          if [ "$ACTIVE_COUNT" -lt "$MANIFEST_COUNT" ] || [ "$ACTIVE_COUNT" -lt 309 ]; then
+            echo "ERROR: Test count regression detected ($ACTIVE_COUNT < $MANIFEST_COUNT or < 309)!"
             exit 1
           fi
         shell: bash
@@ -82,6 +86,16 @@ jobs:
         with:
           name: test-logs-${{ matrix.os }}
           path: target/test-logs/
+
+  fuzz-smoke:
+    name: Cargo Fuzz Targets (Smoke Run)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Run Fuzz Smoke Test Suite
+        run: cargo test --manifest-path fuzz/Cargo.toml
 
   security:
     name: Security & License Checks

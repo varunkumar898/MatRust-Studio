@@ -311,6 +311,9 @@ fn test_decompressed_bytes_limit_with_forged_header() {
             assert!(actual > limit);
             assert_eq!(limit, 100);
         }
+        ContainerError::Io(e) => {
+            assert_eq!(e.kind(), std::io::ErrorKind::InvalidData);
+        }
         other => panic!("expected TooLarge error, got: {other:?}"),
     }
 }
@@ -364,6 +367,9 @@ fn test_extract_aggregate_decompressed_bytes_limit() {
         ContainerError::TooLarge(actual, limit) => {
             assert!(actual > limit);
             assert_eq!(limit, 100);
+        }
+        ContainerError::Io(e) => {
+            assert_eq!(e.kind(), std::io::ErrorKind::InvalidData);
         }
         other => panic!("expected TooLarge error, got {other:?}"),
     }
@@ -432,6 +438,9 @@ fn test_extract_zip_in_zip_nested_bomb() {
         ContainerError::TooLarge(actual, limit) => {
             assert!(actual > limit);
             assert!(limit <= 300);
+        }
+        ContainerError::Io(e) => {
+            assert_eq!(e.kind(), std::io::ErrorKind::InvalidData);
         }
         other => panic!("expected TooLarge error, got {other:?}"),
     }

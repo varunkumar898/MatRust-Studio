@@ -170,3 +170,21 @@ fn test_c_header_parity_and_declarations() {
     assert!(header.contains("mlapp_session_shutdown"));
     assert!(header.contains("mlapp_string_free"));
 }
+
+#[test]
+fn test_mlapp_ffi_alias_header_exists_and_includes_mlapp_h() {
+    let header_candidates = [
+        "crates/mlapp-ffi/include/mlapp_ffi.h",
+        "include/mlapp_ffi.h",
+        "../mlapp-ffi/include/mlapp_ffi.h",
+    ];
+    let mut header_content = None;
+    for path in header_candidates {
+        if let Ok(content) = std::fs::read_to_string(path) {
+            header_content = Some(content);
+            break;
+        }
+    }
+    let header = header_content.expect("include/mlapp_ffi.h must exist");
+    assert!(header.contains("#include \"mlapp.h\""));
+}

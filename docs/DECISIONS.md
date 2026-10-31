@@ -74,3 +74,21 @@ $$\text{Score} = \max\left(0, 100 - (25 \times N_{\text{hazardous}} + 15 \times 
    - `Runs`: Score $\ge 90$, $N_{\text{hazardous}} = 0$, $N_{\text{unanalyzable}} = 0$.
    - `Partial`: Score $\ge 50$ and $N_{\text{hazardous}} = 0$.
    - `Unsupported`: Score $< 50$ or $N_{\text{hazardous}} > 0$.
+
+---
+
+## Decision 5: Clean-Room Isolation, Real-App Validation & UNVERIFIED Format Items
+
+### Context
+To maintain strict clean-room legal integrity, proprietary MathWorks binaries, sample applications, and assets are never checked into version control.
+
+### Current Status
+- **0 Real Proprietary Apps Checked In**: Repository test fixtures are clean-room synthesized packages conforming strictly to ISO/IEC 29500-2:2021 (Open Packaging Conventions) and MathWorks public App Designer XML specifications.
+- **Opt-In External Validation Harness**: An opt-in test harness (`test_opt_in_real_apps_validation`) inspects, parses, and validates real `.mlapp` packages supplied externally through the `MLAPP_REAL_APPS_DIR` environment variable.
+
+### UNVERIFIED Format Assumptions
+The following format aspects remain **UNVERIFIED** pending direct black-box testing against real `.mlapp` files from varying releases:
+1. `UNVERIFIED_MLAPP_OPC_NAMESPACES`: Exact XML namespace URI strings across older pre-R2018a releases for custom App Designer packaging.
+2. `UNVERIFIED_BINARY_COMPONENT_DATA`: Internal payload representation of legacy or custom third-party ActiveX/Java controls embedded in `.mlapp`.
+3. `UNVERIFIED_XML_UUID_FORMAT`: Exact UUID formatting scheme and schema versioning attributes in `appdesigner/app.xml` across future releases.
+4. `UNVERIFIED_TIMER_CALLBACK_INTERLEAVING`: Precise callback queuing and re-entrancy semantics for multi-timer App Designer components.

@@ -43,4 +43,35 @@ proptest! {
             prop_assert!(false, "Expected Double values");
         }
     }
+
+    #[test]
+    fn prop_1_based_indexing_and_column_major_equivalence(
+        rows in 1usize..10,
+        cols in 1usize..10,
+        vals in prop::collection::vec(-1000.0f64..1000.0f64, 100)
+    ) {
+        let numel = rows * cols;
+        let arr = DenseArray::from_vec(vec![rows, cols], vals[..numel].to_vec()).unwrap();
+
+        // 1-based indexing: 0 is out of bounds
+        prop_assert!(arr.get_linear(0).is_err());
+        prop_assert!(arr.get_subscript(&[0, 1]).is_err());
+        prop_assert!(arr.get_subscript(&[1, 0]).is_err());
+
+        // Past bounds is out of bounds
+        prop_assert!(arr.get_linear(numel + 1).is_err());
+        prop_assert!(arr.get_subscript(&[rows + 1, 1]).is_err());
+        prop_assert!(arr.get_subscript(&[1, cols + 1]).is_err());
+
+        // For every valid coordinate (r, c), check column-major index: (c - 1) * rows + r
+        for r in 1..=rows {
+            for c in 1..=cols {
+                let expected_linear = (c - 1) * rows + r;
+                let val_sub = arr.get_subscript(&[r, c]);
+                let val_lin = arr.get_linear(expected_linear);
+                prop_assert!(val_sub.is_ok());
+                prop_assert_eq!(val_sub, val_lin);
+            }
+        }
+    }
 }

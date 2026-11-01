@@ -89,6 +89,15 @@ enum Commands {
         #[arg(long, default_value_t = 5000)]
         timeout_ms: u64,
     },
+    /// Inspect a Simulink model (.slx) and print a structural and compatibility report
+    SlxInspect {
+        /// Path to .slx model file
+        model_path: PathBuf,
+
+        /// Output report as JSON
+        #[arg(long, default_value_t = false)]
+        json: bool,
+    },
 }
 
 fn main() -> Result<()> {
@@ -256,6 +265,41 @@ fn main() -> Result<()> {
 
             session.shutdown();
             println!("\nApp session closed successfully.");
+        }
+        Commands::SlxInspect { model_path, json } => {
+            let file = File::open(&model_path)
+                .with_context(|| format!("Failed to open .slx model file at {:?}", model_path))?;
+            let limits = mlapp_container::ContainerLimits::default();
+            let (_diagram, report) = mlapp_sim::inspect_slx(file, limits)
+                .with_context(|| format!("Failed to inspect .slx model at {:?}", model_path))?;
+
+            if json {
+                println!("{}", serde_json::to_string_pretty(&report)?);
+            } else {
+                println!("=== Simulink Model Inspection Report ===");
+                println!("Model Name: {}", report.model_name);
+                println!("Release:    {}", report.release);
+                println!("Version:    {}", report.version);
+                println!("Total Blocks: {}", report.total_blocks);
+                println!("Total Lines:  {}", report.total_lines);
+                println!("Fully Supported by Solver: {}", report.is_solver_supported);
+                println!("\nBlock Type Breakdown:");
+                for (b_type, count) in &report.block_type_counts {
+                    println!("  - {b_type}: {count}");
+                }
+                if !report.required_toolboxes.is_empty() {
+                    println!("\nRequired Toolboxes:");
+                    for tb in &report.required_toolboxes {
+                        println!("  - {tb}");
+                    }
+                }
+                if !report.unsupported_blocks.is_empty() {
+                    println!("\nUnsupported Blocks for Native Simulation:");
+                    for blk in &report.unsupported_blocks {
+                        println!("  - {blk}");
+                    }
+                }
+            }
         }
     }
 

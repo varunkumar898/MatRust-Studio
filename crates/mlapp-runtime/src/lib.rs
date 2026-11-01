@@ -174,22 +174,31 @@ pub struct AppRuntime {
     pub interpreter: Interpreter,
     pub app_handle: AppHandle,
     pub class_def: Option<AppClassDef>,
+    pub loaded_models: Arc<Mutex<HashMap<String, mlapp_sim::BlockDiagram>>>,
 }
 
 impl AppRuntime {
     pub fn new(app_handle: AppHandle) -> Self {
+        let loaded_models = Arc::new(Mutex::new(HashMap::new()));
         let mut interp = Interpreter::new();
         rustlab_stdlib::register_all(&mut interp);
         interp.cancel_token = Some(app_handle.cancel_token.clone());
-        register_app_builtins(&mut interp, &app_handle);
+        register_app_builtins(&mut interp, &app_handle, loaded_models.clone());
 
         let mut runtime = Self {
             interpreter: interp,
             app_handle,
             class_def: None,
+            loaded_models,
         };
         runtime.configure_matlab_bridge(false);
         runtime
+    }
+
+    /// Loads an in-memory `BlockDiagram` into the runtime.
+    pub fn load_diagram(&self, diagram: mlapp_sim::BlockDiagram) {
+        let mut models = self.loaded_models.lock().unwrap_or_else(|p| p.into_inner());
+        models.insert(diagram.name.clone(), diagram);
     }
 
     /// Configures MATLAB bridge delegation for unsupported functions.
@@ -557,8 +566,27 @@ fn value_to_plain_string(v: &Value) -> String {
     }
 }
 
-/// Registers App Designer specific builtins like `uialert`, `uiconfirm`, `plot` hooks.
-fn register_app_builtins(interp: &mut Interpreter, app_handle: &AppHandle) {
+fn resolve_slx_path(model_name: &str) -> Option<std::path::PathBuf> {
+    let path = std::path::PathBuf::from(model_name);
+    let slx_path = if path.extension().is_none() {
+        path.with_extension("slx")
+    } else {
+        path
+    };
+    let candidates = [
+        slx_path.clone(),
+        std::path::PathBuf::from("fixtures/sample_models").join(&slx_path),
+        std::path::PathBuf::from("../../fixtures/sample_models").join(&slx_path),
+    ];
+    candidates.into_iter().find(|p| p.is_file())
+}
+
+/// Registers App Designer specific builtins like `uialert`, `uiconfirm`, `plot`, and Simulink `sim`/`set_param` hooks.
+fn register_app_builtins(
+    interp: &mut Interpreter,
+    app_handle: &AppHandle,
+    loaded_models: Arc<Mutex<HashMap<String, mlapp_sim::BlockDiagram>>>,
+) {
     let handle_clone = app_handle.clone();
     interp.register_builtin("uialert", move |args: &[Value], _nargout: usize| {
         let msg = args.get(1).map(value_to_plain_string).unwrap_or_default();
@@ -664,6 +692,238 @@ fn register_app_builtins(interp: &mut Interpreter, app_handle: &AppHandle) {
             command: "hold".to_string(),
             args: vec![Value::char_vector(&mode)],
         });
+        Ok(vec![])
+    });
+
+    // Simulink sim builtin
+    let models_sim = loaded_models.clone();
+    interp.register_builtin("sim", move |args: &[Value], _nargout: usize| {
+        if args.is_empty() {
+            return Err(rustlab_eval::EvalError::UserError {
+                identifier: "Simulink:InvalidInput".to_string(),
+                message: "sim requires at least 1 argument (model name)".to_string(),
+                span: rustlab_parse::Span::default(),
+            });
+        }
+        let model_name = value_to_plain_string(&args[0]);
+        let mut config = mlapp_sim::SimulationConfig::default();
+
+        if args.len() >= 3 {
+            let mut i = 1;
+            while i + 1 < args.len() {
+                let param = value_to_plain_string(&args[i]);
+                let val_str = value_to_plain_string(&args[i + 1]);
+                if param.eq_ignore_ascii_case("StopTime") {
+                    if let Ok(t) = val_str.parse::<f64>() {
+                        config.stop_time = t;
+                    }
+                } else if param.eq_ignore_ascii_case("StartTime") {
+                    if let Ok(t) = val_str.parse::<f64>() {
+                        config.start_time = t;
+                    }
+                } else if param.eq_ignore_ascii_case("FixedStep") {
+                    if let Ok(dt) = val_str.parse::<f64>() {
+                        config.step_size = dt;
+                    }
+                }
+                i += 2;
+            }
+        }
+
+        let diagram_opt = {
+            let models = models_sim.lock().unwrap_or_else(|p| p.into_inner());
+            models.get(&model_name).cloned()
+        };
+
+        let diagram = if let Some(diag) = diagram_opt {
+            diag
+        } else if let Some(slx_path) = resolve_slx_path(&model_name) {
+            let f =
+                std::fs::File::open(&slx_path).map_err(|e| rustlab_eval::EvalError::UserError {
+                    identifier: "Simulink:LoadError".to_string(),
+                    message: format!("Failed to open model file {:?}: {e}", slx_path),
+                    span: rustlab_parse::Span::default(),
+                })?;
+            let (diag, _) = mlapp_sim::inspect_slx(f, mlapp_container::ContainerLimits::default())
+                .map_err(|e| rustlab_eval::EvalError::UserError {
+                    identifier: "Simulink:InspectError".to_string(),
+                    message: format!("Failed to inspect model {:?}: {e}", slx_path),
+                    span: rustlab_parse::Span::default(),
+                })?;
+            diag
+        } else {
+            return Err(rustlab_eval::EvalError::UserError {
+                identifier: "Simulink:ModelNotFound".to_string(),
+                message: format!(
+                    "Simulink model '{model_name}' not found in loaded models or on disk"
+                ),
+                span: rustlab_parse::Span::default(),
+            });
+        };
+
+        let sim_out = mlapp_sim::simulate_diagram(&diagram, &config).map_err(|e| {
+            rustlab_eval::EvalError::UserError {
+                identifier: "Simulink:SimError".to_string(),
+                message: format!("Simulation failed for model '{model_name}': {e}"),
+                span: rustlab_parse::Span::default(),
+            }
+        })?;
+
+        Ok(vec![sim_out.to_matlab_value()])
+    });
+
+    // Simulink set_param builtin
+    let models_set = loaded_models.clone();
+    interp.register_builtin("set_param", move |args: &[Value], _nargout: usize| {
+        if args.len() < 3 {
+            return Err(rustlab_eval::EvalError::UserError {
+                identifier: "Simulink:InvalidInput".to_string(),
+                message: "set_param requires 3 arguments: (object, parameter, value)".to_string(),
+                span: rustlab_parse::Span::default(),
+            });
+        }
+        let target = value_to_plain_string(&args[0]);
+        let param_name = value_to_plain_string(&args[1]);
+        let param_val = value_to_plain_string(&args[2]);
+
+        let mut models = models_set.lock().unwrap_or_else(|p| p.into_inner());
+
+        let (model_name, block_name) = if let Some((m, b)) = target.split_once('/') {
+            (m, Some(b))
+        } else {
+            (target.as_str(), None)
+        };
+
+        if let Some(diag) = models.get_mut(model_name) {
+            if let Some(bname) = block_name {
+                if let Some(b) = diag.find_block_mut(bname) {
+                    b.set_param(param_name, param_val);
+                } else {
+                    return Err(rustlab_eval::EvalError::UserError {
+                        identifier: "Simulink:BlockNotFound".to_string(),
+                        message: format!("Block '{bname}' not found in model '{model_name}'"),
+                        span: rustlab_parse::Span::default(),
+                    });
+                }
+            } else {
+                diag.properties.insert(param_name, param_val);
+            }
+        } else {
+            return Err(rustlab_eval::EvalError::UserError {
+                identifier: "Simulink:ModelNotFound".to_string(),
+                message: format!("Simulink model '{model_name}' not loaded"),
+                span: rustlab_parse::Span::default(),
+            });
+        }
+        Ok(vec![])
+    });
+
+    // Simulink get_param builtin
+    let models_get = loaded_models.clone();
+    interp.register_builtin("get_param", move |args: &[Value], _nargout: usize| {
+        if args.len() < 2 {
+            return Err(rustlab_eval::EvalError::UserError {
+                identifier: "Simulink:InvalidInput".to_string(),
+                message: "get_param requires 2 arguments: (object, parameter)".to_string(),
+                span: rustlab_parse::Span::default(),
+            });
+        }
+        let target = value_to_plain_string(&args[0]);
+        let param_name = value_to_plain_string(&args[1]);
+
+        let models = models_get.lock().unwrap_or_else(|p| p.into_inner());
+        let (model_name, block_name) = if let Some((m, b)) = target.split_once('/') {
+            (m, Some(b))
+        } else {
+            (target.as_str(), None)
+        };
+
+        if let Some(diag) = models.get(model_name) {
+            let val = if let Some(bname) = block_name {
+                diag.find_block(bname)
+                    .and_then(|b| b.get_param(&param_name))
+            } else {
+                diag.properties.get(&param_name).map(|s| s.as_str())
+            };
+            if let Some(v) = val {
+                Ok(vec![Value::char_vector(v)])
+            } else {
+                Err(rustlab_eval::EvalError::UserError {
+                    identifier: "Simulink:ParamNotFound".to_string(),
+                    message: format!("Parameter '{param_name}' not found on '{target}'"),
+                    span: rustlab_parse::Span::default(),
+                })
+            }
+        } else {
+            Err(rustlab_eval::EvalError::UserError {
+                identifier: "Simulink:ModelNotFound".to_string(),
+                message: format!("Simulink model '{model_name}' not loaded"),
+                span: rustlab_parse::Span::default(),
+            })
+        }
+    });
+
+    // Simulink load_system builtin
+    let models_load = loaded_models.clone();
+    interp.register_builtin("load_system", move |args: &[Value], _nargout: usize| {
+        if args.is_empty() {
+            return Err(rustlab_eval::EvalError::UserError {
+                identifier: "Simulink:InvalidInput".to_string(),
+                message: "load_system requires model name".to_string(),
+                span: rustlab_parse::Span::default(),
+            });
+        }
+        let model_name = value_to_plain_string(&args[0]);
+        if let Some(slx_path) = resolve_slx_path(&model_name) {
+            let f =
+                std::fs::File::open(&slx_path).map_err(|e| rustlab_eval::EvalError::UserError {
+                    identifier: "Simulink:LoadError".to_string(),
+                    message: format!("Failed to open model file {:?}: {e}", slx_path),
+                    span: rustlab_parse::Span::default(),
+                })?;
+            let (diag, _) = mlapp_sim::inspect_slx(f, mlapp_container::ContainerLimits::default())
+                .map_err(|e| rustlab_eval::EvalError::UserError {
+                    identifier: "Simulink:InspectError".to_string(),
+                    message: format!("Failed to inspect model {:?}: {e}", slx_path),
+                    span: rustlab_parse::Span::default(),
+                })?;
+            let mut models = models_load.lock().unwrap_or_else(|p| p.into_inner());
+            models.insert(diag.name.clone(), diag);
+            Ok(vec![])
+        } else {
+            Err(rustlab_eval::EvalError::UserError {
+                identifier: "Simulink:ModelNotFound".to_string(),
+                message: format!("Simulink model '{model_name}' not found on disk"),
+                span: rustlab_parse::Span::default(),
+            })
+        }
+    });
+
+    // Simulink close_system builtin
+    let models_close = loaded_models.clone();
+    interp.register_builtin("close_system", move |args: &[Value], _nargout: usize| {
+        if let Some(first) = args.first() {
+            let name = value_to_plain_string(first);
+            let mut models = models_close.lock().unwrap_or_else(|p| p.into_inner());
+            models.remove(&name);
+        }
+        Ok(vec![])
+    });
+
+    // Simulink bdclose builtin
+    let models_bdclose = loaded_models;
+    interp.register_builtin("bdclose", move |args: &[Value], _nargout: usize| {
+        let mut models = models_bdclose.lock().unwrap_or_else(|p| p.into_inner());
+        if let Some(first) = args.first() {
+            let name = value_to_plain_string(first);
+            if name == "all" {
+                models.clear();
+            } else {
+                models.remove(&name);
+            }
+        } else {
+            models.clear();
+        }
         Ok(vec![])
     });
 }

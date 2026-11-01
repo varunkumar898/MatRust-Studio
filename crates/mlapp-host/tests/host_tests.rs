@@ -1,4 +1,7 @@
 use mlapp_host::{AppSession, HostConfig, HostNotification, UiEvent};
+use mlapp_runtime::UiMutation;
+use mlapp_ui::PropertyValue;
+use std::io::{Cursor, Write};
 
 #[test]
 fn test_app_host_session_lifecycle() {
@@ -54,8 +57,7 @@ fn test_app_host_session_lifecycle() {
 fn test_end_to_end_callback_with_advanced_matlab_features() {
     use mlapp_runtime::UiMutation;
     use mlapp_ui::PropertyValue;
-    use std::io::Cursor;
-    use std::io::Write;
+    use std::io::{Cursor, Write};
     use zip::write::SimpleFileOptions;
     use zip::ZipWriter;
 
@@ -245,8 +247,7 @@ fn test_end_to_end_callback_with_advanced_matlab_features() {
 
 #[test]
 fn test_host_automatic_timeout_cancelling_infinite_loop() {
-    use std::io::Cursor;
-    use std::io::Write;
+    use std::io::{Cursor, Write};
     use zip::write::SimpleFileOptions;
     use zip::ZipWriter;
 
@@ -346,8 +347,7 @@ fn test_host_automatic_timeout_cancelling_infinite_loop() {
 fn test_comprehensive_e2e_features_and_axes_model() {
     use mlapp_plot::{AxesModel, PlotSeries};
     use mlapp_runtime::UiMutation;
-    use std::io::Cursor;
-    use std::io::Write;
+    use std::io::{Cursor, Write};
     use zip::write::SimpleFileOptions;
     use zip::ZipWriter;
 
@@ -538,8 +538,7 @@ fn test_comprehensive_e2e_features_and_axes_model() {
 fn test_value_changed_callback_receives_event_value_and_app_field() {
     use mlapp_runtime::UiMutation;
     use mlapp_ui::PropertyValue;
-    use std::io::Cursor;
-    use std::io::Write;
+    use std::io::{Cursor, Write};
     use zip::write::SimpleFileOptions;
     use zip::ZipWriter;
 
@@ -789,4 +788,262 @@ fn test_matlab_bridge_delegation_and_unsupported_hint() {
         );
         session.shutdown();
     }
+}
+
+#[test]
+fn test_simulink_app_designer_integration() {
+    let mut buf = Vec::new();
+    {
+        let mut zip = zip::ZipWriter::new(Cursor::new(&mut buf));
+        let opt = zip::write::SimpleFileOptions::default()
+            .compression_method(zip::CompressionMethod::Deflated);
+
+        zip.start_file("[Content_Types].xml", opt).unwrap();
+        zip.write_all(b"<?xml version=\"1.0\" encoding=\"UTF-8\"?><Types></Types>")
+            .unwrap();
+
+        zip.start_file("metadata/coreProperties.xml", opt).unwrap();
+        let core = r#"<?xml version="1.0" encoding="UTF-8"?>
+<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties"
+                   xmlns:dc="http://purl.org/dc/elements/1.1/">
+    <dc:title>SimulinkApp</dc:title>
+    <dc:creator>TestRunner</dc:creator>
+    <cp:version>1.0.0</cp:version>
+</cp:coreProperties>"#;
+        zip.write_all(core.as_bytes()).unwrap();
+
+        zip.start_file("appdesigner/app.xml", opt).unwrap();
+        let app = r#"<?xml version="1.0" encoding="utf-8"?>
+<appdata>
+  <UIFigure Name="UIFigure" Position="[100, 100, 800, 600]">
+    <Slider Name="GainSlider" Value="2.0" Position="50, 480, 200, 22" />
+    <Button Name="RunBtn" Text="Run Simulation" Position="50, 420, 120, 30" ButtonPushedFcn="RunBtnPushed" />
+    <Label Name="StatusLabel" Text="Ready" Position="50, 380, 200, 22" />
+    <UIAxes Name="SimAxes" Position="300, 50, 450, 450" />
+  </UIFigure>
+</appdata>"#;
+        zip.write_all(app.as_bytes()).unwrap();
+
+        zip.start_file("matlab/document.xml", opt).unwrap();
+        let doc_xml = r#"<?xml version="1.0" encoding="utf-8"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+    <![CDATA[
+    classdef SimulinkApp < matlab.apps.AppBase
+        properties (Access = public)
+            UIFigure
+            GainSlider
+            RunBtn
+            StatusLabel
+            SimAxes
+        end
+        methods (Access = private)
+            function startupFcn(app)
+                load_system('simple_feedback');
+            end
+            function RunBtnPushed(app, event)
+                set_param('simple_feedback/Gain', 'Gain', num2str(app.GainSlider.Value));
+                simOut = sim('simple_feedback', 'StopTime', '5.0', 'FixedStep', '0.01');
+                plot(app.SimAxes, simOut.tout, simOut.yout);
+                app.StatusLabel.Text = sprintf('Simulation Finished (Gain=%.1f)', app.GainSlider.Value);
+            end
+        end
+    end
+    ]]>
+</w:document>"#;
+        zip.write_all(doc_xml.as_bytes()).unwrap();
+        zip.finish().unwrap();
+    }
+
+    let host_cfg = HostConfig {
+        allow_file_io: true,
+        ..HostConfig::default()
+    };
+    let mut session = AppSession::launch(Cursor::new(buf), host_cfg).expect("launch session");
+
+    // Test across 3 different gain settings: 1.0, 3.5, 7.0
+    for gain_val in [1.0, 3.5, 7.0] {
+        session
+            .send_event(UiEvent::ValueChanged {
+                component_name: "GainSlider".to_string(),
+                new_val: PropertyValue::Number(gain_val),
+            })
+            .expect("update slider");
+
+        session
+            .send_event(UiEvent::ButtonClick {
+                component_name: "RunBtn".to_string(),
+            })
+            .expect("click run");
+
+        let mut saw_finished = false;
+        let mut saw_plot = false;
+        let mut plot_len = 0;
+
+        let expected_status = format!("Simulation Finished (Gain={gain_val:.1})");
+        for _ in 0..100 {
+            while let Some(notif) = session.poll_notification() {
+                if let HostNotification::Mutations(mutations) = notif {
+                    for m in mutations {
+                        match m {
+                            UiMutation::SetProperty {
+                                component,
+                                property,
+                                value,
+                            } => {
+                                if component == "StatusLabel"
+                                    && property == "Text"
+                                    && value == PropertyValue::String(expected_status.clone())
+                                {
+                                    saw_finished = true;
+                                }
+                            }
+                            UiMutation::PlotCall { axes, args, .. }
+                                if axes == "SimAxes" && args.len() == 2 =>
+                            {
+                                saw_plot = true;
+                                if let rustlab_math::Value::Double(d) = &args[0] {
+                                    plot_len = d.as_slice().len();
+                                }
+                            }
+                            _ => {}
+                        }
+                    }
+                }
+            }
+            if saw_finished && saw_plot {
+                break;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(10));
+        }
+
+        assert!(
+            saw_finished,
+            "Expected 'Simulation Finished' status update for gain {gain_val}"
+        );
+        assert!(
+            saw_plot,
+            "Expected plot command emitted for SimAxes for gain {gain_val}"
+        );
+        assert_eq!(
+            plot_len, 501,
+            "Expected 501 points logged across 5.0 seconds with step 0.01"
+        );
+    }
+
+    session.shutdown();
+}
+
+#[test]
+fn test_simulink_error_paths() {
+    let mut buf = Vec::new();
+    {
+        let mut zip = zip::ZipWriter::new(Cursor::new(&mut buf));
+        let opt = zip::write::SimpleFileOptions::default()
+            .compression_method(zip::CompressionMethod::Deflated);
+
+        zip.start_file("[Content_Types].xml", opt).unwrap();
+        zip.write_all(b"<?xml version=\"1.0\" encoding=\"UTF-8\"?><Types></Types>")
+            .unwrap();
+
+        zip.start_file("metadata/coreProperties.xml", opt).unwrap();
+        let core = r#"<?xml version="1.0" encoding="UTF-8"?>
+<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties"
+                   xmlns:dc="http://purl.org/dc/elements/1.1/">
+    <dc:title>SimErrorApp</dc:title>
+    <dc:creator>TestRunner</dc:creator>
+    <cp:version>1.0.0</cp:version>
+</cp:coreProperties>"#;
+        zip.write_all(core.as_bytes()).unwrap();
+
+        zip.start_file("appdesigner/app.xml", opt).unwrap();
+        let app = r#"<?xml version="1.0" encoding="utf-8"?>
+<appdata>
+  <UIFigure Name="UIFigure" Position="[100, 100, 800, 600]">
+    <Button Name="MissingModelBtn" Text="Test Missing" Position="50, 420, 120, 30" ButtonPushedFcn="MissingModelBtnPushed" />
+    <Button Name="InvalidParamBtn" Text="Test Invalid" Position="50, 350, 120, 30" ButtonPushedFcn="InvalidParamBtnPushed" />
+  </UIFigure>
+</appdata>"#;
+        zip.write_all(app.as_bytes()).unwrap();
+
+        zip.start_file("matlab/document.xml", opt).unwrap();
+        let doc_xml = r#"<?xml version="1.0" encoding="utf-8"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+    <![CDATA[
+    classdef SimErrorApp < matlab.apps.AppBase
+        properties (Access = public)
+            UIFigure
+            MissingModelBtn
+            InvalidParamBtn
+        end
+        methods (Access = private)
+            function MissingModelBtnPushed(app, event)
+                sim('non_existent_system_model_12345');
+            end
+            function InvalidParamBtnPushed(app, event)
+                set_param('non_existent_system_model_12345/Gain', 'Gain', '10');
+            end
+        end
+    end
+    ]]>
+</w:document>"#;
+        zip.write_all(doc_xml.as_bytes()).unwrap();
+        zip.finish().unwrap();
+    }
+
+    let mut session =
+        AppSession::launch(Cursor::new(buf), HostConfig::default()).expect("launch session");
+
+    // Test 1: Missing model returns error notification
+    session
+        .send_event(UiEvent::ButtonClick {
+            component_name: "MissingModelBtn".to_string(),
+        })
+        .expect("click missing model button");
+
+    let mut saw_missing_err = false;
+    for _ in 0..100 {
+        while let Some(notif) = session.poll_notification() {
+            if let HostNotification::Error(e) = notif {
+                if e.contains("Simulink model 'non_existent_system_model_12345' not found") {
+                    saw_missing_err = true;
+                }
+            }
+        }
+        if saw_missing_err {
+            break;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(10));
+    }
+    assert!(
+        saw_missing_err,
+        "Simulating missing model must emit clear error notification"
+    );
+
+    // Test 2: Invalid parameter on missing model returns error notification
+    session
+        .send_event(UiEvent::ButtonClick {
+            component_name: "InvalidParamBtn".to_string(),
+        })
+        .expect("click invalid param button");
+
+    let mut saw_param_err = false;
+    for _ in 0..100 {
+        while let Some(notif) = session.poll_notification() {
+            if let HostNotification::Error(e) = notif {
+                if e.contains("Simulink model 'non_existent_system_model_12345' not loaded") {
+                    saw_param_err = true;
+                }
+            }
+        }
+        if saw_param_err {
+            break;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(10));
+    }
+    assert!(
+        saw_param_err,
+        "set_param on missing model must emit clear error notification"
+    );
+
+    session.shutdown();
 }

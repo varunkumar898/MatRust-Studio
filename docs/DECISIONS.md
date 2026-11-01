@@ -118,3 +118,33 @@ To maintain 100% clean-room isolation while providing an automated semantic orac
 4. **Runtime Integration**:
    - Without `--allow-matlab`: Unknown builtins return `Unsupported MATLAB function '<name>'. Hint: run with --allow-matlab to delegate to real MATLAB`.
    - With `--allow-matlab`: Unknown builtins are transparently forwarded to `MatlabSession::call()`.
+
+---
+
+## Decision 7: Simulink & SLX Inspection Engine (`mlapp-sim`)
+
+### Context
+To support multi-domain engineering simulations and MATLAB/Simulink workflows without proprietary dependencies, `mlapp-sim` provides clean-room inspection, parsing, and execution of Simulink `.slx` model archives.
+
+### Architecture & Security
+1. **Container Security**:
+   - `.slx` archives are ISO/IEC 29500-2 OPC zip packages. Inspection uses `mlapp-container` security limits to prevent zip-bombs and zip-slip directory traversal.
+   - XML parsing enforces a 1000-element nesting depth limit to prevent stack overflow on hostile or corrupted diagrams.
+2. **Block Diagram Representation**:
+   - `BlockDiagram`, `Block`, `BlockType`, `Line`, and `PortRef` capture system topology, parameters (`<P Name="...">`), and line connections (`<Line><P Name="Src">...<P Name="Dst">...`).
+3. **Simulation Engine**:
+   - Discrete and continuous-time solver (`simulate_diagram`) with fixed-step Euler integration.
+   - Supports essential block types: `Constant`, `SineWave`, `Step`, `Gain`, `Sum`, `Product`, `Integrator`, `UnitDelay`, `Saturation`, `Scope`, `ToWorkspace`, and `Outport`.
+4. **App Designer Runtime Integration**:
+   - Registers standard Simulink builtins: `sim`, `load_system`, `set_param`, `get_param`, `close_system`, and `bdclose`.
+   - Enables App Designer applications to inspect parameters, update gains, simulate models, and plot response trajectories on `UIAxes`.
+5. **CLI Inspection**:
+   - `mlapp slx-inspect <model.slx>` formats model metadata, release, block count, line count, solver support, and required toolboxes.
+   - `--json` outputs machine-readable JSON for integration into build pipelines and automated dashboards.
+
+### UNVERIFIED Format Assumptions
+The following Simulink format aspects remain **UNVERIFIED** pending direct black-box testing against real `.slx` models from varying releases:
+1. `UNVERIFIED_SLX_MASKED_SUBSYSTEMS`: Complex masked subsystem internal parameter mapping across releases.
+2. `UNVERIFIED_SLX_STATEFLOW_CHART`: Machine-level Stateflow chart transition encoding inside `simulink/stateflow.xml`.
+3. `UNVERIFIED_SLX_VARIABLE_STEP_SOLVERS`: Variable-step Dormand-Prince (ode45) zero-crossing event location thresholds in SLX block diagram headers.
+

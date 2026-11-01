@@ -15,6 +15,19 @@ fn get_fixture_path(name: &str) -> String {
     format!("fixtures/sample_apps/{name}")
 }
 
+fn get_model_fixture_path(name: &str) -> String {
+    let candidate_paths = [
+        format!("fixtures/sample_models/{name}"),
+        format!("../../fixtures/sample_models/{name}"),
+    ];
+    for p in candidate_paths {
+        if std::path::Path::new(&p).exists() {
+            return p;
+        }
+    }
+    format!("fixtures/sample_models/{name}")
+}
+
 #[test]
 fn test_cli_inspect_command() {
     let fixture = get_fixture_path("r2021a_sample.mlapp");
@@ -170,4 +183,38 @@ fn test_cli_run_allow_matlab_flag() {
         .stdout(predicate::str::contains(
             "Allow delegation of unsupported functions to a real MATLAB installation",
         ));
+}
+
+#[test]
+fn test_cli_slx_inspect_command() {
+    let model_path = get_model_fixture_path("simple_feedback.slx");
+    let mut cmd = Command::cargo_bin("mlapp-cli").expect("binary mlapp-cli exists");
+
+    cmd.arg("slx-inspect")
+        .arg(&model_path)
+        .assert()
+        .success()
+        .stdout(predicate::str::contains(
+            "=== Simulink Model Inspection Report ===",
+        ))
+        .stdout(predicate::str::contains("Model Name: simple_feedback"))
+        .stdout(predicate::str::contains("Fully Supported by Solver: true"))
+        .stdout(predicate::str::contains("Total Blocks: 5"));
+}
+
+#[test]
+fn test_cli_slx_inspect_json_command() {
+    let model_path = get_model_fixture_path("simple_feedback.slx");
+    let mut cmd = Command::cargo_bin("mlapp-cli").expect("binary mlapp-cli exists");
+
+    cmd.arg("slx-inspect")
+        .arg(&model_path)
+        .arg("--json")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains(
+            "\"model_name\": \"simple_feedback\"",
+        ))
+        .stdout(predicate::str::contains("\"total_blocks\": 5"))
+        .stdout(predicate::str::contains("\"is_solver_supported\": true"));
 }

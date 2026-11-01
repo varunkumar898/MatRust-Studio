@@ -157,7 +157,17 @@ pub fn matmul_2d(a: &DenseArray<f64>, b: &DenseArray<f64>) -> Result<DenseArray<
         let mut c_data = vec![0.0; total_c];
         let a_data = a.as_slice();
         let b_data = b.as_slice();
-        // matrixmultiply::dgemm uses column-major layout when rsa=1, csa=m, rsb=1, csb=k, rsc=1, csc=m
+        // matrixmultiply::dgemm uses column-major layout when rsa=1, csa=m, rsb=1, csb=k, rsc=1, csc=m.
+        //
+        // SAFETY: all four pointers and their lengths were checked above:
+        //   * m, k_a and n are the exact shapes of a and b;
+        //   * a.len() == m*k_a and b.len() == k_a*n (checked above);
+        //   * c_data has exactly m*n elements (total_c, bounded by the 128M
+        //     element cap above);
+        //   * m and k_a fit in isize (checked above);
+        //   * zero-sized dimensions returned before reaching this block.
+        // matrixmultiply only reads/writes within those lengths and does not
+        // retain the pointers after returning.
         unsafe {
             matrixmultiply::dgemm(
                 m,

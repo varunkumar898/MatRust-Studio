@@ -21,6 +21,16 @@ jobs:
       - name: Cargo Format Check
         run: cargo fmt --all -- --check
 
+      - name: Install cbindgen
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cbindgen@0.29.0
+
+      - name: C FFI header is cbindgen-generated and committed
+        run: |
+          cbindgen --config cbindgen.toml --crate mlapp-ffi --output crates/mlapp-ffi/include/mlapp.h
+          git diff --exit-code -- crates/mlapp-ffi/include/mlapp.h
+
   test-matrix:
     name: Build & Test (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
@@ -75,8 +85,9 @@ jobs:
           echo "Active workspace test count: $ACTIVE_COUNT"
           MANIFEST_COUNT=$(grep -E ': test$' docs/test-manifest.txt | wc -l)
           echo "Manifest baseline test count: $MANIFEST_COUNT"
-          if [ "$ACTIVE_COUNT" -lt "$MANIFEST_COUNT" ] || [ "$ACTIVE_COUNT" -lt 313 ]; then
-            echo "ERROR: Test count regression detected ($ACTIVE_COUNT < $MANIFEST_COUNT or < 313)!"
+          if [ "$ACTIVE_COUNT" -ne "$MANIFEST_COUNT" ]; then
+            echo "ERROR: Test manifest does not match the real total ($ACTIVE_COUNT active vs $MANIFEST_COUNT manifest)!"
+            echo "Add/remove the test from docs/test-manifest.txt with a written reason in the same commit."
             exit 1
           fi
         shell: bash
@@ -132,17 +143,17 @@ jobs:
         run: cargo audit
 
   msrv:
-    name: MSRV Check (Rust 1.80.0)
+    name: MSRV Check (Rust 1.88.0)
     runs-on: ubuntu-latest
     env:
-      RUSTUP_TOOLCHAIN: 1.80.0
+      RUSTUP_TOOLCHAIN: 1.88.0
     steps:
       - uses: actions/checkout@v4
       - name: Install Linux system dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y libgtk-3-dev libasound2-dev libudev-dev libxkbcommon-dev libwayland-dev
-      - uses: dtolnay/rust-toolchain@1.80.0
+      - uses: dtolnay/rust-toolchain@1.88.0
       - uses: Swatinem/rust-cache@v2
       - name: Print toolchain versions and check workspace under MSRV
         run: |

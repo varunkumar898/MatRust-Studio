@@ -21,7 +21,11 @@ members = [
 ]
 
 [workspace.package]
-rust-version = "1.80.0"
+# MSRV is 1.88.0: the locked dependency graph contains crates that declare
+# rust-version = 1.88.0 (for example zip 9.2.0, proptest 1.12.0, image 0.25.10).
+# Rust 1.80.0 cannot even parse edition2024 manifests; see the CI evidence in
+# docs/verify-logs/2026-11-01-c19db918d8a293c8a2c8bc56147a3c7ac03c10a4-msrv-1.80-github-job-124807996217.log.
+rust-version = "1.88.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 

@@ -63,6 +63,7 @@ test_app_host_session_lifecycle: test
 test_comprehensive_e2e_features_and_axes_model: test
 test_end_to_end_callback_with_advanced_matlab_features: test
 test_host_automatic_timeout_cancelling_infinite_loop: test
+test_value_changed_callback_receives_event_value_and_app_field: test
 
 4 tests, 0 benchmarks
 0 tests, 0 benchmarks
@@ -215,6 +216,7 @@ test_a3_sparse_memory_efficiency_10000x10000: test
 test_array_growth_on_assignment: test
 test_broadcasting_elementwise_binary: test
 test_colon_range: test
+test_matmul_huge_output_is_rejected_without_allocating: test
 test_matmul_zero_dimensions_and_mismatch: test
 test_matrix_multiplication: test
 test_minimum_2d_and_singleton_stripping: test

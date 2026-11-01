@@ -353,13 +353,25 @@ pub mod egui_backend {
     pub struct EguiAppWindow {
         pub session: AppSession,
         pub renderer: EguiRenderer,
+        started: std::time::Instant,
+        auto_close_after: Option<std::time::Duration>,
     }
 
     impl EguiAppWindow {
         pub fn new(session: AppSession) -> Self {
+            // Optional automation hook used by manual GUI checks. It is read
+            // from the environment so normal interactive runs never close by
+            // themselves.
+            let auto_close_after = std::env::var("MLAPP_GUI_AUTOCLOSE_MS")
+                .ok()
+                .and_then(|raw| raw.parse::<u64>().ok())
+                .filter(|ms| *ms > 0)
+                .map(std::time::Duration::from_millis);
             Self {
                 session,
                 renderer: EguiRenderer::new(),
+                started: std::time::Instant::now(),
+                auto_close_after,
             }
         }
     }
@@ -408,6 +420,12 @@ pub mod egui_backend {
 
             for ev in self.renderer.pending_events.drain(..) {
                 let _ = self.session.send_event(ev);
+            }
+
+            if let Some(limit) = self.auto_close_after {
+                if self.started.elapsed() >= limit {
+                    ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+                }
             }
 
             ctx.request_repaint_after(std::time::Duration::from_millis(16));

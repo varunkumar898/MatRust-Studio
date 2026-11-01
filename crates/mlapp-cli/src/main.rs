@@ -184,9 +184,13 @@ fn main() -> Result<()> {
 
             if gui {
                 println!(
-                    "[GUI Mode]: Initializing GUI window for '{}'...",
+                    "[GUI Mode]: Opening native window for '{}'...",
                     session.manifest.app_name
                 );
+                mlapp_render::egui_backend::run_gui_window(session)
+                    .map_err(|e| anyhow::anyhow!("Failed to open the GUI window: {e}"))?;
+                println!("\nApp session closed successfully.");
+                return Ok(());
             }
 
             // Render layout statically with HeadlessRenderer

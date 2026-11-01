@@ -6,7 +6,8 @@ use mlapp_container::{AppContainer, AppManifest, ContainerError};
 use mlapp_lang::{extract_code_from_document_xml, parse_app_classdef, AppClassDef, LangError};
 use mlapp_runtime::{AppHandle, AppRuntime, RuntimeError, UiMutation};
 use mlapp_ui::{parse_app_xml, Component, PropertyValue, UiError};
-use rustlab_math::Value;
+use rustlab_math::{DenseArray, StructArray, Value};
+use std::collections::HashMap;
 use std::io::{Read, Seek};
 use std::sync::mpsc::{channel, Receiver, Sender, TryRecvError};
 use std::sync::Mutex;
@@ -212,10 +213,15 @@ fn worker_loop(
 
                 if let Some(cb_name) = callback_name {
                     if class_def.methods.contains_key(&cb_name) {
+                        let event = make_event_data(
+                            &component_name,
+                            "ButtonPushed",
+                            &PropertyValue::Number(0.0),
+                        );
                         if let Err(e) = run_callback_with_timeout(
                             &mut runtime,
                             &cb_name,
-                            Value::Double(rustlab_math::DenseArray::scalar(0.0)),
+                            event,
                             _config.callback_timeout_ms,
                         ) {
                             let _ = notif_tx.send(HostNotification::Error(format!(
@@ -235,10 +241,16 @@ fn worker_loop(
                 component_name,
                 new_val,
             } => {
-                let _ =
-                    runtime
-                        .app_handle
-                        .set_component_property(&component_name, "Value", new_val);
+                let property_result = runtime.app_handle.set_component_property(
+                    &component_name,
+                    "Value",
+                    new_val.clone(),
+                );
+                if let Err(e) = property_result {
+                    let _ = notif_tx.send(HostNotification::Error(format!(
+                        "Could not set Value on component '{component_name}': {e}"
+                    )));
+                }
 
                 let callback_name =
                     find_callback_name(&runtime, &component_name, "ValueChangedFcn")
@@ -246,10 +258,20 @@ fn worker_loop(
 
                 if let Some(cb_name) = callback_name {
                     if class_def.methods.contains_key(&cb_name) {
-                        let _ = runtime.run_callback(
+                        // App Designer callbacks receive event data as a struct
+                        // with at least Source, EventName and Value fields. The
+                        // new value is available as event.Value.
+                        let event = make_event_data(&component_name, "ValueChanged", &new_val);
+                        if let Err(e) = run_callback_with_timeout(
+                            &mut runtime,
                             &cb_name,
-                            Value::Double(rustlab_math::DenseArray::scalar(0.0)),
-                        );
+                            event,
+                            _config.callback_timeout_ms,
+                        ) {
+                            let _ = notif_tx.send(HostNotification::Error(format!(
+                                "Callback '{cb_name}' failed: {e}"
+                            )));
+                        }
                     }
                 }
 
@@ -260,6 +282,42 @@ fn worker_loop(
             }
         }
     }
+}
+
+fn property_value_to_value(value: &PropertyValue) -> Value {
+    match value {
+        PropertyValue::String(s) => Value::char_vector(s),
+        PropertyValue::Number(n) => Value::Double(DenseArray::scalar(*n)),
+        PropertyValue::Boolean(b) => Value::logical_scalar(*b),
+        PropertyValue::Position(rect) => Value::Double(
+            DenseArray::from_vec(vec![1, 4], vec![rect.x, rect.y, rect.width, rect.height])
+                .unwrap_or_else(|_| DenseArray::scalar(0.0)),
+        ),
+        PropertyValue::Color(c) => Value::Double(
+            DenseArray::from_vec(vec![1, 4], c.iter().map(|v| f64::from(*v)).collect())
+                .unwrap_or_else(|_| DenseArray::scalar(0.0)),
+        ),
+        PropertyValue::List(items) => {
+            let data = items
+                .iter()
+                .map(|item| Value::char_vector(item))
+                .collect::<Vec<_>>();
+            let shape = vec![1, data.len()];
+            Value::Cell(
+                DenseArray::from_vec(shape, data)
+                    .unwrap_or_else(|_| DenseArray::scalar(Value::char_vector(""))),
+            )
+        }
+        PropertyValue::Unknown(s) => Value::char_vector(s),
+    }
+}
+
+fn make_event_data(source: &str, event_name: &str, value: &PropertyValue) -> Value {
+    let mut fields = HashMap::new();
+    fields.insert("Source".to_string(), Value::char_vector(source));
+    fields.insert("EventName".to_string(), Value::char_vector(event_name));
+    fields.insert("Value".to_string(), property_value_to_value(value));
+    Value::Struct(StructArray::scalar(fields))
 }
 
 fn find_callback_name(runtime: &AppRuntime, comp_name: &str, event_key: &str) -> Option<String> {

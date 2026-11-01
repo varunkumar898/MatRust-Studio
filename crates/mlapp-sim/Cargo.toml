@@ -1,0 +1,19 @@
+[package]
+name = "mlapp-sim"
+version = "0.1.0"
+edition = "2021"
+authors = ["mlapp-rs contributors"]
+license = "MIT OR Apache-2.0"
+description = "Simulink SLX package parser, block diagram inspection, and fixed-step simulation engine"
+
+[dependencies]
+rustlab-math = { path = "../rustlab-math" }
+mlapp-container = { path = "../mlapp-container" }
+quick-xml = { version = "0.41", features = ["serialize"] }
+zip = { version = "9.2", default-features = false, features = ["deflate"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "2.0"
+
+[dev-dependencies]
+tempfile = "3.17"

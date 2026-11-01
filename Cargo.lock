@@ -2023,6 +2023,7 @@ dependencies = [
  "mlapp-host",
  "mlapp-lang",
  "mlapp-render",
+ "mlapp-sim",
  "mlapp-ui",
  "predicates",
  "serde_json",
@@ -2064,6 +2065,7 @@ dependencies = [
  "mlapp-lang",
  "mlapp-plot",
  "mlapp-runtime",
+ "mlapp-sim",
  "mlapp-ui",
  "rustlab-eval",
  "rustlab-math",
@@ -2127,8 +2129,10 @@ dependencies = [
 name = "mlapp-runtime"
 version = "0.1.0"
 dependencies = [
+ "mlapp-container",
  "mlapp-lang",
  "mlapp-matlab",
+ "mlapp-sim",
  "mlapp-ui",
  "rustlab-eval",
  "rustlab-math",
@@ -2137,6 +2141,20 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror 2.0.21",
+]
+
+[[package]]
+name = "mlapp-sim"
+version = "0.1.0"
+dependencies = [
+ "mlapp-container",
+ "quick-xml",
+ "rustlab-math",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.21",
+ "zip",
 ]
 
 [[package]]

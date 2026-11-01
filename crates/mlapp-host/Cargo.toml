@@ -21,6 +21,7 @@ thiserror = "2.0"
 zip = { version = "9.2", default-features = false, features = ["deflate"] }
 criterion = "0.5"
 rustlab-eval = { path = "../rustlab-eval" }
+mlapp-sim = { path = "../mlapp-sim" }
 
 [[bench]]
 name = "host_benches"

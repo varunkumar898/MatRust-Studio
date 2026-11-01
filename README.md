@@ -29,6 +29,7 @@ MatRust Studio is architected as a modular Cargo workspace decoupling the core n
 - **`crates/mlapp-cli`**: Command-line interface for inspecting, validating, extracting, and executing MATLAB apps.
 - **`crates/mlapp-ffi`**: C ABI embedding interface with integer handle safety, string ownership helpers, and `catch_unwind` error isolation.
 - **`crates/mlapp-matlab`**: Inter-process bridge to real MATLAB installations for automated oracle conformance testing and fallback runtime execution (`--allow-matlab`).
+- **`crates/mlapp-sim`**: Simulink `.slx` Open Packaging Conventions archive inspector, XML block diagram parser, continuous/discrete simulation solver, and App Designer integration (`sim`, `load_system`, `set_param`).
 - **`fuzz/`**: LibFuzzer targets for parser, XML, and ZIP containers with smoke tests.
 
 ---
@@ -46,7 +47,7 @@ MatRust Studio is architected as a modular Cargo workspace decoupling the core n
 
 ## Verification & Test Suite
 
-The default-feature test count is **327** (same names under `--all-features` and `--no-default-features`). Every test name is recorded in `docs/test-manifest.txt`, and CI fails if the real total differs from that manifest.
+The default-feature test count is **336** (same names under `--all-features` and `--no-default-features`). Every test name is recorded in `docs/test-manifest.txt`, and CI fails if the real total differs from that manifest.
 
 ```bash
 cargo test --workspace
@@ -79,6 +80,12 @@ cargo run -p mlapp-cli -- check-compat app.mlapp
 ```bash
 cargo run -p mlapp-cli -- run app.mlapp
 cargo run -p mlapp-cli -- run --gui app.mlapp
+```
+
+### Inspect Simulink Model (`.slx`)
+```bash
+cargo run -p mlapp-cli -- slx-inspect model.slx
+cargo run -p mlapp-cli -- slx-inspect --json model.slx
 ```
 
 ---
@@ -133,6 +140,8 @@ cargo run -p mlapp-cli -- run --gui app.mlapp
 | **Rendering Backends** | Interactive GUI Window (`mlapp run --gui`) | **Implemented** | [render_tests.rs](crates/mlapp-render/tests/render_tests.rs) `test_autotest_headless_e2e_with_plot_and_label_mutation`, [cli_tests.rs](crates/mlapp-cli/tests/cli_tests.rs) `test_cli_run_autotest_flag` | Real eframe native window + automated autotest engine (`--autotest`) supporting `wait_ms`, `click`, `set_value`, `expect_property`, `screenshot`, `close`. Screenshot committed in `docs/screenshots/c4a0ff9/gui_window_autotest.png` (SHA-256 `5D700F06844D306C32103928094EF33A293AB667A93A134A58EBAC02C6499AE3`). |
 | **Embedding C ABI** | C API headers, null safety & handle IDs | **Implemented** | [ffi_tests.rs](crates/mlapp-ffi/tests/ffi_tests.rs) `test_c_abi_package_and_session_flow_with_handle_ids` | `mlapp.h` and `mlapp_ffi.h` parity, integer IDs, null checks, `catch_unwind` |
 | **MATLAB Bridge** | Real MATLAB process IPC bridge (`mlapp-matlab`) | **Implemented** | [bridge_tests.rs](crates/mlapp-matlab/tests/bridge_tests.rs) `test_mock_session_eval_and_call`, [oracle_tests.rs](crates/mlapp-matlab/tests/oracle_tests.rs) `test_matlab_oracle_conformance_suite`, [host_tests.rs](crates/mlapp-host/tests/host_tests.rs) `test_matlab_bridge_delegation_and_unsupported_hint` | JSON lines IPC bridge, automatic installation detection across PATH/MATLAB_ROOT/Registry/macOS/Linux, oracle conformance testing, and `--allow-matlab` delegation. |
+| **Simulink & SLX Inspection** | Clean-room SLX package inspection (`mlapp slx-inspect`) | **Implemented** | [cli_tests.rs](crates/mlapp-cli/tests/cli_tests.rs) `test_cli_slx_inspect_command`, [sim_tests.rs](crates/mlapp-sim/tests/sim_tests.rs) `test_slx_inspect_and_parser` | Parses `simulink/blockdiagram.xml` with 1000-depth stack limit; audits release, block count, line count, solver support, and toolboxes; text and `--json` outputs. |
+| **Simulink & SLX Inspection** | Continuous & discrete simulation engine | **Implemented** | [sim_tests.rs](crates/mlapp-sim/tests/sim_tests.rs) `test_simulation_first_order_step_response`, [host_tests.rs](crates/mlapp-host/tests/host_tests.rs) `test_simulink_app_designer_integration` | Fixed-step Euler simulation engine (`simulate_diagram`); runtime integration via `sim`, `load_system`, `set_param`, `get_param`, `close_system` in App Designer callbacks. |
 | **CLI Tooling** | `inspect`, `extract`, `check-compat`, `run` | **Implemented** | [cli_tests.rs](crates/mlapp-cli/tests/cli_tests.rs) `test_cli_run_command`, `test_cli_run_gui_flag` | Verified inspection, compatibility, execution, and `--gui` flag |
 | **Mathematics & Calculations** | Multi-Backend Linalg Parity (< 1e-12) | **Implemented** | [numeric_comparison_tests.rs](crates/rustlab-stdlib/tests/numeric_comparison_tests.rs) `test_dgemm_matrixmultiply_vs_fallback_matches_to_1e12`, `test_symmetric_eig_faer_vs_native_matches_to_1e12`, `test_svd_faer_vs_native_matches_to_1e12` | Numerical output agreement across faer, native fallback, and matrixmultiply within $< 10^{-12}$ |
 | **Property Testing** | Property-based tests (`proptest`) | **Implemented** | [proptest_math.rs](crates/rustlab-math/tests/proptest_math.rs) `prop_1_based_indexing_and_column_major_equivalence`, [proptest_parser.rs](crates/rustlab-parse/tests/proptest_parser.rs) `prop_never_panic_on_arbitrary_string` | Tensor addition commutativity, involution, 1-based indexing, and parser properties |

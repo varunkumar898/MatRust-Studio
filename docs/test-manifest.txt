@@ -27,8 +27,10 @@ test_cli_run_autotest_flag: test
 test_cli_run_autotest_headless_execution: test
 test_cli_run_command: test
 test_cli_run_gui_flag: test
+test_cli_slx_inspect_command: test
+test_cli_slx_inspect_json_command: test
 
-10 tests, 0 benchmarks
+12 tests, 0 benchmarks
 0 tests, 0 benchmarks
 test_decompressed_bytes_limit_with_forged_header: test
 test_extract_aggregate_decompressed_bytes_limit: test
@@ -67,9 +69,11 @@ test_comprehensive_e2e_features_and_axes_model: test
 test_end_to_end_callback_with_advanced_matlab_features: test
 test_host_automatic_timeout_cancelling_infinite_loop: test
 test_matlab_bridge_delegation_and_unsupported_hint: test
+test_simulink_app_designer_integration: test
+test_simulink_error_paths: test
 test_value_changed_callback_receives_event_value_and_app_field: test
 
-6 tests, 0 benchmarks
+8 tests, 0 benchmarks
 0 tests, 0 benchmarks
 test_check_compat_deterministic_snapshot: test
 test_extract_code_from_xml: test
@@ -109,6 +113,14 @@ test_runtime_permission_enforcement: test
 test_unsupported_function_diagnostics: test
 
 6 tests, 0 benchmarks
+0 tests, 0 benchmarks
+test_generate_and_verify_sample_model_fixture: test
+test_security_dos_file_limits_on_slx: test
+test_simulation_first_order_step_response: test
+test_simulation_saturation_and_gain: test
+test_slx_inspect_and_parser: test
+
+5 tests, 0 benchmarks
 0 tests, 0 benchmarks
 test_coordinate_transformation_bidirectional: test
 test_dos_xml_depth_999_small_stack: test
@@ -425,6 +437,7 @@ test_readtable_and_dot_indexing: test
 test_summary_and_writetable_roundtrip: test
 
 3 tests, 0 benchmarks
+0 tests, 0 benchmarks
 0 tests, 0 benchmarks
 0 tests, 0 benchmarks
 0 tests, 0 benchmarks

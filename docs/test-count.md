@@ -23,6 +23,7 @@ This document tracks the cumulative and per-suite test counts across milestones,
 | **Milestone mlapp-rs & GitHub CI** | **302** | **302** | +16 `mlapp-container`, +7 `mlapp-cli`, +5 `mlapp-ui`, +5 `mlapp-lang`, +10 `mlapp-runtime`, +7 `mlapp-host`, +4 `mlapp-plot`, +3 `mlapp-render`, +3 `mlapp-ffi`, +2 `rustlab-math` proptests | Complete MATLAB App Designer runtime (.mlapp/.mlappinstall), container security, C FFI handles, conformance suite, and property tests. Net +62 tests. Zero regressions. |
 | **Milestone Hardening & Fuzz/Proptest** | **309** | **309** | +3 `rustlab-parse` proptests, +1 `rustlab-math` N-D indexing proptest, +1 `mlapp-render` headless screenshot test, +1 `mlapp-ffi` alias header test, +1 `rustlab-stdlib` doc generator parity test | Full workspace hardening, zip 9.2 & quick-xml 0.41 upgrades, 0 unreachable ignores, cargo-fuzz targets, and criterion host benchmarks. Net +7 tests. |
 | **Milestone GUI, Math Parity & Real-App Harness** | **313** | **313** | +3 `numeric_comparison_tests.rs` (faer/native/matrixmultiply parity < 1e-12), +1 `render_tests.rs` (`test_gui_window_screenshot_capture_and_export`) | Interactive egui window (`mlapp run --gui`), window screenshot export, multi-backend linalg comparison, external real-app testing suite. Net +4 tests. 0 regressions. |
+| **Hardening review follow-up (`be5d46f`)** | **315** | **315** | +1 `mlapp-host` (`test_value_changed_callback_receives_event_value_and_app_field`), +1 `rustlab-math` (`test_matmul_huge_output_is_rejected_without_allocating`) | Event data now carries `Source`, `EventName`, and `Value`; `ValueChanged` callback errors are surfaced; real `--gui` launch wired to eframe; MSRV raised to 1.88.0. Net +2 tests. 0 removals. |
 
 ---
 
@@ -33,6 +34,6 @@ Investigation and historical logs confirm:
 - The suite containing **37 tests** is `crates/rustlab-data/tests/data_tests.rs` (37 tests).
 - `crates/rustlab-math` has continuously maintained:
   - `crates/rustlab-math/src/lib.rs` (unit tests): 10 tests
-  - `crates/rustlab-math/tests/math_tests.rs` (integration tests): 13 tests
+  - `crates/rustlab-math/tests/math_tests.rs` (integration tests): 14 tests (13 at the time of the original reconciliation, plus `test_matmul_huge_output_is_rejected_without_allocating`)
   - Added in CI / Hardening: `crates/rustlab-math/tests/proptest_math.rs`: 3 property tests
-- Total in `rustlab-math` is currently **26 tests**. Zero math tests were ever lost, deleted, or skipped. All test suites across all crates are fully tracked and verified.
+- Total in `rustlab-math` is currently **27 tests**. Zero math tests were ever lost, deleted, or skipped. All test suites across all crates are fully tracked and verified.

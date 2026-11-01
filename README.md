@@ -3,7 +3,7 @@
 [![CI](https://github.com/varunkumar898/MatRust-Studio/actions/workflows/ci.yml/badge.svg)](https://github.com/varunkumar898/MatRust-Studio/actions/workflows/ci.yml)
 [![License: MIT OR Apache-2.0](https://img.shields.io/badge/License-MIT%20OR%20Apache--2.0-blue.svg)](LICENSE-MIT)
 
-A high-performance, license-free, clean-room numerical computing platform and MATLAB App Designer (`.mlapp` / `.mlappinstall`) runtime implemented in pure, safe Rust.
+A high-performance, license-free, clean-room numerical computing platform and MATLAB App Designer (`.mlapp` / `.mlappinstall`) runtime implemented in Rust. Unsafe code is limited to the C ABI and one audited `matrixmultiply::dgemm` call; see [`docs/SAFETY-AUDIT.md`](docs/SAFETY-AUDIT.md).
 
 > **NOTICE**: MatRust Studio and `mlapp-rs` are independent clean-room implementations developed without proprietary MathWorks code. MATLAB is a registered trademark of The MathWorks, Inc. This project is not affiliated with, sponsored by, or endorsed by The MathWorks, Inc.
 
@@ -45,13 +45,20 @@ MatRust Studio is architected as a modular Cargo workspace decoupling the core n
 
 ## Verification & Test Suite
 
-All 309 unit, integration, property, and fuzz smoke tests pass across all workspace crates with zero warnings:
+The default-feature test count is **315** (same names under `--all-features` and `--no-default-features`). Every test name is recorded in `docs/test-manifest.txt`, and CI fails if the real total differs from that manifest.
 
 ```bash
 cargo test --workspace
+cargo test --workspace --all-features
+cargo test --workspace --no-default-features
 cargo clippy --workspace --all-targets --all-features -- -D warnings
+cargo clippy --workspace --all-targets --no-default-features -- -D warnings
 cargo fmt --all -- --check
 ```
+
+The declared MSRV is **Rust 1.88.0**. The previous 1.80.0 claim was false: the locked dependency graph contains crates that require Cargo's edition 2024 support and up to Rust 1.88. The CI MSRV job now really installs 1.88.0 and runs `cargo check --workspace --all-targets --all-features --locked`.
+
+Security boundaries, unsafe blocks, panic sources, and mutex-poisoning policy are documented in [`docs/SAFETY-AUDIT.md`](docs/SAFETY-AUDIT.md). CI also regenerates `crates/mlapp-ffi/include/mlapp.h` with cbindgen 0.29.0 and fails on any diff.
 
 ---
 
@@ -122,7 +129,7 @@ cargo run -p mlapp-cli -- run --gui app.mlapp
 | **Host & Threading** | Worker thread lifecycle & channels | **Implemented** | [host_tests.rs](crates/mlapp-host/tests/host_tests.rs) `test_app_host_session_lifecycle` | Worker evaluates callbacks, dispatches notifications |
 | **Rendering Backends** | Pluggable `RenderBackend` trait | **Implemented** | [render_tests.rs](crates/mlapp-render/tests/render_tests.rs) `test_headless_renderer_tree_walk_and_event_dispatch` | Headless backend tested; egui backend behind feature |
 | **Rendering Backends** | Headless Screenshot Verification | **Implemented** | [render_tests.rs](crates/mlapp-render/tests/render_tests.rs) `test_headless_screenshot_render` | Rasterizes `UIFigure`, `Panel`, `Button`, `UIAxes` to RGBA buffer |
-| **Rendering Backends** | Interactive GUI Window (`mlapp run --gui`) | **Partial** | [render_tests.rs](crates/mlapp-render/tests/render_tests.rs) `test_gui_window_screenshot_capture_and_export` | Component tree rendering, callback dispatch, UIAxes rendering; window screenshot committed to `docs/assets/gui_window_sample.png`; real interactive run pending manual testing per `docs/GUI_MANUAL_CHECK.md` |
+| **Rendering Backends** | Interactive GUI Window (`mlapp run --gui`) | **Partial** | [render_tests.rs](crates/mlapp-render/tests/render_tests.rs) `test_gui_window_screenshot_capture_and_export` | `mlapp run --gui` now calls `eframe::run_native` and opens a real native window. A Windows run opened the sample app, was captured with `PrintWindow` to `docs/assets/gui_window_live.png` (SHA-256 `06CB900F5C02FD8028DA5D3B1B6FA7339657A999B94E9C1CB2E95A4E8D3F8A4B`), and exited 0 via `MLAPP_GUI_AUTOCLOSE_MS`. Automated mouse-click callback dispatch in CI is still not implemented; see `docs/GUI_MANUAL_CHECK.md` |
 | **Embedding C ABI** | C API headers, null safety & handle IDs | **Implemented** | [ffi_tests.rs](crates/mlapp-ffi/tests/ffi_tests.rs) `test_c_abi_package_and_session_flow_with_handle_ids` | `mlapp.h` and `mlapp_ffi.h` parity, integer IDs, null checks, `catch_unwind` |
 | **CLI Tooling** | `inspect`, `extract`, `check-compat`, `run` | **Implemented** | [cli_tests.rs](crates/mlapp-cli/tests/cli_tests.rs) `test_cli_run_command`, `test_cli_run_gui_flag` | Verified inspection, compatibility, execution, and `--gui` flag |
 | **Mathematics & Calculations** | Multi-Backend Linalg Parity (< 1e-12) | **Implemented** | [numeric_comparison_tests.rs](crates/rustlab-stdlib/tests/numeric_comparison_tests.rs) `test_dgemm_matrixmultiply_vs_fallback_matches_to_1e12`, `test_symmetric_eig_faer_vs_native_matches_to_1e12`, `test_svd_faer_vs_native_matches_to_1e12` | Numerical output agreement across faer, native fallback, and matrixmultiply within $< 10^{-12}$ |

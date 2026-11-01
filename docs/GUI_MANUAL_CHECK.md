@@ -56,4 +56,17 @@ Perform the following user interactions:
 
 | Date | Tester | OS Platform | Window Backend | Result | Notes |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| *Pending* | User | Windows / Linux / macOS | eframe (winit + glow/wgpu) | *Pending User Run* | Real interactive run pending manual execution |
+| 2026-11-01 | Automated | Windows 11 ARM64 | eframe 0.31.1 (winit + glow) | Window opened, screenshot captured, exit 0 | `scripts/capture-gui-window.ps1` launched `mlapp-cli run --gui` with `MLAPP_GUI_AUTOCLOSE_MS=5000`; `PrintWindow` captured the 814x638 native window to `docs/assets/gui_window_live.png` (SHA-256 `06CB900F5C02FD8028DA5D3B1B6FA7339657A999B94E9C1CB2E95A4E8D3F8A4B`). Button click and callback mutation are still **not** automated; the checklist below remains a manual step. |
+
+## 4. Reproduce the Automated Window Capture (Windows)
+
+```powershell
+cargo build -p mlapp-cli
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/capture-gui-window.ps1 `
+  -Package fixtures/sample_apps/r2021a_sample.mlapp `
+  -Output docs/assets/gui_window_live.png `
+  -Title FixtureApp_R2021a `
+  -AutoCloseMs 5000
+```
+
+The script sets `MLAPP_GUI_AUTOCLOSE_MS` for the child process, waits for the native window title, captures the window with Win32 `PrintWindow`, and fails if the window or screenshot is missing. It does not click buttons. CI is headless and only runs the offscreen screenshot test; the native-window capture is a desktop check.

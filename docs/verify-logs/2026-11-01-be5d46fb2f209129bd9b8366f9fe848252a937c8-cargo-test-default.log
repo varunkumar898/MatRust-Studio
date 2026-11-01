@@ -1,0 +1,773 @@
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\rustlab_parse-3vj6bb4cml7as\s-hnq8p8dfod-01e4s26-working`
+
+warning: `rustlab-parse` (lib) generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\mlapp_container-14tk1uwr95e6l\s-hnqahn8yhk-0p5lbn6-working`
+
+warning: `mlapp-container` (lib) generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\mlapp_plot-2v2nisro0j5ax\s-hnq8p8dmre-0lnqmr0-working`
+
+warning: `mlapp-plot` (lib) generated 1 warning
+   Compiling matrust_studio v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\apps\desktop)
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\fixture_tests-0fyrpgt284fmq\s-hnqahnytzq-0qqphwn-working`
+
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\container_tests-0dudri2ip58bg\s-hnqcw8plfq-1y75e8a-working`
+
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\mlapp_container-096mnrfdbwu54\s-hnqahndvff-1dgu4qr-working`
+
+warning: `mlapp-container` (test "fixture_tests") generated 1 warning
+warning: `mlapp-container` (test "container_tests") generated 1 warning
+warning: `mlapp-container` (lib test) generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\plot_tests-2lm7geracv3ej\s-hnq8p90lde-1pmwzbi-working`
+
+warning: `mlapp-plot` (test "plot_tests") generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\mlapp_plot-0kvquzq3u7xrn\s-hnq8p8hrj0-1gpwkk6-working`
+
+warning: `mlapp-plot` (lib test) generated 1 warning
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 3.82s
+     Running unittests src\lib.rs (target\debug\deps\matrust_studio-16df9d9659dd0c75.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\main.rs (target\debug\deps\matrust_studio-f572e7bd7c63c4c6.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\desktop_tests.rs (target\debug\deps\desktop_tests-1a50a5d9f7b1ee03.exe)
+
+running 14 tests
+test test_code_folding_block_detection ... ok
+test test_dock_tree_move_panel_and_tab_operations ... ok
+test test_desktop_session_numerical_methods_and_data ... ok
+test test_desktop_session_simulation_and_robotics ... ok
+test test_dock_tree_presets_and_json_persistence ... ok
+test test_session_basic_arithmetic_and_matrices ... ok
+test test_session_command_window_disp ... ok
+test test_session_cancellation_flag ... ok
+test test_session_plotting_builtins_and_state ... ok
+test test_session_csv_import ... ok
+test test_breakpoint_execution_stop ... ok
+test test_breakpoint_execution_pause_inspect_and_continue ... ok
+test test_worker_client_async_execution ... ok
+test test_worker_panic_recovery_and_session_reset ... ok
+
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s
+
+     Running unittests src\main.rs (target\debug\deps\mlapp_cli-a3590749b56f1ebd.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\cli_tests.rs (target\debug\deps\cli_tests-35b1fe0c3b6c3841.exe)
+
+running 7 tests
+test test_cli_run_gui_flag ... ok
+test test_cli_check_compat_command ... ok
+test test_cli_invalid_path_fails ... ok
+test test_cli_extract_command ... ok
+test test_cli_inspect_command ... ok
+test test_cli_check_compat_hazardous_and_unanalyzable ... ok
+test test_cli_run_command ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.23s
+
+     Running unittests src\lib.rs (target\debug\deps\mlapp_container-f2ef0d3664d303d6.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\container_tests.rs (target\debug\deps\container_tests-a763bba32c17b200.exe)
+
+running 16 tests
+test test_extract_security_nul_byte ... ok
+test test_extract_security_symlink_not_allowed ... ok
+test test_extract_security_drive_letter ... ok
+test test_decompressed_bytes_limit_with_forged_header ... ok
+test test_extract_security_duplicate_entry_names ... ok
+test test_extract_security_backslash_traversal ... ok
+test test_extract_aggregate_decompressed_bytes_limit ... ok
+test test_extract_security_unc_path ... ok
+test test_extract_zip_in_zip_nested_bomb ... ok
+test test_extract_security_reserved_device_names ... ok
+test test_opt_in_real_apps_validation ... ok
+test test_file_count_limit ... ok
+test test_zip_slip_protection ... ok
+test test_inspect_mlapp_structure ... ok
+test test_zip_bomb_protection ... ok
+test test_inspect_mlappinstall_manifest ... ok
+
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests\fixture_tests.rs (target\debug\deps\fixture_tests-2ce6fc74625ab4e5.exe)
+
+running 4 tests
+test test_r2018b_release_format ... ok
+test test_r2023b_release_format ... ok
+test test_hazardous_fixture_compatibility ... ok
+test test_fixtures_generation_and_inspection ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running unittests src\lib.rs (target\debug\deps\mlapp_ffi-56a5da210366d2c0.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\ffi_tests.rs (target\debug\deps\ffi_tests-550d199b8855a11e.exe)
+
+running 4 tests
+test test_c_abi_null_and_invalid_inputs_with_handle_ids ... ok
+test test_mlapp_ffi_alias_header_exists_and_includes_mlapp_h ... ok
+test test_c_header_parity_and_declarations ... ok
+test test_c_abi_package_and_session_flow_with_handle_ids ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running unittests src\lib.rs (target\debug\deps\mlapp_host-f6bb1d27cae0bafb.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\host_tests.rs (target\debug\deps\host_tests-c76cd66f5ba396ea.exe)
+
+running 5 tests
+test test_value_changed_callback_receives_event_value_and_app_field ... ok
+test test_end_to_end_callback_with_advanced_matlab_features ... ok
+test test_comprehensive_e2e_features_and_axes_model ... ok
+test test_app_host_session_lifecycle ... ok
+test test_host_automatic_timeout_cancelling_infinite_loop ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.12s
+
+     Running unittests src\lib.rs (target\debug\deps\mlapp_lang-0c32c13c59ee808a.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\lang_tests.rs (target\debug\deps\lang_tests-7f03886624664a50.exe)
+
+running 4 tests
+test test_extract_code_from_xml ... ok
+test test_parse_app_classdef_structure ... ok
+test test_static_compatibility_scanner ... ok
+test test_check_compat_deterministic_snapshot ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.12s
+
+     Running unittests src\lib.rs (target\debug\deps\mlapp_plot-e980a2379ce0ac0a.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\plot_tests.rs (target\debug\deps\plot_tests-0496db1783dfd1e9.exe)
+
+running 1 test
+test test_axes_model_plotting_and_svg_export ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\lib.rs (target\debug\deps\mlapp_render-363db252ea43c75f.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\render_tests.rs (target\debug\deps\render_tests-e5e645c5b74e8f36.exe)
+
+running 3 tests
+test test_headless_renderer_tree_walk_and_event_dispatch ... ok
+test test_headless_screenshot_render ... ok
+test test_gui_window_screenshot_capture_and_export ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.27s
+
+     Running unittests src\lib.rs (target\debug\deps\mlapp_runtime-f192d6bcba6d8894.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\runtime_tests.rs (target\debug\deps\runtime_tests-94da6ef59234fad7.exe)
+
+running 6 tests
+test test_unsupported_function_diagnostics ... ok
+test test_cooperative_cancellation ... ok
+test test_runtime_permission_enforcement ... ok
+test test_app_runtime_lifecycle_and_mutations ... ok
+test test_comprehensive_runtime_sandbox_policies ... ok
+test test_cancellation_while_loop_and_long_builtin ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s
+
+     Running unittests src\lib.rs (target\debug\deps\mlapp_ui-029f844ce2c4aeb3.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\ui_tests.rs (target\debug\deps\ui_tests-fbdbe7afdba4b6de.exe)
+
+running 5 tests
+test test_coordinate_transformation_bidirectional ... ok
+test test_top_level_figure_geometry_exact_values ... ok
+test test_parse_app_xml_component_tree ... ok
+test test_xml_nesting_depth_limit ... ok
+test test_dos_xml_depth_999_small_stack ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running unittests src\lib.rs (target\debug\deps\rustlab_cli-f26b82f2a3ba5575.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\main.rs (target\debug\deps\rustlab-58f0ed41cf473dd6.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\cli_tests.rs (target\debug\deps\cli_tests-51fe4e4e04ce5b5c.exe)
+
+running 4 tests
+test test_incomplete_input_detection ... ok
+test test_semicolon_output_suppression ... ok
+test test_diagnostic_error_formatting ... ok
+test test_g01_singular_inv_warns_on_stderr_and_prints_inf ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+
+     Running tests\diagnostics_tests.rs (target\debug\deps\diagnostics_tests-5d86bdfd143b98de.exe)
+
+running 12 tests
+test parse_error_keeps_location_and_caret ... ok
+test rendered_line_text_never_contains_carriage_return ... ok
+test span_to_location_crlf_bookkeeping ... ok
+test binary_op_error_underlines_whole_expression_lf ... ok
+test binary_op_caret_lands_on_spanning_line_lf ... ok
+test span_to_location_edge_cases ... ok
+test span_to_location_lf_bookkeeping ... ok
+test span_to_location_single_crlf_line ... ok
+test binary_op_caret_is_crlf_insensitive ... ok
+test undefined_symbol_caret_lands_on_symbol_line_lf ... ok
+test undefined_symbol_caret_survives_two_crlf_lines ... ok
+test undefined_symbol_gets_a_single_caret_lf ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\lib.rs (target\debug\deps\rustlab_data-df0c5b2d99d233f8.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\data_tests.rs (target\debug\deps\data_tests-3af32f1a3647ac61.exe)
+
+running 37 tests
+test test_b2_cov_and_corrcoef ... ok
+test test_b2_corrcoef_diagonal_one_property ... ok
+test test_b2_cov_and_corrcoef_edge_cases ... ok
+test test_b2_cummax_and_cummin ... ok
+test test_b2_csv_bom_and_crlf_roundtrip ... ok
+test test_b2_csv_large_exponent_bit_exact_double_property ... ok
+test test_b2_csv_nan_inf_roundtrip ... ok
+test test_b2_csv_ragged_row_error_with_line_number ... ok
+test test_b2_csv_options_delimiter_header_bom_crlf ... ok
+test test_b2_cummax_and_cummin_edge_cases ... ok
+test test_b2_display_mixed_integer_decimals_unverified ... ok
+test test_b2_display_scale_factor_vs_enotation_unverified ... ok
+test test_b2_display_sub_01_scalars_unverified ... ok
+test test_b2_histcounts ... ok
+test test_b2_histcounts_edge_cases ... ok
+test test_b2_median_edge_cases ... ok
+test test_b2_median_vector_matrix_nd_omitnan ... ok
+test test_b2_mode_edge_cases ... ok
+test test_b2_mode_tiebreak_smallest ... ok
+test test_b2_movmean_and_movmedian ... ok
+test test_b2_movmean_and_movmedian_edge_cases ... ok
+test test_b2_movmean_of_constants_property ... ok
+test test_b2_percentiles_monotone_property ... ok
+test test_b2_prctile_and_quantile_edge_cases ... ok
+test test_b2_prctile_and_quantile_interpolation ... ok
+test test_b2_prctile_matlab_rule_goldens ... ok
+test test_b2_sortrows_and_unique_edge_cases ... ok
+test test_b2_sortrows_and_unique_ia_ic ... ok
+test test_b2_var_and_std_edge_cases ... ok
+test test_b2_readmatrix_and_writematrix_roundtrip ... ok
+test test_b2_unique_row_orientation ... ok
+test test_b2_csv_empty_trailing_field_and_header_only ... ok
+test test_b2_variance_non_negative_property ... ok
+test test_b2_zscore ... ok
+test test_b2_var_and_std_flags_dims_integer_classes ... ok
+test test_b2_zscore_edge_cases ... ok
+test test_b2_csv_quoted_embedded_newlines_and_delimiters ... ok
+
+test result: ok. 37 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests\g01_verify_tests.rs (target\debug\deps\g01_verify_tests-cf0a5d950b9772cc.exe)
+
+running 1 test
+test test_g01_rustlab_only_ids_do_not_use_matlab_prefix ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\stats_reference_tests.rs (target\debug\deps\stats_reference_tests-5ef01cd6dd166a3c.exe)
+
+running 7 tests
+test test_reference_empty_and_len1 ... ok
+test test_reference_nan_and_inf_windows ... ok
+test test_reference_window_edges_and_k_equals_len ... ok
+test test_reference_offset_1e8_plus_noise ... ok
+test test_reference_constant_data ... ok
+test test_reference_drift_over_100k_elements ... ok
+test test_reference_random_data ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running unittests src\lib.rs (target\debug\deps\rustlab_eval-68564fae8fc20c2f.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\eval_tests.rs (target\debug\deps\eval_tests-501c76a9d7ec2044.exe)
+
+running 10 tests
+test test_basic_arithmetic_evaluation ... ok
+test test_global_scoping ... ok
+test test_if_elseif_else ... ok
+test test_for_loop_and_column_iteration ... ok
+test test_indexing_with_end ... ok
+test test_matrix_creation_and_multiplication ... ok
+test test_array_growth_on_assignment ... ok
+test test_dos_runtime_recursion_limit ... ok
+test test_while_loop_with_break ... ok
+test test_user_defined_functions_and_multiple_returns ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\milestone_a1_tests.rs (target\debug\deps\milestone_a1_tests-d92670e0d3aa68d2.exe)
+
+running 6 tests
+test test_try_catch_mexception ... ok
+test test_function_handles_and_lexical_closures ... ok
+test test_boolean_mask_indexing_and_assignment ... ok
+test test_nested_end_contexts ... ok
+test test_cellfun_arrayfun_structfun ... ok
+test test_varargin_varargout_nargin_nargout ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\lib.rs (target\debug\deps\rustlab_math-137ef8580164bf11.exe)
+
+running 10 tests
+test array::tests::test_transpose ... ok
+test array::tests::test_dense_array_creation_and_indexing ... ok
+test ops::tests::test_colon_range ... ok
+test broadcast::tests::test_broadcast_iterator_outer_sum ... ok
+test broadcast::tests::test_broadcast_shapes ... ok
+test array::tests::test_dynamic_array_growth ... ok
+test ops::tests::test_elementwise_binary_with_broadcasting ... ok
+test ops::tests::test_matmul_2d ... ok
+test shape::tests::test_column_major_strides ... ok
+test shape::tests::test_normalize_shape ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\math_tests.rs (target\debug\deps\math_tests-46b4baf27c62068c.exe)
+
+running 14 tests
+test test_1_based_indexing_column_major ... ok
+test test_array_growth_on_assignment ... ok
+test test_a3_exact_int64_uint64 ... ok
+test test_a3_sparse_csc_duplicate_summing_and_algebra ... ok
+test test_broadcasting_elementwise_binary ... ok
+test test_a3_mixed_type_rules_and_errors ... ok
+test test_a3_saturating_integer_arithmetic ... ok
+test test_colon_range ... ok
+test test_matmul_zero_dimensions_and_mismatch ... ok
+test test_minimum_2d_and_singleton_stripping ... ok
+test test_matrix_multiplication ... ok
+test test_relational_and_logical_operations ... ok
+test test_a3_sparse_memory_efficiency_10000x10000 ... ok
+test test_matmul_huge_output_is_rejected_without_allocating ... ok
+
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\proptest_math.rs (target\debug\deps\proptest_math-8f184dd7490afc51.exe)
+
+running 3 tests
+test prop_transpose_involution ... ok
+test prop_addition_is_commutative ... ok
+test prop_1_based_indexing_and_column_major_equivalence ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s
+
+     Running unittests src\lib.rs (target\debug\deps\rustlab_matio-899f9047eef11155.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\matio_tests.rs (target\debug\deps\matio_tests-fdbd45b81c881bd4.exe)
+
+running 7 tests
+test test_char_and_logical_roundtrip ... ok
+test test_compressed_roundtrip ... ok
+test test_uncompressed_roundtrip ... ok
+test test_complex_numbers_roundtrip ... ok
+test test_file_save_and_load ... ok
+test test_numeric_classes_roundtrip ... ok
+test test_matio_image_sparse_and_empty_roundtrip ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+     Running tests\scipy_mat_tests.rs (target\debug\deps\scipy_mat_tests-c9d2af9e0824e77c.exe)
+
+running 1 test
+test test_scipy_generated_files_interop ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running unittests src\lib.rs (target\debug\deps\rustlab_parse-e2e8ed844c45d3f2.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\lexer_tests.rs (target\debug\deps\lexer_tests-41e3c7406ee82e02.exe)
+
+running 4 tests
+test test_comments_and_line_continuations ... ok
+test test_transpose_vs_char_vector ... ok
+test test_char_and_string_literals ... ok
+test test_numeric_literals ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\parser_tests.rs (target\debug\deps\parser_tests-15b386f4adb1cadf.exe)
+
+running 14 tests
+test test_anonymous_function ... ok
+test test_colon_range_expressions ... ok
+test test_control_flow ... ok
+test test_function_def ... ok
+test test_indexing_and_end ... ok
+test test_matrix_literals_and_whitespace ... ok
+test test_multi_assignment ... ok
+test test_dos_long_dot_and_call_chains ... ok
+test test_operator_precedence ... ok
+test test_power_right_associativity ... ok
+test test_dos_nested_brackets_and_braces ... ok
+test test_dos_nested_anon_and_unary_minus ... ok
+test test_parser_nesting_depth_limit ... ok
+test test_dos_100k_terms_addition ... ok
+
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s
+
+     Running tests\proptest_parser.rs (target\debug\deps\proptest_parser-a31057b8ada705f5.exe)
+
+running 3 tests
+test prop_valid_arithmetic_expressions_parse ... ok
+test prop_matrix_literal_expressions_parse ... ok
+test prop_never_panic_on_arbitrary_string ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s
+
+     Running unittests src\lib.rs (target\debug\deps\rustlab_stdlib-cb22b1ed75f3d7f9.exe)
+
+running 7 tests
+test linalg::eig_sym::tests::test_eig_sym_3x3 ... ok
+test linalg::expm::tests::test_expm_diagonal_matrix ... ok
+test linalg::expm::tests::test_expm_zero_matrix ... ok
+test linalg::eig_sym::tests::test_eig_sym_diagonal ... ok
+test signal::radix2::tests::test_radix2_roundtrip ... ok
+test linalg::kron::tests::test_kron_2x2 ... ok
+test linalg::eig_sym::tests::test_eig_sym_known_2x2 ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\conformance_tests.rs (target\debug\deps\conformance_tests-2e8108ae2a843fbe.exe)
+
+running 1 test
+test test_conformance_scripts_execution ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests\doc_generator_tests.rs (target\debug\deps\doc_generator_tests-7b8809867cb9efff.exe)
+
+running 1 test
+test test_supported_functions_doc_parity_and_coverage ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\extended_capabilities_tests.rs (target\debug\deps\extended_capabilities_tests-4d1f42c75a7b9697.exe)
+
+running 6 tests
+test test_dos_huge_zeros_allocation_cap ... ok
+test test_image_processing_rgb2gray_and_filters ... ok
+test test_signal_filters_windows_and_xcorr ... ok
+test test_robotics_rotations_and_kinematics ... ok
+test test_machine_learning_fitlm_predict_kmeans ... ok
+test test_simulation_tf_and_step ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\g01_verify_tests.rs (target\debug\deps\g01_verify_tests-2edffcf7d946fe89.exe)
+
+running 7 tests
+test test_g01_core_omitnan_sum_mean_min_max ... ok
+test test_g01_lu_residuals_random_5x5 ... ok
+test test_g01_mldivide_singular_returns_inf ... ok
+test test_g01_display_scale_factor_0_001_1000_golden_unverified ... ok
+test test_g01_display_extreme_range_1e_16_1_golden_unverified ... ok
+test test_g01_mask_count_and_size_identifiers_settled ... ok
+test test_g01_lu_residuals_random_50x50 ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests\numeric_comparison_tests.rs (target\debug\deps\numeric_comparison_tests-4735f9d8f7fd019b.exe)
+
+running 3 tests
+test test_numeric_comparison_matrixmultiply_vs_fallback_gemm ... ok
+test test_numeric_comparison_faer_vs_native_svd ... ok
+test test_numeric_comparison_faer_vs_native_eig_sym ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\numerical_tests.rs (target\debug\deps\numerical_tests-28593608faa552dd.exe)
+
+running 6 tests
+test test_polyval_scalar_and_vector ... ok
+test test_gradient ... ok
+test test_interp1_linear_and_nearest ... ok
+test test_roots_linear_and_quadratic ... ok
+test test_polyfit_linear_and_quadratic ... ok
+test test_trapz_and_cumtrapz ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests\regression_a312_tests.rs (target\debug\deps\regression_a312_tests-54ece5778e7387cd.exe)
+
+running 16 tests
+test binary_expression_span_covers_full_expression ... ok
+test matrix_display_common_scale_boundary_unverified ... ok
+test mixed_integer_assignment_refuses_inconsistent_class ... ok
+test matrix_display_width_is_uniform_across_rows ... ok
+test matrix_display_parity_goldens_unverified ... ok
+test mixed_integer_class_binary_ops_use_exact_matlab_text ... ok
+test reshape_empty_bracket_in_higher_dimension ... ok
+test non_integer_class_display_goldens_unverified ... ok
+test reshape_empty_bracket_autodim_matches_explicit_dims ... ok
+test scalar_display_via_env_matches_output_log ... ok
+test scalar_integer_display_goldens ... ok
+test reshape_invalid_size_arguments_keep_matlab_diagnostics ... ok
+test test_num2str_noninteger_matrix_g_style_unverified ... ok
+test test_scientific_notation_threshold_rule_cited_unverified ... ok
+test scalar_scientific_display_goldens_unverified ... ok
+test every_registered_builtin_has_docs_and_help ... ok
+
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+     Running tests\stdlib_a1_tests.rs (target\debug\deps\stdlib_a1_tests-f2c413d68a387dcc.exe)
+
+running 13 tests
+test test_nd_array_trailing_end_expansion ... ok
+test test_nan_comparison_semantics_regression ... ok
+test test_number_display_format_short_golden ... ok
+test test_ieee754_nan_inf_semantics ... ok
+test test_boolean_mask_shape_rules_and_deletion ... ok
+test test_num2str_and_mat2str ... ok
+test test_diagnostics_error_and_assert ... ok
+test test_nested_anonymous_functions_and_closure_handles ... ok
+test test_sprintf_format_recycling_golden ... ok
+test test_sprintf_fprintf_edge_cases ... ok
+test test_string_library_core ... ok
+test test_path_which_exist_and_scripts ... ok
+test test_regexp_and_regexprep ... ok
+
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+
+     Running tests\stdlib_a2_tests.rs (target\debug\deps\stdlib_a2_tests-ca4c0a10b47e73bc.exe)
+
+running 21 tests
+test test_a2_both_native_and_faer_eig_paths_match ... ok
+test test_a2_expm_defective_matrix ... ok
+test test_a2_expm_nilpotent_matrix ... ok
+test test_a2_expm_large_norm_scaling_squaring ... ok
+test test_a2_eigenvector_tie_break_sign_invariant ... ok
+test test_a2_2d_transforms_fft2_ifft2 ... ok
+test test_a2_expm_rotation_generator ... ok
+test test_a2_edge_cases_empty_1x1_singular_nan_nonsquare ... ok
+test test_a2_golden_eig_symmetric_ascending_and_sign_normalized ... ok
+test test_a2_golden_eig_rotation_complex_conjugate ... ok
+test test_a2_golden_pinv_rank_deficient ... ok
+test test_a2_pinv_moore_penrose_condition ... ok
+test test_a2_golden_expm_zero_and_diagonal ... ok
+test test_a2_pivoted_qr_rank_deficient_matrix ... ok
+test test_a2_golden_svd_rank1 ... ok
+test test_a2_pivoted_qr_decomposition ... ok
+test test_a2_rank_cond_null_orth_kron ... ok
+test test_a2_symmetric_eig_routes_to_faer_and_canonicalizes ... ok
+test test_a2_tolerance_rule_max_mn_eps_sigma1 ... ok
+test test_a2_property_av_equals_vd_and_usvt_equals_a ... ok
+test test_a2_property_fft_ifft_roundtrip_various_lengths ... ok
+
+test result: ok. 21 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests\stdlib_a3_tests.rs (target\debug\deps\stdlib_a3_tests-2dc2019fb6303f55.exe)
+
+running 16 tests
+test test_a3_logical_mask_assignment_errors ... ok
+test test_a3_exact_64bit_integers_and_saturation ... ok
+test test_a3_find_variants_and_short_circuit ... ok
+test test_a3_nd_deletion_3d_and_growth ... ok
+test test_a3_bitwise_operations ... ok
+test test_a3_mixed_type_rules_and_errors ... ok
+test test_a3_nd_reductions_and_integer_preservation ... ok
+test test_a3_nd_operations_cat_permute_meshgrid_reshape ... ok
+test test_a3_reshape_empty_placeholder_and_negative_error ... ok
+test test_a3_nd_slicing_assignment_and_deletion ... ok
+test test_a3_nd_sort_cumsum_prod_and_broadcast ... ok
+test test_a3_sparse_parity_and_residual ... ok
+test test_a3_class_predicates_and_limits ... ok
+test test_a3_sparse_memory_efficiency ... ok
+test test_a3_sparse_csc_matrices_and_algebra ... ok
+test test_a3_integer_types_and_saturating_arithmetic ... ok
+
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests\stdlib_tests.rs (target\debug\deps\stdlib_tests-526383595b82d43e.exe)
+
+running 13 tests
+test test_b2_inv_and_mldivide_singular_matrix_returns_inf ... ok
+test test_multiple_return_values ... ok
+test test_cell_arrays ... ok
+test test_reductions_and_statistics ... ok
+test test_linear_algebra_and_system_solve ... ok
+test test_array_generators ... ok
+test test_search_and_sort ... ok
+test test_elementwise_elementary_math ... ok
+test test_signal_and_fft ... ok
+test test_strings_and_chars ... ok
+test test_shape_and_inspection ... ok
+test test_struct_arrays ... ok
+test test_matio_builtin_load_save ... ok
+
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests\table_tests.rs (target\debug\deps\table_tests-bd8a72120b695e96.exe)
+
+running 3 tests
+test test_head_and_tail_table ... ok
+test test_readtable_and_dot_indexing ... ok
+test test_summary_and_writetable_roundtrip ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+   Doc-tests matrust_studio
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests mlapp_container
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests mlapp_ffi
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests mlapp_host
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests mlapp_lang
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests mlapp_plot
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests mlapp_render
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests mlapp_runtime
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests mlapp_ui
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests rustlab_cli
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests rustlab_data
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests rustlab_eval
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests rustlab_math
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests rustlab_matio
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests rustlab_parse
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests rustlab_stdlib
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

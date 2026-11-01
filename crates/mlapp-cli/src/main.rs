@@ -73,6 +73,10 @@ enum Commands {
         #[arg(long, default_value_t = false)]
         allow_interop: bool,
 
+        /// Allow delegation of unsupported functions to a real MATLAB installation
+        #[arg(long, default_value_t = false)]
+        allow_matlab: bool,
+
         /// Launch GUI window instead of headless mode
         #[arg(long, default_value_t = false)]
         gui: bool,
@@ -164,6 +168,7 @@ fn main() -> Result<()> {
             allow_system,
             allow_eval,
             allow_interop,
+            allow_matlab,
             gui,
             autotest,
             timeout_ms,
@@ -177,6 +182,7 @@ fn main() -> Result<()> {
                 allow_system,
                 allow_eval,
                 allow_interop,
+                allow_matlab,
                 callback_timeout_ms: timeout_ms,
             };
 

@@ -45,6 +45,10 @@ pub struct IndexingContext {
     pub total_len: usize,
 }
 
+/// Dynamic fallback callback invoked when a function symbol is not resolved.
+pub type FallbackHandler =
+    Arc<dyn Fn(&str, &[Value], usize) -> Result<Vec<Value>, EvalError> + Send + Sync>;
+
 /// Tree-walking MATLAB evaluator.
 pub struct Interpreter {
     pub env: Environment,
@@ -59,6 +63,7 @@ pub struct Interpreter {
     pub cancel_token: Option<Arc<std::sync::atomic::AtomicBool>>,
     pub recursion_depth: usize,
     pub max_recursion_depth: usize,
+    pub fallback_handler: Option<FallbackHandler>,
 }
 
 impl Interpreter {
@@ -77,6 +82,7 @@ impl Interpreter {
             cancel_token: None,
             recursion_depth: 0,
             max_recursion_depth: 32,
+            fallback_handler: None,
         };
         interp.init_constants();
         interp
@@ -88,6 +94,14 @@ impl Interpreter {
         F: BuiltinFn + 'static,
     {
         self.builtins.insert(name.to_string(), Arc::new(func));
+    }
+
+    /// Sets a dynamic fallback handler for unknown function invocations.
+    pub fn set_fallback_handler<F>(&mut self, handler: F)
+    where
+        F: Fn(&str, &[Value], usize) -> Result<Vec<Value>, EvalError> + Send + Sync + 'static,
+    {
+        self.fallback_handler = Some(Arc::new(handler));
     }
 
     /// Returns a sorted list of all registered builtin function names.
@@ -432,6 +446,9 @@ impl Interpreter {
                     } else {
                         Ok(self.last_ans.clone().unwrap_or_else(Value::empty))
                     }
+                } else if let Some(fallback) = self.fallback_handler.clone() {
+                    let res = fallback(name, &[], 1)?;
+                    Ok(res.into_iter().next().unwrap_or_else(Value::empty))
                 } else {
                     Err(EvalError::UndefinedSymbol {
                         name: name.clone(),
@@ -947,6 +964,8 @@ impl Interpreter {
                                 targets.len(),
                                 *f_span,
                             )?
+                        } else if let Some(fallback) = self.fallback_handler.clone() {
+                            fallback(func_name, &evaluated_args, targets.len())?
                         } else {
                             return Err(EvalError::UndefinedSymbol {
                                 name: func_name.clone(),
@@ -1128,6 +1147,15 @@ impl Interpreter {
                 } else {
                     return Ok(self.last_ans.clone().unwrap_or_else(Value::empty));
                 }
+            }
+
+            if let Some(fallback) = self.fallback_handler.clone() {
+                let mut evaluated_args = Vec::with_capacity(args.len());
+                for a in args {
+                    evaluated_args.push(self.eval_expr(a)?);
+                }
+                let mut results = fallback(name, &evaluated_args, 1)?;
+                return Ok(results.pop().unwrap_or_else(Value::empty));
             }
 
             return Err(EvalError::UndefinedSymbol {
@@ -1787,6 +1815,8 @@ impl Interpreter {
                     builtin.call(&args, nargout)
                 } else if self.resolve_and_load_mfile(name)? {
                     self.call_user_function_multi(name, args, nargout, span)
+                } else if let Some(fallback) = self.fallback_handler.clone() {
+                    fallback(name, &args, nargout)
                 } else {
                     Err(EvalError::UndefinedSymbol {
                         name: name.clone(),

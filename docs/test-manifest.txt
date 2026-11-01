@@ -22,12 +22,13 @@ test_cli_check_compat_hazardous_and_unanalyzable: test
 test_cli_extract_command: test
 test_cli_inspect_command: test
 test_cli_invalid_path_fails: test
+test_cli_run_allow_matlab_flag: test
 test_cli_run_autotest_flag: test
 test_cli_run_autotest_headless_execution: test
 test_cli_run_command: test
 test_cli_run_gui_flag: test
 
-9 tests, 0 benchmarks
+10 tests, 0 benchmarks
 0 tests, 0 benchmarks
 test_decompressed_bytes_limit_with_forged_header: test
 test_extract_aggregate_decompressed_bytes_limit: test
@@ -65,9 +66,10 @@ test_app_host_session_lifecycle: test
 test_comprehensive_e2e_features_and_axes_model: test
 test_end_to_end_callback_with_advanced_matlab_features: test
 test_host_automatic_timeout_cancelling_infinite_loop: test
+test_matlab_bridge_delegation_and_unsupported_hint: test
 test_value_changed_callback_receives_event_value_and_app_field: test
 
-5 tests, 0 benchmarks
+6 tests, 0 benchmarks
 0 tests, 0 benchmarks
 test_check_compat_deterministic_snapshot: test
 test_extract_code_from_xml: test
@@ -75,6 +77,17 @@ test_parse_app_classdef_structure: test
 test_static_compatibility_scanner: test
 
 4 tests, 0 benchmarks
+0 tests, 0 benchmarks
+test_matlab_detection_functions: test
+test_matlab_value_roundtrip_all_types: test
+test_mock_session_eval_and_call: test
+test_protocol_error_response_handling: test
+test_protocol_serialization_roundtrip: test
+
+5 tests, 0 benchmarks
+test_matlab_oracle_conformance_suite: test
+
+1 test, 0 benchmarks
 0 tests, 0 benchmarks
 test_axes_model_plotting_and_svg_export: test
 
@@ -412,6 +425,7 @@ test_readtable_and_dot_indexing: test
 test_summary_and_writetable_roundtrip: test
 
 3 tests, 0 benchmarks
+0 tests, 0 benchmarks
 0 tests, 0 benchmarks
 0 tests, 0 benchmarks
 0 tests, 0 benchmarks

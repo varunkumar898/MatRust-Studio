@@ -92,3 +92,29 @@ The following format aspects remain **UNVERIFIED** pending direct black-box test
 2. `UNVERIFIED_BINARY_COMPONENT_DATA`: Internal payload representation of legacy or custom third-party ActiveX/Java controls embedded in `.mlapp`.
 3. `UNVERIFIED_XML_UUID_FORMAT`: Exact UUID formatting scheme and schema versioning attributes in `appdesigner/app.xml` across future releases.
 4. `UNVERIFIED_TIMER_CALLBACK_INTERLEAVING`: Precise callback queuing and re-entrancy semantics for multi-timer App Designer components.
+
+
+---
+
+## Decision 6: MATLAB Subprocess Bridge (`mlapp-matlab`) & Oracle Conformance Testing
+
+### Context
+To maintain 100% clean-room isolation while providing an automated semantic oracle, `mlapp-matlab` provides an inter-process bridge to any locally installed real MATLAB version. It also serves as an explicit runtime fallback when users provide `--allow-matlab`.
+
+### Implementation & Protocol
+1. **Engine Discovery**:
+   - `MATLAB_ROOT` environment variable
+   - System `PATH`
+   - Windows Registry (`HKLM\SOFTWARE\MathWorks\MATLAB`)
+   - Standard macOS `/Applications/MATLAB_*.app`
+   - Standard Linux `/usr/local/MATLAB/*` and `/opt/MATLAB/*`
+2. **IPC Protocol**:
+   - Spawns `matlab -batch "..."` or `-nodesktop -nosplash -nojvm -r "..."` with piped stdin/stdout.
+   - Communicates over newline-delimited JSON with typed envelopes (`MatlabRequest::Eval`, `MatlabRequest::Call`).
+   - Responses carry typed values (`Double`, `Char`, `Logical`, `Cell`, `Struct`) or structured error details (`identifier`, `message`).
+3. **Graceful Oracle Testing**:
+   - If MATLAB is not installed on the runner, `crates/mlapp-matlab/tests/oracle_tests.rs` prints `[SKIPPED] MATLAB not installed on host` and passes cleanly without failing CI.
+   - Internal mock session enables deterministic unit testing of envelopes, value conversions, and failure semantics in headless CI.
+4. **Runtime Integration**:
+   - Without `--allow-matlab`: Unknown builtins return `Unsupported MATLAB function '<name>'. Hint: run with --allow-matlab to delegate to real MATLAB`.
+   - With `--allow-matlab`: Unknown builtins are transparently forwarded to `MatlabSession::call()`.

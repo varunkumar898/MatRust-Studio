@@ -1,63 +1,5 @@
-warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\rustlab_parse-3vj6bb4cml7as\s-hnq8p8dfod-01e4s26-working`
-
-warning: `rustlab-parse` (lib) generated 1 warning
-warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\rustlab_math-2pa2kha8ci2p7\s-hnq8p8v0d5-0j6marz-working`
-
-warning: `rustlab-math` (lib) generated 1 warning
-warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\rustlab_eval-3f134hj6l0dmv\s-hnq8p9fyfl-10x5dle-working`
-
-warning: `rustlab-eval` (lib) generated 1 warning
-warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\rustlab_data-38uipx8bmovug\s-hnq8pax5hp-0qocine-working`
-
-warning: `rustlab-data` (lib) generated 1 warning
-warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\mlapp_container-14tk1uwr95e6l\s-hnqahn8yhk-0p5lbn6-working`
-
-warning: `mlapp-container` (lib) generated 1 warning
-warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\mlapp_plot-2v2nisro0j5ax\s-hnq8p8dmre-0lnqmr0-working`
-
-warning: `mlapp-plot` (lib) generated 1 warning
-warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\mlapp_host-1wqnyyh36pshy\s-hnqahns0ks-0h0zqui-working`
-
-warning: `mlapp-host` (lib) generated 1 warning
-warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\mlapp_ffi-0pj1xtzrqgdut\s-hnqahoevvl-0bor102-working`
-
-warning: `mlapp-ffi` (lib) generated 1 warning
-warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\ffi_tests-0nwg2ww3zuy5c\s-hnqahqkclk-0ml7guz-working`
-
-warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\mlapp_container-096mnrfdbwu54\s-hnqahndvff-1dgu4qr-working`
-
-warning: `mlapp-ffi` (test "ffi_tests") generated 1 warning
-warning: `mlapp-container` (lib test) generated 1 warning
-warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\fixture_tests-0fyrpgt284fmq\s-hnqahnytzq-0qqphwn-working`
-
-warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\container_tests-0dudri2ip58bg\s-hnqcoe4rx5-0rq6q52-working`
-
-warning: `mlapp-container` (test "fixture_tests") generated 1 warning
-warning: `mlapp-container` (test "container_tests") generated 1 warning
-warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\proptest_math-09alt17dgcu14\s-hnq9t5n9lm-0k9qmx3-working`
-
-warning: `rustlab-math` (test "proptest_math") generated 1 warning
-warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\mlapp_ffi-3p647gi2f23vo\s-hnqahoedvz-026p59i-working`
-
-warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\host_tests-0cdzhew1w1ik3\s-hnqahoyien-0tfafvd-working`
-
-warning: `mlapp-ffi` (lib test) generated 1 warning
-warning: `mlapp-host` (test "host_tests") generated 1 warning
-warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\plot_tests-2lm7geracv3ej\s-hnq8p90lde-1pmwzbi-working`
-
-warning: `mlapp-plot` (test "plot_tests") generated 1 warning
-warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\mlapp_host-38s725ukoczul\s-hnqahnyndn-0iw1s3h-working`
-
-warning: `mlapp-host` (lib test) generated 1 warning
-warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\Users\varun\Desktop\MATSTUDIO\target\debug\incremental\mlapp_plot-0kvquzq3u7xrn\s-hnq8p8hrj0-1gpwkk6-working`
-
-warning: `mlapp-plot` (lib test) generated 1 warning
-    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.71s
-     Running unittests src\lib.rs (target\debug\deps\matrust_studio-16df9d9659dd0c75.exe)
+﻿0 tests, 0 benchmarks
 0 tests, 0 benchmarks
-     Running unittests src\main.rs (target\debug\deps\matrust_studio-f572e7bd7c63c4c6.exe)
-0 tests, 0 benchmarks
-     Running tests\desktop_tests.rs (target\debug\deps\desktop_tests-1a50a5d9f7b1ee03.exe)
 test_breakpoint_execution_pause_inspect_and_continue: test
 test_breakpoint_execution_stop: test
 test_code_folding_block_detection: test
@@ -74,9 +16,7 @@ test_worker_client_async_execution: test
 test_worker_panic_recovery_and_session_reset: test
 
 14 tests, 0 benchmarks
-     Running unittests src\main.rs (target\debug\deps\mlapp_cli-a3590749b56f1ebd.exe)
 0 tests, 0 benchmarks
-     Running tests\cli_tests.rs (target\debug\deps\cli_tests-35b1fe0c3b6c3841.exe)
 test_cli_check_compat_command: test
 test_cli_check_compat_hazardous_and_unanalyzable: test
 test_cli_extract_command: test
@@ -86,9 +26,7 @@ test_cli_run_command: test
 test_cli_run_gui_flag: test
 
 7 tests, 0 benchmarks
-     Running unittests src\lib.rs (target\debug\deps\mlapp_container-f2ef0d3664d303d6.exe)
 0 tests, 0 benchmarks
-     Running tests\container_tests.rs (target\debug\deps\container_tests-a763bba32c17b200.exe)
 test_decompressed_bytes_limit_with_forged_header: test
 test_extract_aggregate_decompressed_bytes_limit: test
 test_extract_security_backslash_traversal: test
@@ -107,57 +45,44 @@ test_zip_bomb_protection: test
 test_zip_slip_protection: test
 
 16 tests, 0 benchmarks
-     Running tests\fixture_tests.rs (target\debug\deps\fixture_tests-2ce6fc74625ab4e5.exe)
 test_fixtures_generation_and_inspection: test
 test_hazardous_fixture_compatibility: test
 test_r2018b_release_format: test
 test_r2023b_release_format: test
 
 4 tests, 0 benchmarks
-     Running unittests src\lib.rs (target\debug\deps\mlapp_ffi-56a5da210366d2c0.exe)
 0 tests, 0 benchmarks
-     Running tests\ffi_tests.rs (target\debug\deps\ffi_tests-550d199b8855a11e.exe)
 test_c_abi_null_and_invalid_inputs_with_handle_ids: test
 test_c_abi_package_and_session_flow_with_handle_ids: test
 test_c_header_parity_and_declarations: test
 test_mlapp_ffi_alias_header_exists_and_includes_mlapp_h: test
 
 4 tests, 0 benchmarks
-     Running unittests src\lib.rs (target\debug\deps\mlapp_host-a132e2ff16cbb264.exe)
 0 tests, 0 benchmarks
-     Running tests\host_tests.rs (target\debug\deps\host_tests-450cd471c243e303.exe)
 test_app_host_session_lifecycle: test
 test_comprehensive_e2e_features_and_axes_model: test
 test_end_to_end_callback_with_advanced_matlab_features: test
 test_host_automatic_timeout_cancelling_infinite_loop: test
 
 4 tests, 0 benchmarks
-     Running unittests src\lib.rs (target\debug\deps\mlapp_lang-0c32c13c59ee808a.exe)
 0 tests, 0 benchmarks
-     Running tests\lang_tests.rs (target\debug\deps\lang_tests-7f03886624664a50.exe)
 test_check_compat_deterministic_snapshot: test
 test_extract_code_from_xml: test
 test_parse_app_classdef_structure: test
 test_static_compatibility_scanner: test
 
 4 tests, 0 benchmarks
-     Running unittests src\lib.rs (target\debug\deps\mlapp_plot-e980a2379ce0ac0a.exe)
 0 tests, 0 benchmarks
-     Running tests\plot_tests.rs (target\debug\deps\plot_tests-0496db1783dfd1e9.exe)
 test_axes_model_plotting_and_svg_export: test
 
 1 test, 0 benchmarks
-     Running unittests src\lib.rs (target\debug\deps\mlapp_render-363db252ea43c75f.exe)
 0 tests, 0 benchmarks
-     Running tests\render_tests.rs (target\debug\deps\render_tests-e5e645c5b74e8f36.exe)
 test_gui_window_screenshot_capture_and_export: test
 test_headless_renderer_tree_walk_and_event_dispatch: test
 test_headless_screenshot_render: test
 
 3 tests, 0 benchmarks
-     Running unittests src\lib.rs (target\debug\deps\mlapp_runtime-f192d6bcba6d8894.exe)
 0 tests, 0 benchmarks
-     Running tests\runtime_tests.rs (target\debug\deps\runtime_tests-94da6ef59234fad7.exe)
 test_app_runtime_lifecycle_and_mutations: test
 test_cancellation_while_loop_and_long_builtin: test
 test_comprehensive_runtime_sandbox_policies: test
@@ -166,9 +91,7 @@ test_runtime_permission_enforcement: test
 test_unsupported_function_diagnostics: test
 
 6 tests, 0 benchmarks
-     Running unittests src\lib.rs (target\debug\deps\mlapp_ui-029f844ce2c4aeb3.exe)
 0 tests, 0 benchmarks
-     Running tests\ui_tests.rs (target\debug\deps\ui_tests-fbdbe7afdba4b6de.exe)
 test_coordinate_transformation_bidirectional: test
 test_dos_xml_depth_999_small_stack: test
 test_parse_app_xml_component_tree: test
@@ -176,18 +99,14 @@ test_top_level_figure_geometry_exact_values: test
 test_xml_nesting_depth_limit: test
 
 5 tests, 0 benchmarks
-     Running unittests src\lib.rs (target\debug\deps\rustlab_cli-f26b82f2a3ba5575.exe)
 0 tests, 0 benchmarks
-     Running unittests src\main.rs (target\debug\deps\rustlab-58f0ed41cf473dd6.exe)
 0 tests, 0 benchmarks
-     Running tests\cli_tests.rs (target\debug\deps\cli_tests-51fe4e4e04ce5b5c.exe)
 test_diagnostic_error_formatting: test
 test_g01_singular_inv_warns_on_stderr_and_prints_inf: test
 test_incomplete_input_detection: test
 test_semicolon_output_suppression: test
 
 4 tests, 0 benchmarks
-     Running tests\diagnostics_tests.rs (target\debug\deps\diagnostics_tests-5d86bdfd143b98de.exe)
 binary_op_caret_is_crlf_insensitive: test
 binary_op_caret_lands_on_spanning_line_lf: test
 binary_op_error_underlines_whole_expression_lf: test
@@ -202,9 +121,7 @@ undefined_symbol_caret_survives_two_crlf_lines: test
 undefined_symbol_gets_a_single_caret_lf: test
 
 12 tests, 0 benchmarks
-     Running unittests src\lib.rs (target\debug\deps\rustlab_data-df0c5b2d99d233f8.exe)
 0 tests, 0 benchmarks
-     Running tests\data_tests.rs (target\debug\deps\data_tests-3af32f1a3647ac61.exe)
 test_b2_corrcoef_diagonal_one_property: test
 test_b2_cov_and_corrcoef: test
 test_b2_cov_and_corrcoef_edge_cases: test
@@ -244,11 +161,9 @@ test_b2_zscore: test
 test_b2_zscore_edge_cases: test
 
 37 tests, 0 benchmarks
-     Running tests\g01_verify_tests.rs (target\debug\deps\g01_verify_tests-cf0a5d950b9772cc.exe)
 test_g01_rustlab_only_ids_do_not_use_matlab_prefix: test
 
 1 test, 0 benchmarks
-     Running tests\stats_reference_tests.rs (target\debug\deps\stats_reference_tests-5ef01cd6dd166a3c.exe)
 test_reference_constant_data: test
 test_reference_drift_over_100k_elements: test
 test_reference_empty_and_len1: test
@@ -258,9 +173,7 @@ test_reference_random_data: test
 test_reference_window_edges_and_k_equals_len: test
 
 7 tests, 0 benchmarks
-     Running unittests src\lib.rs (target\debug\deps\rustlab_eval-68564fae8fc20c2f.exe)
 0 tests, 0 benchmarks
-     Running tests\eval_tests.rs (target\debug\deps\eval_tests-501c76a9d7ec2044.exe)
 test_array_growth_on_assignment: test
 test_basic_arithmetic_evaluation: test
 test_dos_runtime_recursion_limit: test
@@ -273,7 +186,6 @@ test_user_defined_functions_and_multiple_returns: test
 test_while_loop_with_break: test
 
 10 tests, 0 benchmarks
-     Running tests\milestone_a1_tests.rs (target\debug\deps\milestone_a1_tests-d92670e0d3aa68d2.exe)
 test_boolean_mask_indexing_and_assignment: test
 test_cellfun_arrayfun_structfun: test
 test_function_handles_and_lexical_closures: test
@@ -282,7 +194,6 @@ test_try_catch_mexception: test
 test_varargin_varargout_nargin_nargout: test
 
 6 tests, 0 benchmarks
-     Running unittests src\lib.rs (target\debug\deps\rustlab_math-137ef8580164bf11.exe)
 array::tests::test_dense_array_creation_and_indexing: test
 array::tests::test_dynamic_array_growth: test
 array::tests::test_transpose: test
@@ -295,7 +206,6 @@ shape::tests::test_column_major_strides: test
 shape::tests::test_normalize_shape: test
 
 10 tests, 0 benchmarks
-     Running tests\math_tests.rs (target\debug\deps\math_tests-46b4baf27c62068c.exe)
 test_1_based_indexing_column_major: test
 test_a3_exact_int64_uint64: test
 test_a3_mixed_type_rules_and_errors: test
@@ -311,15 +221,12 @@ test_minimum_2d_and_singleton_stripping: test
 test_relational_and_logical_operations: test
 
 13 tests, 0 benchmarks
-     Running tests\proptest_math.rs (target\debug\deps\proptest_math-8f184dd7490afc51.exe)
 prop_1_based_indexing_and_column_major_equivalence: test
 prop_addition_is_commutative: test
 prop_transpose_involution: test
 
 3 tests, 0 benchmarks
-     Running unittests src\lib.rs (target\debug\deps\rustlab_matio-899f9047eef11155.exe)
 0 tests, 0 benchmarks
-     Running tests\matio_tests.rs (target\debug\deps\matio_tests-fdbd45b81c881bd4.exe)
 test_char_and_logical_roundtrip: test
 test_complex_numbers_roundtrip: test
 test_compressed_roundtrip: test
@@ -329,20 +236,16 @@ test_numeric_classes_roundtrip: test
 test_uncompressed_roundtrip: test
 
 7 tests, 0 benchmarks
-     Running tests\scipy_mat_tests.rs (target\debug\deps\scipy_mat_tests-c9d2af9e0824e77c.exe)
 test_scipy_generated_files_interop: test
 
 1 test, 0 benchmarks
-     Running unittests src\lib.rs (target\debug\deps\rustlab_parse-e2e8ed844c45d3f2.exe)
 0 tests, 0 benchmarks
-     Running tests\lexer_tests.rs (target\debug\deps\lexer_tests-41e3c7406ee82e02.exe)
 test_char_and_string_literals: test
 test_comments_and_line_continuations: test
 test_numeric_literals: test
 test_transpose_vs_char_vector: test
 
 4 tests, 0 benchmarks
-     Running tests\parser_tests.rs (target\debug\deps\parser_tests-15b386f4adb1cadf.exe)
 test_anonymous_function: test
 test_colon_range_expressions: test
 test_control_flow: test
@@ -359,13 +262,11 @@ test_parser_nesting_depth_limit: test
 test_power_right_associativity: test
 
 14 tests, 0 benchmarks
-     Running tests\proptest_parser.rs (target\debug\deps\proptest_parser-a31057b8ada705f5.exe)
 prop_matrix_literal_expressions_parse: test
 prop_never_panic_on_arbitrary_string: test
 prop_valid_arithmetic_expressions_parse: test
 
 3 tests, 0 benchmarks
-     Running unittests src\lib.rs (target\debug\deps\rustlab_stdlib-cb22b1ed75f3d7f9.exe)
 linalg::eig_sym::tests::test_eig_sym_3x3: test
 linalg::eig_sym::tests::test_eig_sym_diagonal: test
 linalg::eig_sym::tests::test_eig_sym_known_2x2: test
@@ -375,15 +276,12 @@ linalg::kron::tests::test_kron_2x2: test
 signal::radix2::tests::test_radix2_roundtrip: test
 
 7 tests, 0 benchmarks
-     Running tests\conformance_tests.rs (target\debug\deps\conformance_tests-2e8108ae2a843fbe.exe)
 test_conformance_scripts_execution: test
 
 1 test, 0 benchmarks
-     Running tests\doc_generator_tests.rs (target\debug\deps\doc_generator_tests-7b8809867cb9efff.exe)
 test_supported_functions_doc_parity_and_coverage: test
 
 1 test, 0 benchmarks
-     Running tests\extended_capabilities_tests.rs (target\debug\deps\extended_capabilities_tests-4d1f42c75a7b9697.exe)
 test_dos_huge_zeros_allocation_cap: test
 test_image_processing_rgb2gray_and_filters: test
 test_machine_learning_fitlm_predict_kmeans: test
@@ -392,7 +290,6 @@ test_signal_filters_windows_and_xcorr: test
 test_simulation_tf_and_step: test
 
 6 tests, 0 benchmarks
-     Running tests\g01_verify_tests.rs (target\debug\deps\g01_verify_tests-2edffcf7d946fe89.exe)
 test_g01_core_omitnan_sum_mean_min_max: test
 test_g01_display_extreme_range_1e_16_1_golden_unverified: test
 test_g01_display_scale_factor_0_001_1000_golden_unverified: test
@@ -402,13 +299,11 @@ test_g01_mask_count_and_size_identifiers_settled: test
 test_g01_mldivide_singular_returns_inf: test
 
 7 tests, 0 benchmarks
-     Running tests\numeric_comparison_tests.rs (target\debug\deps\numeric_comparison_tests-4735f9d8f7fd019b.exe)
 test_numeric_comparison_faer_vs_native_eig_sym: test
 test_numeric_comparison_faer_vs_native_svd: test
 test_numeric_comparison_matrixmultiply_vs_fallback_gemm: test
 
 3 tests, 0 benchmarks
-     Running tests\numerical_tests.rs (target\debug\deps\numerical_tests-28593608faa552dd.exe)
 test_gradient: test
 test_interp1_linear_and_nearest: test
 test_polyfit_linear_and_quadratic: test
@@ -417,7 +312,6 @@ test_roots_linear_and_quadratic: test
 test_trapz_and_cumtrapz: test
 
 6 tests, 0 benchmarks
-     Running tests\regression_a312_tests.rs (target\debug\deps\regression_a312_tests-54ece5778e7387cd.exe)
 binary_expression_span_covers_full_expression: test
 every_registered_builtin_has_docs_and_help: test
 matrix_display_common_scale_boundary_unverified: test
@@ -436,7 +330,6 @@ test_num2str_noninteger_matrix_g_style_unverified: test
 test_scientific_notation_threshold_rule_cited_unverified: test
 
 16 tests, 0 benchmarks
-     Running tests\stdlib_a1_tests.rs (target\debug\deps\stdlib_a1_tests-f2c413d68a387dcc.exe)
 test_boolean_mask_shape_rules_and_deletion: test
 test_diagnostics_error_and_assert: test
 test_ieee754_nan_inf_semantics: test
@@ -452,7 +345,6 @@ test_sprintf_fprintf_edge_cases: test
 test_string_library_core: test
 
 13 tests, 0 benchmarks
-     Running tests\stdlib_a2_tests.rs (target\debug\deps\stdlib_a2_tests-ca4c0a10b47e73bc.exe)
 test_a2_2d_transforms_fft2_ifft2: test
 test_a2_both_native_and_faer_eig_paths_match: test
 test_a2_edge_cases_empty_1x1_singular_nan_nonsquare: test
@@ -476,7 +368,6 @@ test_a2_symmetric_eig_routes_to_faer_and_canonicalizes: test
 test_a2_tolerance_rule_max_mn_eps_sigma1: test
 
 21 tests, 0 benchmarks
-     Running tests\stdlib_a3_tests.rs (target\debug\deps\stdlib_a3_tests-2dc2019fb6303f55.exe)
 test_a3_bitwise_operations: test
 test_a3_class_predicates_and_limits: test
 test_a3_exact_64bit_integers_and_saturation: test
@@ -495,7 +386,6 @@ test_a3_sparse_memory_efficiency: test
 test_a3_sparse_parity_and_residual: test
 
 16 tests, 0 benchmarks
-     Running tests\stdlib_tests.rs (target\debug\deps\stdlib_tests-526383595b82d43e.exe)
 test_array_generators: test
 test_b2_inv_and_mldivide_singular_matrix_returns_inf: test
 test_cell_arrays: test
@@ -511,41 +401,24 @@ test_strings_and_chars: test
 test_struct_arrays: test
 
 13 tests, 0 benchmarks
-     Running tests\table_tests.rs (target\debug\deps\table_tests-bd8a72120b695e96.exe)
 test_head_and_tail_table: test
 test_readtable_and_dot_indexing: test
 test_summary_and_writetable_roundtrip: test
 
 3 tests, 0 benchmarks
-   Doc-tests matrust_studio
 0 tests, 0 benchmarks
-   Doc-tests mlapp_container
 0 tests, 0 benchmarks
-   Doc-tests mlapp_ffi
 0 tests, 0 benchmarks
-   Doc-tests mlapp_host
 0 tests, 0 benchmarks
-   Doc-tests mlapp_lang
 0 tests, 0 benchmarks
-   Doc-tests mlapp_plot
 0 tests, 0 benchmarks
-   Doc-tests mlapp_render
 0 tests, 0 benchmarks
-   Doc-tests mlapp_runtime
 0 tests, 0 benchmarks
-   Doc-tests mlapp_ui
 0 tests, 0 benchmarks
-   Doc-tests rustlab_cli
 0 tests, 0 benchmarks
-   Doc-tests rustlab_data
 0 tests, 0 benchmarks
-   Doc-tests rustlab_eval
 0 tests, 0 benchmarks
-   Doc-tests rustlab_math
 0 tests, 0 benchmarks
-   Doc-tests rustlab_matio
 0 tests, 0 benchmarks
-   Doc-tests rustlab_parse
 0 tests, 0 benchmarks
-   Doc-tests rustlab_stdlib
 0 tests, 0 benchmarks

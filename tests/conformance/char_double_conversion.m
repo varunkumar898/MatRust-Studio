@@ -1,0 +1,1 @@
+﻿res = double('ABC');

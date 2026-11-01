@@ -19,7 +19,7 @@ thiserror = "2.0"
 
 [dev-dependencies]
 zip = { version = "9.2", default-features = false, features = ["deflate"] }
-criterion = "0.5"
+criterion = "0.8"
 rustlab-eval = { path = "../rustlab-eval" }
 mlapp-sim = { path = "../mlapp-sim" }
 

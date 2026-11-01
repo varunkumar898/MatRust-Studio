@@ -81,9 +81,9 @@ jobs:
 
       - name: Test Count Guard (anti-regression check)
         run: |
-          ACTIVE_COUNT=$(cargo test --workspace -- --list | grep -E ': test$' | wc -l)
+          ACTIVE_COUNT=$(cargo test --workspace -- --list | tr -d '\r' | grep -E ': test$' | wc -l)
           echo "Active workspace test count: $ACTIVE_COUNT"
-          MANIFEST_COUNT=$(grep -E ': test$' docs/test-manifest.txt | wc -l)
+          MANIFEST_COUNT=$(tr -d '\r' < docs/test-manifest.txt | grep -E ': test$' | wc -l)
           echo "Manifest baseline test count: $MANIFEST_COUNT"
           if [ "$ACTIVE_COUNT" -ne "$MANIFEST_COUNT" ]; then
             echo "ERROR: Test manifest does not match the real total ($ACTIVE_COUNT active vs $MANIFEST_COUNT manifest)!"

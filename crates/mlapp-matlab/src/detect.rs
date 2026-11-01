@@ -1,7 +1,6 @@
 //! Detection of local MATLAB installations across operating systems.
 
 use std::path::{Path, PathBuf};
-use std::process::Command;
 
 /// Checks if a usable MATLAB executable is available on the system.
 pub fn is_matlab_available() -> bool {
@@ -144,6 +143,8 @@ fn probe_matlab_in_dir(root: &Path) -> Option<PathBuf> {
 
 #[cfg(target_os = "windows")]
 fn probe_windows_registry() -> Option<PathBuf> {
+    use std::process::Command;
+
     let output = Command::new("reg")
         .args(["query", r"HKLM\SOFTWARE\MathWorks\MATLAB", "/s"])
         .output()

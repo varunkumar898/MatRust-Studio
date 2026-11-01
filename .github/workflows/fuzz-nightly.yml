@@ -1,0 +1,51 @@
+name: Nightly Fuzzing
+
+on:
+  schedule:
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fuzz-20min:
+    name: Nightly Fuzz Run (20 min per target)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install Nightly Rust Toolchain
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          targets: x86_64-unknown-linux-gnu
+          components: rust-src
+
+      - name: Cache Cargo Dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install cargo-fuzz
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-fuzz
+
+      - name: Run Fuzz Parser (20 minutes)
+        run: |
+          mkdir -p fuzz/artifacts
+          cargo +nightly fuzz run fuzz_parser --target x86_64-unknown-linux-gnu -- -max_total_time=1200
+
+      - name: Run Fuzz XML (20 minutes)
+        run: |
+          cargo +nightly fuzz run fuzz_xml --target x86_64-unknown-linux-gnu -- -max_total_time=1200
+
+      - name: Run Fuzz ZIP (20 minutes)
+        run: |
+          cargo +nightly fuzz run fuzz_zip --target x86_64-unknown-linux-gnu -- -max_total_time=1200
+
+      - name: Upload Fuzz Crash Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-fuzz-artifacts
+          path: fuzz/artifacts/

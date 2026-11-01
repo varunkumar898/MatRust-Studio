@@ -52,10 +52,9 @@ int32_t mlapp_package_get_manifest_json(uint64_t package_id,
  * The caller is responsible for freeing it via `mlapp_string_free`.
  *
  * # Safety
- * - `out_str` must point to a valid writable pointer memory.
+ * - `out_str` must point to valid writable pointer memory.
  */
-int32_t mlapp_package_get_manifest_string(uint64_t package_id,
-                                          char **out_str);
+int32_t mlapp_package_get_manifest_string(uint64_t package_id, char **out_str);
 
 /**
  * Statically analyzes the package compatibility and writes the report as JSON into `out_buf`.
@@ -72,13 +71,13 @@ int32_t mlapp_package_check_compat_json(uint64_t package_id,
  * The caller is responsible for freeing it via `mlapp_string_free`.
  *
  * # Safety
- * - `out_str` must point to a valid writable pointer memory.
+ * - `out_str` must point to valid writable pointer memory.
  */
 int32_t mlapp_package_check_compat_string(uint64_t package_id,
                                           char **out_str);
 
 /**
- * Launches an interactive application session for the given package ID.
+ * Launches an application session for the given package ID.
  * Returns 0 on success with the assigned session ID written to `*out_session_id`, or -1 on error.
  *
  * # Safety
@@ -102,7 +101,7 @@ int32_t mlapp_session_send_button_click(uint64_t session_id,
 int32_t mlapp_session_shutdown(uint64_t session_id);
 
 #ifdef __cplusplus
-} // extern "C"
-#endif // __cplusplus
+}  // extern "C"
+#endif  // __cplusplus
 
-#endif /* MLAPP_H */
+#endif  /* MLAPP_H */

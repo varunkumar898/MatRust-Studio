@@ -18,4 +18,10 @@ serde_json = "1.0"
 thiserror = "2.0"
 
 [dev-dependencies]
-zip = { version = "2.2", default-features = false, features = ["deflate"] }
+zip = { version = "9.2", default-features = false, features = ["deflate"] }
+criterion = "0.5"
+rustlab-eval = { path = "../rustlab-eval" }
+
+[[bench]]
+name = "host_benches"
+harness = false

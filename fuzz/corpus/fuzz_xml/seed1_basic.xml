@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<App>
+  <UIFigure Title="Main Window">
+    <Button Name="StartBtn" Text="Start"/>
+    <Label Name="StatusLabel" Text="Ready"/>
+  </UIFigure>
+</App>

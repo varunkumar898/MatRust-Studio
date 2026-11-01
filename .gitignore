@@ -1,4 +1,6 @@
-/target
+target/
+**/target/
+fuzz/target/
 **/*.rs.bk
 *.mat_tmp
 re/targets/*.exe

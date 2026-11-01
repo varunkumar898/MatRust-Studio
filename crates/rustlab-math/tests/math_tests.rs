@@ -298,3 +298,21 @@ fn test_matmul_zero_dimensions_and_mismatch() {
         other => panic!("expected InnerDimensionMismatch, got {other:?}"),
     }
 }
+
+#[test]
+fn test_matmul_huge_output_is_rejected_without_allocating() {
+    use rustlab_math::ops::matmul_2d;
+
+    // The product would have 10^10 elements. The dimension guard must reject
+    // it before allocating the output. Inputs are small enough to build.
+    let a = DenseArray::from_vec(vec![100_000, 1], vec![1.0; 100_000]).unwrap();
+    let b = DenseArray::from_vec(vec![1, 100_000], vec![1.0; 100_000]).unwrap();
+
+    let err = matmul_2d(&a, &b).expect_err("huge output must be rejected");
+    match err {
+        MathError::DimensionMismatch { identifier, .. } => {
+            assert_eq!(identifier, "MATLAB:pmaxsize");
+        }
+        other => panic!("expected MATLAB:pmaxsize, got {other:?}"),
+    }
+}

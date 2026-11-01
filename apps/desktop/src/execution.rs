@@ -979,6 +979,11 @@ impl WorkerClient {
                                 }
                             }
                             WorkerRequest::InjectPanicForTesting => {
+                                // Test-only path used by
+                                // test_worker_panic_recovery_and_session_reset.
+                                // The panic is caught by the catch_unwind above,
+                                // the worker is recreated, and the client gets
+                                // WorkerResponse::WorkerPanic.
                                 panic!("Controlled worker test panic");
                             }
                             WorkerRequest::Shutdown => {}
@@ -1064,6 +1069,12 @@ impl WorkerClient {
         let _ = self.tx.send(WorkerRequest::SetBreakpoints(bps));
     }
 
+    /// Test-only hook: requests a controlled worker panic.
+    ///
+    /// This is public because the integration test lives outside the crate.
+    /// It is not called by the desktop UI, is not exposed through the CLI or
+    /// FFI, and the worker catches the panic and rebuilds its session.
+    #[doc(hidden)]
     pub fn inject_panic_for_testing(&self) {
         let _ = self.tx.send(WorkerRequest::InjectPanicForTesting);
     }

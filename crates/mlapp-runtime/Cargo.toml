@@ -19,4 +19,5 @@ thiserror = "2.0"
 
 [features]
 default = []
+# Documented stub feature: optional GNU Octave process bridge (Tier 4; currently unimplemented / unsupported).
 octave-bridge = []

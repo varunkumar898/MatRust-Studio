@@ -109,10 +109,12 @@ pub fn extract_code_from_document_xml(xml: &str) -> Result<String, LangError> {
                 collected.push('\n');
             }
             Event::Text(e) => {
-                if let Ok(text) = e.unescape() {
-                    if text.contains("classdef") {
-                        collected.push_str(&text);
-                        collected.push('\n');
+                if let Ok(raw_str) = std::str::from_utf8(e.as_ref()) {
+                    if let Ok(text) = quick_xml::escape::unescape(raw_str) {
+                        if text.contains("classdef") {
+                            collected.push_str(&text);
+                            collected.push('\n');
+                        }
                     }
                 }
             }

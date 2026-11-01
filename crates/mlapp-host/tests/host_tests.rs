@@ -533,3 +533,109 @@ fn test_comprehensive_e2e_features_and_axes_model() {
 
     session.shutdown();
 }
+
+#[test]
+fn test_value_changed_callback_receives_event_value_and_app_field() {
+    use mlapp_runtime::UiMutation;
+    use mlapp_ui::PropertyValue;
+    use std::io::Cursor;
+    use std::io::Write;
+    use zip::write::SimpleFileOptions;
+    use zip::ZipWriter;
+
+    let mut buf = Vec::new();
+    {
+        let mut zip = ZipWriter::new(Cursor::new(&mut buf));
+        let opt = SimpleFileOptions::default().compression_method(zip::CompressionMethod::Deflated);
+
+        zip.start_file("[Content_Types].xml", opt).unwrap();
+        zip.write_all(b"<?xml version=\"1.0\" encoding=\"UTF-8\"?><Types></Types>")
+            .unwrap();
+
+        zip.start_file("metadata/coreProperties.xml", opt).unwrap();
+        let core = r#"<?xml version="1.0" encoding="UTF-8"?>
+<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties"
+                   xmlns:dc="http://purl.org/dc/elements/1.1/">
+    <dc:title>EventValueApp</dc:title>
+</cp:coreProperties>"#;
+        zip.write_all(core.as_bytes()).unwrap();
+
+        zip.start_file("appdesigner/app.xml", opt).unwrap();
+        let app_xml = r#"<?xml version="1.0" encoding="UTF-8"?>
+<appdata>
+    <UIFigure Name="UIFigure" Position="[100, 100, 640, 480]">
+        <NumericEditField Name="FreqField" Value="5.0" Position="20, 400, 100, 22" ValueChangedFcn="FreqFieldValueChanged" />
+        <Label Name="OutLabel" Text="Idle" Position="20, 300, 300, 30" />
+    </UIFigure>
+</appdata>"#;
+        zip.write_all(app_xml.as_bytes()).unwrap();
+
+        zip.start_file("matlab/document.xml", opt).unwrap();
+        let doc_xml = r#"<?xml version="1.0" encoding="UTF-8"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+    <![CDATA[
+    classdef EventValueApp < matlab.apps.AppBase
+        properties (Access = public)
+            UIFigure
+            FreqField
+            OutLabel
+        end
+        methods (Access = private)
+            function FreqFieldValueChanged(app, event)
+                app.OutLabel.Text = sprintf('App=%d Event=%d', app.FreqField.Value, event.Value);
+            end
+        end
+    end
+    ]]>
+</w:document>"#;
+        zip.write_all(doc_xml.as_bytes()).unwrap();
+        zip.finish().unwrap();
+    }
+
+    let mut session = AppSession::launch(Cursor::new(buf), HostConfig::default())
+        .expect("launch event-value session");
+    session
+        .send_event(UiEvent::ValueChanged {
+            component_name: "FreqField".to_string(),
+            new_val: PropertyValue::Number(7.0),
+        })
+        .expect("send value changed");
+
+    let mut saw_expected = false;
+    let start = std::time::Instant::now();
+    while start.elapsed().as_millis() < 2000 {
+        while let Some(notif) = session.poll_notification() {
+            match notif {
+                HostNotification::Mutations(mutations) => {
+                    for mutation in mutations {
+                        if let UiMutation::SetProperty {
+                            component,
+                            property,
+                            value,
+                        } = mutation
+                        {
+                            if component == "OutLabel"
+                                && property == "Text"
+                                && value == PropertyValue::String("App=7 Event=7".to_string())
+                            {
+                                saw_expected = true;
+                            }
+                        }
+                    }
+                }
+                HostNotification::Error(e) => panic!("worker error: {e}"),
+                _ => {}
+            }
+        }
+        if saw_expected {
+            break;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(10));
+    }
+
+    assert!(
+        saw_expected,
+        "ValueChanged callback must observe both app.FreqField.Value and event.Value"
+    );
+    session.shutdown();
+}

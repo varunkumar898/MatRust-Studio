@@ -43,6 +43,7 @@ pub struct HostConfig {
     pub allow_system: bool,
     pub allow_eval: bool,
     pub allow_interop: bool,
+    pub allow_matlab: bool,
     pub callback_timeout_ms: u64,
 }
 
@@ -54,6 +55,7 @@ impl Default for HostConfig {
             allow_system: false,
             allow_eval: false,
             allow_interop: false,
+            allow_matlab: false,
             callback_timeout_ms: 5000,
         }
     }
@@ -131,6 +133,7 @@ impl AppSession {
                 config_clone.allow_eval,
                 config_clone.allow_interop,
             );
+            runtime.configure_matlab_bridge(config_clone.allow_matlab);
             runtime.load_class_def(class_def_worker.clone());
 
             // Run startupFcn

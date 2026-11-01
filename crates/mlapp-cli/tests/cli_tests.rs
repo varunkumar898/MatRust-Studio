@@ -157,3 +157,17 @@ fn test_cli_run_autotest_headless_execution() {
 
     let _ = std::fs::remove_file(script_path);
 }
+
+#[test]
+fn test_cli_run_allow_matlab_flag() {
+    let mut cmd = Command::cargo_bin("mlapp-cli").expect("binary mlapp-cli exists");
+
+    cmd.arg("run")
+        .arg("--help")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("--allow-matlab"))
+        .stdout(predicate::str::contains(
+            "Allow delegation of unsupported functions to a real MATLAB installation",
+        ));
+}

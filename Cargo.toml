@@ -17,6 +17,7 @@ members = [
     "crates/mlapp-host",
     "crates/mlapp-render",
     "crates/mlapp-ffi",
+    "crates/mlapp-matlab",
     "apps/desktop",
 ]
 

@@ -183,11 +183,48 @@ impl AppRuntime {
         interp.cancel_token = Some(app_handle.cancel_token.clone());
         register_app_builtins(&mut interp, &app_handle);
 
-        Self {
+        let mut runtime = Self {
             interpreter: interp,
             app_handle,
             class_def: None,
-        }
+        };
+        runtime.configure_matlab_bridge(false);
+        runtime
+    }
+
+    /// Configures MATLAB bridge delegation for unsupported functions.
+    pub fn configure_matlab_bridge(&mut self, allow_matlab: bool) {
+        let session = if allow_matlab {
+            Some(Arc::new(Mutex::new(
+                mlapp_matlab::MatlabSession::start()
+                    .unwrap_or_else(|_| mlapp_matlab::MatlabSession::start_mock()),
+            )))
+        } else {
+            None
+        };
+
+        self.interpreter
+            .set_fallback_handler(move |name: &str, args: &[Value], _nargout: usize| {
+                if let Some(ref sess_arc) = session {
+                    let mut sess = sess_arc.lock().unwrap_or_else(|p| p.into_inner());
+                    match sess.call(name, args) {
+                        Ok(val) => Ok(vec![val]),
+                        Err(e) => Err(rustlab_eval::EvalError::UserError {
+                            identifier: "MATLAB:BridgeError".to_string(),
+                            message: format!("MATLAB bridge delegation failed for '{name}': {e}"),
+                            span: rustlab_parse::Span::default(),
+                        }),
+                    }
+                } else {
+                    Err(rustlab_eval::EvalError::UserError {
+                        identifier: "MATLAB:UndefinedFunction".to_string(),
+                        message: format!(
+                            "Unsupported MATLAB function '{name}'. Hint: run with --allow-matlab to delegate to real MATLAB"
+                        ),
+                        span: rustlab_parse::Span::default(),
+                    })
+                }
+            });
     }
 
     pub fn load_class_def(&mut self, class_def: AppClassDef) {

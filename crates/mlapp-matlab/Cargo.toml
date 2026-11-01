@@ -1,0 +1,17 @@
+[package]
+name = "mlapp-matlab"
+version = "0.1.0"
+edition = "2021"
+authors = ["mlapp-rs contributors"]
+license = "MIT OR Apache-2.0"
+description = "Inter-process bridge to real MATLAB installations for oracle testing and fallback evaluation"
+
+[dependencies]
+rustlab-math = { path = "../rustlab-math" }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "2.0"
+
+[dev-dependencies]
+rustlab-parse = { path = "../rustlab-parse" }
+rustlab-eval = { path = "../rustlab-eval" }

@@ -2086,6 +2086,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "mlapp-matlab"
+version = "0.1.0"
+dependencies = [
+ "rustlab-eval",
+ "rustlab-math",
+ "rustlab-parse",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.21",
+]
+
+[[package]]
 name = "mlapp-plot"
 version = "0.1.0"
 dependencies = [
@@ -2116,6 +2128,7 @@ name = "mlapp-runtime"
 version = "0.1.0"
 dependencies = [
  "mlapp-lang",
+ "mlapp-matlab",
  "mlapp-ui",
  "rustlab-eval",
  "rustlab-math",

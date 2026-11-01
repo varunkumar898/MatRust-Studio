@@ -639,3 +639,154 @@ fn test_value_changed_callback_receives_event_value_and_app_field() {
     );
     session.shutdown();
 }
+
+#[test]
+fn test_matlab_bridge_delegation_and_unsupported_hint() {
+    use mlapp_runtime::UiMutation;
+    use mlapp_ui::PropertyValue;
+    use std::io::{Cursor, Write};
+    use zip::write::SimpleFileOptions;
+    use zip::ZipWriter;
+
+    // Helper to generate a test zip buffer calling svd([1 2; 3 4])
+    let build_app_zip = || -> Vec<u8> {
+        let mut buf = Vec::new();
+        let mut zip = ZipWriter::new(Cursor::new(&mut buf));
+        let options =
+            SimpleFileOptions::default().compression_method(zip::CompressionMethod::Deflated);
+
+        zip.start_file("[Content_Types].xml", options).unwrap();
+        zip.write_all(b"<?xml version=\"1.0\" encoding=\"UTF-8\"?><Types></Types>")
+            .unwrap();
+
+        zip.start_file("metadata/coreProperties.xml", options)
+            .unwrap();
+        let core = r#"<?xml version="1.0" encoding="UTF-8"?>
+<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties">
+    <dc:title>BridgeApp</dc:title>
+    <cp:version>1.0.0</cp:version>
+</cp:coreProperties>"#;
+        zip.write_all(core.as_bytes()).unwrap();
+
+        zip.start_file("appdesigner/app.xml", options).unwrap();
+        let app_xml = r#"<?xml version="1.0" encoding="UTF-8"?>
+<appdata>
+    <UIFigure Name="UIFigure" Position="[100, 100, 640, 480]">
+        <Label Name="ResultLabel" Text="Waiting" Position="20, 300, 200, 30" />
+        <Button Name="BridgeBtn" Text="Run SVD" Position="20, 200, 100, 30" ButtonPushedFcn="BridgeBtnPushed" />
+    </UIFigure>
+</appdata>"#;
+        zip.write_all(app_xml.as_bytes()).unwrap();
+
+        zip.start_file("matlab/document.xml", options).unwrap();
+        let doc_xml = r#"<?xml version="1.0" encoding="UTF-8"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+    <![CDATA[
+    classdef BridgeApp < matlab.apps.AppBase
+        properties (Access = public)
+            UIFigure
+            ResultLabel
+            BridgeBtn
+        end
+        methods (Access = public)
+            function BridgeBtnPushed(app, event)
+                res = fminsearch([0, 0]);
+                app.ResultLabel.Text = sprintf('x=%.1f,y=%.1f', res(1), res(2));
+            end
+        end
+    end
+    ]]>
+</w:document>"#;
+        zip.write_all(doc_xml.as_bytes()).unwrap();
+        zip.finish().unwrap();
+        buf
+    };
+
+    // Case 1: Without --allow-matlab, calling fminsearch fails with a clear hint
+    {
+        let zip_bytes = build_app_zip();
+        let config = HostConfig {
+            allow_matlab: false,
+            ..Default::default()
+        };
+        let mut session =
+            AppSession::launch(Cursor::new(zip_bytes), config).expect("launch session");
+
+        session
+            .send_event(UiEvent::ButtonClick {
+                component_name: "BridgeBtn".to_string(),
+            })
+            .expect("send button click");
+
+        let mut saw_hint_error = false;
+        for _ in 0..100 {
+            while let Some(notif) = session.poll_notification() {
+                if let HostNotification::Error(e) = notif {
+                    if e.contains("Unsupported MATLAB function 'fminsearch'")
+                        && e.contains("run with --allow-matlab to delegate to real MATLAB")
+                    {
+                        saw_hint_error = true;
+                    }
+                }
+            }
+            if saw_hint_error {
+                break;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(10));
+        }
+        assert!(
+            saw_hint_error,
+            "Calling unsupported function without --allow-matlab must fail with delegation hint"
+        );
+        session.shutdown();
+    }
+
+    // Case 2: With --allow-matlab, calling fminsearch succeeds via the bridge
+    {
+        let zip_bytes = build_app_zip();
+        let config = HostConfig {
+            allow_matlab: true,
+            ..Default::default()
+        };
+        let mut session =
+            AppSession::launch(Cursor::new(zip_bytes), config).expect("launch session");
+
+        session
+            .send_event(UiEvent::ButtonClick {
+                component_name: "BridgeBtn".to_string(),
+            })
+            .expect("send button click");
+
+        let mut saw_success_mutation = false;
+        for _ in 0..100 {
+            while let Some(notif) = session.poll_notification() {
+                if let HostNotification::Mutations(mutations) = notif {
+                    for mutation in mutations {
+                        if let UiMutation::SetProperty {
+                            component,
+                            property,
+                            value,
+                        } = mutation
+                        {
+                            if component == "ResultLabel"
+                                && property == "Text"
+                                && value == PropertyValue::String("x=1.0,y=2.0".to_string())
+                            {
+                                saw_success_mutation = true;
+                            }
+                        }
+                    }
+                }
+            }
+            if saw_success_mutation {
+                break;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(10));
+        }
+        assert!(
+            saw_success_mutation,
+            "Calling unsupported function with --allow-matlab must delegate to MATLAB bridge and update UI"
+        );
+        session.shutdown();
+    }
+}

@@ -1,26 +1,34 @@
 Criterion Host Benchmarks - MatRust Studio (mlapp-host)
 Target: crates/mlapp-host/benches/host_benches.rs
-Profile: release
-Command: cargo test -p mlapp-host --bench host_benches --release -- --bench
+Profile: bench (release)
+Command: cargo bench -p mlapp-host
 
 ================================================================================
 Benchmark: container_open_and_inspect
 Warming up: 500.00 ms
-Samples: 20 samples in estimated 2.0045 s (66k iterations)
-Time: [35.240 µs 39.704 µs 44.191 µs]
-Median: 39.704 µs
-Outliers: 2 (10.00%) high mild
+Samples: 20 samples in estimated 2.0039 s (42k iterations)
+Time: [40.251 µs 50.374 µs 59.236 µs]
+Median: 50.374 µs
+Outliers: 1 (5.00%) high mild
 
 Benchmark: ui_xml_parse_component_tree
 Warming up: 500.00 ms
-Samples: 20 samples in estimated 2.0011 s (231k iterations)
-Time: [6.2195 µs 7.6537 µs 9.7387 µs]
-Median: 7.6537 µs
-Outliers: 2 (10.00%) high mild / severe
+Samples: 20 samples in estimated 2.0017 s (180k iterations)
+Time: [8.6220 µs 10.079 µs 12.394 µs]
+Median: 10.079 µs
 
 Benchmark: interpreter_session_and_button_callback
 Warming up: 500.00 ms
-Samples: 20 samples in estimated 3.7444 s (420 iterations)
-Time: [8.6980 ms 9.1857 ms 9.6962 ms]
-Median: 9.1857 ms
+Samples: 20 samples in estimated 2.2548 s (210 iterations)
+Time: [9.2542 ms 10.307 ms 11.381 ms]
+Median: 10.307 ms
+Outliers: 3 (15.00%)
+
+Benchmark: interpreter_pure_for_loop_1e5
+Script: acc = 0; for i = 1:100000, acc = acc + i; end
+Warming up: 500.00 ms
+Samples: 20 samples in estimated 2.3052 s (20 iterations)
+Time: [154.72 ms 162.90 ms 170.32 ms]
+Median: 162.90 ms
+Outliers: 3 (15.00%) low mild
 ================================================================================

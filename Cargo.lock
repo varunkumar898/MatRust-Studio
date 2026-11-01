@@ -2065,6 +2065,7 @@ dependencies = [
  "mlapp-plot",
  "mlapp-runtime",
  "mlapp-ui",
+ "rustlab-eval",
  "rustlab-math",
  "serde",
  "serde_json",

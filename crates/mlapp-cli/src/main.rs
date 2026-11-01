@@ -77,6 +77,10 @@ enum Commands {
         #[arg(long, default_value_t = false)]
         gui: bool,
 
+        /// Path to JSON autotest script for automated UI execution
+        #[arg(long)]
+        autotest: Option<std::path::PathBuf>,
+
         /// Execution timeout per callback in milliseconds
         #[arg(long, default_value_t = 5000)]
         timeout_ms: u64,
@@ -161,6 +165,7 @@ fn main() -> Result<()> {
             allow_eval,
             allow_interop,
             gui,
+            autotest,
             timeout_ms,
         } => {
             let file = File::open(&package_path)
@@ -181,6 +186,32 @@ fn main() -> Result<()> {
 
             println!("App Name: {}", session.manifest.app_name);
             println!("Release: {:?}", session.manifest.detected_matlab_release);
+
+            if let Some(test_path) = autotest {
+                let script = mlapp_render::AutotestScript::from_file(&test_path).map_err(|e| {
+                    anyhow::anyhow!("Failed to load autotest script from {:?}: {e}", test_path)
+                })?;
+
+                if gui {
+                    println!(
+                        "[GUI Autotest Mode]: Launching GUI window for '{}' with autotest script...",
+                        session.manifest.app_name
+                    );
+                    mlapp_render::egui_backend::run_gui_window_with_autotest(session, Some(script))
+                        .map_err(|e| anyhow::anyhow!("GUI autotest execution failed: {e}"))?;
+                    println!("\nGUI autotest script passed successfully.");
+                    return Ok(());
+                } else {
+                    println!(
+                        "[Headless Autotest Mode]: Running autotest script on '{}'...",
+                        session.manifest.app_name
+                    );
+                    mlapp_render::run_autotest_headless(&mut session, &script)
+                        .map_err(|e| anyhow::anyhow!("Headless autotest execution failed: {e}"))?;
+                    println!("\nHeadless autotest script passed successfully.");
+                    return Ok(());
+                }
+            }
 
             if gui {
                 println!(

@@ -114,3 +114,46 @@ fn test_cli_invalid_path_fails() {
         .assert()
         .failure();
 }
+
+#[test]
+fn test_cli_run_autotest_flag() {
+    let mut cmd = Command::cargo_bin("mlapp-cli").expect("binary mlapp-cli exists");
+
+    cmd.arg("run")
+        .arg("--help")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("--autotest"))
+        .stdout(predicate::str::contains("Path to JSON autotest script"));
+}
+
+#[test]
+fn test_cli_run_autotest_headless_execution() {
+    let fixture = get_fixture_path("r2021a_sample.mlapp");
+
+    let script_json = r#"[
+        { "type": "wait_ms", "duration_ms": 20 },
+        { "type": "set_value", "component": "ThresholdField", "value": "99" },
+        { "type": "expect_property", "component": "ThresholdField", "property": "Value", "expected": "99" },
+        { "type": "close" }
+    ]"#;
+
+    let temp_dir = std::env::temp_dir();
+    let script_path = temp_dir.join("cli_test_autotest.json");
+    std::fs::write(&script_path, script_json).expect("write temp autotest script");
+
+    let mut cmd = Command::cargo_bin("mlapp-cli").expect("binary mlapp-cli exists");
+
+    cmd.arg("run")
+        .arg(&fixture)
+        .arg("--autotest")
+        .arg(&script_path)
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Headless Autotest Mode"))
+        .stdout(predicate::str::contains(
+            "Headless autotest script passed successfully.",
+        ));
+
+    let _ = std::fs::remove_file(script_path);
+}

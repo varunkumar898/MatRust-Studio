@@ -94,7 +94,7 @@ jobs:
 
       - name: Upload Test Logs Artifact
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: test-logs-${{ matrix.os }}
           path: target/test-logs/
@@ -175,7 +175,7 @@ jobs:
           mkdir -p target/geiger
           cargo geiger --all-features > target/geiger/geiger-report.txt || true
       - name: Upload Geiger Report Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: geiger-report
           path: target/geiger/geiger-report.txt

@@ -2,6 +2,9 @@
 
 #![deny(clippy::unwrap_used)]
 
+pub mod autotest;
+pub use autotest::{run_autotest_headless, AutotestAction, AutotestScript};
+
 use mlapp_host::UiEvent;
 use mlapp_ui::{
     figure_to_top_left_geometry, matlab_to_top_left_geometry, Component, ComponentKind,
@@ -349,29 +352,61 @@ pub mod egui_backend {
         }
     }
 
+    use crate::autotest::{
+        find_component, find_component_mut, matches_property_value, parse_property_value,
+        AutotestAction, AutotestScript,
+    };
+    use std::sync::{Arc, Mutex};
+
+    pub struct AutotestRunnerState {
+        pub script: AutotestScript,
+        pub current_action: usize,
+        pub step_deadline: Option<std::time::Instant>,
+        pub expect_started: Option<std::time::Instant>,
+        pub finished: bool,
+    }
+
     /// Interactive egui application window running an AppSession.
     pub struct EguiAppWindow {
         pub session: AppSession,
         pub renderer: EguiRenderer,
         started: std::time::Instant,
         auto_close_after: Option<std::time::Duration>,
+        pub autotest: Option<AutotestRunnerState>,
+        pub shared_error: Option<Arc<Mutex<Option<String>>>>,
     }
 
     impl EguiAppWindow {
         pub fn new(session: AppSession) -> Self {
-            // Optional automation hook used by manual GUI checks. It is read
-            // from the environment so normal interactive runs never close by
-            // themselves.
+            Self::with_autotest(session, None, None)
+        }
+
+        pub fn with_autotest(
+            session: AppSession,
+            autotest: Option<AutotestScript>,
+            shared_error: Option<Arc<Mutex<Option<String>>>>,
+        ) -> Self {
             let auto_close_after = std::env::var("MLAPP_GUI_AUTOCLOSE_MS")
                 .ok()
                 .and_then(|raw| raw.parse::<u64>().ok())
                 .filter(|ms| *ms > 0)
                 .map(std::time::Duration::from_millis);
+
+            let autotest_state = autotest.map(|script| AutotestRunnerState {
+                script,
+                current_action: 0,
+                step_deadline: None,
+                expect_started: None,
+                finished: false,
+            });
+
             Self {
                 session,
                 renderer: EguiRenderer::new(),
                 started: std::time::Instant::now(),
                 auto_close_after,
+                autotest: autotest_state,
+                shared_error,
             }
         }
     }
@@ -389,7 +424,7 @@ pub mod egui_backend {
                                     value,
                                 } => {
                                     if let Some(comp) =
-                                        self.session.ui_tree.find_by_name_mut(&component)
+                                        find_component_mut(&mut self.session.ui_tree, &component)
                                     {
                                         let _ = comp.set_property(&property, value);
                                     }
@@ -397,7 +432,35 @@ pub mod egui_backend {
                                 UiMutation::Alert { title, message } => {
                                     eprintln!("[Alert Dialog] {title}: {message}");
                                 }
-                                UiMutation::PlotCall { .. } => {}
+                                UiMutation::PlotCall {
+                                    axes,
+                                    command,
+                                    args,
+                                } => {
+                                    let num_points = args
+                                        .iter()
+                                        .filter_map(|v| v.to_double_array().ok())
+                                        .map(|a| a.numel())
+                                        .max()
+                                        .unwrap_or(0);
+                                    let axes_name = axes.strip_prefix("app.").unwrap_or(&axes);
+                                    if let Some(comp) =
+                                        find_component_mut(&mut self.session.ui_tree, axes_name)
+                                    {
+                                        let _ = comp.set_property(
+                                            "HasPlottedData",
+                                            mlapp_ui::PropertyValue::Boolean(true),
+                                        );
+                                        let _ = comp.set_property(
+                                            "NumPoints",
+                                            mlapp_ui::PropertyValue::Number(num_points as f64),
+                                        );
+                                        let _ = comp.set_property(
+                                            "PlotCommand",
+                                            mlapp_ui::PropertyValue::String(command),
+                                        );
+                                    }
+                                }
                             }
                         }
                     }
@@ -408,6 +471,131 @@ pub mod egui_backend {
                         eprintln!("[Worker Error]: {e}");
                     }
                     HostNotification::Terminated => {}
+                }
+            }
+
+            if let Some(runner) = &mut self.autotest {
+                if !runner.finished {
+                    if runner.current_action >= runner.script.actions.len() {
+                        runner.finished = true;
+                        ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+                    } else {
+                        let action = &runner.script.actions[runner.current_action];
+                        match action {
+                            AutotestAction::WaitMs { duration_ms } => {
+                                let now = std::time::Instant::now();
+                                if runner.step_deadline.is_none() {
+                                    runner.step_deadline =
+                                        Some(now + std::time::Duration::from_millis(*duration_ms));
+                                } else if let Some(deadline) = runner.step_deadline {
+                                    if now >= deadline {
+                                        runner.step_deadline = None;
+                                        runner.current_action += 1;
+                                    }
+                                }
+                            }
+                            AutotestAction::Click { component } => {
+                                if find_component(&self.session.ui_tree, component).is_none() {
+                                    if let Some(shared) = &self.shared_error {
+                                        if let Ok(mut g) = shared.lock() {
+                                            *g = Some(format!(
+                                                "Component '{component}' not found in UI tree"
+                                            ));
+                                        }
+                                    }
+                                    runner.finished = true;
+                                    ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+                                } else {
+                                    println!("[Autotest GUI] Click '{component}'");
+                                    let _ = self.session.send_event(UiEvent::ButtonClick {
+                                        component_name: component.clone(),
+                                    });
+                                    runner.current_action += 1;
+                                }
+                            }
+                            AutotestAction::SetValue { component, value } => {
+                                let parsed = parse_property_value(value);
+                                if let Some(comp) =
+                                    find_component_mut(&mut self.session.ui_tree, component)
+                                {
+                                    let _ = comp.set_property("Value", parsed.clone());
+                                }
+                                println!("[Autotest GUI] SetValue '{component}' = '{value}'");
+                                let _ = self.session.send_event(UiEvent::ValueChanged {
+                                    component_name: component.clone(),
+                                    new_val: parsed,
+                                });
+                                runner.current_action += 1;
+                            }
+                            AutotestAction::ExpectProperty {
+                                component,
+                                property,
+                                expected,
+                            } => {
+                                let now = std::time::Instant::now();
+                                if runner.expect_started.is_none() {
+                                    runner.expect_started = Some(now);
+                                }
+                                let mut matched = false;
+                                if let Some(comp) = find_component(&self.session.ui_tree, component)
+                                {
+                                    if let Some(val) = comp.get_property(property) {
+                                        if matches_property_value(val, expected) {
+                                            matched = true;
+                                        }
+                                    }
+                                }
+
+                                if matched {
+                                    println!(
+                                        "[Autotest GUI] ExpectProperty matched '{component}.{property}' == '{expected}'"
+                                    );
+                                    runner.expect_started = None;
+                                    runner.current_action += 1;
+                                } else if let Some(started) = runner.expect_started {
+                                    if now.duration_since(started)
+                                        >= std::time::Duration::from_millis(3000)
+                                    {
+                                        let actual =
+                                            find_component(&self.session.ui_tree, component)
+                                                .and_then(|c| c.get_property(property))
+                                                .map(|v| format!("{v:?}"))
+                                                .unwrap_or_else(|| "<none>".to_string());
+                                        if let Some(shared) = &self.shared_error {
+                                            if let Ok(mut g) = shared.lock() {
+                                                *g = Some(format!(
+                                                    "ExpectProperty timeout for '{component}.{property}': expected '{expected}', got '{actual}'"
+                                                ));
+                                            }
+                                        }
+                                        runner.finished = true;
+                                        ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+                                    }
+                                }
+                            }
+                            AutotestAction::Screenshot { path } => {
+                                println!("[Autotest GUI] Screenshot saving to {:?}", path);
+                                if let Err(e) =
+                                    crate::save_screenshot_png(&self.session.ui_tree, path)
+                                {
+                                    if let Some(shared) = &self.shared_error {
+                                        if let Ok(mut g) = shared.lock() {
+                                            *g = Some(format!("Failed to save screenshot: {e}"));
+                                        }
+                                    }
+                                    runner.finished = true;
+                                    ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+                                } else {
+                                    runner.current_action += 1;
+                                }
+                            }
+                            AutotestAction::Close => {
+                                println!("[Autotest GUI] Close action");
+                                runner.finished = true;
+                                ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+                            }
+                        }
+                    }
                 }
             }
 
@@ -432,13 +620,17 @@ pub mod egui_backend {
         }
     }
 
-    /// Launches an interactive eframe GUI window for the app session.
-    pub fn run_gui_window(
+    /// Launches an interactive eframe GUI window for the app session with optional autotest.
+    pub fn run_gui_window_with_autotest(
         session: AppSession,
+        autotest: Option<AutotestScript>,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let title = session.manifest.app_name.clone();
         let w = session.ui_tree.position.width.max(640.0) as f32;
         let h = session.ui_tree.position.height.max(480.0) as f32;
+
+        let shared_err = Arc::new(Mutex::new(None));
+        let shared_err_clone = Arc::clone(&shared_err);
 
         let native_options = eframe::NativeOptions {
             viewport: egui::ViewportBuilder::default()
@@ -450,13 +642,32 @@ pub mod egui_backend {
         eframe::run_native(
             &title,
             native_options,
-            Box::new(|_cc| Ok(Box::new(EguiAppWindow::new(session)))),
+            Box::new(move |_cc| {
+                Ok(Box::new(EguiAppWindow::with_autotest(
+                    session,
+                    autotest,
+                    Some(shared_err_clone),
+                )))
+            }),
         )
         .map_err(|e| {
             Box::new(std::io::Error::other(e.to_string()))
                 as Box<dyn std::error::Error + Send + Sync>
         })?;
 
+        if let Ok(guard) = shared_err.lock() {
+            if let Some(err_msg) = &*guard {
+                return Err(format!("Autotest GUI failure: {err_msg}").into());
+            }
+        }
+
         Ok(())
+    }
+
+    /// Launches an interactive eframe GUI window for the app session.
+    pub fn run_gui_window(
+        session: AppSession,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        run_gui_window_with_autotest(session, None)
     }
 }

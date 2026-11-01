@@ -1,4 +1,4 @@
-﻿0 tests, 0 benchmarks
+0 tests, 0 benchmarks
 0 tests, 0 benchmarks
 test_breakpoint_execution_pause_inspect_and_continue: test
 test_breakpoint_execution_stop: test
@@ -22,10 +22,12 @@ test_cli_check_compat_hazardous_and_unanalyzable: test
 test_cli_extract_command: test
 test_cli_inspect_command: test
 test_cli_invalid_path_fails: test
+test_cli_run_autotest_flag: test
+test_cli_run_autotest_headless_execution: test
 test_cli_run_command: test
 test_cli_run_gui_flag: test
 
-7 tests, 0 benchmarks
+9 tests, 0 benchmarks
 0 tests, 0 benchmarks
 test_decompressed_bytes_limit_with_forged_header: test
 test_extract_aggregate_decompressed_bytes_limit: test
@@ -65,7 +67,7 @@ test_end_to_end_callback_with_advanced_matlab_features: test
 test_host_automatic_timeout_cancelling_infinite_loop: test
 test_value_changed_callback_receives_event_value_and_app_field: test
 
-4 tests, 0 benchmarks
+5 tests, 0 benchmarks
 0 tests, 0 benchmarks
 test_check_compat_deterministic_snapshot: test
 test_extract_code_from_xml: test
@@ -78,11 +80,13 @@ test_axes_model_plotting_and_svg_export: test
 
 1 test, 0 benchmarks
 0 tests, 0 benchmarks
+test_autotest_headless_e2e_with_plot_and_label_mutation: test
+test_autotest_script_json_deserialization: test
 test_gui_window_screenshot_capture_and_export: test
 test_headless_renderer_tree_walk_and_event_dispatch: test
 test_headless_screenshot_render: test
 
-3 tests, 0 benchmarks
+5 tests, 0 benchmarks
 0 tests, 0 benchmarks
 test_app_runtime_lifecycle_and_mutations: test
 test_cancellation_while_loop_and_long_builtin: test
@@ -222,7 +226,7 @@ test_matrix_multiplication: test
 test_minimum_2d_and_singleton_stripping: test
 test_relational_and_logical_operations: test
 
-13 tests, 0 benchmarks
+14 tests, 0 benchmarks
 prop_1_based_indexing_and_column_major_equivalence: test
 prop_addition_is_commutative: test
 prop_transpose_involution: test

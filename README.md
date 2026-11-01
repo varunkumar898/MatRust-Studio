@@ -45,7 +45,7 @@ MatRust Studio is architected as a modular Cargo workspace decoupling the core n
 
 ## Verification & Test Suite
 
-The default-feature test count is **315** (same names under `--all-features` and `--no-default-features`). Every test name is recorded in `docs/test-manifest.txt`, and CI fails if the real total differs from that manifest.
+The default-feature test count is **319** (same names under `--all-features` and `--no-default-features`). Every test name is recorded in `docs/test-manifest.txt`, and CI fails if the real total differs from that manifest.
 
 ```bash
 cargo test --workspace
@@ -129,7 +129,7 @@ cargo run -p mlapp-cli -- run --gui app.mlapp
 | **Host & Threading** | Worker thread lifecycle & channels | **Implemented** | [host_tests.rs](crates/mlapp-host/tests/host_tests.rs) `test_app_host_session_lifecycle` | Worker evaluates callbacks, dispatches notifications |
 | **Rendering Backends** | Pluggable `RenderBackend` trait | **Implemented** | [render_tests.rs](crates/mlapp-render/tests/render_tests.rs) `test_headless_renderer_tree_walk_and_event_dispatch` | Headless backend tested; egui backend behind feature |
 | **Rendering Backends** | Headless Screenshot Verification | **Implemented** | [render_tests.rs](crates/mlapp-render/tests/render_tests.rs) `test_headless_screenshot_render` | Rasterizes `UIFigure`, `Panel`, `Button`, `UIAxes` to RGBA buffer |
-| **Rendering Backends** | Interactive GUI Window (`mlapp run --gui`) | **Partial** | [render_tests.rs](crates/mlapp-render/tests/render_tests.rs) `test_gui_window_screenshot_capture_and_export` | `mlapp run --gui` now calls `eframe::run_native` and opens a real native window. A Windows run opened the sample app, was captured with `PrintWindow` to `docs/assets/gui_window_live.png` (SHA-256 `06CB900F5C02FD8028DA5D3B1B6FA7339657A999B94E9C1CB2E95A4E8D3F8A4B`), and exited 0 via `MLAPP_GUI_AUTOCLOSE_MS`. Automated mouse-click callback dispatch in CI is still not implemented; see `docs/GUI_MANUAL_CHECK.md` |
+| **Rendering Backends** | Interactive GUI Window (`mlapp run --gui`) | **Implemented** | [render_tests.rs](crates/mlapp-render/tests/render_tests.rs) `test_autotest_headless_e2e_with_plot_and_label_mutation`, [cli_tests.rs](crates/mlapp-cli/tests/cli_tests.rs) `test_cli_run_autotest_flag` | Real eframe native window + automated autotest engine (`--autotest`) supporting `wait_ms`, `click`, `set_value`, `expect_property`, `screenshot`, `close`. Screenshot committed in `docs/screenshots/c4a0ff9/gui_window_autotest.png` (SHA-256 `5D700F06844D306C32103928094EF33A293AB667A93A134A58EBAC02C6499AE3`). |
 | **Embedding C ABI** | C API headers, null safety & handle IDs | **Implemented** | [ffi_tests.rs](crates/mlapp-ffi/tests/ffi_tests.rs) `test_c_abi_package_and_session_flow_with_handle_ids` | `mlapp.h` and `mlapp_ffi.h` parity, integer IDs, null checks, `catch_unwind` |
 | **CLI Tooling** | `inspect`, `extract`, `check-compat`, `run` | **Implemented** | [cli_tests.rs](crates/mlapp-cli/tests/cli_tests.rs) `test_cli_run_command`, `test_cli_run_gui_flag` | Verified inspection, compatibility, execution, and `--gui` flag |
 | **Mathematics & Calculations** | Multi-Backend Linalg Parity (< 1e-12) | **Implemented** | [numeric_comparison_tests.rs](crates/rustlab-stdlib/tests/numeric_comparison_tests.rs) `test_dgemm_matrixmultiply_vs_fallback_matches_to_1e12`, `test_symmetric_eig_faer_vs_native_matches_to_1e12`, `test_svd_faer_vs_native_matches_to_1e12` | Numerical output agreement across faer, native fallback, and matrixmultiply within $< 10^{-12}$ |

@@ -132,3 +132,152 @@ fn test_gui_window_screenshot_capture_and_export() {
     let png_header = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
     assert_eq!(&bytes[0..8], &png_header, "Invalid PNG header");
 }
+
+#[test]
+fn test_autotest_script_json_deserialization() {
+    let json_wrapped = r#"{
+        "actions": [
+            { "type": "wait_ms", "duration_ms": 50 },
+            { "type": "set_value", "component": "FreqField", "value": "10" },
+            { "type": "expect_property", "component": "FreqField", "property": "Value", "expected": "10" },
+            { "type": "click", "component": "PlotBtn" },
+            { "type": "screenshot", "path": "target/test_screenshot.png" },
+            { "type": "close" }
+        ]
+    }"#;
+    let script = mlapp_render::AutotestScript::from_json_str(json_wrapped)
+        .expect("deserialize wrapped script");
+    assert_eq!(script.actions.len(), 6);
+
+    let json_array = r#"[
+        { "type": "wait_ms", "duration_ms": 10 },
+        { "type": "close" }
+    ]"#;
+    let script2 =
+        mlapp_render::AutotestScript::from_json_str(json_array).expect("deserialize array script");
+    assert_eq!(script2.actions.len(), 2);
+}
+
+#[test]
+fn test_autotest_headless_e2e_with_plot_and_label_mutation() {
+    use mlapp_host::{AppSession, HostConfig};
+    use std::io::Cursor;
+    use std::io::Write;
+    use zip::write::SimpleFileOptions;
+    use zip::ZipWriter;
+
+    let mut buf = Vec::new();
+    {
+        let mut zip = ZipWriter::new(Cursor::new(&mut buf));
+        let options =
+            SimpleFileOptions::default().compression_method(zip::CompressionMethod::Deflated);
+
+        zip.start_file("[Content_Types].xml", options).unwrap();
+        zip.write_all(b"<?xml version=\"1.0\" encoding=\"UTF-8\"?><Types></Types>")
+            .unwrap();
+
+        zip.start_file("metadata/coreProperties.xml", options)
+            .unwrap();
+        let core = r#"<?xml version="1.0" encoding="UTF-8"?>
+<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties"
+                   xmlns:dc="http://purl.org/dc/elements/1.1/">
+    <dc:title>AutotestDemoApp</dc:title>
+    <cp:version>1.0.0</cp:version>
+</cp:coreProperties>"#;
+        zip.write_all(core.as_bytes()).unwrap();
+
+        zip.start_file("appdesigner/app.xml", options).unwrap();
+        let app_xml = r#"<?xml version="1.0" encoding="UTF-8"?>
+<appdata>
+    <UIFigure Name="UIFigure" Position="[100, 100, 640, 480]">
+        <Label Name="StatusLabel" Text="InitialReady" Position="20, 400, 200, 30" />
+        <Button Name="PlotBtn" Text="Run Plot" Position="20, 350, 100, 30" ButtonPushedFcn="PlotBtnPushed" />
+        <UIAxes Name="PlotAxes" Position="150, 50, 450, 350" />
+    </UIFigure>
+</appdata>"#;
+        zip.write_all(app_xml.as_bytes()).unwrap();
+
+        zip.start_file("matlab/document.xml", options).unwrap();
+        let doc_xml = r#"<?xml version="1.0" encoding="UTF-8"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+    <![CDATA[
+    classdef AutotestDemoApp < matlab.apps.AppBase
+        properties (Access = public)
+            UIFigure
+            StatusLabel
+            PlotBtn
+            PlotAxes
+        end
+        methods (Access = private)
+            function PlotBtnPushed(app, event)
+                t = linspace(0, 1, 50);
+                y = sin(2 * 3.14159 * 5 * t);
+                plot(app.PlotAxes, t, y);
+                app.StatusLabel.Text = 'PlotGenerated:50pts';
+            end
+        end
+    end
+    ]]>
+</w:document>"#;
+        zip.write_all(doc_xml.as_bytes()).unwrap();
+        zip.finish().unwrap();
+    }
+
+    let mut session = AppSession::launch(Cursor::new(buf), HostConfig::default())
+        .expect("launch AutotestDemoApp session");
+
+    let candidate_dirs = [
+        std::path::PathBuf::from("docs/screenshots/c4a0ff9"),
+        std::path::PathBuf::from("../../docs/screenshots/c4a0ff9"),
+    ];
+    let mut screenshot_dir = candidate_dirs[0].clone();
+    for d in &candidate_dirs {
+        if let Some(parent) = d.parent() {
+            if parent.exists() {
+                screenshot_dir = d.clone();
+                break;
+            }
+        }
+    }
+    let _ = std::fs::create_dir_all(&screenshot_dir);
+    let screenshot_path = screenshot_dir.join("gui_window_autotest.png");
+
+    let script = mlapp_render::AutotestScript {
+        actions: vec![
+            mlapp_render::AutotestAction::ExpectProperty {
+                component: "StatusLabel".to_string(),
+                property: "Text".to_string(),
+                expected: "InitialReady".to_string(),
+            },
+            mlapp_render::AutotestAction::Click {
+                component: "PlotBtn".to_string(),
+            },
+            mlapp_render::AutotestAction::WaitMs { duration_ms: 100 },
+            mlapp_render::AutotestAction::ExpectProperty {
+                component: "StatusLabel".to_string(),
+                property: "Text".to_string(),
+                expected: "PlotGenerated:50pts".to_string(),
+            },
+            mlapp_render::AutotestAction::ExpectProperty {
+                component: "PlotAxes".to_string(),
+                property: "HasPlottedData".to_string(),
+                expected: "true".to_string(),
+            },
+            mlapp_render::AutotestAction::Screenshot {
+                path: screenshot_path.clone(),
+            },
+            mlapp_render::AutotestAction::Close,
+        ],
+    };
+
+    mlapp_render::run_autotest_headless(&mut session, &script)
+        .expect("headless autotest execution failed");
+
+    assert!(
+        screenshot_path.exists(),
+        "Screenshot must be created at {:?}",
+        screenshot_path
+    );
+    let bytes = std::fs::read(&screenshot_path).expect("read screenshot");
+    assert!(bytes.len() > 1000, "Screenshot size must be > 1000 bytes");
+}

@@ -1,0 +1,34 @@
+{
+  "actions": [
+    {
+      "type": "wait_ms",
+      "duration_ms": 100
+    },
+    {
+      "type": "set_value",
+      "component": "ThresholdField",
+      "value": "42"
+    },
+    {
+      "type": "expect_property",
+      "component": "ThresholdField",
+      "property": "Value",
+      "expected": "42"
+    },
+    {
+      "type": "click",
+      "component": "StartBtn"
+    },
+    {
+      "type": "wait_ms",
+      "duration_ms": 200
+    },
+    {
+      "type": "screenshot",
+      "path": "docs/screenshots/sample_app_autotest.png"
+    },
+    {
+      "type": "close"
+    }
+  ]
+}

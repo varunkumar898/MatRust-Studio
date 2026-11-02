@@ -19,6 +19,7 @@ members = [
     "crates/mlapp-ffi",
     "crates/mlapp-matlab",
     "crates/mlapp-sim",
+    "crates/mlapp-octave",
     "apps/desktop",
 ]
 

@@ -4,7 +4,9 @@
 //! 3. `faer` SVD vs native Jacobi SVD
 
 use rustlab_math::{DenseArray, Value};
-use rustlab_stdlib::linalg::eig_sym::{eig_sym, faer_self_adjoint_eig};
+use rustlab_stdlib::linalg::eig_sym::eig_sym;
+#[cfg(feature = "faer")]
+use rustlab_stdlib::linalg::eig_sym::faer_self_adjoint_eig;
 use rustlab_stdlib::linalg::svd::{jacobi_svd_native, svd_fn};
 
 fn fallback_dgemm(m: usize, k: usize, n: usize, a: &[f64], b: &[f64]) -> Vec<f64> {
@@ -93,39 +95,47 @@ fn test_numeric_comparison_faer_vs_native_eig_sym() {
     ];
     let a = DenseArray::from_vec_unchecked(vec![4, 4], a_data);
 
-    let (d_native, v_native) = eig_sym(&a).expect("native eig_sym failed");
-    let (d_faer, v_faer) = faer_self_adjoint_eig(&a).expect("faer eig failed");
-
+    let (d_native, _v_native) = eig_sym(&a).expect("native eig_sym failed");
     assert_eq!(d_native.len(), 4);
-    assert_eq!(d_faer.len(), 4);
 
-    // Eigenvalues must match to within 1e-12
-    for i in 0..4 {
-        let err = (d_native[i] - d_faer[i]).abs();
-        assert!(
-            err < 1e-12,
-            "Eigenvalue mismatch at index {i}: native={}, faer={}, diff={err}",
-            d_native[i],
-            d_faer[i]
-        );
-    }
+    #[cfg(feature = "faer")]
+    {
+        #[cfg(feature = "faer")]
+        let (d_faer, v_faer) = faer_self_adjoint_eig(&a).expect("faer eig failed");
 
-    // Verify reconstruction A = V * D * V^T for both
-    for (name, v, d) in [("native", &v_native, &d_native), ("faer", &v_faer, &d_faer)] {
-        for r in 0..4 {
-            for c in 0..4 {
-                let mut sum = 0.0f64;
-                for (k, &d_k) in d.iter().enumerate() {
-                    let v_rk = *v.get_subscript(&[r + 1, k + 1]).unwrap();
-                    let v_ck = *v.get_subscript(&[c + 1, k + 1]).unwrap();
-                    sum += v_rk * d_k * v_ck;
+        assert_eq!(d_faer.len(), 4);
+
+        // Eigenvalues must match to within 1e-12
+        for i in 0..4 {
+            let err = (d_native[i] - d_faer[i]).abs();
+            assert!(
+                err < 1e-12,
+                "Eigenvalue mismatch at index {i}: native={}, faer={}, diff={err}",
+                d_native[i],
+                d_faer[i]
+            );
+        }
+
+        // Verify reconstruction A = V * D * V^T for both
+        for (name, v, d) in [
+            ("native", &_v_native, &d_native),
+            ("faer", &v_faer, &d_faer),
+        ] {
+            for r in 0..4 {
+                for c in 0..4 {
+                    let mut sum = 0.0f64;
+                    for (k, &d_k) in d.iter().enumerate() {
+                        let v_rk = *v.get_subscript(&[r + 1, k + 1]).unwrap();
+                        let v_ck = *v.get_subscript(&[c + 1, k + 1]).unwrap();
+                        sum += v_rk * d_k * v_ck;
+                    }
+                    let expected: f64 = *a.get_subscript(&[r + 1, c + 1]).unwrap();
+                    let residual = (sum - expected).abs();
+                    assert!(
+                        residual < 1e-11,
+                        "{name} reconstruction failed at ({r},{c}): got {sum}, expected {expected}"
+                    );
                 }
-                let expected: f64 = *a.get_subscript(&[r + 1, c + 1]).unwrap();
-                let residual = (sum - expected).abs();
-                assert!(
-                    residual < 1e-11,
-                    "{name} reconstruction failed at ({r},{c}): got {sum}, expected {expected}"
-                );
             }
         }
     }

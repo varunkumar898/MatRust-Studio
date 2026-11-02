@@ -20,6 +20,10 @@ impl Default for CurrentFolderPanel {
 }
 
 impl CurrentFolderPanel {
+    pub fn set_directory(&mut self, dir: PathBuf) {
+        self.current_dir = dir;
+    }
+
     pub fn show(&mut self, ui: &mut Ui, theme: &Theme, open_file_request: &mut Option<PathBuf>) {
         ui.vertical(|ui| {
             // Header bar

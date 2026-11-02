@@ -1,21 +1,26 @@
 0 tests, 0 benchmarks
 0 tests, 0 benchmarks
+test_acceptance_t_entropy: test
 test_breakpoint_execution_pause_inspect_and_continue: test
 test_breakpoint_execution_stop: test
 test_code_folding_block_detection: test
 test_desktop_session_numerical_methods_and_data: test
 test_desktop_session_simulation_and_robotics: test
+test_dock_tree_help_addons_simulink_panels: test
 test_dock_tree_move_panel_and_tab_operations: test
 test_dock_tree_presets_and_json_persistence: test
+test_editor_section_extraction_and_syntax_analysis: test
+test_no_ai_crates_or_symbols: test
 test_session_basic_arithmetic_and_matrices: test
 test_session_cancellation_flag: test
 test_session_command_window_disp: test
 test_session_csv_import: test
 test_session_plotting_builtins_and_state: test
+test_simulink_editor_canvas_and_solver: test
 test_worker_client_async_execution: test
 test_worker_panic_recovery_and_session_reset: test
 
-14 tests, 0 benchmarks
+19 tests, 0 benchmarks
 0 tests, 0 benchmarks
 test_cli_check_compat_command: test
 test_cli_check_compat_hazardous_and_unanalyzable: test

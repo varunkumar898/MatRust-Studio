@@ -46,3 +46,13 @@ This document records issues encountered during development, their reproduction,
 - **Root Cause**: Clippy enforces idiomatic match guards (`UiMutation::PlotCall { axes, args, .. } if ... =>`) and direct use of standard math constants.
 - **Fix**: Collapsed the match arm and used `std::f64::consts::TAU`.
 - **Commit SHA**: `fc9dfcd` (merged into `main` at `ba7137f`).
+
+
+---
+
+### Issue 6: Forbidden AI Keyword Scanner Self-Matching
+- **What Broke**: `test_no_ai_crates_or_symbols` failed with `Forbidden AI keyword 'openai' found in file: ...desktop_tests.rs`.
+- **Reproduction**: Run `cargo test -p matrust_studio --test desktop_tests`.
+- **Root Cause**: The workspace file scanner was scanning `desktop_tests.rs`, which contained the word in its string literal slice of forbidden words (`let forbidden = [...]`).
+- **Fix**: Added explicit exclusion for `desktop_tests.rs` in `scan_dir`, ensuring the test audits all library, crate, and application source code without self-matching.
+- **Commit SHA**: Current commit on `feat/phase10-shell`.

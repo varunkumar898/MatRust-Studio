@@ -2,7 +2,7 @@
 
 use crate::execution::VariableRow;
 use crate::theme::Theme;
-use egui::{Key, RichText, ScrollArea, TextEdit, TextStyle, Ui, Vec2};
+use egui::{Color32, Key, RichText, ScrollArea, TextEdit, TextStyle, Ui, Vec2};
 use std::collections::HashSet;
 use std::fs;
 use std::path::PathBuf;
@@ -67,6 +67,42 @@ pub fn find_foldable_blocks(source: &str) -> Vec<FoldRange> {
         }
     }
     blocks
+}
+
+/// Extracts the active section containing `cursor_line` (1-based), delimited by `%%`.
+pub fn extract_active_section(content: &str, cursor_line: usize) -> String {
+    let lines: Vec<&str> = content.lines().collect();
+    if lines.is_empty() {
+        return String::new();
+    }
+    let target_idx = cursor_line.saturating_sub(1).min(lines.len() - 1);
+
+    // Scan upward to find preceding %%
+    let mut start_idx = 0;
+    for i in (0..=target_idx).rev() {
+        if lines[i].trim_start().starts_with("%%") {
+            start_idx = i;
+            break;
+        }
+    }
+
+    // Scan downward to find following %%
+    let mut end_idx = lines.len();
+    for (i, line) in lines.iter().enumerate().skip(target_idx + 1) {
+        if line.trim_start().starts_with("%%") {
+            end_idx = i;
+            break;
+        }
+    }
+
+    lines[start_idx..end_idx].join("\n")
+}
+
+/// Checks MATLAB script syntax using `rustlab_parse`.
+pub fn check_syntax(content: &str) -> Result<(), String> {
+    rustlab_parse::parse(content)
+        .map(|_| ())
+        .map_err(|e| format!("{e}"))
 }
 
 #[derive(Clone, Debug)]
@@ -225,6 +261,7 @@ impl EditorPanel {
         workspace_vars: &[VariableRow],
         on_run_script: &mut Option<String>,
         on_run_selection: &mut Option<String>,
+        on_run_section: &mut Option<String>,
     ) {
         ui.vertical(|ui| {
             // Document Tab Bar
@@ -265,8 +302,49 @@ impl EditorPanel {
                     self.new_script();
                 }
 
-                // Run buttons on right of tab bar
+                // Run buttons and Code Analysis on right of tab bar
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    if let Some(doc) = self.active_doc() {
+                        match check_syntax(&doc.content) {
+                            Ok(()) => {
+                                ui.label(
+                                    RichText::new("✔ Clean")
+                                        .color(Color32::from_rgb(100, 220, 120))
+                                        .size(11.0),
+                                )
+                                .on_hover_text("Code Analysis: No syntax errors detected");
+                            }
+                            Err(e) => {
+                                ui.label(
+                                    RichText::new("⚠ Syntax Warning")
+                                        .color(Color32::from_rgb(255, 170, 50))
+                                        .size(11.0),
+                                )
+                                .on_hover_text(format!("Code Analysis: {e}"));
+                            }
+                        }
+                    }
+                    if let Some(doc) = self.active_doc() {
+                        match check_syntax(&doc.content) {
+                            Ok(()) => {
+                                ui.label(
+                                    RichText::new("✔ Clean")
+                                        .color(Color32::from_rgb(100, 220, 120))
+                                        .size(11.0),
+                                )
+                                .on_hover_text("Code Analysis: No syntax errors detected");
+                            }
+                            Err(e) => {
+                                ui.label(
+                                    RichText::new("⚠ Syntax Warning")
+                                        .color(Color32::from_rgb(255, 170, 50))
+                                        .size(11.0),
+                                )
+                                .on_hover_text(format!("Code Analysis: {e}"));
+                            }
+                        }
+                    }
+
                     if ui
                         .button("▶ Run Selection")
                         .on_hover_text("Execute selected text (F9)")
@@ -274,6 +352,58 @@ impl EditorPanel {
                     {
                         if let Some(doc) = self.active_doc() {
                             *on_run_selection = Some(doc.content.clone());
+                        }
+                    }
+                    if ui
+                        .button("▶ Run Section")
+                        .on_hover_text("Execute active section surrounded by %% (Ctrl+Enter)")
+                        .clicked()
+                    {
+                        if let Some(doc) = self.active_doc() {
+                            let sec = extract_active_section(&doc.content, doc.cursor_line);
+                            *on_run_section = Some(sec);
+                        }
+                    }
+                    if let Some(doc) = self.active_doc() {
+                        match check_syntax(&doc.content) {
+                            Ok(()) => {
+                                ui.label(
+                                    RichText::new("✔ Clean")
+                                        .color(Color32::from_rgb(100, 220, 120))
+                                        .size(11.0),
+                                )
+                                .on_hover_text("Code Analysis: No syntax errors detected");
+                            }
+                            Err(e) => {
+                                ui.label(
+                                    RichText::new("⚠ Syntax Warning")
+                                        .color(Color32::from_rgb(255, 170, 50))
+                                        .size(11.0),
+                                )
+                                .on_hover_text(format!("Code Analysis: {e}"));
+                            }
+                        }
+                    }
+
+                    if ui
+                        .button("▶ Run Section")
+                        .on_hover_text("Execute active section surrounded by %% (Ctrl+Enter)")
+                        .clicked()
+                    {
+                        if let Some(doc) = self.active_doc() {
+                            let sec = extract_active_section(&doc.content, doc.cursor_line);
+                            *on_run_section = Some(sec);
+                        }
+                    }
+
+                    if ui
+                        .button("▶ Run Section")
+                        .on_hover_text("Execute active section surrounded by %% (Ctrl+Enter)")
+                        .clicked()
+                    {
+                        if let Some(doc) = self.active_doc() {
+                            let sec = extract_active_section(&doc.content, doc.cursor_line);
+                            *on_run_section = Some(sec);
                         }
                     }
                     if ui

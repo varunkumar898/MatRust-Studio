@@ -1944,6 +1944,8 @@ version = "0.1.0"
 dependencies = [
  "eframe",
  "egui",
+ "mlapp-sim",
+ "png",
  "rustlab-cli",
  "rustlab-eval",
  "rustlab-math",
@@ -2069,6 +2071,7 @@ dependencies = [
  "mlapp-ui",
  "rustlab-eval",
  "rustlab-math",
+ "rustlab-stdlib",
  "serde",
  "serde_json",
  "thiserror 2.0.21",
@@ -2096,6 +2099,17 @@ dependencies = [
  "rustlab-parse",
  "serde",
  "serde_json",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "mlapp-octave"
+version = "0.1.0"
+dependencies = [
+ "rustlab-math",
+ "serde",
+ "serde_json",
+ "tempfile",
  "thiserror 2.0.21",
 ]
 

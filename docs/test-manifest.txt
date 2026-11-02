@@ -1,3 +1,5 @@
+0 tests, 0 benchmarks
+0 tests, 0 benchmarks
 test_acceptance_t_entropy: test
 test_breakpoint_execution_pause_inspect_and_continue: test
 test_breakpoint_execution_stop: test
@@ -110,6 +112,7 @@ test_real_octave_oracle_conformance_if_installed: test
 test_axes_model_plotting_and_svg_export: test
 
 1 test, 0 benchmarks
+0 tests, 0 benchmarks
 0 tests, 0 benchmarks
 test_autotest_headless_e2e_with_plot_and_label_mutation: test
 test_autotest_script_json_deserialization: test
@@ -451,6 +454,7 @@ test_readtable_and_dot_indexing: test
 test_summary_and_writetable_roundtrip: test
 
 3 tests, 0 benchmarks
+0 tests, 0 benchmarks
 0 tests, 0 benchmarks
 0 tests, 0 benchmarks
 0 tests, 0 benchmarks

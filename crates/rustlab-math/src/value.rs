@@ -175,7 +175,8 @@ impl StructArray {
     }
 
     pub fn scalar(map: HashMap<String, Value>) -> Self {
-        let fields = map.keys().cloned().collect();
+        let mut fields: Vec<String> = map.keys().cloned().collect();
+        fields.sort();
         Self {
             shape: vec![1, 1],
             fields,

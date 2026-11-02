@@ -19,6 +19,31 @@ members = [
     "crates/mlapp-ffi",
     "crates/mlapp-matlab",
     "crates/mlapp-sim",
+    "crates/mlapp-octave",
+    "crates/mlapp-py",
+    "apps/desktop",
+]
+
+default-members = [
+    "crates/rustlab-parse",
+    "crates/rustlab-math",
+    "crates/rustlab-eval",
+    "crates/rustlab-stdlib",
+    "crates/rustlab-matio",
+    "crates/rustlab-data",
+    "crates/rustlab-cli",
+    "crates/mlapp-container",
+    "crates/mlapp-cli",
+    "crates/mlapp-ui",
+    "crates/mlapp-lang",
+    "crates/mlapp-runtime",
+    "crates/mlapp-plot",
+    "crates/mlapp-host",
+    "crates/mlapp-render",
+    "crates/mlapp-ffi",
+    "crates/mlapp-matlab",
+    "crates/mlapp-sim",
+    "crates/mlapp-octave",
     "apps/desktop",
 ]
 

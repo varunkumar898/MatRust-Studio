@@ -1,5 +1,3 @@
-0 tests, 0 benchmarks
-0 tests, 0 benchmarks
 test_acceptance_t_entropy: test
 test_breakpoint_execution_pause_inspect_and_continue: test
 test_breakpoint_execution_stop: test
@@ -97,6 +95,17 @@ test_protocol_serialization_roundtrip: test
 test_matlab_oracle_conformance_suite: test
 
 1 test, 0 benchmarks
+0 tests, 0 benchmarks
+test_octave_detection_functions: test
+test_octave_literal_generation: test
+test_octave_mock_session_eval_and_call: test
+test_octave_protocol_serialization_roundtrip: test
+test_octave_safety_allowlist_enforcement: test
+test_octave_session_lifecycle_and_shutdown: test
+test_octave_value_roundtrip_all_types: test
+test_real_octave_oracle_conformance_if_installed: test
+
+8 tests, 0 benchmarks
 0 tests, 0 benchmarks
 test_axes_model_plotting_and_svg_export: test
 
@@ -442,6 +451,7 @@ test_readtable_and_dot_indexing: test
 test_summary_and_writetable_roundtrip: test
 
 3 tests, 0 benchmarks
+0 tests, 0 benchmarks
 0 tests, 0 benchmarks
 0 tests, 0 benchmarks
 0 tests, 0 benchmarks

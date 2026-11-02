@@ -5,3 +5,11 @@ This software is developed independently as a clean-room numerical computing pla
 This project is not affiliated with, endorsed by, or sponsored by The MathWorks, Inc.
 MATLAB and Simulink are registered trademarks of The MathWorks, Inc.
 All other trademarks mentioned herein are the property of their respective owners.
+
+GNU Octave Clean-Room Subprocess Boundary:
+GNU Octave is licensed under the GNU General Public License (GPLv3+).
+MatRust Studio / RustLab does not link with GNU Octave libraries, does not include
+or distribute GNU Octave code or binaries, and communicates with GNU Octave exclusively
+as an external, independent subprocess via standard operating system pipes (stdin/stdout/stderr).
+This architecture maintains a strict clean-room boundary, keeping MatRust Studio under
+its permissive MIT OR Apache-2.0 licensing.

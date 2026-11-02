@@ -41,11 +41,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Linux system dependencies for GUI / egui
+      - name: Install Linux system dependencies for GUI / egui and Octave
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev libasound2-dev libudev-dev libxkbcommon-dev libwayland-dev
+          sudo apt-get install -y libgtk-3-dev libasound2-dev libudev-dev libxkbcommon-dev libwayland-dev octave
+          octave-cli --version || true
 
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -202,3 +203,24 @@ jobs:
         with:
           name: geiger-report
           path: target/geiger/geiger-report.txt
+
+  python-bindings:
+    name: Python Bindings (Python ${{ matrix.python-version }} on ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ["3.9", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install maturin and pytest
+        run: python -m pip install --upgrade pip maturin pytest
+      - name: Build and install matrust package
+        run: pip install .
+      - name: Run pytest test suite
+        run: pytest python/tests -v

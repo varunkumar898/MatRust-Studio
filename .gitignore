@@ -27,3 +27,15 @@ ehthumbs.db
 # Logs: ignore root and temporary logs, but track formal verify logs
 *.log
 !docs/verify-logs/*.log
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyd
+*.so
+*.dylib
+*.egg-info/
+dist/
+build/
+.pytest_cache/

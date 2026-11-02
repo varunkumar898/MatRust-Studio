@@ -18,8 +18,8 @@ use std::io::Cursor;
 use std::path::Path;
 
 create_exception!(matrust, MlappError, PyException);
-create_exception!(matrust, PackageError, PyException);
-create_exception!(matrust, SessionError, PyException);
+create_exception!(matrust, PackageError, MlappError);
+create_exception!(matrust, SessionError, MlappError);
 
 #[derive(Debug, thiserror::Error)]
 pub enum MatRustError {

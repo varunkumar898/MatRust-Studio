@@ -42,6 +42,18 @@ fn test_conformance_scripts_execution() {
 
     for m_path in entries {
         let file_stem = m_path.file_stem().unwrap().to_string_lossy().to_string();
+
+        let requires_data = file_stem.contains("cummax")
+            || file_stem.contains("movmean")
+            || file_stem.contains("stats");
+        if !cfg!(feature = "data") && requires_data {
+            println!(
+                "Skipping {} in no-default-features mode (data feature disabled)",
+                m_path.display()
+            );
+            continue;
+        }
+
         println!("Executing conformance test: {}", m_path.display());
 
         let source_raw = fs::read_to_string(&m_path)

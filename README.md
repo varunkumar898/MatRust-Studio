@@ -97,8 +97,14 @@ cargo run -p mlapp-cli -- slx-inspect --json model.slx
 >
 > **Explicitly Unimplemented Features**:
 > The following components are **NOT IMPLEMENTED**:
-> 1. **Octave Bridge**: Subprocess bridge to `octave-cli` is NOT implemented (documented stub).
-> 2. **Python Bindings (PyO3)**: Native PyO3 extension is NOT implemented (C ABI with integer handles available via `mlapp-ffi`).
+> 1. **AI / Copilot features**: Intentionally not included by design. The IDE shell and engine are completely offline, clean-room numerical computing tools with zero AI dependencies, zero network telemetry, and zero LLM calls. The right dock panel is exclusively an offline Help & Documentation browser.
+> 2. **Octave Bridge**: Subprocess bridge to `octave-cli` is NOT implemented (documented stub).
+> 3. **Python Bindings (PyO3)**: Native PyO3 extension is NOT implemented (C ABI with integer handles available via `mlapp-ffi`).
+>
+> **Function Coverage Summary (see [docs/COVERAGE.md](docs/COVERAGE.md))**:
+> - **Tier F1 (Core Numerical Computing)**: **90.0%** (225 / 250 functions implemented)
+> - **Tier F2 (Toolboxes & Systems)**: **47.5%** (38 / 80 functions implemented)
+> - **Overall Registry**: **79.7%** (263 / 330 functions implemented or partial)
 
 | Capability Area | Feature | Status | Proving Test | Notes |
 | :--- | :--- | :--- | :--- | :--- |

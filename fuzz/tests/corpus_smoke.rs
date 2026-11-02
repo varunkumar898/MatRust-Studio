@@ -92,3 +92,72 @@ fn test_seed_corpus_smoke_zip() {
         let _ = mlapp_container::AppContainer::open(cursor);
     }
 }
+
+#[test]
+fn test_seed_corpus_smoke_container_extract() {
+    let corpus_dir = Path::new("corpus/fuzz_container_extract");
+    if let Ok(entries) = fs::read_dir(corpus_dir) {
+        for entry in entries.flatten() {
+            if let Ok(data) = fs::read(entry.path()) {
+                let cursor = Cursor::new(data);
+                if let Ok(mut container) = mlapp_container::AppContainer::open(cursor) {
+                    if let Ok(tmp) = tempfile::tempdir() {
+                        let _ = container.extract_all(tmp.path());
+                    }
+                }
+            }
+        }
+    }
+
+    // Edge cases for container extraction
+    let edge_cases: &[&[u8]] = &[
+        b"",
+        b"PK\x03\x04",
+        b"PK\x05\x06\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00",
+        &[0u8; 2048],
+    ];
+
+    for &bytes in edge_cases {
+        let cursor = Cursor::new(bytes);
+        if let Ok(mut container) = mlapp_container::AppContainer::open(cursor) {
+            if let Ok(tmp) = tempfile::tempdir() {
+                let _ = container.extract_all(tmp.path());
+            }
+        }
+    }
+}
+
+#[test]
+fn test_seed_corpus_smoke_interpreter() {
+    let corpus_dir = Path::new("corpus/fuzz_interpreter");
+    if let Ok(entries) = fs::read_dir(corpus_dir) {
+        for entry in entries.flatten() {
+            if let Ok(data) = fs::read(entry.path()) {
+                if let Ok(s) = std::str::from_utf8(&data) {
+                    let mut interp = rustlab_eval::Interpreter::new();
+                    rustlab_stdlib::register_all(&mut interp);
+                    interp.max_recursion_depth = 16;
+                    let _ = interp.eval_script(s);
+                }
+            }
+        }
+    }
+
+    // Edge cases including loop constructs, expressions, and syntax edge cases
+    let edge_cases: &[&str] = &[
+        "",
+        "x = 1 + 2;",
+        "s = 0; for i = 1:5; s = s + i; end",
+        "while false; x = 1; end",
+        "A = [1 2; 3 4]; B = A * [5; 6];",
+        "try; x = 1/0; catch ME; y = 2; end",
+        "f = @(x) x + 1; z = f(10);",
+    ];
+
+    for &s in edge_cases {
+        let mut interp = rustlab_eval::Interpreter::new();
+        rustlab_stdlib::register_all(&mut interp);
+        interp.max_recursion_depth = 16;
+        let _ = interp.eval_script(s);
+    }
+}

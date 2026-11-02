@@ -148,3 +148,34 @@ The following Simulink format aspects remain **UNVERIFIED** pending direct black
 2. `UNVERIFIED_SLX_STATEFLOW_CHART`: Machine-level Stateflow chart transition encoding inside `simulink/stateflow.xml`.
 3. `UNVERIFIED_SLX_VARIABLE_STEP_SOLVERS`: Variable-step Dormand-Prince (ode45) zero-crossing event location thresholds in SLX block diagram headers.
 
+
+
+---
+
+## Decision 8: Complete IDE Shell Layout, No AI Policy, and Simulink Path B Block Diagram Canvas
+
+### Context
+To deliver Phase 10 through Phase 14 of MatRust Studio, the desktop application (`apps/desktop`) provides a full MATLAB-like computing environment without proprietary branding or assets, under a strict offline clean-room legal boundary.
+
+### Architectural Decisions
+1. **Strict Zero AI / Zero Copilot Policy**:
+   - The desktop environment and core engine are 100% offline, deterministic scientific computing tools.
+   - All AI/LLM client crates, telemetry, and keywords (`openai`, `anthropic`, `copilot`, `\bllm\b`) are explicitly forbidden by policy and enforced by both a dedicated unit test (`test_no_ai_crates_or_symbols`) and automated CI scanning.
+   - The right dock panel is exclusively an offline Clean-Room **Help & Documentation Panel** (`help <fn>`, search, syntax, examples, category directory).
+2. **Toolstrip Ribbon & Top Tab Strip**:
+   - Organized into top-level tabs: `HOME`, `PLOTS`, `APPS`, contextual `EDITOR`, `PUBLISH`, and `VIEW`.
+   - HOME toolstrip contains standard button groups: `FILE`, `VARIABLE`, `CODE`, `SIMULINK`, `ENVIRONMENT`, and `RESOURCES`.
+   - Every button either triggers a verified native action or displays an explanatory tooltip ("Not implemented yet") to guarantee zero dead clicks.
+   - Global Search box (`Ctrl+Shift+Space`) enables offline command and documentation lookup.
+3. **Address Bar Navigation**:
+   - Placed below the toolstrip with Back, Forward, Up, Folder browse, and editable text input. Changing the text and pressing Enter synchronizes the working directory and file browser.
+4. **Editor Enhancements**:
+   - Section execution: `%%` markers delimit sections. `Ctrl+Enter` and "▶ Run Section" execute only the active section surrounding the cursor.
+   - Code analysis indicator: live syntax verification via `rustlab_parse` displays a green checkmark (`✔ Clean`) or amber warning triangle (`⚠ Syntax Warning`).
+5. **Simulink Path B Block Diagram Canvas (`apps/desktop/src/simulink_editor.rs`)**:
+   - Clean-room block diagram editor canvas with pan/zoom and grid background.
+   - Left sidebar block library browser: Sources (Constant, Sine Wave, Step), Math Operations (Gain, Sum, Product, Saturation), Continuous/Discrete (Integrator, Unit Delay), Sinks (Scope, To Workspace).
+   - Dragging, port wiring, parameter dialog, and simulation integration via `mlapp_sim::simulate_diagram()`.
+   - Built-in oscilloscope Scope waveform viewer plotting time-series response trajectories.
+6. **Acceptance Test `T-ENTROPY`**:
+   - Verified automated execution of the 5-line information theory script (`symbols=[1,2,3,4]; probabilities=[0.1,0.3,0.4,0.2]; entropy=-sum(probabilities.*log2(probabilities)); disp(['Entropy: ',num2str(entropy)])`), producing `Entropy: 1.8464`, workspace inspection rows, and verified PNG screenshot in `docs/screenshots/ba7137f/01-t-entropy.png`.

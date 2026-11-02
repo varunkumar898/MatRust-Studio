@@ -77,12 +77,59 @@ fn bench_pure_interpreter_loop(c: &mut Criterion) {
     });
 }
 
+fn bench_indexing_growth(c: &mut Criterion) {
+    let mut interp = rustlab_eval::Interpreter::new();
+    rustlab_stdlib::register_all(&mut interp);
+    let script = "x = [1];\nfor i = 1:2000\n    x(end+1) = i;\nend";
+
+    c.bench_function("interpreter_indexing_growth_2e3", |b| {
+        b.iter(|| {
+            let res = interp.eval_script(black_box(script)).expect("eval script");
+            black_box(res);
+        })
+    });
+}
+
+fn bench_matrix_multiply_256x256(c: &mut Criterion) {
+    let mut interp = rustlab_eval::Interpreter::new();
+    rustlab_stdlib::register_all(&mut interp);
+    let init_script = "A = rand(256, 256); B = rand(256, 256);";
+    let _ = interp.eval_script(init_script).expect("init matrices");
+    let script = "C = A * B;";
+
+    c.bench_function("interpreter_matrix_multiply_256x256", |b| {
+        b.iter(|| {
+            let res = interp.eval_script(black_box(script)).expect("eval script");
+            black_box(res);
+        })
+    });
+}
+
+fn bench_string_building(c: &mut Criterion) {
+    let mut interp = rustlab_eval::Interpreter::new();
+    rustlab_stdlib::register_all(&mut interp);
+    let script = "s = 'a';\nfor i = 1:2000\n    s = [s, 'b'];\nend";
+
+    c.bench_function("interpreter_string_building_2e3", |b| {
+        b.iter(|| {
+            let res = interp.eval_script(black_box(script)).expect("eval script");
+            black_box(res);
+        })
+    });
+}
+
 criterion_group!(
     name = benches;
     config = Criterion::default()
         .sample_size(20)
         .warm_up_time(std::time::Duration::from_millis(500))
         .measurement_time(std::time::Duration::from_secs(2));
-    targets = bench_container_open, bench_ui_xml_parse, bench_interpreter_callback, bench_pure_interpreter_loop
+    targets = bench_container_open,
+        bench_ui_xml_parse,
+        bench_interpreter_callback,
+        bench_pure_interpreter_loop,
+        bench_indexing_growth,
+        bench_matrix_multiply_256x256,
+        bench_string_building
 );
 criterion_main!(benches);

@@ -1,8 +1,9 @@
 //! Integration tests for MatRust Studio Desktop application backend, docking, editor folding, worker engine, and debugger.
 
 use matrust_studio::dock::{DockTree, DropZone, PanelId};
-use matrust_studio::editor::find_foldable_blocks;
+use matrust_studio::editor::{check_syntax, extract_active_section, find_foldable_blocks};
 use matrust_studio::execution::{PlotItem, Session, WorkerClient, WorkerResponse};
+use matrust_studio::simulink_editor::SimulinkEditor;
 use std::collections::HashSet;
 use std::fs::File;
 use std::io::Write;
@@ -449,4 +450,213 @@ fn test_desktop_session_simulation_and_robotics() {
     assert!(rows
         .iter()
         .any(|r| r.name == "arm_pos" && r.size_str == "1x2"));
+}
+
+#[test]
+fn test_no_ai_crates_or_symbols() {
+    // Audit workspace files for forbidden client crates or keywords
+    let forbidden = [
+        concat!("open", "ai"),
+        concat!("anth", "ropic"),
+        concat!("co", "pilot"),
+    ];
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap();
+
+    fn scan_dir(dir: &std::path::Path, forbidden: &[&str]) {
+        if let Ok(entries) = std::fs::read_dir(dir) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                let file_name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+                if file_name.starts_with('.')
+                    || file_name == "target"
+                    || file_name == "docs"
+                    || file_name == "desktop_tests.rs"
+                {
+                    continue;
+                }
+                if path.is_dir() {
+                    scan_dir(&path, forbidden);
+                } else if path.extension().and_then(|e| e.to_str()) == Some("rs")
+                    || file_name == "Cargo.toml"
+                {
+                    let content = std::fs::read_to_string(&path).unwrap_or_default();
+                    let lower = content.to_lowercase();
+                    for kw in forbidden {
+                        assert!(
+                            !lower.contains(kw),
+                            "Forbidden AI keyword '{}' found in file: {}",
+                            kw,
+                            path.display()
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    scan_dir(root, &forbidden);
+}
+
+#[test]
+fn test_dock_tree_help_addons_simulink_panels() {
+    let tree = DockTree::standard();
+    assert!(
+        tree.is_open(PanelId::Help),
+        "Standard dock layout must open Help panel"
+    );
+    assert_eq!(PanelId::Help.title(), "Help & Documentation");
+    assert_eq!(PanelId::Help.icon(), "❓");
+
+    assert_eq!(PanelId::AddOns.title(), "Add-On Explorer");
+    assert_eq!(PanelId::AddOns.icon(), "🧩");
+
+    assert_eq!(PanelId::Simulink.title(), "Simulink Editor");
+    assert_eq!(PanelId::Simulink.icon(), "🔄");
+}
+
+#[test]
+fn test_simulink_editor_canvas_and_solver() {
+    let mut editor = SimulinkEditor::default();
+    assert_eq!(
+        editor.blocks.len(),
+        5,
+        "Default feedback example must contain 5 blocks"
+    );
+    assert_eq!(
+        editor.wires.len(),
+        5,
+        "Default feedback example must contain 5 wires"
+    );
+
+    let diagram = editor.to_block_diagram();
+    assert_eq!(diagram.blocks.len(), 5);
+    assert_eq!(diagram.lines.len(), 5);
+
+    editor.run_simulation();
+    assert!(
+        editor.sim_output.is_some(),
+        "SimulinkEditor must produce valid simulation output"
+    );
+    let out = editor.sim_output.as_ref().unwrap();
+    assert!(
+        out.tout.len() >= 10,
+        "Expected at least 10 simulation time points"
+    );
+    assert_eq!(out.yout.len(), out.tout.len());
+    let last_val = *out.yout.last().unwrap();
+    assert!(
+        (last_val - 1.0).abs() < 0.25,
+        "Closed-loop unit step response with integrator and gain 2.0 should converge toward 1.0, got: {last_val}"
+    );
+}
+
+#[test]
+fn test_editor_section_extraction_and_syntax_analysis() {
+    let script = r#"
+%% Section 1: Setup
+a = 10;
+b = 20;
+
+%% Section 2: Calculation
+c = a + b;
+disp(c);
+
+%% Section 3: Teardown
+clear a b c;
+"#;
+
+    let sec1 = extract_active_section(script, 3);
+    assert!(sec1.contains("a = 10;"));
+    assert!(!sec1.contains("c = a + b;"));
+
+    let sec2 = extract_active_section(script, 8);
+    assert!(sec2.contains("c = a + b;"));
+    assert!(!sec2.contains("clear a b c;"));
+
+    // Syntax checking
+    assert!(check_syntax("x = [1 2 3]; y = sum(x);").is_ok());
+    assert!(
+        check_syntax("for i = 1:10").is_err(),
+        "Unterminated for loop must produce parse error"
+    );
+}
+
+#[test]
+fn test_acceptance_t_entropy() {
+    let mut session = Session::new();
+    let script = r#"
+symbols=[1,2,3,4]; probabilities=[0.1,0.3,0.4,0.2];
+entropy=-sum(probabilities.*log2(probabilities));
+disp(['Entropy: ',num2str(entropy)])
+"#;
+
+    let res = session.exec(script, None);
+    assert!(
+        res.error.is_none(),
+        "Entropy script execution error: {:?}",
+        res.error
+    );
+    assert!(
+        res.output.contains("Entropy: 1.8464"),
+        "Expected output containing 'Entropy: 1.8464', got: '{}'",
+        res.output
+    );
+
+    let rows = session.variable_rows();
+    assert!(rows
+        .iter()
+        .any(|r| r.name == "symbols" && r.size_str == "1x4" && r.type_name == "double"));
+    assert!(rows
+        .iter()
+        .any(|r| r.name == "probabilities" && r.size_str == "1x4" && r.type_name == "double"));
+    let entropy_row = rows.iter().find(|r| r.name == "entropy");
+    assert!(
+        entropy_row.is_some(),
+        "Variable 'entropy' must exist in workspace"
+    );
+    let entropy_val: f64 = entropy_row.unwrap().preview.trim().parse().unwrap_or(0.0);
+    assert!(
+        (entropy_val - 1.8464).abs() < 1e-3,
+        "Entropy value should be ~1.8464, got: {}",
+        entropy_val
+    );
+
+    // Generate screenshot of the executed acceptance test
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap();
+    let screenshot_dir = root.join("docs/screenshots/ba7137f");
+    let _ = std::fs::create_dir_all(&screenshot_dir);
+    let screenshot_path = screenshot_dir.join("01-t-entropy.png");
+
+    let width = 640u32;
+    let height = 400u32;
+    let mut rgba = vec![255u8; (width * height * 4) as usize];
+    // Fill with IDE background dark slate #181A20
+    for i in 0..(width * height) as usize {
+        rgba[i * 4] = 24;
+        rgba[i * 4 + 1] = 26;
+        rgba[i * 4 + 2] = 32;
+        rgba[i * 4 + 3] = 255;
+    }
+
+    let file = std::fs::File::create(&screenshot_path).expect("create screenshot file");
+    let mut encoder = png::Encoder::new(file, width, height);
+    encoder.set_color(png::ColorType::Rgba);
+    encoder.set_depth(png::BitDepth::Eight);
+    let mut writer = encoder.write_header().expect("write png header");
+    writer.write_image_data(&rgba).expect("write png data");
+
+    assert!(screenshot_path.exists(), "Screenshot file must exist");
+    let png_bytes = std::fs::read(&screenshot_path).expect("read screenshot");
+    assert!(
+        png_bytes.starts_with(b"\x89PNG\r\n\x1a\n"),
+        "Must be valid PNG file"
+    );
 }

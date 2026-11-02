@@ -12,9 +12,13 @@ cargo-fuzz = true
 
 [dependencies]
 rustlab-parse = { path = "../crates/rustlab-parse" }
+rustlab-eval = { path = "../crates/rustlab-eval" }
+rustlab-stdlib = { path = "../crates/rustlab-stdlib" }
+rustlab-math = { path = "../crates/rustlab-math" }
 mlapp-lang = { path = "../crates/mlapp-lang" }
 mlapp-ui = { path = "../crates/mlapp-ui" }
 mlapp-container = { path = "../crates/mlapp-container" }
+tempfile = "3"
 
 [target.'cfg(not(windows))'.dependencies]
 libfuzzer-sys = "0.4"
@@ -34,5 +38,17 @@ doc = false
 [[bin]]
 name = "fuzz_zip"
 path = "fuzz_targets/fuzz_zip.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_container_extract"
+path = "fuzz_targets/fuzz_container_extract.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_interpreter"
+path = "fuzz_targets/fuzz_interpreter.rs"
 test = false
 doc = false

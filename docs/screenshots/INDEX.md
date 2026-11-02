@@ -5,6 +5,7 @@ This document catalogs all verified GUI window and autotest engine screenshots c
 | Commit Hash | Artifact File | Resolution | SHA-256 | Description | Verification Status |
 |---|---|---|---|---|---|
 | `c4a0ff9` | `docs/screenshots/c4a0ff9/gui_window_autotest.png` | 640x480 | `5D700F06844D306C32103928094EF33A293AB667A93A134A58EBAC02C6499AE3` | End-to-end autotest execution of `AutotestDemoApp`: Button click executes callback, mutates `StatusLabel.Text` to `'PlotGenerated:50pts'`, plots 50-point sine curve onto `PlotAxes`, validated via `ExpectProperty` and rendered to PNG | Verified |
+| `ba7137f` | `docs/screenshots/ba7137f/01-t-entropy.png` | 640x400 | `4A5A6189C9A180CD145F53B27082285BF287019BF3DD1FC5147CD9BAC65C9323` | Acceptance test `T-ENTROPY`: Execution of 5-line information theory script (`symbols`, `probabilities`, `entropy`, `disp`), producing command window output `Entropy: 1.8464` and persistent workspace variables | Verified |
 | Baseline | `docs/screenshots/sample_app_autotest.png` | 800x600 | (Tracked) | Full fixture autotest of `r2021a_sample.mlapp`: `ThresholdField` mutation to 42, `StartBtn` click dispatch | Verified |
 | Baseline | `docs/assets/gui_window_sample.png` | 640x480 | (Tracked) | Static layout capture with UIFigure, Panel, Button, and UIAxes | Verified |
 

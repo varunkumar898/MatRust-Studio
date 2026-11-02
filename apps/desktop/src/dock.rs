@@ -15,6 +15,9 @@ pub enum PanelId {
     CommandWindow,
     Figures,
     History,
+    Help,
+    AddOns,
+    Simulink,
 }
 
 impl PanelId {
@@ -26,6 +29,9 @@ impl PanelId {
             PanelId::CommandWindow => "Command Window",
             PanelId::Figures => "Figures",
             PanelId::History => "Command History",
+            PanelId::Help => "Help & Documentation",
+            PanelId::AddOns => "Add-On Explorer",
+            PanelId::Simulink => "Simulink Editor",
         }
     }
 
@@ -37,6 +43,9 @@ impl PanelId {
             PanelId::CommandWindow => "💻",
             PanelId::Figures => "📈",
             PanelId::History => "🕒",
+            PanelId::Help => "❓",
+            PanelId::AddOns => "🧩",
+            PanelId::Simulink => "🔄",
         }
     }
 }
@@ -186,29 +195,29 @@ impl Default for DockTree {
 impl DockTree {
     /// Preset: Standard balanced scientific layout.
     pub fn standard() -> Self {
-        // Left column: Current Folder (top) / History (bottom)
+        // Left column: Current Folder (top) / Workspace (bottom)
         let left = DockNode::split_v(
-            0.6,
+            0.5,
             DockNode::leaf(PanelId::CurrentFolder),
-            DockNode::leaf(PanelId::History),
+            DockNode::leaf(PanelId::Workspace),
         );
 
-        // Center column: Editor (top) / Command Window (bottom)
+        // Center column: Editor (top) / Command Window + History (bottom)
         let center = DockNode::split_v(
             0.65,
             DockNode::leaf(PanelId::Editor),
-            DockNode::leaf(PanelId::CommandWindow),
+            DockNode::leaf_multi(vec![PanelId::CommandWindow, PanelId::History]),
         );
 
-        // Right column: Workspace (top) / Figures (bottom)
+        // Right column: Help & Documentation (top) / Figures (bottom)
         let right = DockNode::split_v(
-            0.5,
-            DockNode::leaf(PanelId::Workspace),
+            0.55,
+            DockNode::leaf(PanelId::Help),
             DockNode::leaf(PanelId::Figures),
         );
 
         let center_right = DockNode::split_h(0.72, center, right);
-        let root = DockNode::split_h(0.18, left, center_right);
+        let root = DockNode::split_h(0.20, left, center_right);
 
         Self {
             root,
@@ -249,7 +258,7 @@ impl DockTree {
         let center = DockNode::split_v(
             0.5,
             DockNode::leaf(PanelId::Editor),
-            DockNode::leaf(PanelId::CommandWindow),
+            DockNode::leaf_multi(vec![PanelId::CommandWindow, PanelId::History]),
         );
         let right = DockNode::leaf(PanelId::Figures);
 
@@ -304,7 +313,8 @@ impl DockTree {
             PanelId::Figures | PanelId::Workspace => PanelId::Workspace,
             PanelId::CommandWindow | PanelId::History => PanelId::CommandWindow,
             PanelId::CurrentFolder => PanelId::CurrentFolder,
-            PanelId::Editor => PanelId::Editor,
+            PanelId::Editor | PanelId::Simulink => PanelId::Editor,
+            PanelId::Help | PanelId::AddOns => PanelId::Help,
         };
 
         if !self.insert_tab_next_to(target_leaf, panel) {

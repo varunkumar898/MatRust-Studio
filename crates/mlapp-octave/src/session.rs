@@ -1,13 +1,12 @@
 //! Persistent GNU Octave subprocess session and lifecycle management.
 
 use crate::detect::find_octave_binary;
-use crate::protocol::{OctaveErrorInfo, OctaveRequest, OctaveResponse, OctaveValue};
+use crate::protocol::{OctaveErrorInfo, OctaveValue};
 use crate::safety::check_call_safety;
 use rustlab_math::{DenseArray, Value};
 use std::collections::HashMap;
-use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
-use std::process::{Child, ChildStdin, ChildStdout, Command, Stdio};
+use std::process::Command;
 use thiserror::Error;
 
 /// Configuration parameters for an active Octave session.
@@ -55,9 +54,8 @@ pub enum OctaveError {
 
 enum SessionBackend {
     Real {
-        child: Child,
-        stdin: ChildStdin,
-        reader: BufReader<ChildStdout>,
+        binary: PathBuf,
+        vars: HashMap<String, Value>,
     },
     Mock {
         vars: HashMap<String, Value>,
@@ -94,39 +92,20 @@ impl OctaveSession {
 
     /// Starts a persistent session with explicit binary path and configuration.
     pub fn start_with_binary(binary: &Path, config: OctaveConfig) -> Result<Self, OctaveError> {
-        let mut cmd = Command::new(binary);
-        cmd.args([
-            "--no-gui",
-            "--norc",
-            "--no-init-file",
-            "--quiet",
-            "--no-window-system",
-            "--eval",
-            "more off; while ~feof(stdin), __line__ = fgetl(stdin); if ~ischar(__line__), break; end; __line__ = strtrim(__line__); if isempty(__line__), continue; end; if ~strncmp(__line__, '{', 1), try eval(__line__); catch end; continue; end; if strcmp(__line__, '{\"cmd\":\"ping\"}'), printf('{\"ok\":true}\\n'); fflush(stdout); continue; end; if strcmp(__line__, '{\"cmd\":\"shutdown\"}'), break; end; try, __req__ = jsondecode(__line__); if isfield(__req__, 'cmd') && strcmp(__req__.cmd, 'eval'), __res__ = eval(__req__.src); if islogical(__res__), __dims__ = sprintf('%d,', size(__res__)); __data__ = sprintf('%d,', __res__(:)); if ~isempty(__data__), __data__ = strrep(strrep(__data__(1:end-1), '1', 'true'), '0', 'false'); end; printf('{\"ok\":true,\"result\":{\"type\":\"logical\",\"dims\":[%s],\"data\":[%s]}}\\n', __dims__(1:end-1), __data__); fflush(stdout); elseif ischar(__res__), printf('{\"ok\":true,\"result\":{\"type\":\"char\",\"data\":\"%s\"}}\\n', strrep(strrep(__res__, '\\', '\\\\'), '\"', '\\\"')); fflush(stdout); elseif isnumeric(__res__), __dims__ = sprintf('%d,', size(__res__)); __data__ = sprintf('%.17g,', __res__(:)); if ~isempty(__data__), __data__ = __data__(1:end-1); end; printf('{\"ok\":true,\"result\":{\"type\":\"double\",\"dims\":[%s],\"data\":[%s]}}\\n', __dims__(1:end-1), __data__); fflush(stdout); else, printf('{\"ok\":true}\\n'); fflush(stdout); end; elseif isfield(__req__, 'cmd') && strcmp(__req__.cmd, 'call'), __args__ = {}; if isfield(__req__, 'args'), for __i__ = 1:length(__req__.args), __a__ = __req__.args{__i__}; if strcmp(__a__.type, 'double'), __args__{__i__} = reshape(__a__.data, __a__.dims); elseif strcmp(__a__.type, 'char'), __args__{__i__} = __a__.data; elseif strcmp(__a__.type, 'logical'), __args__{__i__} = logical(reshape(__a__.data, __a__.dims)); end; end; end; __res__ = feval(__req__.fn_name, __args__{:}); if isnumeric(__res__), __dims__ = sprintf('%d,', size(__res__)); __data__ = sprintf('%.17g,', __res__(:)); if ~isempty(__data__), __data__ = __data__(1:end-1); end; printf('{\"ok\":true,\"result\":{\"type\":\"double\",\"dims\":[%s],\"data\":[%s]}}\\n', __dims__(1:end-1), __data__); fflush(stdout); else, printf('{\"ok\":true}\\n'); fflush(stdout); end; else, printf('{\"ok\":false,\"error\":{\"identifier\":\"Octave:unknownCmd\",\"message\":\"Unknown command\"}}\\n'); fflush(stdout); end; catch __err__, printf('{\"ok\":false,\"error\":{\"identifier\":\"%s\",\"message\":\"%s\"}}\\n', __err__.identifier, strrep(strrep(__err__.message, '\\', '\\\\'), '\"', '\\\"')); fflush(stdout); end; end;",
-        ]);
-        cmd.stdin(Stdio::piped());
-        cmd.stdout(Stdio::piped());
-        cmd.stderr(Stdio::null());
-
-        let mut child = cmd
-            .spawn()
+        let output = Command::new(binary)
+            .args(["--version"])
+            .output()
             .map_err(|e| OctaveError::ProcessStart(e.to_string()))?;
-
-        let stdin = child
-            .stdin
-            .take()
-            .ok_or_else(|| OctaveError::ProcessIo("Failed to open child stdin".to_string()))?;
-        let stdout = child
-            .stdout
-            .take()
-            .ok_or_else(|| OctaveError::ProcessIo("Failed to open child stdout".to_string()))?;
-        let reader = BufReader::new(stdout);
+        if !output.status.success() {
+            return Err(OctaveError::ProcessStart(
+                "Octave binary execution failed version check".to_string(),
+            ));
+        }
 
         Ok(Self {
             backend: SessionBackend::Real {
-                child,
-                stdin,
-                reader,
+                binary: binary.to_path_buf(),
+                vars: HashMap::new(),
             },
             config,
         })
@@ -150,20 +129,25 @@ impl OctaveSession {
     /// Sends a ping command to confirm the Octave process is responsive.
     pub fn ping(&mut self) -> Result<(), OctaveError> {
         match &mut self.backend {
-            SessionBackend::Real { stdin, reader, .. } => {
-                let req = OctaveRequest::Ping;
-                let line = serde_json::to_string(&req)
-                    .map_err(|e| OctaveError::Protocol(e.to_string()))?;
-                writeln!(stdin, "{}", line).map_err(|e| OctaveError::ProcessIo(e.to_string()))?;
-                stdin
-                    .flush()
+            SessionBackend::Real { binary, .. } => {
+                let output = Command::new(binary)
+                    .args([
+                        "--no-gui",
+                        "--norc",
+                        "--no-init-file",
+                        "--quiet",
+                        "--no-window-system",
+                        "--eval",
+                        "disp('pong');",
+                    ])
+                    .output()
                     .map_err(|e| OctaveError::ProcessIo(e.to_string()))?;
-
-                let mut resp_line = String::new();
-                reader
-                    .read_line(&mut resp_line)
-                    .map_err(|e| OctaveError::ProcessIo(e.to_string()))?;
-                Ok(())
+                if output.status.success() {
+                    Ok(())
+                } else {
+                    let err = String::from_utf8_lossy(&output.stderr).to_string();
+                    Err(OctaveError::Protocol(format!("Ping failed: {err}")))
+                }
             }
             SessionBackend::Mock { .. } => Ok(()),
         }
@@ -171,19 +155,9 @@ impl OctaveSession {
 
     /// Stores a variable in the Octave workspace.
     pub fn put(&mut self, name: &str, val: &Value) -> Result<(), OctaveError> {
-        let oct_val = OctaveValue::from_value(val)
-            .map_err(|e| OctaveError::Protocol(format!("Value conversion error: {e}")))?;
-
         match &mut self.backend {
-            SessionBackend::Real { stdin, .. } => {
-                let literal = oct_val.to_octave_literal();
-                let cmd = format!("{name} = {literal};\n");
-                stdin
-                    .write_all(cmd.as_bytes())
-                    .map_err(|e| OctaveError::ProcessIo(e.to_string()))?;
-                stdin
-                    .flush()
-                    .map_err(|e| OctaveError::ProcessIo(e.to_string()))?;
+            SessionBackend::Real { vars, .. } => {
+                vars.insert(name.to_string(), val.clone());
                 Ok(())
             }
             SessionBackend::Mock { vars } => {
@@ -196,8 +170,10 @@ impl OctaveSession {
     /// Retrieves a variable from the Octave workspace.
     pub fn get(&mut self, name: &str) -> Result<Value, OctaveError> {
         match &mut self.backend {
-            SessionBackend::Real { .. } => {
-                // In real Octave, evaluate the variable name to fetch its serialized form
+            SessionBackend::Real { vars, .. } => {
+                if let Some(val) = vars.get(name) {
+                    return Ok(val.clone());
+                }
                 self.eval(name)
             }
             SessionBackend::Mock { vars } => {
@@ -214,41 +190,59 @@ impl OctaveSession {
     /// Evaluates a MATLAB/Octave expression and returns the parsed result.
     pub fn eval(&mut self, src: &str) -> Result<Value, OctaveError> {
         match &mut self.backend {
-            SessionBackend::Real { stdin, reader, .. } => {
-                let req = OctaveRequest::Eval {
-                    src: src.to_string(),
-                };
-                let line = serde_json::to_string(&req)
-                    .map_err(|e| OctaveError::Protocol(e.to_string()))?;
-                writeln!(stdin, "{}", line).map_err(|e| OctaveError::ProcessIo(e.to_string()))?;
-                stdin
-                    .flush()
-                    .map_err(|e| OctaveError::ProcessIo(e.to_string()))?;
-
-                let mut resp_line = String::new();
-                reader
-                    .read_line(&mut resp_line)
-                    .map_err(|e| OctaveError::ProcessIo(e.to_string()))?;
-
-                let resp: OctaveResponse = serde_json::from_str(&resp_line).map_err(|e| {
-                    OctaveError::Protocol(format!("JSON parse error: {e} in {resp_line}"))
-                })?;
-
-                if resp.ok {
-                    let oval = resp.result.ok_or_else(|| {
-                        OctaveError::Protocol("Missing result in ok response".to_string())
+            SessionBackend::Real { binary, vars } => {
+                let mut prefix = String::new();
+                for (k, v) in vars.iter() {
+                    let oct_val = OctaveValue::from_value(v).map_err(|e| {
+                        OctaveError::Protocol(format!("Value conversion error: {e}"))
                     })?;
-                    oval.to_value()
-                        .map_err(|e| OctaveError::Protocol(format!("Value conversion error: {e}")))
+                    prefix.push_str(&format!("{k} = {};\n", oct_val.to_octave_literal()));
+                }
+                let eval_script = format!(
+                    "{prefix}try, __val__ = ({src}); if isnumeric(__val__), __dims__ = sprintf('%d,', size(__val__)); __data__ = sprintf('%.17g,', __val__(:)); if ~isempty(__data__), __data__ = __data__(1:end-1); end; printf('__OCT_RES__{{\"type\":\"double\",\"dims\":[%s],\"data\":[%s]}}\\n', __dims__(1:end-1), __data__); elseif islogical(__val__), __dims__ = sprintf('%d,', size(__val__)); __data__ = sprintf('%d,', __val__(:)); if ~isempty(__data__), __data__ = strrep(strrep(__data__(1:end-1), '1', 'true'), '0', 'false'); end; printf('__OCT_RES__{{\"type\":\"logical\",\"dims\":[%s],\"data\":[%s]}}\\n', __dims__(1:end-1), __data__); elseif ischar(__val__), printf('__OCT_RES__{{\"type\":\"char\",\"data\":\"%s\"}}\\n', strrep(strrep(__val__, '\\', '\\\\'), '\"', '\\\"')); else, printf('__OCT_OK__\\n'); end; catch __err__, printf('__OCT_ERR__{{\"identifier\":\"%s\",\"message\":\"%s\"}}\\n', __err__.identifier, strrep(strrep(__err__.message, '\\', '\\\\'), '\"', '\\\"')); end;"
+                );
+                let output = Command::new(binary)
+                    .args([
+                        "--no-gui",
+                        "--norc",
+                        "--no-init-file",
+                        "--quiet",
+                        "--no-window-system",
+                        "--eval",
+                        &eval_script,
+                    ])
+                    .output()
+                    .map_err(|e| OctaveError::ProcessIo(e.to_string()))?;
+
+                let stdout_str = String::from_utf8_lossy(&output.stdout);
+                for line in stdout_str.lines() {
+                    if let Some(json_str) = line.strip_prefix("__OCT_RES__") {
+                        let oval: OctaveValue = serde_json::from_str(json_str).map_err(|e| {
+                            OctaveError::Protocol(format!(
+                                "Failed to parse Octave result: {e} in {json_str}"
+                            ))
+                        })?;
+                        return oval.to_value().map_err(|e| {
+                            OctaveError::Protocol(format!("Value conversion error: {e}"))
+                        });
+                    } else if let Some(err_json) = line.strip_prefix("__OCT_ERR__") {
+                        let err_info: OctaveErrorInfo =
+                            serde_json::from_str(err_json).map_err(|e| {
+                                OctaveError::Protocol(format!("Failed to parse Octave error: {e}"))
+                            })?;
+                        return Err(OctaveError::OctaveException {
+                            identifier: err_info.identifier,
+                            message: err_info.message,
+                        });
+                    }
+                }
+                if output.status.success() {
+                    Ok(Value::scalar(0.0))
                 } else {
-                    let err = resp.error.unwrap_or(OctaveErrorInfo {
-                        identifier: "Octave:genericError".to_string(),
-                        message: "Unknown error from Octave worker".to_string(),
-                    });
-                    Err(OctaveError::OctaveException {
-                        identifier: err.identifier,
-                        message: err.message,
-                    })
+                    let err = String::from_utf8_lossy(&output.stderr).to_string();
+                    Err(OctaveError::Protocol(format!(
+                        "Octave execution failed: {err}"
+                    )))
                 }
             }
             SessionBackend::Mock { vars } => {
@@ -268,55 +262,69 @@ impl OctaveSession {
 
     /// Invokes a named function in Octave with the provided arguments, enforcing safety allow-list policies.
     pub fn call(&mut self, fn_name: &str, args: &[Value]) -> Result<Value, OctaveError> {
-        // Enforce safety allow-list policy first
         check_call_safety(fn_name, self.config.allow_unsafe)
             .map_err(OctaveError::SecurityViolation)?;
 
         match &mut self.backend {
-            SessionBackend::Real { stdin, reader, .. } => {
-                let mut oargs = Vec::with_capacity(args.len());
-                for a in args {
-                    let oa = OctaveValue::from_value(a).map_err(|e| {
-                        OctaveError::Protocol(format!("Argument conversion error: {e}"))
+            SessionBackend::Real { binary, vars } => {
+                let mut prefix = String::new();
+                for (k, v) in vars.iter() {
+                    let oct_val = OctaveValue::from_value(v).map_err(|e| {
+                        OctaveError::Protocol(format!("Value conversion error: {e}"))
                     })?;
-                    oargs.push(oa);
+                    prefix.push_str(&format!("{k} = {};\n", oct_val.to_octave_literal()));
                 }
-
-                let req = OctaveRequest::Call {
-                    fn_name: fn_name.to_string(),
-                    args: oargs,
-                };
-                let line = serde_json::to_string(&req)
-                    .map_err(|e| OctaveError::Protocol(e.to_string()))?;
-                writeln!(stdin, "{}", line).map_err(|e| OctaveError::ProcessIo(e.to_string()))?;
-                stdin
-                    .flush()
-                    .map_err(|e| OctaveError::ProcessIo(e.to_string()))?;
-
-                let mut resp_line = String::new();
-                reader
-                    .read_line(&mut resp_line)
-                    .map_err(|e| OctaveError::ProcessIo(e.to_string()))?;
-
-                let resp: OctaveResponse = serde_json::from_str(&resp_line).map_err(|e| {
-                    OctaveError::Protocol(format!("JSON parse error: {e} in {resp_line}"))
-                })?;
-
-                if resp.ok {
-                    let oval = resp.result.ok_or_else(|| {
-                        OctaveError::Protocol("Missing result in ok response".to_string())
+                let mut arg_literals = Vec::with_capacity(args.len());
+                for a in args {
+                    let oct_val = OctaveValue::from_value(a).map_err(|e| {
+                        OctaveError::Protocol(format!("Value conversion error: {e}"))
                     })?;
-                    oval.to_value()
-                        .map_err(|e| OctaveError::Protocol(format!("Value conversion error: {e}")))
+                    arg_literals.push(oct_val.to_octave_literal());
+                }
+                let call_expr = format!("{fn_name}({})", arg_literals.join(", "));
+                let eval_script = format!(
+                    "{prefix}try, __val__ = ({call_expr}); if isnumeric(__val__), __dims__ = sprintf('%d,', size(__val__)); __data__ = sprintf('%.17g,', __val__(:)); if ~isempty(__data__), __data__ = __data__(1:end-1); end; printf('__OCT_RES__{{\"type\":\"double\",\"dims\":[%s],\"data\":[%s]}}\\n', __dims__(1:end-1), __data__); elseif islogical(__val__), __dims__ = sprintf('%d,', size(__val__)); __data__ = sprintf('%d,', __val__(:)); if ~isempty(__data__), __data__ = strrep(strrep(__data__(1:end-1), '1', 'true'), '0', 'false'); end; printf('__OCT_RES__{{\"type\":\"logical\",\"dims\":[%s],\"data\":[%s]}}\\n', __dims__(1:end-1), __data__); elseif ischar(__val__), printf('__OCT_RES__{{\"type\":\"char\",\"data\":\"%s\"}}\\n', strrep(strrep(__val__, '\\', '\\\\'), '\"', '\\\"')); else, printf('__OCT_OK__\\n'); end; catch __err__, printf('__OCT_ERR__{{\"identifier\":\"%s\",\"message\":\"%s\"}}\\n', __err__.identifier, strrep(strrep(__err__.message, '\\', '\\\\'), '\"', '\\\"')); end;"
+                );
+                let output = Command::new(binary)
+                    .args([
+                        "--no-gui",
+                        "--norc",
+                        "--no-init-file",
+                        "--quiet",
+                        "--no-window-system",
+                        "--eval",
+                        &eval_script,
+                    ])
+                    .output()
+                    .map_err(|e| OctaveError::ProcessIo(e.to_string()))?;
+
+                let stdout_str = String::from_utf8_lossy(&output.stdout);
+                for line in stdout_str.lines() {
+                    if let Some(json_str) = line.strip_prefix("__OCT_RES__") {
+                        let oval: OctaveValue = serde_json::from_str(json_str).map_err(|e| {
+                            OctaveError::Protocol(format!(
+                                "Failed to parse Octave result: {e} in {json_str}"
+                            ))
+                        })?;
+                        return oval.to_value().map_err(|e| {
+                            OctaveError::Protocol(format!("Value conversion error: {e}"))
+                        });
+                    } else if let Some(err_json) = line.strip_prefix("__OCT_ERR__") {
+                        let err_info: OctaveErrorInfo =
+                            serde_json::from_str(err_json).map_err(|e| {
+                                OctaveError::Protocol(format!("Failed to parse Octave error: {e}"))
+                            })?;
+                        return Err(OctaveError::OctaveException {
+                            identifier: err_info.identifier,
+                            message: err_info.message,
+                        });
+                    }
+                }
+                if output.status.success() {
+                    Ok(Value::scalar(0.0))
                 } else {
-                    let err = resp.error.unwrap_or(OctaveErrorInfo {
-                        identifier: "Octave:genericError".to_string(),
-                        message: "Unknown error from Octave worker".to_string(),
-                    });
-                    Err(OctaveError::OctaveException {
-                        identifier: err.identifier,
-                        message: err.message,
-                    })
+                    let err = String::from_utf8_lossy(&output.stderr).to_string();
+                    Err(OctaveError::Protocol(format!("Octave call failed: {err}")))
                 }
             }
             SessionBackend::Mock { .. } => evaluate_mock_call(fn_name, args),
@@ -325,14 +333,8 @@ impl OctaveSession {
 
     /// Shuts down the Octave worker process cleanly.
     pub fn shutdown(&mut self) {
-        if let SessionBackend::Real { child, stdin, .. } = &mut self.backend {
-            let req = OctaveRequest::Shutdown;
-            if let Ok(line) = serde_json::to_string(&req) {
-                let _ = writeln!(stdin, "{}", line);
-                let _ = stdin.flush();
-            }
-            let _ = child.kill();
-            let _ = child.wait();
+        if let SessionBackend::Real { vars, .. } = &mut self.backend {
+            vars.clear();
         }
     }
 }

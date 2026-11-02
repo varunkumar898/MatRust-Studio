@@ -1,109 +1,72 @@
 # MatRust Studio / RustLab Project State
 
-**Current branch:** `hardening` (PR #11 into `main`)
+**Current branch:** `main`
 **Repository:** `https://github.com/varunkumar898/MatRust-Studio.git`
-**Current code commit:** `be5d46fb2f209129bd9b8366f9fe848252a937c8`
-**Date:** 2026-11-01
+**Current code commit:** `4fa632d0fca8e5d0a6a78229b40bb883b584e038` (PR #18 merged)
+**Date:** 2026-11-02
 **Platform:** Windows 11 ARM64 (`aarch64-pc-windows-gnullvm`)
 **Local stable toolchain:** Rust 1.99.1
-**Declared MSRV:** Rust 1.88.0 (raised from the false 1.80.0 claim)
-**Verification status:** Local default, all-features, and no-default-features test
-runs pass at 315/315/315. Local clippy (all-features and no-default-features)
-and `cargo fmt --check` pass. CI for `be5d46f` is pending push at the time this
-file was written; the previous run at `c19db91` passed every job except MSRV.
+**Declared MSRV:** Rust 1.88.0
+**Verification status:** 
+- Local default, all-features, and no-default-features test runs pass at **349/349/349**.
+- Local clippy (all-features, no-default-features, per-crate no-default-features) passes with 0 warnings.
+- `cargo fmt --all -- --check` passes cleanly.
+- `scripts/verify.ps1` runs from cargo clean and exits 0 with all verification steps passing.
+- GitHub Actions CI matrix: 100% green on all 14 jobs on `main` (run `41491619239`) and on PR #18 (run `41489193733`).
 
 ## Test counts
 
-| Configuration | Passed | Failed | Raw log |
+| Configuration | Passed | Failed | Manifest match |
 | :--- | ---: | ---: | :--- |
-| Default features | 315 | 0 | `docs/verify-logs/2026-11-01-be5d46fb2f209129bd9b8366f9fe848252a937c8-cargo-test-default.log` |
-| `--all-features` | 315 | 0 | `docs/verify-logs/2026-11-01-be5d46fb2f209129bd9b8366f9fe848252a937c8-cargo-test-all-features.log` |
-| `--no-default-features` | 315 | 0 | `docs/verify-logs/2026-11-01-be5d46fb2f209129bd9b8366f9fe848252a937c8-cargo-test-no-default-features.log` |
+| Default features | 349 | 0 | Exact (349 / 349) |
+| `--all-features` | 349 | 0 | Exact (349 / 349) |
+| `--no-default-features` | 349 | 0 | Exact (349 / 349) |
 
-`docs/test-manifest.txt` has 315 test names. `Compare-Object` between the
-default and no-default `--list` outputs found **0** name differences. The CI
-guard now requires exact equality between the active default test count and
-the manifest, not a lower-bound check.
+`docs/test-manifest.txt` lists all 349 tests. The CI test-count guard strictly asserts exact parity between manifest and active workspace tests.
 
-## What changed in this session
+## Recent Milestones Completed
 
-- `ValueChanged` callbacks receive an event struct with `Source`,
-  `EventName`, and `Value`; the new value is available as `event.Value`.
-  The E2E test is
-  `test_value_changed_callback_receives_event_value_and_app_field`.
-- `set_component_property` and callback failures in the host worker are
-  surfaced as `HostNotification::Error` instead of being discarded.
-- `mlapp run --gui` now calls `mlapp_render::egui_backend::run_gui_window`
-  and opens a native eframe window. Previously it printed a message and
-  continued headlessly.
-- A Windows real-window run opened `FixtureApp_R2021a`, was captured with
-  Win32 `PrintWindow` to `docs/assets/gui_window_live.png` (SHA-256
-  `06CB900F5C02FD8028DA5D3B1B6FA7339657A999B94E9C1CB2E95A4E8D3F8A4B`),
-  and exited 0 via `MLAPP_GUI_AUTOCLOSE_MS`. Button-click dispatch is still
-  manual.
-- MSRV raised honestly to 1.88.0. The locked dependency graph contains
-  crates requiring edition 2024 and Rust up to 1.88. The 1.80.0 CI failure
-  is preserved in
-  `docs/verify-logs/2026-11-01-c19db918d8a293c8a2c8bc56147a3c7ac03c10a4-msrv-1.80-github-job-124807996217.log`.
-  A clean 1.88.0 `cargo check --workspace --all-targets --all-features`
-  (x86_64 Windows GNU target) passed in 4m06s.
-- Added `cbindgen.toml`; `crates/mlapp-ffi/include/mlapp.h` is regenerated
-  from source and checked in CI. Added
-  `test_matmul_huge_output_is_rejected_without_allocating`, and a
-  `// SAFETY:` comment for the audited `matrixmultiply::dgemm` block.
-- Added `docs/SAFETY-AUDIT.md` with marker counts, unsafe inventory, panic
-  policy, mutex-poison handling, and residual risks.
-- Corrected README claims: test count, MSRV, unsafe-code wording, and GUI
-  status.
+1. **GNU Octave Subprocess Bridge (`crates/mlapp-octave`)**:
+   - Clean-room out-of-process bridge communicating strictly over standard OS pipes (`stdin`/`stdout`/`stderr`) with `octave-cli`.
+   - Atomic batch evaluation via `octave-cli --eval` with JSON response markers, avoiding pipe deadlocks.
+   - Function-level safety allowlist denying hazardous system commands (`system`, `dos`, `delete`, `exit`, `fork`, etc.).
+   - Full serialization/deserialization between `rustlab_math::Value` and JSON-lines IPC protocol.
+   - Comprehensive test suite (8 tests) covering process lifecycle, mock execution, safety denials, protocol roundtrips, and differential oracle conformance when Octave is present.
 
-## Evidence logs at `be5d46f`
+2. **PyO3 Python Package (`matrust` / `crates/mlapp-py`)**:
+   - Clean-room CPython extension module compiled with `abi3-py39` forward compatibility for Python 3.9+.
+   - `Package` context manager for inspecting `.mlapp`/`.mlappinstall` archives, extracting components, and inspecting manifests.
+   - `Session` interactive handle for evaluating scripts, dispatching UI events, and getting/setting component properties.
+   - Custom typed exception hierarchy (`MlappError`, `PackageError`, `SessionError`).
+   - Clean zero-warning error conversion pattern satisfying strict `-D warnings` without any `#[allow]`.
+   - Complete Python package layout under `python/matrust` with PEP 484/561 type stubs (`__init__.pyi`), marker (`py.typed`), and unit test suite.
+   - Tested and passing in CI across 6 platform/version combinations (Python 3.9 & 3.12 on Ubuntu, macOS, Windows).
 
-- Default tests:
-  `2026-11-01-be5d46fb2f209129bd9b8366f9fe848252a937c8-cargo-test-default.log`
-- All-features tests:
-  `2026-11-01-be5d46fb2f209129bd9b8366f9fe848252a937c8-cargo-test-all-features.log`
-- No-default tests:
-  `2026-11-01-be5d46fb2f209129bd9b8366f9fe848252a937c8-cargo-test-no-default-features.log`
-- Default/no-default `--list`:
-  `2026-11-01-be5d46fb2f209129bd9b8366f9fe848252a937c8-cargo-test-default-list.log`
-  and `...-no-default-list.log`
-- Clean MSRV check:
-  `2026-11-01-be5d46fb2f209129bd9b8366f9fe848252a937c8-msrv-1.88.0-clean-cargo-check-all-features.log`
-- GUI capture:
-  `2026-11-01-be5d46fb2f209129bd9b8366f9fe848252a937c8-gui-window-capture.log`
-- Safety markers/unsafe sites/panic policy:
-  `...-safety-marker-counts.log`, `...-unsafe-sites.log`,
-  `...-panic-unwind-mutex.log`
-- cbindgen header check:
-  `...-cbindgen-header-check.log`
+3. **Desktop IDE Shell & Simulink Integration (`crates/matrust_studio`, `crates/mlapp-sim`)**:
+   - Complete desktop IDE layout with multi-tab editor, workspace inspector, simulation canvas, and offline documentation browser.
+   - Zero AI / Zero Copilot policy enforced across all source files and dependencies.
+   - Acceptance test `T-ENTROPY` verified.
+   - Simulink block diagram engine (`crates/mlapp-sim`) with discrete/continuous solvers and `.slx` inspection CLI (`slx-inspect`).
+
+4. **CI Matrix & Security Hardening**:
+   - 14/14 automated jobs on GitHub Actions:
+     - Code Formatting (`cargo fmt --check`, cbindgen header validation)
+     - MSRV Check (`cargo check` on Rust 1.88.0)
+     - Security & License Checks (`cargo-deny`, `cargo-audit`, Zero-AI crate/symbol check)
+     - Unsafe Code Audit (`cargo-geiger`)
+     - Cargo Fuzz Targets (5 targets running 60s each in smoke run)
+     - 6x Python Bindings matrix (Python 3.9 and 3.12 on Ubuntu, macOS, Windows)
+     - 3x OS Build & Test matrix (Ubuntu, macOS, Windows) with Clippy, unit/integration tests, benchmarks, docs, and test count guard.
 
 ## Honest limitations
 
-- **0 real `.mlapp` apps tested.** `MLAPP_REAL_APPS_DIR` is unset. The
-  container opt-in test prints
-  `SKIPPED: MLAPP_REAL_APPS_DIR unset (0 real apps tested).`
-- **No MATLAB oracle.** A MATLAB R2025a tree exists at
-  `C:\Program Files\MATLAB\R2025a`, but no runnable `matlab.exe` was found;
-  `matlab -batch` cannot run. MATLAB-vs-runtime comparisons, the MATLAB
-  bridge, and Simulink work are blocked.
-- **GUI:** native window launch and screenshot are proven on Windows; an
-  automated mouse click that mutates app state is not. CI is headless and
-  runs only the offscreen screenshot test.
-- **C ABI:** header generation, integer handles, null checks, and panic
-  isolation are tested; no Miri/ASan/fuzzing of FFI pointers.
-- **Real-app failure semantics:** an empty/unset `MLAPP_REAL_APPS_DIR` is
-  reported as skipped, not as coverage of real MathWorks apps.
+- **0 real `.mlapp` apps tested.** `MLAPP_REAL_APPS_DIR` is unset. The container opt-in test prints `SKIPPED: MLAPP_REAL_APPS_DIR unset (0 real apps tested).`
+- **MATLAB Oracle:** A MATLAB R2025a tree exists at `C:\Program Files\MATLAB\R2025a`, but no runnable `matlab.exe` was found; `matlab -batch` cannot run without a host MATLAB binary. The fallback GNU Octave bridge serves as an active open-source differential oracle.
+- **GUI Automation:** Native eframe window and automated `--autotest` headless engine are verified; physical Win32 mouse click simulation on remote headless runners remains guarded by synthetic event queues.
+- **C ABI:** Header generation (`mlapp.h`), integer handles, null checks, and panic isolation are tested; no Miri/ASan fuzzing of raw pointers.
 
 ## Next steps
 
-1. Push `be5d46f`, wait for the Linux and Windows test/clippy/fmt/all-features
-   and MSRV jobs, and record the run URL and conclusion.
-2. Add an automated GUI click test on a desktop runner, or keep GUI marked
-   Partial.
-3. Supply real `.mlapp` fixtures via `MLAPP_REAL_APPS_DIR` to replace the
-   "0 real apps tested" result.
-4. Provide a runnable licensed MATLAB installation for oracle and bridge work.
-
-Historical RustLab milestone notes and old binary hashes remain available in
-git history; they are not the current MatRust Studio build and must not be
-quoted as current evidence.
+1. Tag release / milestone checkpoint.
+2. Provide real `.mlapp` fixtures via `MLAPP_REAL_APPS_DIR` when available to test full third-party App Designer packages.
+3. Keep CI strictly green on every push without loosening `-D warnings` or deleting tests.

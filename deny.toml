@@ -13,6 +13,7 @@ confidence-threshold = 0.8
 allow = [
     "MIT",
     "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
     "BSD-2-Clause",
     "BSD-3-Clause",
     "ISC",
@@ -38,5 +39,4 @@ allow-registry = ["https://github.com/rust-lang/crates.io-index"]
 version = 2
 ignore = [
     "RUSTSEC-2024-0436", # paste is unmaintained (transitive dep of faer/gemm)
-    "RUSTSEC-2026-0192", # ttf-parser is unmaintained (transitive dep of egui)
 ]

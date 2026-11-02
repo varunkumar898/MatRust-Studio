@@ -1,0 +1,27 @@
+[package]
+name = "mlapp-py"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+description = "PyO3 Python bindings for MatRust Studio App Designer and RustLab numerical platform"
+
+[lib]
+name = "_matrust"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+pyo3 = { version = "0.22", features = ["abi3-py39", "gil-refs"] }
+mlapp-container = { path = "../mlapp-container" }
+mlapp-host = { path = "../mlapp-host" }
+mlapp-runtime = { path = "../mlapp-runtime" }
+mlapp-ui = { path = "../mlapp-ui" }
+rustlab-math = { path = "../rustlab-math" }
+rustlab-eval = { path = "../rustlab-eval" }
+rustlab-stdlib = { path = "../rustlab-stdlib" }
+serde_json = "1.0"
+thiserror = "1.0"
+
+[features]
+default = ["extension-module"]
+extension-module = ["pyo3/extension-module"]
+gil-refs = []

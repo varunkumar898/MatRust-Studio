@@ -179,3 +179,45 @@ To deliver Phase 10 through Phase 14 of MatRust Studio, the desktop application 
    - Built-in oscilloscope Scope waveform viewer plotting time-series response trajectories.
 6. **Acceptance Test `T-ENTROPY`**:
    - Verified automated execution of the 5-line information theory script (`symbols=[1,2,3,4]; probabilities=[0.1,0.3,0.4,0.2]; entropy=-sum(probabilities.*log2(probabilities)); disp(['Entropy: ',num2str(entropy)])`), producing `Entropy: 1.8464`, workspace inspection rows, and verified PNG screenshot in `docs/screenshots/ba7137f/01-t-entropy.png`.
+
+---
+
+## Decision 9: PyO3 Python Bindings (`matrust`) & Unsafe Code Justification
+
+### Context
+To support multi-language scientific workflows, automation, and headless testing, MatRust Studio provides typed Python bindings (`matrust`) wrapping the App Designer container inspector and the RustLab numerical interpreter.
+
+### Architecture & Design
+1. **PyO3 with CPython `abi3-py39` Forward Compatibility**:
+   - Compiles against the Stable CPython ABI starting at Python 3.9. A single compiled wheel or shared library is forward-compatible across Python 3.9 through 3.13+ without recompilation.
+2. **Package & Module Layout**:
+   - Rust extension crate: `crates/mlapp-py` (`_matrust`).
+   - Python package: `python/matrust` with `__init__.py`, PEP 484/561 type stubs (`__init__.pyi`), and marker (`py.typed`).
+   - Standard `pyproject.toml` configuration targeting Maturin build backend.
+3. **Typed Python API**:
+   - `open_package(path: str) -> Package`: Opens `.mlapp` or `.mlappinstall` containers.
+   - `Package`: Context manager supporting `inspect()` (returning structured JSON report) and `extract_all(dest: str)` (with zip-slip traversal protection).
+   - `Session`: Interactive session supporting `send_event(event: dict)`, `eval(statement: str)`, `get_property(comp, prop)`, `set_property(comp, prop, val)`, and `shutdown()`.
+4. **Workspace Segregation Rule**:
+   - `crates/mlapp-py` is excluded from root `Cargo.toml` `default-members` so that `cargo test --workspace` never requires Python development headers or a Python toolchain to pass on developer workstations or in standard CI matrix jobs.
+   - A dedicated Python CI job matrix verifies wheel building and pytest execution across Python 3.9 and 3.12.
+5. **Unsafe Justification**:
+   - By strict project policy, `#![forbid(unsafe_code)]` is enforced in numerical library crates.
+   - In `mlapp-py`, the use of `unsafe` is strictly confined to internal PyO3 CPython C-API FFI wrappers (reference counting and GIL acquisition). No manual raw pointer manipulation or unsafe buffer indexing exists in user code.
+
+---
+
+## Decision 10: GNU Octave Clean-Room Subprocess Bridge (`mlapp-octave`)
+
+### Context
+To enable differential testing, verification oracle comparison, and fallback execution for advanced toolboxes without proprietary dependencies, `mlapp-octave` provides a bridge to GNU Octave.
+
+### Architectural Decisions
+1. **Strict Clean-Room GPL Separation**:
+   - GNU Octave is licensed under GPLv3+. To preserve MatRust Studio's permissive dual MIT/Apache-2.0 license, no Octave code or headers are copied or linked.
+   - Communication occurs solely out-of-process via standard OS pipes (`stdin`, `stdout`, `stderr`) to `octave-cli`.
+2. **Default Function-Level Safety Policy**:
+   - Hazardous functions (`system`, `delete`, `unlink`, `rmdir`, `exit`, `javaMethod`, `python_invoke`) are blocked by default.
+   - Over 60 numerical and matrix functions (`sin`, `inv`, `lu`, `svd`, `roots`, `polyfit`) are pre-vetted as recognized safe builtins.
+3. **Mock & Headless Test Support**:
+   - Headless CI environments without Octave installed run mock sessions (`OctaveSession::start_mock()`), while local developer machines with Octave automatically exercise differential oracle conformance.

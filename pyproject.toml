@@ -1,0 +1,28 @@
+[build-system]
+requires = ["maturin>=1.5,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "matrust"
+version = "0.1.0"
+description = "Python bindings for MatRust Studio App Designer and RustLab scientific computing platform"
+readme = "python/README.md"
+requires-python = ">=3.9"
+license = { text = "MIT OR Apache-2.0" }
+classifiers = [
+    "Programming Language :: Rust",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering",
+]
+
+[tool.maturin]
+manifest-path = "crates/mlapp-py/Cargo.toml"
+python-source = "python"
+module-name = "matrust._matrust"
+features = ["pyo3/extension-module"]

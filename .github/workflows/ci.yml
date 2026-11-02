@@ -74,6 +74,12 @@ jobs:
       - name: Check Workspace Benchmarks
         run: cargo bench --workspace --no-run
 
+      - name: Run Host Benchmarks Smoke & Regression Guard
+        run: |
+          cargo bench -p mlapp-host -- --test
+          python3 scripts/check_bench_regression.py
+        shell: bash
+
       - name: Cargo Doc (no broken links / warnings)
         run: cargo doc --workspace --no-deps
         env:
@@ -143,6 +149,16 @@ jobs:
 
       - name: Run cargo-audit
         run: cargo audit
+
+      - name: Verify No AI / LLM Crates or Symbols
+        run: |
+          echo "Verifying zero AI/LLM client crates or symbols in workspace code..."
+          ! git grep -i -E '(openai|anthropic|copilot|\bllm\b)' -- ':!docs' ':!.github' ':!*.md'
+
+      - name: Verify No AI / LLM Crates or Symbols
+        run: |
+          echo "Verifying zero AI/LLM client crates or symbols in workspace code..."
+          ! git grep -i -E '(openai|anthropic|copilot|\bllm\b)' -- ':!docs' ':!.github' ':!*.md'
 
       - name: Verify No AI / LLM Crates or Symbols
         run: |

@@ -16,6 +16,9 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      - name: Install Stable Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
+
       - name: Install Nightly Rust Toolchain
         uses: dtolnay/rust-toolchain@nightly
         with:
@@ -25,6 +28,9 @@ jobs:
       - name: Cache Cargo Dependencies
         uses: Swatinem/rust-cache@v2
 
+      - name: Run Corpus Smoke Test Suite
+        run: cargo test --manifest-path fuzz/Cargo.toml --test corpus_smoke
+
       - name: Install cargo-fuzz
         uses: taiki-e/install-action@v2
         with:
@@ -33,15 +39,27 @@ jobs:
       - name: Run Fuzz Parser (20 minutes)
         run: |
           mkdir -p fuzz/artifacts
-          cargo +nightly fuzz run fuzz_parser --target x86_64-unknown-linux-gnu -- -max_total_time=1200
+          cargo +nightly fuzz run fuzz_parser --target x86_64-unknown-linux-gnu -- -max_total_time=1200 -dict=fuzz/dict/matlab_keywords.dict
 
       - name: Run Fuzz XML (20 minutes)
         run: |
-          cargo +nightly fuzz run fuzz_xml --target x86_64-unknown-linux-gnu -- -max_total_time=1200
+          mkdir -p fuzz/artifacts
+          cargo +nightly fuzz run fuzz_xml --target x86_64-unknown-linux-gnu -- -max_total_time=1200 -dict=fuzz/dict/xml_tags.dict
 
       - name: Run Fuzz ZIP (20 minutes)
         run: |
+          mkdir -p fuzz/artifacts
           cargo +nightly fuzz run fuzz_zip --target x86_64-unknown-linux-gnu -- -max_total_time=1200
+
+      - name: Run Fuzz Container Extract (20 minutes)
+        run: |
+          mkdir -p fuzz/artifacts
+          cargo +nightly fuzz run fuzz_container_extract --target x86_64-unknown-linux-gnu -- -max_total_time=1200
+
+      - name: Run Fuzz Interpreter (20 minutes)
+        run: |
+          mkdir -p fuzz/artifacts
+          cargo +nightly fuzz run fuzz_interpreter --target x86_64-unknown-linux-gnu -- -max_total_time=1200 -dict=fuzz/dict/matlab_keywords.dict
 
       - name: Upload Fuzz Crash Artifacts
         if: always()

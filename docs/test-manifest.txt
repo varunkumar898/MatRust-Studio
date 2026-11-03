@@ -1,4 +1,5 @@
-﻿test_acceptance_t_entropy: test
+﻿current_folder::tests::hidden_filter_is_dotfile_only: test
+test_acceptance_t_entropy: test
 test_block_diagram_editor_canvas_and_solver: test
 test_breakpoint_execution_pause_inspect_and_continue: test
 test_breakpoint_execution_stop: test

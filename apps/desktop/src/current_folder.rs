@@ -8,6 +8,10 @@ use std::path::PathBuf;
 pub struct CurrentFolderPanel {
     pub current_dir: PathBuf,
     pub selected_file: Option<PathBuf>,
+    /// G5/G15-priced toggle from BACKLOG 6.2: dot-entries (".git",
+    /// ".github", ".re-ghidra", ...) are hidden by default, matching the
+    /// common IDE file-browser default.
+    pub show_hidden: bool,
 }
 
 impl Default for CurrentFolderPanel {
@@ -15,6 +19,7 @@ impl Default for CurrentFolderPanel {
         Self {
             current_dir: std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")),
             selected_file: None,
+            show_hidden: false,
         }
     }
 }
@@ -39,6 +44,7 @@ impl CurrentFolderPanel {
                             self.current_dir = parent.to_path_buf();
                         }
                     }
+                    ui.checkbox(&mut self.show_hidden, "Hidden");
                 });
             });
 
@@ -84,6 +90,11 @@ impl CurrentFolderPanel {
                             let file_name =
                                 path.file_name().and_then(|n| n.to_str()).unwrap_or("?");
 
+                            // BACKLOG 6.2: hide dot-entries unless shown.
+                            if !self.show_hidden && is_hidden(file_name) {
+                                return;
+                            }
+
                             // Determine icon & color
                             let (icon, color) = if path.is_dir() {
                                 ("📁", theme.text_primary)
@@ -124,5 +135,26 @@ impl CurrentFolderPanel {
                     }
                 });
         });
+    }
+}
+
+/// Dot-entries (".git", ".re-ghidra", ...) count as hidden, matching the
+/// common IDE default of not showing dotfiles in a file browser.
+fn is_hidden(file_name: &str) -> bool {
+    file_name.starts_with('.')
+}
+
+#[cfg(test)]
+mod tests {
+    use super::is_hidden;
+
+    #[test]
+    fn hidden_filter_is_dotfile_only() {
+        assert!(is_hidden(".git"));
+        assert!(is_hidden(".github"));
+        assert!(is_hidden(".re-ghidra"));
+        assert!(!is_hidden("main.rs"));
+        assert!(!is_hidden("hello.m"));
+        assert!(!is_hidden("a.txt"));
     }
 }

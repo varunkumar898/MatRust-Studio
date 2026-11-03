@@ -59,7 +59,9 @@ pub struct BlockDiagramEditor {
 
 impl Default for BlockDiagramEditor {
     fn default() -> Self {
-        let mut editor = Self {
+        // G2: a fresh canvas is EMPTY; the feedback example is an explicit
+        // user action ("Load Feedback Example" button).
+        Self {
             blocks: Vec::new(),
             wires: Vec::new(),
             selected_block_sid: None,
@@ -81,9 +83,7 @@ impl Default for BlockDiagramEditor {
             sim_status: "Ready".to_string(),
             show_scope_window: false,
             scope_signal_name: "Scope".to_string(),
-        };
-        editor.load_default_feedback_example();
-        editor
+        }
     }
 }
 
@@ -325,7 +325,7 @@ impl BlockDiagramEditor {
 
             ui.separator();
 
-            if ui.button("Feedback Example").clicked() {
+            if ui.button("Load Feedback Example").clicked() {
                 self.load_default_feedback_example();
             }
 

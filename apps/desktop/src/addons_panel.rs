@@ -19,13 +19,14 @@ pub struct AddOnItem {
     pub is_builtin: bool,
 }
 
-/// Catalog of default clean-room add-on packages.
+/// Catalog of the built-in launcher apps that ship with the IDE. Additional
+/// packages (a real install/download system) are future work.
 pub static DEFAULT_ADDONS: &[AddOnItem] = &[
     AddOnItem {
         id: "app-data-importer",
         title: "Data Importer & Table Cleaner",
         version: "1.2.0",
-        author: "MatRust Studio Clean-Room Team",
+        author: "MATSTUDIO",
         category: "Data Analysis",
         description: "Interactive GUI application for previewing, formatting, and importing delimited CSV, TSV, and tabular data directly into workspace matrices and tables.",
         is_installed: true,
@@ -35,7 +36,7 @@ pub static DEFAULT_ADDONS: &[AddOnItem] = &[
         id: "app-plot-explorer",
         title: "Plot & Curve Explorer",
         version: "1.1.0",
-        author: "MatRust Studio Clean-Room Team",
+        author: "MATSTUDIO",
         category: "Visualization",
         description: "Interactive visualization tool for exploring 2D curves, multi-series plots, histograms, and scatter plots with interactive pan, zoom, and axis styling.",
         is_installed: true,
@@ -45,7 +46,7 @@ pub static DEFAULT_ADDONS: &[AddOnItem] = &[
         id: "app-signal-viewer",
         title: "Signal & Waveform Analyzer",
         version: "1.0.0",
-        author: "MatRust Studio Clean-Room Team",
+        author: "MATSTUDIO",
         category: "Signal Processing",
         description: "Time-domain and frequency-domain waveform viewer supporting FFT spectrum estimation, filtering, and window analysis.",
         is_installed: true,
@@ -55,21 +56,11 @@ pub static DEFAULT_ADDONS: &[AddOnItem] = &[
         id: "app-block-diagram-inspector",
         title: "SLX Block Model Inspector",
         version: "1.0.0",
-        author: "MatRust Studio Clean-Room Team",
+        author: "MATSTUDIO",
         category: "Simulation & Modeling",
         description: "Inspects block hierarchies, parameter schemas, input/output connectivity, and annotations within .slx block diagram model packages without requiring proprietary runtimes.",
         is_installed: true,
         is_builtin: true,
-    },
-    AddOnItem {
-        id: "pkg-control-systems",
-        title: "Control System Design Essentials",
-        version: "0.9.4",
-        author: "Community Contributor",
-        category: "Control Systems",
-        description: "State-space and transfer function tools: step response, Bode diagram data generation, root locus, and feedback loop analysis.",
-        is_installed: false,
-        is_builtin: false,
     },
 ];
 

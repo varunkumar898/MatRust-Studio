@@ -520,16 +520,23 @@ fn test_dock_tree_help_addons_block_diagram_panels() {
 
 #[test]
 fn test_block_diagram_editor_canvas_and_solver() {
+    // G2: a fresh editor starts with an EMPTY canvas; the example is
+    // loaded explicitly below.
     let mut editor = BlockDiagramEditor::default();
+    assert!(
+        editor.blocks.is_empty(),
+        "A fresh block diagram editor must start with an empty canvas"
+    );
+    editor.load_default_feedback_example();
     assert_eq!(
         editor.blocks.len(),
         5,
-        "Default feedback example must contain 5 blocks"
+        "Loaded feedback example must contain 5 blocks"
     );
     assert_eq!(
         editor.wires.len(),
         5,
-        "Default feedback example must contain 5 wires"
+        "Loaded feedback example must contain 5 wires"
     );
 
     let diagram = editor.to_block_diagram();

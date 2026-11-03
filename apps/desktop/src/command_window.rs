@@ -26,16 +26,11 @@ pub struct CommandWindow {
 
 impl Default for CommandWindow {
     fn default() -> Self {
-        let welcome = vec![
-            ConsoleLogEntry {
-                kind: ConsoleLogKind::Output,
-                text: "MatRust Studio Numerical Computing Environment\n".to_string(),
-            },
-            ConsoleLogEntry {
-                kind: ConsoleLogKind::Output,
-                text: "Type commands at the >> prompt. Type 'help' for builtins.\n\n".to_string(),
-            },
-        ];
+        // G2: no watermark banner; the empty state is a single hint line.
+        let welcome = vec![ConsoleLogEntry {
+            kind: ConsoleLogKind::Output,
+            text: "Type commands at the >> prompt. Type 'help' for builtins.\n".to_string(),
+        }];
         Self {
             logs: welcome,
             input_buffer: String::new(),

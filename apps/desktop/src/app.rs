@@ -1231,8 +1231,9 @@ impl MatStudioApp {
                             "• [Current Directory] {}",
                             self.current_folder.current_dir.display()
                         ));
-                        ui.label("• [Built-in Toolboxes] <matrust-studio>/crates/rustlab-stdlib");
-                        ui.label("• [Block Diagram Engine] <matrust-studio>/crates/mlapp-sim");
+                        ui.label(
+                            "The engine search path is fixed: the current directory and the built-in crates.",
+                        );
                     });
 
                     ui.separator();

@@ -120,13 +120,11 @@ pub struct DocumentTab {
 
 impl DocumentTab {
     pub fn new_untitled(idx: usize) -> Self {
-        let initial_script = format!(
-            "% Script Untitled{idx}.m\n% MatRust Studio Script\n\nx = linspace(0, 2*pi, 100);\ny = sin(x);\n\nfigure(1);\nplot(x, y);\ntitle('Sine Wave');\ngrid on;\n"
-        );
         Self {
             path: None,
             title: format!("Untitled{idx}.m"),
-            content: initial_script,
+            // G2: a new script starts empty, with no pre-filled demo content.
+            content: String::new(),
             is_dirty: true,
             breakpoints: HashSet::new(),
             folded_blocks: HashSet::new(),

@@ -201,9 +201,9 @@ impl AppRuntime {
         models.insert(diagram.name.clone(), diagram);
     }
 
-    /// Configures MATLAB bridge delegation for unsupported functions.
-    pub fn configure_matlab_bridge(&mut self, allow_matlab: bool) {
-        let session = if allow_matlab {
+    /// Configures execution bridges (MATLAB and GNU Octave) for unsupported functions.
+    pub fn configure_bridges(&mut self, allow_matlab: bool, allow_octave: bool) {
+        let matlab_session = if allow_matlab {
             Some(Arc::new(Mutex::new(
                 mlapp_matlab::MatlabSession::start()
                     .unwrap_or_else(|_| mlapp_matlab::MatlabSession::start_mock()),
@@ -212,9 +212,18 @@ impl AppRuntime {
             None
         };
 
+        let octave_session = if allow_octave {
+            Some(Arc::new(Mutex::new(
+                mlapp_octave::OctaveSession::start()
+                    .unwrap_or_else(|_| mlapp_octave::OctaveSession::start_mock()),
+            )))
+        } else {
+            None
+        };
+
         self.interpreter
             .set_fallback_handler(move |name: &str, args: &[Value], _nargout: usize| {
-                if let Some(ref sess_arc) = session {
+                if let Some(ref sess_arc) = matlab_session {
                     let mut sess = sess_arc.lock().unwrap_or_else(|p| p.into_inner());
                     match sess.call(name, args) {
                         Ok(val) => Ok(vec![val]),
@@ -224,16 +233,31 @@ impl AppRuntime {
                             span: rustlab_parse::Span::default(),
                         }),
                     }
+                } else if let Some(ref sess_arc) = octave_session {
+                    let mut sess = sess_arc.lock().unwrap_or_else(|p| p.into_inner());
+                    match sess.call(name, args) {
+                        Ok(val) => Ok(vec![val]),
+                        Err(e) => Err(rustlab_eval::EvalError::UserError {
+                            identifier: "Octave:BridgeError".to_string(),
+                            message: format!("GNU Octave bridge delegation failed for '{name}': {e}"),
+                            span: rustlab_parse::Span::default(),
+                        }),
+                    }
                 } else {
                     Err(rustlab_eval::EvalError::UserError {
                         identifier: "MATLAB:UndefinedFunction".to_string(),
                         message: format!(
-                            "Unsupported MATLAB function '{name}'. Hint: run with --allow-matlab to delegate to real MATLAB"
+                            "Unsupported MATLAB function '{name}'. Hint: run with --allow-matlab to delegate to real MATLAB (or --allow-octave for GNU Octave)"
                         ),
                         span: rustlab_parse::Span::default(),
                     })
                 }
             });
+    }
+
+    /// Configures MATLAB bridge delegation for unsupported functions.
+    pub fn configure_matlab_bridge(&mut self, allow_matlab: bool) {
+        self.configure_bridges(allow_matlab, false);
     }
 
     pub fn load_class_def(&mut self, class_def: AppClassDef) {

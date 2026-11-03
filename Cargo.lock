@@ -2171,6 +2171,7 @@ dependencies = [
  "mlapp-container",
  "mlapp-lang",
  "mlapp-matlab",
+ "mlapp-octave",
  "mlapp-sim",
  "mlapp-ui",
  "rustlab-eval",

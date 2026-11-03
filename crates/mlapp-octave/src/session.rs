@@ -402,6 +402,17 @@ fn evaluate_mock_call(fn_name: &str, args: &[Value]) -> Result<Value, OctaveErro
             Ok(Value::scalar(1.0))
         }
         "fminsearch" => Ok(make_vector(vec![1.0, 2.0])),
+        "hypot" => {
+            let a = args
+                .first()
+                .and_then(|v| v.as_scalar_f64().ok())
+                .unwrap_or(0.0);
+            let b = args
+                .get(1)
+                .and_then(|v| v.as_scalar_f64().ok())
+                .unwrap_or(0.0);
+            Ok(Value::scalar((a * a + b * b).sqrt()))
+        }
         _ => Ok(Value::char_vector(&format!("mock_octave_{fn_name}"))),
     }
 }

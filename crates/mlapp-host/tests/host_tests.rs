@@ -689,8 +689,8 @@ fn test_matlab_bridge_delegation_and_unsupported_hint() {
         end
         methods (Access = public)
             function BridgeBtnPushed(app, event)
-                res = fminsearch([0, 0]);
-                app.ResultLabel.Text = sprintf('x=%.1f,y=%.1f', res(1), res(2));
+                res = hypot(3, 4);
+                app.ResultLabel.Text = sprintf('res=%.1f', res);
             end
         end
     end
@@ -721,7 +721,7 @@ fn test_matlab_bridge_delegation_and_unsupported_hint() {
         for _ in 0..100 {
             while let Some(notif) = session.poll_notification() {
                 if let HostNotification::Error(e) = notif {
-                    if e.contains("Unsupported MATLAB function 'fminsearch'")
+                    if e.contains("Unsupported MATLAB function 'hypot'")
                         && e.contains("run with --allow-matlab to delegate to real MATLAB")
                     {
                         saw_hint_error = true;
@@ -769,7 +769,7 @@ fn test_matlab_bridge_delegation_and_unsupported_hint() {
                         {
                             if component == "ResultLabel"
                                 && property == "Text"
-                                && value == PropertyValue::String("x=1.0,y=2.0".to_string())
+                                && value == PropertyValue::String("res=5.0".to_string())
                             {
                                 saw_success_mutation = true;
                             }
@@ -785,6 +785,55 @@ fn test_matlab_bridge_delegation_and_unsupported_hint() {
         assert!(
             saw_success_mutation,
             "Calling unsupported function with --allow-matlab must delegate to MATLAB bridge and update UI"
+        );
+        session.shutdown();
+    }
+
+    // Case 3: With --allow-octave, calling fminsearch succeeds via the Octave bridge
+    {
+        let zip_bytes = build_app_zip();
+        let config = HostConfig {
+            allow_octave: true,
+            ..Default::default()
+        };
+        let mut session =
+            AppSession::launch(Cursor::new(zip_bytes), config).expect("launch session");
+
+        session
+            .send_event(UiEvent::ButtonClick {
+                component_name: "BridgeBtn".to_string(),
+            })
+            .expect("send button click");
+
+        let mut saw_success_mutation = false;
+        for _ in 0..100 {
+            while let Some(notif) = session.poll_notification() {
+                if let HostNotification::Mutations(mutations) = notif {
+                    for mutation in mutations {
+                        if let UiMutation::SetProperty {
+                            component,
+                            property,
+                            value,
+                        } = mutation
+                        {
+                            if component == "ResultLabel"
+                                && property == "Text"
+                                && value == PropertyValue::String("res=5.0".to_string())
+                            {
+                                saw_success_mutation = true;
+                            }
+                        }
+                    }
+                }
+            }
+            if saw_success_mutation {
+                break;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(10));
+        }
+        assert!(
+            saw_success_mutation,
+            "Calling unsupported function with --allow-octave must delegate to Octave bridge and update UI"
         );
         session.shutdown();
     }

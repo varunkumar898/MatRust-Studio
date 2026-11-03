@@ -534,3 +534,71 @@ end
     );
     assert!(format!("{pause_err}").contains("cancelled"));
 }
+
+#[test]
+fn test_runtime_unsupported_function_hints_both_bridges() {
+    let fig = Component::new(ComponentKind::UIFigure, "UIFigure");
+    let handle = AppHandle::from_ui_tree("TestApp", &fig);
+    let mut runtime = AppRuntime::new(handle);
+    runtime.configure_bridges(false, false);
+
+    let source = r#"
+classdef TestApp < matlab.apps.AppBase
+    methods (Access = private)
+        function RunTest(app)
+            nonexistent_custom_toolbox_fn(42);
+        end
+    end
+end
+"#;
+    let class_def = parse_app_classdef(source).expect("parse classdef");
+    runtime.load_class_def(class_def);
+
+    let err = runtime
+        .run_callback(
+            "RunTest",
+            Value::Double(rustlab_math::DenseArray::scalar(0.0)),
+        )
+        .expect_err("must fail on unsupported function");
+    let err_str = format!("{err}");
+    assert!(err_str.contains("Unsupported MATLAB function 'nonexistent_custom_toolbox_fn'"));
+    assert!(err_str.contains("--allow-matlab") && err_str.contains("--allow-octave"));
+}
+
+#[test]
+fn test_runtime_configure_bridges_octave_delegation() {
+    let fig = Component::new(ComponentKind::UIFigure, "UIFigure");
+    let handle = AppHandle::from_ui_tree("TestApp", &fig);
+    let mut runtime = AppRuntime::new(handle);
+    runtime.configure_bridges(false, true);
+
+    let source = r#"
+classdef TestApp < matlab.apps.AppBase
+    properties (Access = public)
+        Result = 0
+    end
+    methods (Access = private)
+        function RunTest(app)
+            r = hypot(3, 4);
+            app.Result = r;
+        end
+    end
+end
+"#;
+    let class_def = parse_app_classdef(source).expect("parse classdef");
+    runtime.load_class_def(class_def);
+
+    runtime
+        .run_callback(
+            "RunTest",
+            Value::Double(rustlab_math::DenseArray::scalar(0.0)),
+        )
+        .expect("callback must succeed via octave bridge");
+
+    let res = runtime
+        .app_handle
+        .get_property("Result")
+        .expect("get Result property");
+    let val = res.as_scalar_f64().expect("expected scalar f64 result");
+    assert!((val - 5.0).abs() < 1e-4);
+}

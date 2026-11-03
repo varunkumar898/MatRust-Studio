@@ -77,6 +77,10 @@ enum Commands {
         #[arg(long, default_value_t = false)]
         allow_matlab: bool,
 
+        /// Allow delegation of unsupported functions to a local GNU Octave installation
+        #[arg(long, default_value_t = false)]
+        allow_octave: bool,
+
         /// Launch GUI window instead of headless mode
         #[arg(long, default_value_t = false)]
         gui: bool,
@@ -178,6 +182,7 @@ fn main() -> Result<()> {
             allow_eval,
             allow_interop,
             allow_matlab,
+            allow_octave,
             gui,
             autotest,
             timeout_ms,
@@ -192,6 +197,7 @@ fn main() -> Result<()> {
                 allow_eval,
                 allow_interop,
                 allow_matlab,
+                allow_octave,
                 callback_timeout_ms: timeout_ms,
             };
 

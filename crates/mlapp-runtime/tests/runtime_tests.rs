@@ -579,8 +579,8 @@ classdef TestApp < matlab.apps.AppBase
     end
     methods (Access = private)
         function RunTest(app)
-            r = roots([1 -3 2]);
-            app.Result = r(1);
+            r = hypot(3, 4);
+            app.Result = r;
         end
     end
 end
@@ -600,5 +600,5 @@ end
         .get_property("Result")
         .expect("get Result property");
     let val = res.as_scalar_f64().expect("expected scalar f64 result");
-    assert!((val - 2.0).abs() < 1e-4);
+    assert!((val - 5.0).abs() < 1e-4);
 }

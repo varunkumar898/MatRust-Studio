@@ -689,8 +689,8 @@ fn test_matlab_bridge_delegation_and_unsupported_hint() {
         end
         methods (Access = public)
             function BridgeBtnPushed(app, event)
-                res = fminsearch([0, 0]);
-                app.ResultLabel.Text = sprintf('x=%.1f,y=%.1f', res(1), res(2));
+                res = hypot(3, 4);
+                app.ResultLabel.Text = sprintf('res=%.1f', res);
             end
         end
     end
@@ -721,7 +721,7 @@ fn test_matlab_bridge_delegation_and_unsupported_hint() {
         for _ in 0..100 {
             while let Some(notif) = session.poll_notification() {
                 if let HostNotification::Error(e) = notif {
-                    if e.contains("Unsupported MATLAB function 'fminsearch'")
+                    if e.contains("Unsupported MATLAB function 'hypot'")
                         && e.contains("run with --allow-matlab to delegate to real MATLAB")
                     {
                         saw_hint_error = true;
@@ -769,7 +769,7 @@ fn test_matlab_bridge_delegation_and_unsupported_hint() {
                         {
                             if component == "ResultLabel"
                                 && property == "Text"
-                                && value == PropertyValue::String("x=1.0,y=2.0".to_string())
+                                && value == PropertyValue::String("res=5.0".to_string())
                             {
                                 saw_success_mutation = true;
                             }
@@ -818,7 +818,7 @@ fn test_matlab_bridge_delegation_and_unsupported_hint() {
                         {
                             if component == "ResultLabel"
                                 && property == "Text"
-                                && value == PropertyValue::String("x=1.0,y=2.0".to_string())
+                                && value == PropertyValue::String("res=5.0".to_string())
                             {
                                 saw_success_mutation = true;
                             }

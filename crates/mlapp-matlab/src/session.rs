@@ -232,6 +232,17 @@ impl MatlabSession {
                 // Mock function calls (e.g. svd, eig, det, custom functions)
                 match fn_name {
                     "fminsearch" => Ok(make_vector(vec![1.0, 2.0])),
+                    "hypot" => {
+                        let a = args
+                            .first()
+                            .and_then(|v| v.as_scalar_f64().ok())
+                            .unwrap_or(0.0);
+                        let b = args
+                            .get(1)
+                            .and_then(|v| v.as_scalar_f64().ok())
+                            .unwrap_or(0.0);
+                        Ok(Value::scalar((a * a + b * b).sqrt()))
+                    }
                     "svd" => {
                         // Return mock SVD singular values
                         if let Some(Value::Double(arr)) = args.first() {

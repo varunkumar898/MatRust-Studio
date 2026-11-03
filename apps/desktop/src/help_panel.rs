@@ -435,9 +435,11 @@ impl HelpPanel {
                                     .unwrap_or(false);
 
                                 let label = format!("{}  - {}", entry.name, entry.summary);
-                                if ui.selectable_label(is_selected, label).clicked() {
-                                    self.selected_entry = Some(entry);
-                                }
+                                ui.push_id(entry.name, |ui| {
+                                    if ui.selectable_label(is_selected, label).clicked() {
+                                        self.selected_entry = Some(entry);
+                                    }
+                                });
                             }
                         });
                 });

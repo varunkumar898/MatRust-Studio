@@ -87,6 +87,7 @@ impl CommandWindow {
             // Scrollable console log area
             let available_height = ui.available_height() - 36.0;
             let mut scroll = ScrollArea::vertical()
+                .id_salt("command_window_scroll")
                 .auto_shrink([false, false])
                 .max_height(available_height);
 
@@ -95,8 +96,10 @@ impl CommandWindow {
             }
 
             scroll.show(ui, |ui| {
-                for entry in &self.logs {
-                    match entry.kind {
+                // G5: stable per-row ids keyed by the log index, so UI ids can
+                // never collide across rows or panels.
+                for (row_idx, entry) in self.logs.iter().enumerate() {
+                    ui.push_id(("cw_row", row_idx), |ui| match entry.kind {
                         ConsoleLogKind::Input => {
                             ui.horizontal(|ui| {
                                 ui.colored_label(theme.accent, ">>");
@@ -109,7 +112,7 @@ impl CommandWindow {
                         ConsoleLogKind::Error => {
                             ui.monospace(RichText::new(&entry.text).color(theme.error));
                         }
-                    }
+                    });
                 }
             });
 

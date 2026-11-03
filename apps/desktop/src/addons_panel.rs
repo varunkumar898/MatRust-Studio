@@ -158,9 +158,11 @@ impl AddOnsPanel {
 
                                 let label =
                                     format!("{} v{}{}", addon.title, addon.version, status_badge);
-                                if ui.selectable_label(is_selected, label).clicked() {
-                                    self.selected_addon_id = Some(addon.id.to_string());
-                                }
+                                ui.push_id(addon.id, |ui| {
+                                    if ui.selectable_label(is_selected, label).clicked() {
+                                        self.selected_addon_id = Some(addon.id.to_string());
+                                    }
+                                });
                             }
                         });
                 });

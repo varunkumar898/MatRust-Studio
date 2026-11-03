@@ -668,6 +668,7 @@ impl BlockDiagramEditor {
         if let Some(sid) = &self.editing_block_sid {
             if let Some(block) = self.blocks.iter().find(|b| b.sid == *sid) {
                 egui::Window::new(format!("Block Parameters: {}", block.name))
+                    .id(egui::Id::new(format!("block-params-{sid}")))
                     .collapsible(false)
                     .resizable(false)
                     .default_width(320.0)

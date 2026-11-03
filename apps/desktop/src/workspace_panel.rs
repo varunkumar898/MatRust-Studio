@@ -93,35 +93,39 @@ impl WorkspacePanel {
             }
 
             ScrollArea::vertical()
+                .id_salt("workspace_rows_scroll")
                 .auto_shrink([false, false])
                 .show(ui, |ui| {
                     for var in filtered {
-                        let is_selected =
-                            self.selected_variable.as_ref().map(|s| &s.name) == Some(&var.name);
+                        // G5: stable per-row id keyed by the variable name.
+                        ui.push_id(("ws_row", var.name.as_str()), |ui| {
+                            let is_selected =
+                                self.selected_variable.as_ref().map(|s| &s.name) == Some(&var.name);
 
-                        let row_resp = ui.horizontal(|ui| {
-                            let name_label = RichText::new(&var.name)
-                                .color(if is_selected {
-                                    theme.accent
-                                } else {
-                                    theme.text_primary
-                                })
-                                .strong();
-                            ui.label(name_label);
+                            let row_resp = ui.horizontal(|ui| {
+                                let name_label = RichText::new(&var.name)
+                                    .color(if is_selected {
+                                        theme.accent
+                                    } else {
+                                        theme.text_primary
+                                    })
+                                    .strong();
+                                ui.label(name_label);
 
-                            ui.label(RichText::new(&var.preview).color(theme.text_secondary));
-                            ui.label(RichText::new(&var.size_str).color(theme.text_secondary));
-                            ui.label(RichText::new(&var.type_name).color(theme.syn_builtin));
+                                ui.label(RichText::new(&var.preview).color(theme.text_secondary));
+                                ui.label(RichText::new(&var.size_str).color(theme.text_secondary));
+                                ui.label(RichText::new(&var.type_name).color(theme.syn_builtin));
+                            });
+
+                            if row_resp.response.interact(egui::Sense::click()).clicked() {
+                                self.selected_variable = Some(var.clone());
+                            }
+
+                            if row_resp.response.double_clicked() {
+                                self.selected_variable = Some(var.clone());
+                                self.inspector_open = true;
+                            }
                         });
-
-                        if row_resp.response.interact(egui::Sense::click()).clicked() {
-                            self.selected_variable = Some(var.clone());
-                        }
-
-                        if row_resp.response.double_clicked() {
-                            self.selected_variable = Some(var.clone());
-                            self.inspector_open = true;
-                        }
                     }
                 });
         });

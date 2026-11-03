@@ -71,41 +71,55 @@ impl CurrentFolderPanel {
             };
 
             ScrollArea::vertical()
+                .id_salt("current_folder_scroll")
                 .auto_shrink([false, false])
                 .show(ui, |ui| {
+                    let mut navigated_up_dir = false;
                     for path in entries {
-                        let file_name = path.file_name().and_then(|n| n.to_str()).unwrap_or("?");
+                        // G5: stable per-row id keyed by the path itself. The
+                        // key is computed before the closure so the path can
+                        // be moved into the navigation handler below.
+                        let row_key = path.as_os_str().to_os_string();
+                        ui.push_id(row_key, |ui| {
+                            let file_name =
+                                path.file_name().and_then(|n| n.to_str()).unwrap_or("?");
 
-                        // Determine icon & color
-                        let (icon, color) = if path.is_dir() {
-                            ("📁", theme.text_primary)
-                        } else if file_name.ends_with(".m") {
-                            ("📄", theme.accent)
-                        } else if file_name.ends_with(".mat") {
-                            ("📊", theme.syn_builtin)
-                        } else if file_name.ends_with(".csv") {
-                            ("📑", theme.warning)
-                        } else {
-                            ("  ", theme.text_secondary)
-                        };
-
-                        let is_selected = self.selected_file.as_ref() == Some(&path);
-                        let label_text = format!("{icon} {file_name}");
-
-                        let resp = ui
-                            .selectable_label(is_selected, RichText::new(label_text).color(color));
-
-                        if resp.clicked() {
-                            self.selected_file = Some(path.clone());
-                        }
-
-                        if resp.double_clicked() {
-                            if path.is_dir() {
-                                self.current_dir = path;
-                                break;
+                            // Determine icon & color
+                            let (icon, color) = if path.is_dir() {
+                                ("📁", theme.text_primary)
+                            } else if file_name.ends_with(".m") {
+                                ("📄", theme.accent)
+                            } else if file_name.ends_with(".mat") {
+                                ("📊", theme.syn_builtin)
+                            } else if file_name.ends_with(".csv") {
+                                ("📑", theme.warning)
                             } else {
-                                *open_file_request = Some(path);
+                                ("  ", theme.text_secondary)
+                            };
+
+                            let is_selected = self.selected_file.as_ref() == Some(&path);
+                            let label_text = format!("{icon} {file_name}");
+
+                            let resp = ui.selectable_label(
+                                is_selected,
+                                RichText::new(label_text).color(color),
+                            );
+
+                            if resp.clicked() {
+                                self.selected_file = Some(path.clone());
                             }
+
+                            if resp.double_clicked() {
+                                if path.is_dir() {
+                                    self.current_dir = path;
+                                    navigated_up_dir = true;
+                                } else {
+                                    *open_file_request = Some(path);
+                                }
+                            }
+                        });
+                        if navigated_up_dir {
+                            break;
                         }
                     }
                 });

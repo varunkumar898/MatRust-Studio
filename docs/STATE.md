@@ -14,6 +14,19 @@
 - `scripts/verify.ps1` runs from cargo clean and exits 0 with all verification steps passing.
 - GitHub Actions CI matrix: 100% green on all 14 jobs on PR #20 (run `41584278404`) and running on `main` (run `41592329702`).
 
+## Current work: GUI polish milestone `gui/polish-1`
+
+- Branch `gui/polish-1` created from `main` @ `425f54e` (master prompt v2, S-step plan).
+- **S1 GUI inventory + audit COMPLETE** (no code changed): `docs/gui-audit.md` documents
+  the full panel/control inventory of `apps/desktop`, a real-window capture walk
+  (`docs/screenshots/before/*.png`), runtime findings (duplicate egui ScrollArea id
+  `B61C`, editor tab-bar duplicates, gutter desync, toolstrip overflow, trademark window
+  title, missing run-example and 38/225 help coverage, no-Stop cancellation path in plain
+  runs, %TEMP% layout persistence, and one repo-hygiene bug: workspace tests rewrite
+  `docs/builtins.txt` and re-zip a fixture). Baseline verification from this step: 351/351/351
+  pass (`docs/verify-logs/2026-11-03-gui-s1-baseline-verify.log`).
+- Next: S2 watermark/trademark removal only after owner reviews the S1 audit.
+
 ## Test counts
 
 | Configuration | Passed | Failed | Manifest match |

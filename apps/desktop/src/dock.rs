@@ -17,7 +17,7 @@ pub enum PanelId {
     History,
     Help,
     AddOns,
-    Simulink,
+    BlockDiagram,
 }
 
 impl PanelId {
@@ -31,7 +31,7 @@ impl PanelId {
             PanelId::History => "Command History",
             PanelId::Help => "Help & Documentation",
             PanelId::AddOns => "Add-On Explorer",
-            PanelId::Simulink => "Simulink Editor",
+            PanelId::BlockDiagram => "Block Diagram Editor",
         }
     }
 
@@ -45,7 +45,7 @@ impl PanelId {
             PanelId::History => "🕒",
             PanelId::Help => "❓",
             PanelId::AddOns => "🧩",
-            PanelId::Simulink => "🔄",
+            PanelId::BlockDiagram => "🔄",
         }
     }
 }
@@ -313,7 +313,7 @@ impl DockTree {
             PanelId::Figures | PanelId::Workspace => PanelId::Workspace,
             PanelId::CommandWindow | PanelId::History => PanelId::CommandWindow,
             PanelId::CurrentFolder => PanelId::CurrentFolder,
-            PanelId::Editor | PanelId::Simulink => PanelId::Editor,
+            PanelId::Editor | PanelId::BlockDiagram => PanelId::Editor,
             PanelId::Help | PanelId::AddOns => PanelId::Help,
         };
 

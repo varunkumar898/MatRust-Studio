@@ -1,9 +1,9 @@
 //! Integration tests for MatRust Studio Desktop application backend, docking, editor folding, worker engine, and debugger.
 
+use matrust_studio::block_diagram_editor::BlockDiagramEditor;
 use matrust_studio::dock::{DockTree, DropZone, PanelId};
 use matrust_studio::editor::{check_syntax, extract_active_section, find_foldable_blocks};
 use matrust_studio::execution::{PlotItem, Session, WorkerClient, WorkerResponse};
-use matrust_studio::simulink_editor::SimulinkEditor;
 use std::collections::HashSet;
 use std::fs::File;
 use std::io::Write;
@@ -502,7 +502,7 @@ fn test_no_ai_crates_or_symbols() {
 }
 
 #[test]
-fn test_dock_tree_help_addons_simulink_panels() {
+fn test_dock_tree_help_addons_block_diagram_panels() {
     let tree = DockTree::standard();
     assert!(
         tree.is_open(PanelId::Help),
@@ -514,13 +514,13 @@ fn test_dock_tree_help_addons_simulink_panels() {
     assert_eq!(PanelId::AddOns.title(), "Add-On Explorer");
     assert_eq!(PanelId::AddOns.icon(), "🧩");
 
-    assert_eq!(PanelId::Simulink.title(), "Simulink Editor");
-    assert_eq!(PanelId::Simulink.icon(), "🔄");
+    assert_eq!(PanelId::BlockDiagram.title(), "Block Diagram Editor");
+    assert_eq!(PanelId::BlockDiagram.icon(), "🔄");
 }
 
 #[test]
-fn test_simulink_editor_canvas_and_solver() {
-    let mut editor = SimulinkEditor::default();
+fn test_block_diagram_editor_canvas_and_solver() {
+    let mut editor = BlockDiagramEditor::default();
     assert_eq!(
         editor.blocks.len(),
         5,
@@ -539,7 +539,7 @@ fn test_simulink_editor_canvas_and_solver() {
     editor.run_simulation();
     assert!(
         editor.sim_output.is_some(),
-        "SimulinkEditor must produce valid simulation output"
+        "BlockDiagramEditor must produce valid simulation output"
     );
     let out = editor.sim_output.as_ref().unwrap();
     assert!(

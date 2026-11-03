@@ -1,4 +1,4 @@
-//! Path B License-Free Simulink Block Diagram Canvas & Interactive Solver.
+//! Block Diagram Canvas & Interactive Solver (open, license-free reimplementation).
 //!
 //! Visual node-and-wire diagram editor supporting standard blocks:
 //! Constant, SineWave, Step, Gain, Sum, Product, Integrator, UnitDelay,
@@ -35,8 +35,8 @@ pub struct CanvasWire {
     pub dst_port: usize,
 }
 
-/// Interactive Simulink Editor state.
-pub struct SimulinkEditor {
+/// Interactive block diagram editor state.
+pub struct BlockDiagramEditor {
     pub blocks: Vec<CanvasBlock>,
     pub wires: Vec<CanvasWire>,
     pub selected_block_sid: Option<String>,
@@ -57,7 +57,7 @@ pub struct SimulinkEditor {
     pub scope_signal_name: String,
 }
 
-impl Default for SimulinkEditor {
+impl Default for BlockDiagramEditor {
     fn default() -> Self {
         let mut editor = Self {
             blocks: Vec::new(),
@@ -87,7 +87,7 @@ impl Default for SimulinkEditor {
     }
 }
 
-impl SimulinkEditor {
+impl BlockDiagramEditor {
     /// Loads a clean-room feedback control loop example:
     /// Step -> Sum (-) <- Gain (from Integrator) -> Integrator -> Scope.
     pub fn load_default_feedback_example(&mut self) {
@@ -202,7 +202,7 @@ impl SimulinkEditor {
 
     /// Converts canvas model to `mlapp_sim::BlockDiagram`.
     pub fn to_block_diagram(&self) -> BlockDiagram {
-        let mut diagram = BlockDiagram::new("MatRust_Simulink_Model");
+        let mut diagram = BlockDiagram::new("Untitled_Diagram");
         for b in &self.blocks {
             let mut sb = SimBlock::new(&b.sid, &b.name, b.block_type.clone());
             sb.position = Some([
@@ -253,7 +253,7 @@ impl SimulinkEditor {
         }
     }
 
-    /// Renders the complete Simulink Editor panel.
+    /// Renders the complete Block Diagram Editor panel.
     pub fn show(&mut self, ui: &mut Ui, theme: &Theme) {
         ui.vertical(|ui| {
             // Toolbar at top
@@ -284,7 +284,7 @@ impl SimulinkEditor {
 
     fn render_toolbar(&mut self, ui: &mut Ui, theme: &Theme) {
         ui.horizontal(|ui| {
-            ui.heading(RichText::new("🔄 Simulink Model Editor").color(theme.text_primary));
+            ui.heading(RichText::new("🔄 Block Diagram Editor").color(theme.text_primary));
             ui.separator();
 
             if ui
@@ -715,7 +715,7 @@ impl SimulinkEditor {
     fn render_scope_modal(&mut self, ctx: &egui::Context, _theme: &Theme) {
         let mut close_scope = false;
 
-        egui::Window::new("📈 Simulink Scope Waveform Viewer")
+        egui::Window::new("📈 Scope Waveform Viewer")
             .default_size([650.0, 400.0])
             .resizable(true)
             .show(ctx, |ui| {

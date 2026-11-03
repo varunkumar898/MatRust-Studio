@@ -9,6 +9,7 @@
 //! - Offline Clean-Room Help & Documentation panel (Zero AI)
 
 use crate::addons_panel::AddOnsPanel;
+use crate::block_diagram_editor::BlockDiagramEditor;
 use crate::command_window::CommandWindow;
 use crate::current_folder::CurrentFolderPanel;
 use crate::dock::{DockTree, PanelId};
@@ -17,7 +18,6 @@ use crate::execution::{GraphicsState, VariableRow, WorkerClient, WorkerResponse}
 use crate::figures::FiguresPanel;
 use crate::help_panel::HelpPanel;
 use crate::preferences::Preferences;
-use crate::simulink_editor::SimulinkEditor;
 use crate::statusbar::{EngineStatus, StatusBar};
 use crate::theme::{Theme, ThemeMode};
 use crate::workspace_panel::WorkspacePanel;
@@ -50,7 +50,7 @@ pub struct MatStudioApp {
     pub figures_panel: FiguresPanel,
     pub help_panel: HelpPanel,
     pub addons_panel: AddOnsPanel,
-    pub simulink_editor: SimulinkEditor,
+    pub block_diagram_editor: BlockDiagramEditor,
 
     pub worker: WorkerClient,
     pub graphics: GraphicsState,
@@ -93,7 +93,7 @@ impl Default for MatStudioApp {
             figures_panel: FiguresPanel::default(),
             help_panel: HelpPanel::default(),
             addons_panel: AddOnsPanel::default(),
-            simulink_editor: SimulinkEditor::default(),
+            block_diagram_editor: BlockDiagramEditor::default(),
 
             worker: WorkerClient::new(),
             graphics: GraphicsState::default(),
@@ -171,7 +171,7 @@ impl eframe::App for MatStudioApp {
             let figures_panel = &mut self.figures_panel;
             let help_panel = &mut self.help_panel;
             let addons_panel = &mut self.addons_panel;
-            let simulink_editor = &mut self.simulink_editor;
+            let block_diagram_editor = &mut self.block_diagram_editor;
             let graphics = &mut self.graphics;
 
             self.dock_tree
@@ -213,8 +213,8 @@ impl eframe::App for MatStudioApp {
                     PanelId::AddOns => {
                         addons_panel.show(body_ui, &theme, &mut on_launch_app);
                     }
-                    PanelId::Simulink => {
-                        simulink_editor.show(body_ui, &theme);
+                    PanelId::BlockDiagram => {
+                        block_diagram_editor.show(body_ui, &theme);
                     }
                 });
 
@@ -452,7 +452,7 @@ impl MatStudioApp {
                     PanelId::History,
                     PanelId::Help,
                     PanelId::AddOns,
-                    PanelId::Simulink,
+                    PanelId::BlockDiagram,
                 ] {
                     let mut is_open = self.dock_tree.is_open(panel);
                     if ui
@@ -705,16 +705,16 @@ impl MatStudioApp {
         // Group: SIMULINK
         ui.group(|ui| {
             ui.label(
-                RichText::new("SIMULINK")
+                RichText::new("BLOCK DIAGRAM")
                     .size(10.0)
                     .color(self.theme.text_secondary),
             );
             if ui
-                .button("🔄 Simulink")
-                .on_hover_text("Open license-free Simulink block diagram editor and solver")
+                .button("🔄 Block Diagram")
+                .on_hover_text("Open the block diagram editor with solver")
                 .clicked()
             {
-                self.dock_tree.open_panel(PanelId::Simulink);
+                self.dock_tree.open_panel(PanelId::BlockDiagram);
             }
         });
 
@@ -870,11 +870,11 @@ impl MatStudioApp {
                 self.dock_tree.open_panel(PanelId::Figures);
             }
             if ui
-                .button("🔄 Simulink Inspector")
+                .button("🔄 Inspector")
                 .on_hover_text("Open block diagram model inspector")
                 .clicked()
             {
-                self.dock_tree.open_panel(PanelId::Simulink);
+                self.dock_tree.open_panel(PanelId::BlockDiagram);
             }
             if ui
                 .button("🧩 Add-On Explorer")
@@ -981,7 +981,7 @@ impl MatStudioApp {
                 PanelId::CommandWindow,
                 PanelId::Figures,
                 PanelId::Help,
-                PanelId::Simulink,
+                PanelId::BlockDiagram,
             ] {
                 let mut is_open = self.dock_tree.is_open(panel);
                 if ui.checkbox(&mut is_open, panel.title()).clicked() {
@@ -1065,7 +1065,7 @@ impl MatStudioApp {
         match app_id {
             "app-data-importer" => self.open_import_dialog(),
             "app-plot-explorer" => self.dock_tree.open_panel(PanelId::Figures),
-            "app-simulink-inspector" => self.dock_tree.open_panel(PanelId::Simulink),
+            "app-block-diagram-inspector" => self.dock_tree.open_panel(PanelId::BlockDiagram),
             "app-signal-viewer" => {
                 self.execute_code(
                     "t = 0:0.01:1; plot(t, sin(2*pi*5*t)); title('Signal Waveform');".to_string(),
@@ -1232,7 +1232,7 @@ impl MatStudioApp {
                             self.current_folder.current_dir.display()
                         ));
                         ui.label("• [Built-in Toolboxes] <matrust-studio>/crates/rustlab-stdlib");
-                        ui.label("• [Simulink Engine] <matrust-studio>/crates/mlapp-sim");
+                        ui.label("• [Block Diagram Engine] <matrust-studio>/crates/mlapp-sim");
                     });
 
                     ui.separator();

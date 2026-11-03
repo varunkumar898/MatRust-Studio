@@ -285,10 +285,10 @@ pub static DOC_CATALOG: &[DocEntry] = &[
     },
     DocEntry {
         name: "sim",
-        category: "Simulink & Systems",
+        category: "Systems & Simulation",
         syntax: "out = sim(model_name)\nout = sim(model_name, 'StopTime', 10.0)",
         summary: "Simulate a block diagram model.",
-        description: "Executes fixed-step simulation of a Simulink or BlockDiagram model and returns time-series signal outputs.",
+        description: "Executes fixed-step simulation of a block diagram model and returns time-series signal outputs.",
         example: "out = sim('feedback_controller', 'StopTime', 5.0);",
     },
     DocEntry {
@@ -395,7 +395,7 @@ impl HelpPanel {
                 "Plotting & Graphics",
                 "File & I/O",
                 "Programming & Language",
-                "Simulink & Systems",
+                "Systems & Simulation",
             ];
 
             egui::ComboBox::from_label("Category")

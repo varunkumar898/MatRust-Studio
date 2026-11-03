@@ -1,10 +1,11 @@
-test_acceptance_t_entropy: test
+﻿test_acceptance_t_entropy: test
+test_block_diagram_editor_canvas_and_solver: test
 test_breakpoint_execution_pause_inspect_and_continue: test
 test_breakpoint_execution_stop: test
 test_code_folding_block_detection: test
 test_desktop_session_numerical_methods_and_data: test
 test_desktop_session_simulation_and_robotics: test
-test_dock_tree_help_addons_simulink_panels: test
+test_dock_tree_help_addons_block_diagram_panels: test
 test_dock_tree_move_panel_and_tab_operations: test
 test_dock_tree_presets_and_json_persistence: test
 test_editor_section_extraction_and_syntax_analysis: test
@@ -14,12 +15,8 @@ test_session_cancellation_flag: test
 test_session_command_window_disp: test
 test_session_csv_import: test
 test_session_plotting_builtins_and_state: test
-test_simulink_editor_canvas_and_solver: test
 test_worker_client_async_execution: test
 test_worker_panic_recovery_and_session_reset: test
-
-19 tests, 0 benchmarks
-0 tests, 0 benchmarks
 test_cli_check_compat_command: test
 test_cli_check_compat_hazardous_and_unanalyzable: test
 test_cli_extract_command: test
@@ -32,9 +29,6 @@ test_cli_run_command: test
 test_cli_run_gui_flag: test
 test_cli_slx_inspect_command: test
 test_cli_slx_inspect_json_command: test
-
-12 tests, 0 benchmarks
-0 tests, 0 benchmarks
 test_decompressed_bytes_limit_with_forged_header: test
 test_extract_aggregate_decompressed_bytes_limit: test
 test_extract_security_backslash_traversal: test
@@ -51,22 +45,14 @@ test_inspect_mlappinstall_manifest: test
 test_opt_in_real_apps_validation: test
 test_zip_bomb_protection: test
 test_zip_slip_protection: test
-
-16 tests, 0 benchmarks
 test_fixtures_generation_and_inspection: test
 test_hazardous_fixture_compatibility: test
 test_r2018b_release_format: test
 test_r2023b_release_format: test
-
-4 tests, 0 benchmarks
-0 tests, 0 benchmarks
 test_c_abi_null_and_invalid_inputs_with_handle_ids: test
 test_c_abi_package_and_session_flow_with_handle_ids: test
 test_c_header_parity_and_declarations: test
 test_mlapp_ffi_alias_header_exists_and_includes_mlapp_h: test
-
-4 tests, 0 benchmarks
-0 tests, 0 benchmarks
 test_app_host_session_lifecycle: test
 test_comprehensive_e2e_features_and_axes_model: test
 test_end_to_end_callback_with_advanced_matlab_features: test
@@ -75,27 +61,16 @@ test_matlab_bridge_delegation_and_unsupported_hint: test
 test_simulink_app_designer_integration: test
 test_simulink_error_paths: test
 test_value_changed_callback_receives_event_value_and_app_field: test
-
-8 tests, 0 benchmarks
-0 tests, 0 benchmarks
 test_check_compat_deterministic_snapshot: test
 test_extract_code_from_xml: test
 test_parse_app_classdef_structure: test
 test_static_compatibility_scanner: test
-
-4 tests, 0 benchmarks
-0 tests, 0 benchmarks
 test_matlab_detection_functions: test
 test_matlab_value_roundtrip_all_types: test
 test_mock_session_eval_and_call: test
 test_protocol_error_response_handling: test
 test_protocol_serialization_roundtrip: test
-
-5 tests, 0 benchmarks
 test_matlab_oracle_conformance_suite: test
-
-1 test, 0 benchmarks
-0 tests, 0 benchmarks
 test_octave_detection_functions: test
 test_octave_literal_generation: test
 test_octave_mock_session_eval_and_call: test
@@ -104,21 +79,12 @@ test_octave_safety_allowlist_enforcement: test
 test_octave_session_lifecycle_and_shutdown: test
 test_octave_value_roundtrip_all_types: test
 test_real_octave_oracle_conformance_if_installed: test
-
-8 tests, 0 benchmarks
-0 tests, 0 benchmarks
 test_axes_model_plotting_and_svg_export: test
-
-1 test, 0 benchmarks
-0 tests, 0 benchmarks
 test_autotest_headless_e2e_with_plot_and_label_mutation: test
 test_autotest_script_json_deserialization: test
 test_gui_window_screenshot_capture_and_export: test
 test_headless_renderer_tree_walk_and_event_dispatch: test
 test_headless_screenshot_render: test
-
-5 tests, 0 benchmarks
-0 tests, 0 benchmarks
 test_app_runtime_lifecycle_and_mutations: test
 test_cancellation_while_loop_and_long_builtin: test
 test_comprehensive_runtime_sandbox_policies: test
@@ -127,32 +93,20 @@ test_runtime_configure_bridges_octave_delegation: test
 test_runtime_permission_enforcement: test
 test_runtime_unsupported_function_hints_both_bridges: test
 test_unsupported_function_diagnostics: test
-
-8 tests, 0 benchmarks
-0 tests, 0 benchmarks
 test_generate_and_verify_sample_model_fixture: test
 test_security_dos_file_limits_on_slx: test
 test_simulation_first_order_step_response: test
 test_simulation_saturation_and_gain: test
 test_slx_inspect_and_parser: test
-
-5 tests, 0 benchmarks
-0 tests, 0 benchmarks
 test_coordinate_transformation_bidirectional: test
 test_dos_xml_depth_999_small_stack: test
 test_parse_app_xml_component_tree: test
 test_top_level_figure_geometry_exact_values: test
 test_xml_nesting_depth_limit: test
-
-5 tests, 0 benchmarks
-0 tests, 0 benchmarks
-0 tests, 0 benchmarks
 test_diagnostic_error_formatting: test
 test_g01_singular_inv_warns_on_stderr_and_prints_inf: test
 test_incomplete_input_detection: test
 test_semicolon_output_suppression: test
-
-4 tests, 0 benchmarks
 binary_op_caret_is_crlf_insensitive: test
 binary_op_caret_lands_on_spanning_line_lf: test
 binary_op_error_underlines_whole_expression_lf: test
@@ -165,9 +119,6 @@ span_to_location_single_crlf_line: test
 undefined_symbol_caret_lands_on_symbol_line_lf: test
 undefined_symbol_caret_survives_two_crlf_lines: test
 undefined_symbol_gets_a_single_caret_lf: test
-
-12 tests, 0 benchmarks
-0 tests, 0 benchmarks
 test_b2_corrcoef_diagonal_one_property: test
 test_b2_cov_and_corrcoef: test
 test_b2_cov_and_corrcoef_edge_cases: test
@@ -205,11 +156,7 @@ test_b2_var_and_std_flags_dims_integer_classes: test
 test_b2_variance_non_negative_property: test
 test_b2_zscore: test
 test_b2_zscore_edge_cases: test
-
-37 tests, 0 benchmarks
 test_g01_rustlab_only_ids_do_not_use_matlab_prefix: test
-
-1 test, 0 benchmarks
 test_reference_constant_data: test
 test_reference_drift_over_100k_elements: test
 test_reference_empty_and_len1: test
@@ -217,9 +164,6 @@ test_reference_nan_and_inf_windows: test
 test_reference_offset_1e8_plus_noise: test
 test_reference_random_data: test
 test_reference_window_edges_and_k_equals_len: test
-
-7 tests, 0 benchmarks
-0 tests, 0 benchmarks
 test_array_growth_on_assignment: test
 test_basic_arithmetic_evaluation: test
 test_dos_runtime_recursion_limit: test
@@ -230,16 +174,12 @@ test_indexing_with_end: test
 test_matrix_creation_and_multiplication: test
 test_user_defined_functions_and_multiple_returns: test
 test_while_loop_with_break: test
-
-10 tests, 0 benchmarks
 test_boolean_mask_indexing_and_assignment: test
 test_cellfun_arrayfun_structfun: test
 test_function_handles_and_lexical_closures: test
 test_nested_end_contexts: test
 test_try_catch_mexception: test
 test_varargin_varargout_nargin_nargout: test
-
-6 tests, 0 benchmarks
 array::tests::test_dense_array_creation_and_indexing: test
 array::tests::test_dynamic_array_growth: test
 array::tests::test_transpose: test
@@ -250,8 +190,6 @@ ops::tests::test_elementwise_binary_with_broadcasting: test
 ops::tests::test_matmul_2d: test
 shape::tests::test_column_major_strides: test
 shape::tests::test_normalize_shape: test
-
-10 tests, 0 benchmarks
 test_1_based_indexing_column_major: test
 test_a3_exact_int64_uint64: test
 test_a3_mixed_type_rules_and_errors: test
@@ -266,14 +204,9 @@ test_matmul_zero_dimensions_and_mismatch: test
 test_matrix_multiplication: test
 test_minimum_2d_and_singleton_stripping: test
 test_relational_and_logical_operations: test
-
-14 tests, 0 benchmarks
 prop_1_based_indexing_and_column_major_equivalence: test
 prop_addition_is_commutative: test
 prop_transpose_involution: test
-
-3 tests, 0 benchmarks
-0 tests, 0 benchmarks
 test_char_and_logical_roundtrip: test
 test_complex_numbers_roundtrip: test
 test_compressed_roundtrip: test
@@ -281,18 +214,11 @@ test_file_save_and_load: test
 test_matio_image_sparse_and_empty_roundtrip: test
 test_numeric_classes_roundtrip: test
 test_uncompressed_roundtrip: test
-
-7 tests, 0 benchmarks
 test_scipy_generated_files_interop: test
-
-1 test, 0 benchmarks
-0 tests, 0 benchmarks
 test_char_and_string_literals: test
 test_comments_and_line_continuations: test
 test_numeric_literals: test
 test_transpose_vs_char_vector: test
-
-4 tests, 0 benchmarks
 test_anonymous_function: test
 test_colon_range_expressions: test
 test_control_flow: test
@@ -307,13 +233,9 @@ test_multi_assignment: test
 test_operator_precedence: test
 test_parser_nesting_depth_limit: test
 test_power_right_associativity: test
-
-14 tests, 0 benchmarks
 prop_matrix_literal_expressions_parse: test
 prop_never_panic_on_arbitrary_string: test
 prop_valid_arithmetic_expressions_parse: test
-
-3 tests, 0 benchmarks
 linalg::eig_sym::tests::test_eig_sym_3x3: test
 linalg::eig_sym::tests::test_eig_sym_diagonal: test
 linalg::eig_sym::tests::test_eig_sym_known_2x2: test
@@ -321,22 +243,14 @@ linalg::expm::tests::test_expm_diagonal_matrix: test
 linalg::expm::tests::test_expm_zero_matrix: test
 linalg::kron::tests::test_kron_2x2: test
 signal::radix2::tests::test_radix2_roundtrip: test
-
-7 tests, 0 benchmarks
 test_conformance_scripts_execution: test
-
-1 test, 0 benchmarks
 test_supported_functions_doc_parity_and_coverage: test
-
-1 test, 0 benchmarks
 test_dos_huge_zeros_allocation_cap: test
 test_image_processing_rgb2gray_and_filters: test
 test_machine_learning_fitlm_predict_kmeans: test
 test_robotics_rotations_and_kinematics: test
 test_signal_filters_windows_and_xcorr: test
 test_simulation_tf_and_step: test
-
-6 tests, 0 benchmarks
 test_g01_core_omitnan_sum_mean_min_max: test
 test_g01_display_extreme_range_1e_16_1_golden_unverified: test
 test_g01_display_scale_factor_0_001_1000_golden_unverified: test
@@ -344,21 +258,15 @@ test_g01_lu_residuals_random_50x50: test
 test_g01_lu_residuals_random_5x5: test
 test_g01_mask_count_and_size_identifiers_settled: test
 test_g01_mldivide_singular_returns_inf: test
-
-7 tests, 0 benchmarks
 test_numeric_comparison_faer_vs_native_eig_sym: test
 test_numeric_comparison_faer_vs_native_svd: test
 test_numeric_comparison_matrixmultiply_vs_fallback_gemm: test
-
-3 tests, 0 benchmarks
 test_gradient: test
 test_interp1_linear_and_nearest: test
 test_polyfit_linear_and_quadratic: test
 test_polyval_scalar_and_vector: test
 test_roots_linear_and_quadratic: test
 test_trapz_and_cumtrapz: test
-
-6 tests, 0 benchmarks
 binary_expression_span_covers_full_expression: test
 every_registered_builtin_has_docs_and_help: test
 matrix_display_common_scale_boundary_unverified: test
@@ -375,8 +283,6 @@ scalar_integer_display_goldens: test
 scalar_scientific_display_goldens_unverified: test
 test_num2str_noninteger_matrix_g_style_unverified: test
 test_scientific_notation_threshold_rule_cited_unverified: test
-
-16 tests, 0 benchmarks
 test_boolean_mask_shape_rules_and_deletion: test
 test_diagnostics_error_and_assert: test
 test_ieee754_nan_inf_semantics: test
@@ -390,8 +296,6 @@ test_regexp_and_regexprep: test
 test_sprintf_format_recycling_golden: test
 test_sprintf_fprintf_edge_cases: test
 test_string_library_core: test
-
-13 tests, 0 benchmarks
 test_a2_2d_transforms_fft2_ifft2: test
 test_a2_both_native_and_faer_eig_paths_match: test
 test_a2_edge_cases_empty_1x1_singular_nan_nonsquare: test
@@ -413,8 +317,6 @@ test_a2_property_fft_ifft_roundtrip_various_lengths: test
 test_a2_rank_cond_null_orth_kron: test
 test_a2_symmetric_eig_routes_to_faer_and_canonicalizes: test
 test_a2_tolerance_rule_max_mn_eps_sigma1: test
-
-21 tests, 0 benchmarks
 test_a3_bitwise_operations: test
 test_a3_class_predicates_and_limits: test
 test_a3_exact_64bit_integers_and_saturation: test
@@ -431,8 +333,6 @@ test_a3_reshape_empty_placeholder_and_negative_error: test
 test_a3_sparse_csc_matrices_and_algebra: test
 test_a3_sparse_memory_efficiency: test
 test_a3_sparse_parity_and_residual: test
-
-16 tests, 0 benchmarks
 test_array_generators: test
 test_b2_inv_and_mldivide_singular_matrix_returns_inf: test
 test_cell_arrays: test
@@ -446,29 +346,6 @@ test_shape_and_inspection: test
 test_signal_and_fft: test
 test_strings_and_chars: test
 test_struct_arrays: test
-
-13 tests, 0 benchmarks
 test_head_and_tail_table: test
 test_readtable_and_dot_indexing: test
 test_summary_and_writetable_roundtrip: test
-
-3 tests, 0 benchmarks
-0 tests, 0 benchmarks
-0 tests, 0 benchmarks
-0 tests, 0 benchmarks
-0 tests, 0 benchmarks
-0 tests, 0 benchmarks
-0 tests, 0 benchmarks
-0 tests, 0 benchmarks
-0 tests, 0 benchmarks
-0 tests, 0 benchmarks
-0 tests, 0 benchmarks
-0 tests, 0 benchmarks
-0 tests, 0 benchmarks
-0 tests, 0 benchmarks
-0 tests, 0 benchmarks
-0 tests, 0 benchmarks
-0 tests, 0 benchmarks
-0 tests, 0 benchmarks
-0 tests, 0 benchmarks
-0 tests, 0 benchmarks

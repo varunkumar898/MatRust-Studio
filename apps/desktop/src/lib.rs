@@ -2,6 +2,7 @@
 
 pub mod addons_panel;
 pub mod app;
+pub mod block_diagram_editor;
 pub mod command_window;
 pub mod current_folder;
 pub mod dock;
@@ -10,7 +11,6 @@ pub mod execution;
 pub mod figures;
 pub mod help_panel;
 pub mod preferences;
-pub mod simulink_editor;
 pub mod statusbar;
 pub mod theme;
 pub mod workspace_panel;

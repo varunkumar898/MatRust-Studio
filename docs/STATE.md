@@ -25,7 +25,23 @@
   runs, %TEMP% layout persistence, and one repo-hygiene bug: workspace tests rewrite
   `docs/builtins.txt` and re-zip a fixture). Baseline verification from this step: 351/351/351
   pass (`docs/verify-logs/2026-11-03-gui-s1-baseline-verify.log`).
-- Next: S2 watermark/trademark removal only after owner reviews the S1 audit.
+- **S2@C1 test hygiene COMPLETE** (commit `9ea305c`): all six test-suite writers that
+  touched repo files (`docs/builtins.txt`, `docs/SUPPORTED_FUNCTIONS.md` on UPDATE_DOCS=1,
+  `fixtures/sample_models/simple_feedback.slx`, the four `fixtures/sample_apps/*.mlapp`,
+  and the T-ENTROPY screenshot) now write only to `%TEMP%`; `docs/builtins.txt` is verified
+  read-only against the live registry (225 names under full defaults; drift is a loud test
+  failure instead of a silent rewrite). `scripts/verify.ps1` gained step 10: the run fails
+  on any working-tree dirt. From-clean log:
+  `docs/verify-logs/2026-11-03-gui-s2-hygiene-verify.log` (SHA-256
+  `09287F07129071D3FE34ADBA131D984FB4E4273150F1078B2C76FE7E417F571E`), still 351/351/351
+  and all 351 manifest entries present.
+- **S2@C2 audit reconciliation COMPLETE**: six owner-screenshot items reconciled in
+  `docs/gui-audit.md` section 12 (constants NOT reproduced — engine truth: `true`/`false`
+  builtins only; "No active file" confirmed as a PATH-based condition bug; dot-entries,
+  Help clip, Figures hint recorded) and BACKLOG 6.1-6.6 appended.
+- Next: S2@C3 — remove watermark/caption/demo strings, rename Simulink → Block Diagram
+  Editor and App Designer → App Builder in user-visible text + window title, then
+  before/after 1280x720 captures, manifest regen for renamed tests, and the final verify.
 
 ## Test counts
 

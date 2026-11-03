@@ -308,3 +308,24 @@ screenshots (1, 6), registry absence proven (4), test pollution found (10). Not 
 walkthrough for Add-Ons/History/Help menus (click-mapping misses documented in 6.5),
 EGUI-warning capture instrumentation (needs a logger; belongs to S3), release-binary strings
 check (S8).
+
+## 12. S2 addendum — owner-screenshot reconciliation (2026-11-03)
+
+Added by the owner request dated 2026-11-03 ("check docs/gui-audit.md lists every item
+visible in the owner's screenshot; add any missing"). Six items, per-item status with
+in-session evidence.
+
+| # | Item | Verdict | Evidence |
+| :--- | :--- | :--- | :--- |
+| 1 | "Clean-Room Reference (Zero AI)" heading overlay in Help | already covered | section 2 row 1 + R8 overlap row; removal is part of the S2 code step |
+| 2 | Current Folder lists `.git` / `.github` / `.re-ghidra` | NEW finding (R13) | `current_folder.rs:50-76`: `fs::read_dir` renders every entry with no dot-entry filter; visible in the 1280x720 before-shot. Hiding rule (hide dot-entries vs "show hidden" toggle) is an S3 design decision; tracked in BACKLOG 6.2 |
+| 3 | Workspace shows constants pi, i, j, inf, nan, NaN, true, false, on, off | NOT REPRODUCED in the current build | Workspace rows come only from `interp.env.locals()` (`execution.rs:599-632`); the GUI session seeds no constants; the S1 before-shots show "No variables in workspace". Live probe this session: `docs/functions/true.md` + `false.md` exist (true/false are registered builtins); `pi`, `i`, `j`, `inf`, `nan`, `NaN`, `on`, `off` have neither a doc file nor a registration, so they cannot display as workspace rows (or even evaluate). W2 quick-math risk: typing `pi` errors as an unsupported function. Engine-side work: BACKLOG 6.1. The owner's screenshot most likely predates the current tree, or the rows were created by a script (e.g. assignments named i/j) |
+| 4 | Status bar says "No active file" while a file is open | CONFIRMED display-condition bug | `statusbar.rs:72-79` switches on `active_file` being a PATH; an open UNTITLED document has no path yet, so the label prints "No active file" although an editor tab exists (owner shot + 8.13). Fix in S5: tie the label to "an editor tab is open", not to the existence of a saved path |
+| 5 | Help list clipped at panel width | CONFIRMED layout constraint | `help_panel.rs:374-399`: fixed desired widths (search `desired_width(available - 80)`) plus an 8-item category filter can overflow at 1280x720; the owner shot records the clip at the list right edge. Rework in the S4 layout pass |
+| 6 | Figures empty-state hint text cut off | CONFIRMED | `figures.rs:132-141`: a single centered 14px text "Empty Figure (Run plot(x, y), scatter(x, y), or bar(x, y) to display data)" with no wrapping inside `canvas_rect` overflows small canvases (cut off on both edges in the owner shot) |
+
+Section-11 note: the test-pollution finding (10) was FIXED in commit 9ea305c — every test
+artifact writer now targets `%TEMP%` and `scripts/verify.ps1` step 10 fails the run on a
+dirty tree. Evidence: `docs/verify-logs/2026-11-03-gui-s2-hygiene-verify.log`, SHA-256
+`09287F07129071D3FE34ADBA131D984FB4E4273150F1078B2C76FE7E417F571E` (from-clean, ends
+"All verification steps passed successfully!", manifest check passed: all 351 entries present).

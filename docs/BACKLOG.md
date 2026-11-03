@@ -96,3 +96,29 @@ From official benchmark runs on 1,000,000 elements against original G0.1 contrac
 - **B6**: Robotics (rotations, SE(3), forward/inverse kinematics, PID, trajectory generation).
 - **B7**: Language completeness (loading path, profiler, parfor, containers.Map, classdef design).
 - **B8**: Hardware and C99 Code Generation (serial, ring buffers, MISRA C99 codegen).
+
+---
+
+## 6. GUI polish discoveries (gui/polish-1, 2026-11-03)
+
+New findings recorded while auditing the desktop app (details and evidence in
+`docs/gui-audit.md`):
+
+- 6.1 Engine constants: register `pi`, `i` (imaginary unit), `j`, and `inf`/`nan`
+  (+ `NaN` alias) as zero-arg builtins in `rustlab-stdlib`, with docs/help, so
+  the W2 quick-math scenarios ("pi" currently errors as unsupported) and the
+  docs coverage stay coherent. Core scope, not GUI-only.
+- 6.2 Current Folder dot-entry policy: `.git`, `.github`, `.re-ghidra` are
+  listed today (`current_folder.rs:51-76`, no filter). Decide hide-by-default
+  vs a "show hidden files" toggle (S3).
+- 6.3 Status bar active-file label must consider open UNTITLED editor tabs
+  (`statusbar.rs:72-79` keys on the file PATH only) (S5 status wiring).
+- 6.4 egui-warning capture instrumentation (wire a logger so every duplicate-id
+  warning is collected during the full panel sweep) — S3; carried from S1 audit
+  section 5.
+- 6.5 Release-binary strings check for Simulink/clean-room wordings — S8;
+  carried from S1 audit section 2.
+- 6.6 `docs/SUPPORTED_FUNCTIONS.md` regeneration (next docs task) should also
+  drop the "App Designer UI & Graphics" category wording and the
+  "Clean-Room"-style test labels; the tracked file still contains them
+  (generation is now temp-only per the 9ea305c hygiene fix).

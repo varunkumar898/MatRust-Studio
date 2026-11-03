@@ -55,16 +55,16 @@ Add-Type -AssemblyName System.Drawing
 $process = Start-Process -FilePath $exePath -WorkingDirectory $root -PassThru
 try {
     # Wait for the eframe window to appear (process name is matrust_studio,
-    # window title comes from main.rs e.g. "MatRust Studio - ...").
+    # window title comes from main.rs ("MATSTUDIO")).
     $deadline = (Get-Date).AddSeconds(12)
     $handle = [IntPtr]::Zero
     while ((Get-Date) -lt $deadline) {
-        $handle = [MatStudioCapture]::Find("MatRust Studio")
+        $handle = [MatStudioCapture]::Find("MATSTUDIO")
         if ($handle -ne [IntPtr]::Zero) { break }
         Start-Sleep -Milliseconds 200
     }
     if ($handle -eq [IntPtr]::Zero) {
-        throw "Window with title starting 'MatRust Studio' was not found"
+        throw "Window with title starting 'MATSTUDIO' was not found"
     }
 
     # Give the first UI frames time to layout.

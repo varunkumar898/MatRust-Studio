@@ -1,4 +1,4 @@
-//! Help and Documentation Panel (Offline, Clean-Room, Zero AI).
+//! Help and Documentation Panel (offline, clean-room).
 //!
 //! Provides searchable, categorized function references, syntax guides,
 //! and example code for MATLAB-compatible functions implemented in MatRust Studio.
@@ -361,13 +361,6 @@ impl HelpPanel {
             // Header
             ui.horizontal(|ui| {
                 ui.heading(RichText::new("❓ Help & Documentation").color(theme.text_primary));
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    ui.label(
-                        RichText::new("Offline Clean-Room Reference (Zero AI)")
-                            .size(11.0)
-                            .color(theme.text_secondary),
-                    );
-                });
             });
             ui.separator();
 

@@ -1,6 +1,6 @@
 //! Add-On Explorer and Package Manager Panel.
 //!
-//! Provides a catalog of App Designer applications (.mlapp), toolbox packages
+//! Provides a catalog of App Builder applications (.mlapp), toolbox packages
 //! (.mlappinstall), and clean-room built-in utilities.
 
 use crate::theme::Theme;

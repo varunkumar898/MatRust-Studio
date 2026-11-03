@@ -69,7 +69,7 @@ try {
     $deadline = (Get-Date).AddSeconds(12)
     $handle = [IntPtr]::Zero
     while ((Get-Date) -lt $deadline) {
-        $handle = [MsWin]::Find("MatRust Studio")
+        $handle = [MsWin]::Find("MATSTUDIO")
         if ($handle -ne [IntPtr]::Zero) { break }
         Start-Sleep -Milliseconds 200
     }
@@ -79,10 +79,10 @@ try {
     [void][MsWin]::MoveWindow($handle, 0, 0, 1920, 1080, $true)
     Start-Sleep -Milliseconds 1200
 
-    # 1. Simulink panel: click the "Simulink" button on the HOME toolstrip.
+    # 1. Block diagram panel: click the "Block Diagram" button on the HOME toolstrip.
     [MsWin]::Click(1568, 137)
     Start-Sleep -Milliseconds 1000
-    Save-Shot $handle (Join-Path $outDir "desktop_simulink_panel.png")
+    Save-Shot $handle (Join-Path $outDir "desktop_block_diagram_panel.png")
 
     # 2. View menu open (screenshot menu itself).
     [MsWin]::Click(369, 88)

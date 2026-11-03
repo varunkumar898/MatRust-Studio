@@ -4,9 +4,9 @@
 //! - Multi-tab toolstrip ribbon (HOME, PLOTS, APPS, contextual EDITOR, PUBLISH, VIEW)
 //! - Global search box (Ctrl+Shift+Space)
 //! - Address bar navigation with editable working directory
-//! - Multi-panel dock (Current Folder, Workspace, Editor, Command Window, Figures, History, Help, Add-Ons, Simulink)
+//! - Multi-panel dock (Current Folder, Workspace, Editor, Command Window, Figures, History, Help, Add-Ons, Block Diagram Editor)
 //! - Status bar with engine status, active file, line/col, working dir, and zoom
-//! - Offline Clean-Room Help & Documentation panel (Zero AI)
+//! - Offline clean-room Help & Documentation panel
 
 use crate::addons_panel::AddOnsPanel;
 use crate::block_diagram_editor::BlockDiagramEditor;
@@ -545,12 +545,12 @@ impl MatStudioApp {
 
             // Help Menu
             ui.menu_button("Help", |ui| {
-                if ui.button("Documentation (Offline, Zero AI)").clicked() {
+                if ui.button("Documentation").clicked() {
                     self.dock_tree.open_panel(PanelId::Help);
                     ui.close_menu();
                 }
                 ui.separator();
-                if ui.button("About MatRust Studio").clicked() {
+                if ui.button("About MATSTUDIO").clicked() {
                     self.about_dialog_open = true;
                     ui.close_menu();
                 }
@@ -702,7 +702,7 @@ impl MatStudioApp {
             }
         });
 
-        // Group: SIMULINK
+        // Group: BLOCK DIAGRAM
         ui.group(|ui| {
             ui.label(
                 RichText::new("BLOCK DIAGRAM")
@@ -781,7 +781,7 @@ impl MatStudioApp {
                 .on_hover_text("Parallel worker cluster configuration - Not implemented yet");
         });
 
-        // Group: RESOURCES (Zero AI)
+        // Group: RESOURCES
         ui.group(|ui| {
             ui.label(
                 RichText::new("RESOURCES")
@@ -790,7 +790,7 @@ impl MatStudioApp {
             );
             if ui
                 .button("❓ Help")
-                .on_hover_text("Toggle Help & Documentation panel (Offline, Zero AI)")
+                .on_hover_text("Toggle Help & Documentation panel")
                 .clicked()
             {
                 if self.dock_tree.is_open(PanelId::Help) {
@@ -841,7 +841,7 @@ impl MatStudioApp {
     fn render_apps_toolstrip(&mut self, ui: &mut Ui) {
         ui.group(|ui| {
             ui.label(
-                RichText::new("BUILT-IN CLEAN-ROOM APPS")
+                RichText::new("BUILT-IN APPS")
                     .size(10.0)
                     .color(self.theme.text_secondary),
             );
@@ -1251,14 +1251,14 @@ impl MatStudioApp {
         }
 
         let mut open = self.about_dialog_open;
-        Window::new("About MatRust Studio")
+        Window::new("About MATSTUDIO")
             .open(&mut open)
             .fixed_size([380.0, 240.0])
             .show(ctx, |ui| {
                 ui.vertical_centered(|ui| {
-                    ui.heading("MatRust Studio");
-                    ui.label("Clean-Room MATLAB-Compatible Scientific IDE in Rust");
-                    ui.label("Version 0.1.0 (Clean-Room Offline Numerical Computing IDE)");
+                    ui.heading("MATSTUDIO");
+                    ui.label("A scientific IDE compatible with the MATLAB language (clean-room, not affiliated).");
+                    ui.label("Version 0.1.0 (Offline Numerical Computing IDE)");
                     ui.separator();
                     ui.label("Architecture: eframe + egui | IEEE-754 Double Precision");
                     ui.label("Platform: Windows ARM64 / Linux x86_64 / macOS");

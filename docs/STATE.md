@@ -2,31 +2,39 @@
 
 **Current branch:** `main`
 **Repository:** `https://github.com/varunkumar898/MatRust-Studio.git`
-**Current code commit:** `4fa632d0fca8e5d0a6a78229b40bb883b584e038` (PR #18 merged)
-**Date:** 2026-11-02
+**Current code commit:** `4ae9c687e0ea5e89d81373305a415ff648aa0c31` (PR #20 merged)
+**Date:** 2026-11-03
 **Platform:** Windows 11 ARM64 (`aarch64-pc-windows-gnullvm`)
 **Local stable toolchain:** Rust 1.99.1
 **Declared MSRV:** Rust 1.88.0
 **Verification status:** 
-- Local default, all-features, and no-default-features test runs pass at **349/349/349**.
+- Local default, all-features, and no-default-features test runs pass at **351/351/351**.
 - Local clippy (all-features, no-default-features, per-crate no-default-features) passes with 0 warnings.
 - `cargo fmt --all -- --check` passes cleanly.
 - `scripts/verify.ps1` runs from cargo clean and exits 0 with all verification steps passing.
-- GitHub Actions CI matrix: 100% green on all 14 jobs on `main` (run `41491619239`) and on PR #18 (run `41489193733`).
+- GitHub Actions CI matrix: 100% green on all 14 jobs on PR #20 (run `41584278404`) and running on `main` (run `41592329702`).
 
 ## Test counts
 
 | Configuration | Passed | Failed | Manifest match |
 | :--- | ---: | ---: | :--- |
-| Default features | 349 | 0 | Exact (349 / 349) |
-| `--all-features` | 349 | 0 | Exact (349 / 349) |
-| `--no-default-features` | 349 | 0 | Exact (349 / 349) |
+| Default features | 351 | 0 | Exact (351 / 351) |
+| `--all-features` | 351 | 0 | Exact (351 / 351) |
+| `--no-default-features` | 351 | 0 | Exact (351 / 351) |
 
-`docs/test-manifest.txt` lists all 349 tests. The CI test-count guard strictly asserts exact parity between manifest and active workspace tests.
+`docs/test-manifest.txt` lists all 351 tests. The CI test-count guard strictly asserts exact parity between manifest and active workspace tests.
 
 ## Recent Milestones Completed
 
-1. **GNU Octave Subprocess Bridge (`crates/mlapp-octave`)**:
+1. **Runtime & CLI Integration of GNU Octave Execution Bridge (`crates/mlapp-runtime`, `crates/mlapp-host`, `crates/mlapp-cli`)**:
+   - Integrated `mlapp-octave` as a first-class execution fallback for unsupported functions across App Designer runtime callbacks.
+   - Added `AppRuntime::configure_bridges(allow_matlab: bool, allow_octave: bool)` with backward-compatible `configure_matlab_bridge`.
+   - Added `allow_octave: bool` to `HostConfig` in `mlapp-host` and `--allow-octave` CLI flag in `mlapp-cli`.
+   - Enhanced runtime error reporting: unsupported functions clearly suggest both `--allow-matlab` and `--allow-octave`.
+   - Added unit and E2E host integration tests (`test_runtime_configure_bridges_octave_delegation`, `test_runtime_unsupported_function_hints_both_bridges`, and E2E UI mutation testing in `host_tests`).
+   - Workspace test count grew from 349 to 351 tests (+2 net tests, 0 regressions).
+
+2. **GNU Octave Subprocess Bridge (`crates/mlapp-octave`)**:
    - Clean-room out-of-process bridge communicating strictly over standard OS pipes (`stdin`/`stdout`/`stderr`) with `octave-cli`.
    - Atomic batch evaluation via `octave-cli --eval` with JSON response markers, avoiding pipe deadlocks.
    - Function-level safety allowlist denying hazardous system commands (`system`, `dos`, `delete`, `exit`, `fork`, etc.).

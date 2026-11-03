@@ -1,6 +1,7 @@
 # S1 GUI audit capture: launches the debug desktop binary, resizes its window
 # to the requested resolutions, and saves real PrintWindow screenshots into
-# docs/screenshots/before/. No code is modified by this script.
+# the requested out dir (default docs/screenshots/before/; use
+# -OutDir docs/screenshots/after for post-change evidence). No code is modified by this script.
 #
 # Usage: powershell -NoProfile -ExecutionPolicy Bypass -File scripts\capture-desktop-s1.ps1
 param(

@@ -39,9 +39,17 @@
   `docs/gui-audit.md` section 12 (constants NOT reproduced — engine truth: `true`/`false`
   builtins only; "No active file" confirmed as a PATH-based condition bug; dot-entries,
   Help clip, Figures hint recorded) and BACKLOG 6.1-6.6 appended.
-- Next: S2@C3 — remove watermark/caption/demo strings, rename Simulink → Block Diagram
-  Editor and App Designer → App Builder in user-visible text + window title, then
-  before/after 1280x720 captures, manifest regen for renamed tests, and the final verify.
+- **S2@C3 code steps COMPLETE**: C3a rename (`774d6f1`), C3b watermark/title (`5d0b301`),
+  C3c demo-content removal (`fcdc88d`). Final from-clean verification
+  (`docs/verify-logs/2026-11-03-gui-s2-final-verify.log`, SHA-256
+  `E51F027AB336904948012CE0D06B8C2ECF51CBD40F63887D19B371B4D0CB1A6F`): steps 5/6/7
+  pass-sums 351/351/351, all 351 manifest entries present, working-tree gate green.
+  After-screenshot captured at 1280x720 (`docs/screenshots/after/desktop_1280x720.png`,
+  SHA-256 `CFB1018FE5CE9F9461D5FC8CFBD8E8C868E86C2B24FF6CE63B9EEA4BD5D63C82`): title
+  "MATSTUDIO", empty editor, single-line command-window hint, no watermark overlays;
+  remaining known red ribbons (ScrollArea B61C duplicates) belong to S3 as documented.
+- Next: S3 (ids/action registry, logger-wired warning sweep, dot-entry policy) after
+  owner approval of the S2 report.
 
 ## Test counts
 

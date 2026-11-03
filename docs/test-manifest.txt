@@ -123,10 +123,12 @@ test_app_runtime_lifecycle_and_mutations: test
 test_cancellation_while_loop_and_long_builtin: test
 test_comprehensive_runtime_sandbox_policies: test
 test_cooperative_cancellation: test
+test_runtime_configure_bridges_octave_delegation: test
 test_runtime_permission_enforcement: test
+test_runtime_unsupported_function_hints_both_bridges: test
 test_unsupported_function_diagnostics: test
 
-6 tests, 0 benchmarks
+8 tests, 0 benchmarks
 0 tests, 0 benchmarks
 test_generate_and_verify_sample_model_fixture: test
 test_security_dos_file_limits_on_slx: test

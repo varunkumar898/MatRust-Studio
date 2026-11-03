@@ -19,8 +19,9 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 thiserror = "2.0"
 mlapp-matlab = { path = "../mlapp-matlab" }
+mlapp-octave = { path = "../mlapp-octave" }
 
 [features]
-default = []
-# Documented stub feature: optional GNU Octave process bridge (Tier 4; currently unimplemented / unsupported).
+default = ["octave-bridge"]
+# GNU Octave process bridge integration (delegates unsupported functions to octave-cli).
 octave-bridge = []

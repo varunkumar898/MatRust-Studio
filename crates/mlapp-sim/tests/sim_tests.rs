@@ -210,6 +210,7 @@ fn test_generate_and_verify_sample_model_fixture() {
     diagram.add_line("4", 1, "5", 1);
     diagram.add_line("4", 1, "2", 2);
 
+    // Locate the tracked fixture (READ-ONLY reference).
     let fixture_dir = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .unwrap()
@@ -217,20 +218,37 @@ fn test_generate_and_verify_sample_model_fixture() {
         .unwrap()
         .join("fixtures")
         .join("sample_models");
-    std::fs::create_dir_all(&fixture_dir).expect("Create fixture dir");
     let fixture_path = fixture_dir.join("simple_feedback.slx");
+    assert!(
+        fixture_path.is_file(),
+        "tracked fixture {} must exist",
+        fixture_path.display()
+    );
 
-    let f = std::fs::File::create(&fixture_path).expect("Create fixture file");
-    export_slx(f, &diagram).expect("Export slx fixture");
+    // The test itself must not write inside the repository (scripts/verify.ps1
+    // fails on a dirty tree): the freshly built diagram goes to a temp file,
+    // and the tracked fixture is only read back to confirm the checked-in
+    // model still decodes to the same model name and block/line counts.
+    let temp_path = std::env::temp_dir().join("rustlab-simple-feedback-generated.slx");
 
-    // Inspect the generated fixture file
-    let f_in = std::fs::File::open(&fixture_path).expect("Open fixture file");
-    let (read_diag, report) =
-        inspect_slx(f_in, ContainerLimits::default()).expect("Inspect fixture");
+    for (label, generate) in [("generated", true), ("tracked fixture", false)] {
+        let path = if generate {
+            temp_path.clone()
+        } else {
+            fixture_path.clone()
+        };
+        if generate {
+            let f = std::fs::File::create(&path).expect("Create temp fixture file");
+            export_slx(f, &diagram).expect("Export slx fixture to temp");
+        }
+        let f_in = std::fs::File::open(&path).expect("Open fixture file");
+        let (read_diag, report) = inspect_slx(f_in, ContainerLimits::default())
+            .unwrap_or_else(|e| panic!("inspect {label}: {e}"));
 
-    assert_eq!(report.model_name, "simple_feedback");
-    assert_eq!(report.total_blocks, 5);
-    assert_eq!(report.total_lines, 5);
-    assert!(report.is_solver_supported);
-    assert_eq!(read_diag.blocks.len(), 5);
+        assert_eq!(report.model_name, "simple_feedback", "{label}");
+        assert_eq!(report.total_blocks, 5, "{label}");
+        assert_eq!(report.total_lines, 5, "{label}");
+        assert!(report.is_solver_supported, "{label}");
+        assert_eq!(read_diag.blocks.len(), 5, "{label}");
+    }
 }

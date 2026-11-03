@@ -110,10 +110,17 @@ end
 
 #[test]
 fn test_fixtures_generation_and_inspection() {
-    let fixture_path = "fixtures/sample_apps/r2021a_sample.mlapp";
-    build_test_app("R2021a", fixture_path, false);
+    // Tests must not write inside the repository (scripts/verify.ps1 fails
+    // on a dirty tree): build the sample app into the temp dir and inspect
+    // it from there.
+    let temp_path = std::env::temp_dir().join("rustlab-r2021a-sample.mlapp");
+    let fixture_path = temp_path
+        .to_str()
+        .expect("temp path is valid UTF-8")
+        .to_string();
+    build_test_app("R2021a", &fixture_path, false);
 
-    let file = File::open(fixture_path).expect("open fixture");
+    let file = File::open(&fixture_path).expect("open fixture");
     let mut container = AppContainer::open(file).expect("container open");
 
     assert_eq!(container.package_type(), PackageType::Mlapp);
@@ -162,10 +169,14 @@ fn test_fixtures_generation_and_inspection() {
 
 #[test]
 fn test_hazardous_fixture_compatibility() {
-    let fixture_path = "fixtures/sample_apps/hazardous_sample.mlapp";
-    build_test_app("R2024b", fixture_path, true);
+    let temp_path = std::env::temp_dir().join("rustlab-hazardous-sample.mlapp");
+    let fixture_path = temp_path
+        .to_str()
+        .expect("temp path is valid UTF-8")
+        .to_string();
+    build_test_app("R2024b", &fixture_path, true);
 
-    let file = File::open(fixture_path).expect("open hazardous fixture");
+    let file = File::open(&fixture_path).expect("open hazardous fixture");
     let mut container = AppContainer::open(file).expect("container open");
 
     let doc_xml = container
@@ -184,10 +195,14 @@ fn test_hazardous_fixture_compatibility() {
 
 #[test]
 fn test_r2018b_release_format() {
-    let fixture_path = "fixtures/sample_apps/r2018b_sample.mlapp";
-    build_test_app("R2018b", fixture_path, false);
+    let temp_path = std::env::temp_dir().join("rustlab-r2018b-sample.mlapp");
+    let fixture_path = temp_path
+        .to_str()
+        .expect("temp path is valid UTF-8")
+        .to_string();
+    build_test_app("R2018b", &fixture_path, false);
 
-    let file = File::open(fixture_path).expect("open r2018b fixture");
+    let file = File::open(&fixture_path).expect("open r2018b fixture");
     let mut container = AppContainer::open(file).expect("container open");
 
     let report = container.inspect().expect("inspect");
@@ -199,10 +214,14 @@ fn test_r2018b_release_format() {
 
 #[test]
 fn test_r2023b_release_format() {
-    let fixture_path = "fixtures/sample_apps/r2023b_sample.mlapp";
-    build_test_app("R2023b", fixture_path, false);
+    let temp_path = std::env::temp_dir().join("rustlab-r2023b-sample.mlapp");
+    let fixture_path = temp_path
+        .to_str()
+        .expect("temp path is valid UTF-8")
+        .to_string();
+    build_test_app("R2023b", &fixture_path, false);
 
-    let file = File::open(fixture_path).expect("open r2023b fixture");
+    let file = File::open(&fixture_path).expect("open r2023b fixture");
     let mut container = AppContainer::open(file).expect("container open");
 
     let report = container.inspect().expect("inspect");

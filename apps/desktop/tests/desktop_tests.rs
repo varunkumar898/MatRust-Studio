@@ -625,13 +625,11 @@ disp(['Entropy: ',num2str(entropy)])
         entropy_val
     );
 
-    // Generate screenshot of the executed acceptance test
-    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .unwrap()
-        .parent()
-        .unwrap();
-    let screenshot_dir = root.join("docs/screenshots/ba7137f");
+    // Generate screenshot of the executed acceptance test into a TEMP dir:
+    // tests must never write inside the repository (scripts/verify.ps1 fails
+    // on a dirty tree). The historic artifact docs/screenshots/ba7137f/
+    // remains as the committed record from that milestone.
+    let screenshot_dir = std::env::temp_dir().join("matrust-desktop-test-screenshots");
     let _ = std::fs::create_dir_all(&screenshot_dir);
     let screenshot_path = screenshot_dir.join("01-t-entropy.png");
 

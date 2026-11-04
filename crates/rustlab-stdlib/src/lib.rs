@@ -224,6 +224,7 @@ pub fn register_all(interp: &mut Interpreter) {
     interp.register_builtin("clf", plot_builtins::clf_fn);
     interp.register_builtin("close", plot_builtins::close_fn);
     interp.register_builtin("saveas", plot_builtins::saveas_fn);
+    interp.register_builtin("surf", plot_builtins::surf_fn);
 
     // Diagnostics & Assertions
     interp.register_builtin("error", diagnostics::error_fn);

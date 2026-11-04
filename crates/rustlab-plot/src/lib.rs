@@ -43,6 +43,7 @@ pub enum Series {
     Scatter(Scatter),
     Bar(Bar),
     Histogram(Histogram),
+    Surface(Surface),
 }
 
 /// A connected line plot.
@@ -129,6 +130,113 @@ impl Histogram {
     }
 }
 
+/// A surface (mesh) plot over an N×M grid of (x, y) sample points with Z
+/// heights. `x`, `y`, `z` each contain `rows * cols` values in column-major
+/// order: element `(i, j)` is stored at index `i + j * rows`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Surface {
+    pub name: String,
+    pub rows: usize,
+    pub cols: usize,
+    pub x: Vec<f64>,
+    pub y: Vec<f64>,
+    pub z: Vec<f64>,
+    pub color: [f32; 4],
+}
+
+impl Surface {
+    pub fn new(name: impl Into<String>, rows: usize, cols: usize, x: Vec<f64>, y: Vec<f64>, z: Vec<f64>) -> Self {
+        Self {
+            name: name.into(),
+            rows,
+            cols,
+            x,
+            y,
+            z,
+            color: [0.0, 0.4470, 0.7410, 1.0],
+        }
+    }
+}
+
+/// Camera orientation for 3D views.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct Camera {
+    pub azimuth: f64,   // degrees, rotation around Z axis
+    pub elevation: f64, // degrees, tilt up from the XY plane
+}
+
+impl Default for Camera {
+    fn default() -> Self {
+        Self { azimuth: -37.5, elevation: 30.0 } // MATLAB default view
+    }
+}
+
+/// Colorbar attached to an axes.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Colorbar {
+    pub location: ColorbarLocation,
+    pub label: String,
+}
+
+/// Colorbar placement.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub enum ColorbarLocation {
+    East,
+    West,
+    North,
+    South,
+}
+
+/// Our own perceptual colormap: "rustlab". Built from hand-picked anchor
+/// colors (dark navy -> steel blue -> emerald green -> bright yellow -> deep
+/// red) interpolated in CIE-like perceptual space. Not copied from any
+/// MathWorks colormap.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub enum Colormap {
+    Rustlab,
+}
+
+/// Look up an RGB color in [0,1] at normalized position t in [0,1] for the
+/// given colormap.
+pub fn colormap_lookup(cmap: Colormap, t: f64) -> [f32; 3] {
+    let t = t.clamp(0.0, 1.0);
+    match cmap {
+        Colormap::Rustlab => rustlab_colormap(t),
+    }
+}
+
+/// "rustlab" perceptual colormap. Anchors chosen for roughly monotonic
+/// perceptual lightness: dark navy (#001f3f) -> steel blue (#0074a2) ->
+/// emerald green (#2ab07f) -> bright yellow (#fde725) -> deep red (#7a0403).
+fn rustlab_colormap(t: f64) -> [f32; 3] {
+    let anchors: [(f64, f64, f64, f64); 5] = [
+        (0.0, 0.0, 0.122, 0.247),   // #001f3f
+        (0.25, 0.0, 0.455, 0.635),   // #0074a2
+        (0.5, 0.165, 0.690, 0.498),   // #2ab07f
+        (0.75, 0.992, 0.902, 0.145),   // #fde725
+        (1.0, 0.478, 0.016, 0.012),   // #7a0403
+    ];
+    // Find segment
+    let mut i0 = 0usize;
+    let mut i1 = anchors.len() - 1;
+    for k in 0..anchors.len() - 1 {
+        if anchors[k].0 <= t && t <= anchors[k + 1].0 {
+            i0 = k;
+            i1 = k + 1;
+            break;
+        }
+    }
+    let (t0, r0, g0, b0) = anchors[i0];
+    let (t1, r1, g1, b1) = anchors[i1];
+    let s = if (t1 - t0).abs() < 1e-12 { 0.0 } else { (t - t0) / (t1 - t0) };
+    let s = s * s * (3.0 - 2.0 * s); // smoothstep
+    [
+        (r0 + (r1 - r0) * s) as f32,
+        (g0 + (g1 - g0) * s) as f32,
+        (b0 + (b1 - b0) * s) as f32,
+    ]
+}
+
 /// A text annotation placed at data coordinates.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Text {
@@ -171,13 +279,18 @@ pub struct Axes {
     pub zlabel: String,
     pub xlim: Option<[f64; 2]>,
     pub ylim: Option<[f64; 2]>,
+    pub zlim: Option<[f64; 2]>,
     pub xscale: Scale,
     pub yscale: Scale,
+    pub zscale: Scale,
     pub grid: bool,
     pub hold: bool,
+    pub colormap: Colormap,
     pub series: Vec<Series>,
     pub texts: Vec<Text>,
     pub legend: Option<Legend>,
+    pub colorbar: Option<Colorbar>,
+    pub camera: Camera,
 }
 
 impl Axes {
@@ -190,13 +303,18 @@ impl Axes {
             zlabel: String::new(),
             xlim: None,
             ylim: None,
+            zlim: None,
             xscale: Scale::Linear,
             yscale: Scale::Linear,
+            zscale: Scale::Linear,
             grid: true,
             hold: false,
+            colormap: Colormap::Rustlab,
             series: Vec::new(),
             texts: Vec::new(),
             legend: None,
+            colorbar: None,
+            camera: Camera::default(),
         }
     }
 
@@ -209,9 +327,10 @@ impl Axes {
     }
 
     /// Data bounds across all series, or None when there is no data.
-    pub fn data_bounds(&self) -> Option<([f64; 2], [f64; 2])> {
+    pub fn data_bounds(&self) -> Option<([f64; 2], [f64; 2], [f64; 2])> {
         let mut xs: Vec<f64> = Vec::new();
         let mut ys: Vec<f64> = Vec::new();
+        let mut zs: Vec<f64> = Vec::new();
         for s in &self.series {
             match s {
                 Series::Line(l) => {
@@ -229,9 +348,14 @@ impl Axes {
                 Series::Histogram(h) => {
                     ys.extend(h.values.iter().copied());
                 }
+                Series::Surface(s) => {
+                    xs.extend(s.x.iter().copied());
+                    ys.extend(s.y.iter().copied());
+                    zs.extend(s.z.iter().copied());
+                }
             }
         }
-        if xs.is_empty() && ys.is_empty() {
+        if xs.is_empty() && ys.is_empty() && zs.is_empty() {
             return None;
         }
         let x_range = if xs.is_empty() {
@@ -250,7 +374,15 @@ impl Axes {
                 ys.iter().cloned().fold(f64::NEG_INFINITY, f64::max),
             ]
         };
-        Some((x_range, y_range))
+        let z_range = if zs.is_empty() {
+            [0.0, 1.0]
+        } else {
+            [
+                zs.iter().cloned().fold(f64::INFINITY, f64::min),
+                zs.iter().cloned().fold(f64::NEG_INFINITY, f64::max),
+            ]
+        };
+        Some((x_range, y_range, z_range))
     }
 }
 
@@ -392,7 +524,7 @@ mod tests {
             vec![1.0, 2.0, 3.0],
             vec![4.0, 5.0, 6.0],
         )));
-        let (xr, yr) = ax.data_bounds().unwrap();
+        let (xr, yr, _zr) = ax.data_bounds().unwrap();
         assert!((xr[0] - 1.0).abs() < 1e-12 && (xr[1] - 3.0).abs() < 1e-12);
         assert!((yr[0] - 4.0).abs() < 1e-12 && (yr[1] - 6.0).abs() < 1e-12);
     }
@@ -473,6 +605,7 @@ mod tests {
             Series::Scatter(s) => s.name.clone(),
             Series::Bar(b) => b.name.clone(),
             Series::Histogram(h) => h.name.clone(),
+            Series::Surface(s) => s.name.clone(),
         }
     }
 }

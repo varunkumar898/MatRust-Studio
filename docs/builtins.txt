@@ -214,6 +214,7 @@ structfun
 subplot
 sum
 summary
+surf
 svd
 tail
 tan

@@ -737,6 +737,87 @@ pub fn saveas_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalErro
     Ok(vec![])
 }
 
+/// `surf(X, Y, Z)` — create a 3D surface plot from grid matrices.
+/// `surf(Z)` — uses implicit X = 1:cols, Y = 1:rows.
+pub fn surf_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError> {
+    if args.is_empty() || args.len() > 3 {
+        return Err(user_err(
+            "RUSTLAB:plot:badArgs",
+            "surf requires 1 to 3 inputs (X, Y, Z) or just Z.",
+        ));
+    }
+    let (x_vec, y_vec, z_arr) = if args.len() == 1 {
+        // Implicit X = 1:cols, Y = 1:rows.
+        let z_arr = args[0].to_double_array().map_err(math_err)?;
+        let z_slice = z_arr.as_slice();
+        let shape = z_arr.shape();
+        if shape.len() != 2 {
+            return Err(user_err(
+                "RUSTLAB:plot:badArgs",
+                "surf(Z) requires a 2-D matrix Z.",
+            ));
+        }
+        let rows = shape[0];
+        let cols = shape[1];
+        let x_vec: Vec<f64> = (1..=cols).map(|i| i as f64).collect();
+        let y_vec: Vec<f64> = (1..=rows).map(|i| i as f64).collect();
+        (x_vec, y_vec, z_arr)
+    } else if args.len() == 3 {
+        let x_arr = args[0].to_double_array().map_err(math_err)?;
+        let y_arr = args[1].to_double_array().map_err(math_err)?;
+        let z_arr = args[2].to_double_array().map_err(math_err)?;
+        let x_slice = x_arr.as_slice();
+        let y_slice = y_arr.as_slice();
+        let z_slice = z_arr.as_slice();
+        if x_slice.len() != y_slice.len() || x_slice.len() != z_slice.len() {
+            return Err(user_err(
+                "RUSTLAB:plot:badArgs",
+                "surf(X, Y, Z) requires X, Y, Z to have the same number of elements.",
+            ));
+        }
+        (x_slice.to_vec(), y_slice.to_vec(), z_arr)
+    } else {
+        return Err(user_err(
+            "RUSTLAB:plot:badArgs",
+            "surf requires 1 or 3 inputs.",
+        ));
+    };
+
+    let z_slice = z_arr.as_slice();
+    let shape = z_arr.shape();
+    if shape.len() != 2 {
+        return Err(user_err(
+            "RUSTLAB:plot:badArgs",
+            "surf requires a 2-D matrix Z.",
+        ));
+    }
+    let rows = shape[0];
+    let cols = shape[1];
+    if x_vec.len() != rows * cols || y_vec.len() != rows * cols {
+        return Err(user_err(
+            "RUSTLAB:plot:badArgs",
+            "surf(X, Y, Z) requires X and Y to be Z's size (rows*cols).",
+        ));
+    }
+
+    rustlab_plot::with_plot_state(|reg| {
+        let fig = reg.current_figure_mut().ok_or(user_err(
+            "RUSTLAB:plot:noFigure",
+            "No current figure. Call figure first.",
+        ))?;
+        let ax = ensure_current_axes(fig)?;
+        ax.push_series(rustlab_plot::Series::Surface(rustlab_plot::Surface::new(
+            "surface", rows, cols, x_vec, y_vec, z_slice.to_vec(),
+        )));
+        ax.colorbar = Some(rustlab_plot::Colorbar {
+            location: rustlab_plot::ColorbarLocation::East,
+            label: "Z".to_string(),
+        });
+        Ok::<(), EvalError>(())
+    })?;
+    Ok(vec![])
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -773,5 +854,32 @@ mod tests {
         hold_fn(&[Value::string_scalar("off")], 0).unwrap();
         let fig = rustlab_plot::with_plot_state_ref(|reg| reg.current_figure().unwrap().clone());
         assert!(!fig.current_axes().unwrap().hold);
+    }
+
+    #[test]
+    fn surf_stores_surface_series() {
+        rustlab_plot::plot_state_reset();
+        figure_fn(&[], 1).unwrap();
+        let z = Value::Double(
+            DenseArray::from_vec(vec![2, 2], vec![1.0, 2.0, 3.0, 4.0]).unwrap(),
+        );
+        surf_fn(&[z], 0).unwrap();
+        let fig = rustlab_plot::with_plot_state_ref(|reg| reg.current_figure().unwrap().clone());
+        let ax = fig.current_axes().unwrap();
+        assert_eq!(ax.series.len(), 1);
+        assert!(matches!(ax.series[0], rustlab_plot::Series::Surface(_)));
+    }
+
+    #[test]
+    fn surf_adds_colorbar() {
+        rustlab_plot::plot_state_reset();
+        figure_fn(&[], 1).unwrap();
+        let z = Value::Double(
+            DenseArray::from_vec(vec![2, 2], vec![1.0, 2.0, 3.0, 4.0]).unwrap(),
+        );
+        surf_fn(&[z], 0).unwrap();
+        let fig = rustlab_plot::with_plot_state_ref(|reg| reg.current_figure().unwrap().clone());
+        let ax = fig.current_axes().unwrap();
+        assert!(ax.colorbar.is_some());
     }
 }

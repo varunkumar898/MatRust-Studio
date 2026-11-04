@@ -1420,6 +1420,13 @@ pub fn get_help_text(name: &str) -> Option<&'static str> {
              Description:\
                saveas(filename) saves the current figure as SVG.\n               saveas(h, filename) saves figure h as SVG.\n"
         ),
+        "surf" => Some(
+            "SURF  3-D surface plot.\n\n\
+             Syntax:\
+               surf(X, Y, Z)\n               surf(Z)\n\n\
+             Description:\
+               surf(X, Y, Z) plots a surface from grid matrices X, Y, Z.\n               surf(Z) uses implicit X = 1:cols(Z), Y = 1:rows(Z).\n               A colorbar is added showing the Z scale.\n"
+        ),
         "ishhold" => Some("ishhold"),
         "gcf" => Some(
             "GCF  Get current figure handle.\n\n\

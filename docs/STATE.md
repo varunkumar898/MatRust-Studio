@@ -196,8 +196,17 @@
 - **GUI Automation:** Native eframe window and automated `--autotest` headless engine are verified; physical Win32 mouse click simulation on remote headless runners remains guarded by synthetic event queues.
 - **C ABI:** Header generation (`mlapp.h`), integer handles, null checks, and panic isolation are tested; no Miri/ASan fuzzing of raw pointers.
 
+## Recent Milestones Completed
+
+6. **B2.2 rustlab-plot: renderer-independent plot model + deterministic SVG** (`crates/rustlab-plot`, builtins in `rustlab-stdlib`):
+   - New core crate `crates/rustlab-plot` with `Figure`, `Axes`, `Series` (Line/Scatter/Bar/Histogram), `Text`, `Legend`, `Scale`, and deterministic SVG renderer (`to_svg`) with fixed 2-decimal formatting and documented "nice ticks" rule.
+   - Thread-local `PlotRegistry` mirrors MATLAB's `gcf`/`gca` within one interpreter session.
+   - Builtins registered in `rustlab-stdlib`: `figure`, `plot`, `scatter`, `bar`, `hist`, `hold`, `subplot`, `xlabel`, `ylabel`, `title`, `legend`, `xlim`, `ylim`, `grid`, `saveas`.
+   - Help entries, `docs/functions/*.md` for each builtin, `docs/builtins.txt` updated (240 entries).
+   - Snapshot tests with byte-equal `.svg` reference files.
+   - No GUI, no egui, no resvg; works under `--no-default-features`.
+
 ## Next steps
 
-1. Tag release / milestone checkpoint.
+1. Keep CI strictly green on every push without loosening `-D warnings` or deleting tests.
 2. Provide real `.mlapp` fixtures via `MLAPP_REAL_APPS_DIR` when available to test full third-party App Designer packages.
-3. Keep CI strictly green on every push without loosening `-D warnings` or deleting tests.

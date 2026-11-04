@@ -80,6 +80,7 @@ pub fn register_all(interp: &mut Interpreter) {
     interp.register_builtin("ipermute", nd_ops::ipermute);
     interp.register_builtin("circshift", nd_ops::circshift);
     interp.register_builtin("meshgrid", nd_ops::meshgrid);
+    interp.register_builtin("peaks", nd_ops::peaks);
     interp.register_builtin("ndgrid", nd_ops::ndgrid);
 
     // Elementary Math & Predicates (Tier 3)

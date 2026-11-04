@@ -206,6 +206,90 @@ pub fn meshgrid(args: &[Value], nargout: usize) -> Result<Vec<Value>, EvalError>
     }
 }
 
+/// `peaks(n)` or `peaks(x, y)` evaluates the peaks function.
+///
+/// `peaks(n)` uses `meshgrid` of `linspace(-3, 3, n)`. Default n = 49.
+/// `peaks(x, y)` evaluates the peaks function on the grid defined by
+/// vectors `x` (columns) and `y` (rows).
+/// `peaks()` returns `peaks(49)`.
+///
+/// The peaks function is:
+/// z = 3*(1-x).^2.*exp(-(x.^2)-(y+1).^2)
+///   - 10*(x/5 - x.^3 - y.^5).*exp(-x.^2-y.^2)
+///   - (1/3)*exp(-(x+1).^2-y.^2)
+pub fn peaks(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError> {
+    let (x_vec, y_vec) = match args.len() {
+        0 | 1 => {
+            let n = if args.len() == 1 {
+                args[0].as_scalar_f64().map_err(math_err)? as usize
+            } else {
+                49usize
+            };
+            if n == 0 {
+                return Err(user_err(
+                    "MATLAB:peaks:badN",
+                    "peaks(n) requires n > 0.",
+                ));
+            }
+            let linspace_args = vec![
+                Value::scalar(-3.0),
+                Value::scalar(3.0),
+                Value::scalar(n as f64),
+            ];
+            let result = crate::generators::linspace(&linspace_args, 1)?;
+            let grid = result[0]
+                .to_double_array()
+                .map_err(math_err)?
+                .as_slice()
+                .to_vec();
+            (grid.clone(), grid)
+        }
+        2 => {
+            let x_arr = args[0].to_double_array().map_err(math_err)?;
+            let y_arr = args[1].to_double_array().map_err(math_err)?;
+            (x_arr.as_slice().to_vec(), y_arr.as_slice().to_vec())
+        }
+        _ => {
+            return Err(user_err(
+                "MATLAB:maxrhs",
+                "peaks accepts 0, 1, or 2 inputs.",
+            ));
+        }
+    };
+
+    let nx = x_vec.len();
+    let ny = y_vec.len();
+
+    // Column-major output Z with shape [ny, nx].
+    // X varies along columns: X(i, j) = x_vec[j].
+    // Y varies along rows:    Y(i, j) = y_vec[i].
+    let mut z_data = vec![0.0; ny * nx];
+    for j in 0..nx {
+        let xi = x_vec[j];
+        let xi2 = xi * xi;
+        let xi3 = xi2 * xi;
+        let x_over_5 = xi / 5.0;
+        for i in 0..ny {
+            let yi = y_vec[i];
+            let yi2 = yi * yi;
+            let yi5 = yi2 * yi2 * yi;
+            let yp1 = yi + 1.0;
+            let xp1 = xi + 1.0;
+
+            let term1 = 3.0 * (1.0 - xi).powi(2) * (-(xi2) - yp1 * yp1).exp();
+            let term2 =
+                -10.0 * (x_over_5 - xi3 - yi5) * (-(xi2) - yi2).exp();
+            let term3 = -(1.0 / 3.0) * (-(xp1 * xp1) - yi2).exp();
+
+            z_data[i + j * ny] = term1 + term2 + term3;
+        }
+    }
+
+    Ok(vec![Value::Double(
+        DenseArray::from_vec(vec![ny, nx], z_data).map_err(math_err)?,
+    )])
+}
+
 /// `[X1, X2, ...] = ndgrid(x1, x2, ...)` generates N-D coordinate grids.
 pub fn ndgrid(args: &[Value], nargout: usize) -> Result<Vec<Value>, EvalError> {
     if args.is_empty() {
@@ -459,4 +543,134 @@ pub fn circshift(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalErro
     }
     let arr = DenseArray::from_vec(shape.to_vec(), out_data).map_err(math_err)?;
     Ok(vec![Value::Double(arr)])
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::helpers::user_err;
+
+    #[test]
+    fn meshgrid_31x31_orientation() {
+        let x = Value::Double(
+            DenseArray::row_vector((-15..=15).map(|i| i as f64 * 0.2).collect()),
+        );
+        let y = Value::Double(
+            DenseArray::row_vector((-15..=15).map(|i| i as f64 * 0.2).collect()),
+        );
+        let result = meshgrid(&[x, y], 2).unwrap();
+        assert_eq!(result.len(), 2);
+        let xg = result[0].to_double_array().unwrap();
+        let yg = result[1].to_double_array().unwrap();
+        assert_eq!(xg.shape(), &[31, 31]);
+        assert_eq!(yg.shape(), &[31, 31]);
+
+        // X varies along columns: X(1, :) == -3:0.2:3
+        let xs = xg.as_slice();
+        for j in 0..31 {
+            assert!((xs[j * 31] - (-3.0 + j as f64 * 0.2)).abs() < 1e-12, "X(1, {})", j + 1);
+        }
+
+        // Y varies along rows: Y(:, 1) == -3:0.2:3
+        let ys = yg.as_slice();
+        for i in 0..31 {
+            assert!((ys[i] - (-3.0 + i as f64 * 0.2)).abs() < 1e-12, "Y({}, 1)", i + 1);
+        }
+    }
+
+    #[test]
+    fn meshgrid_single_input_square() {
+        let x = Value::Double(DenseArray::row_vector(vec![1.0, 2.0, 3.0]));
+        let result = meshgrid(&[x], 2).unwrap();
+        assert_eq!(result.len(), 2);
+        let xg = result[0].to_double_array().unwrap();
+        assert_eq!(xg.shape(), &[3, 3]);
+        // Row 1: [1 2 3], Row 2: [1 2 3], Row 3: [1 2 3]
+        let xs = xg.as_slice();
+        for i in 0..3 {
+            for j in 0..3 {
+                assert!((xs[i + j * 3] - (j + 1) as f64).abs() < 1e-12, "X({}, {})", i + 1, j + 1);
+            }
+        }
+    }
+
+    #[test]
+    fn peaks_default_is_49x49() {
+        let result = peaks(&[], 1).unwrap();
+        let z = result[0].to_double_array().unwrap();
+        assert_eq!(z.shape(), &[49, 49]);
+    }
+
+    #[test]
+    fn peaks_n_is_nxn() {
+        let result = peaks(&[Value::scalar(10.0)], 1).unwrap();
+        let z = result[0].to_double_array().unwrap();
+        assert_eq!(z.shape(), &[10, 10]);
+    }
+
+    #[test]
+    fn peaks_zero_zero_golden() {
+        // peaks evaluated at x=0, y=0 should be (3 - 1/3) * exp(-1) = 0.98101
+        let x = Value::Double(DenseArray::row_vector(vec![0.0]));
+        let y = Value::Double(DenseArray::row_vector(vec![0.0]));
+        let result = peaks(&[x, y], 1).unwrap();
+        let z = result[0].to_double_array().unwrap();
+        let expected = (3.0 - 1.0 / 3.0) * (-1.0_f64).exp();
+        assert!((z.as_slice()[0] - expected).abs() < 1e-10, "peaks(0,0) = {}, expected {}", z.as_slice()[0], expected);
+    }
+
+    #[test]
+    fn peaks_xy_matches_meshgrid_size() {
+        // peaks(x, y) where x, y come from meshgrid should produce same shape
+        let x = Value::Double(
+            DenseArray::row_vector((-15..=15).map(|i| i as f64 * 0.2).collect()),
+        );
+        let y = Value::Double(
+            DenseArray::row_vector((-15..=15).map(|i| i as f64 * 0.2).collect()),
+        );
+        let result = peaks(&[x, y], 1).unwrap();
+        let z = result[0].to_double_array().unwrap();
+        assert_eq!(z.shape(), &[31, 31]);
+    }
+
+    #[test]
+    fn sin_sqrt_surface_properties() {
+        // z = sin(sqrt(X.^2 + Y.^2)) on meshgrid(-3:0.2:3, -3:0.2:3)
+        let x = Value::Double(
+            DenseArray::row_vector((-15..=15).map(|i| i as f64 * 0.2).collect()),
+        );
+        let y = Value::Double(
+            DenseArray::row_vector((-15..=15).map(|i| i as f64 * 0.2).collect()),
+        );
+        let mesh = meshgrid(&[x, y], 2).unwrap();
+        let xg = mesh[0].to_double_array().unwrap();
+        let yg = mesh[1].to_double_array().unwrap();
+        let xs = xg.as_slice();
+        let ys = yg.as_slice();
+
+        let mut max_abs = 0.0;
+        let mut z16_16 = 0.0;
+        for j in 0..31 {
+            for i in 0..31 {
+                let xi = xs[i + j * 31];
+                let yi = ys[i + j * 31];
+                let zi = (xi * xi + yi * yi).sqrt().sin();
+                if (zi.abs() > max_abs) {
+                    max_abs = zi.abs();
+                }
+                // z(16, 16) in 1-indexed = row 16, col 16 = i=15, j=15 (0-indexed)
+                if i == 15 && j == 15 {
+                    z16_16 = zi;
+                }
+            }
+        }
+        assert!((z16_16 - 0.0).abs() < 1e-10, "z(16,16) = {}, expected 0", z16_16);
+        assert!(max_abs <= 1.0 + 1e-10, "max|z| = {}, expected <= 1", max_abs);
+    }
+
+    #[test]
+    fn peaks_rejects_invalid_args() {
+        let result = peaks(&[Value::scalar(0.0), Value::scalar(0.0), Value::scalar(0.0)], 1);
+        assert!(result.is_err(), "peaks with 3 args should error");
+    }
 }

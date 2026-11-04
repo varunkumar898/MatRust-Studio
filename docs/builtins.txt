@@ -16,7 +16,6 @@ bitshift
 bitxor
 blackman
 cast
-cla
 cat
 ceil
 cell
@@ -24,10 +23,11 @@ cellfun
 char
 chol
 circshift
+cla
 class
 clf
-cond
 close
+cond
 confusionmat
 conj
 contains
@@ -104,6 +104,7 @@ isempty
 isfield
 isfinite
 isfloat
+ishhold
 isinf
 isinteger
 ismatrix
@@ -112,7 +113,6 @@ isnumeric
 isscalar
 issparse
 isvector
-ishhold
 jtraj
 kmeans
 kron

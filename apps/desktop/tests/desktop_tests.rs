@@ -60,12 +60,13 @@ fn test_session_plotting_builtins_and_state() {
     let fig = &g.figures[0];
     assert_eq!(fig.id, 1);
     assert_eq!(fig.title, "Test Plot");
-    assert_eq!(fig.x_label, "Time (s)");
-    assert_eq!(fig.y_label, "Voltage (V)");
-    assert!(fig.grid);
-    assert_eq!(fig.items.len(), 1);
+    let ax = fig.current_axes().unwrap();
+    assert_eq!(ax.x_label, "Time (s)");
+    assert_eq!(ax.y_label, "Voltage (V)");
+    assert!(ax.grid);
+    assert_eq!(ax.items.len(), 1);
 
-    match &fig.items[0] {
+    match &ax.items[0] {
         PlotItem::Line { x, y, .. } => {
             assert_eq!(x, &[1.0, 2.0, 3.0]);
             assert_eq!(y, &[10.0, 20.0, 30.0]);
@@ -78,7 +79,7 @@ fn test_session_plotting_builtins_and_state() {
     let res2 = session.exec("clf;", None);
     assert!(res2.error.is_none());
     let g2 = session.graphics.lock().unwrap();
-    assert_eq!(g2.figures[0].items.len(), 0);
+    assert_eq!(g2.figures[0].current_axes().unwrap().items.len(), 0);
 }
 
 #[test]
@@ -517,6 +518,7 @@ fn test_dock_tree_help_addons_block_diagram_panels() {
     assert_eq!(PanelId::BlockDiagram.title(), "Block Diagram Editor");
     assert_eq!(PanelId::BlockDiagram.icon(), "[B]");
 }
+
 #[test]
 fn test_block_diagram_editor_canvas_and_solver() {
     // G2: a fresh editor starts with an EMPTY canvas; the example is
@@ -662,5 +664,139 @@ disp(['Entropy: ',num2str(entropy)])
     assert!(
         png_bytes.starts_with(b"\x89PNG\r\n\x1a\n"),
         "Must be valid PNG file"
+    );
+}
+
+/// S4 Scenario 1: Plotting twice with hold on in one figure -> 1 tab with 2 series.
+#[test]
+fn test_s4_scenario1_plot_twice_without_hold_one_tab_two_series() {
+    let mut session = Session::new();
+    let script = r#"
+        hold on;
+        plot([1 2 3], [10 20 30]);
+        plot([1 2 3], [15 25 35]);
+"#;
+    let res = session.exec(script, None);
+    assert!(res.error.is_none(), "Execution failed: {:?}", res.error);
+
+    let g = session.graphics.lock().unwrap();
+    assert_eq!(g.figures.len(), 1, "Expected exactly 1 figure tab");
+    let fig = &g.figures[0];
+    assert_eq!(fig.axes.len(), 1, "Expected 1 axes in the figure");
+    let ax = fig.current_axes().unwrap();
+    assert_eq!(ax.items.len(), 2, "Expected 2 series in the axes");
+}
+
+/// S4 Scenario 2: subplot(2,1,1) + plot, subplot(2,1,2) + plot ->
+/// 1 figure tab containing 2 axes.
+#[test]
+fn test_s4_scenario2_subplot_two_axes_one_tab() {
+    let mut session = Session::new();
+    let script = r#"
+        subplot(2,1,1);
+        plot([1 2 3], [10 20 30]);
+        subplot(2,1,2);
+        plot([1 2 3], [15 25 35]);
+"#;
+    let res = session.exec(script, None);
+    assert!(res.error.is_none(), "Execution failed: {:?}", res.error);
+
+    let g = session.graphics.lock().unwrap();
+    assert_eq!(g.figures.len(), 1, "Expected exactly 1 figure tab");
+    let fig = &g.figures[0];
+    assert_eq!(
+        fig.axes.len(),
+        2,
+        "Expected 2 axes (subplots) in the figure"
+    );
+    assert_eq!(
+        fig.axes[0].items.len(),
+        1,
+        "Expected 1 series in first subplot"
+    );
+    assert_eq!(
+        fig.axes[1].items.len(),
+        1,
+        "Expected 1 series in second subplot"
+    );
+}
+
+/// S4 Scenario 3: figure(1) + plot, figure(2) + plot -> 2 tabs.
+#[test]
+fn test_s4_scenario3_two_figures_two_tabs() {
+    let mut session = Session::new();
+    let script = r#"
+        figure(1);
+        plot([1 2 3], [10 20 30]);
+        figure(2);
+        plot([1 2 3], [15 25 35]);
+"#;
+    let res = session.exec(script, None);
+    assert!(res.error.is_none(), "Execution failed: {:?}", res.error);
+
+    let g = session.graphics.lock().unwrap();
+    assert_eq!(g.figures.len(), 2, "Expected exactly 2 figure tabs");
+    assert_eq!(g.figures[0].axes.len(), 1);
+    assert_eq!(g.figures[0].current_axes().unwrap().items.len(), 1);
+    assert_eq!(g.figures[1].axes.len(), 1);
+    assert_eq!(g.figures[1].current_axes().unwrap().items.len(), 1);
+}
+
+/// S4 Scenario 4: Plot 10 times without hold -> 1 tab (no tab growth).
+#[test]
+fn test_s4_scenario4_plot_ten_times_no_tab_growth() {
+    let mut session = Session::new();
+    let mut script = String::new();
+    for i in 1..=10 {
+        script.push_str(&format!(
+            "plot([{} {} {}], [{} {} {}]);\n",
+            i,
+            i + 1,
+            i + 2,
+            i * 10,
+            i * 10 + 10,
+            i * 10 + 20
+        ));
+    }
+    let res = session.exec(&script, None);
+    assert!(res.error.is_none(), "Execution failed: {:?}", res.error);
+
+    let g = session.graphics.lock().unwrap();
+    assert_eq!(
+        g.figures.len(),
+        1,
+        "Expected exactly 1 figure tab (no tab growth)"
+    );
+    let fig = &g.figures[0];
+    assert_eq!(fig.axes.len(), 1);
+    assert_eq!(fig.current_axes().unwrap().items.len(), 1);
+}
+
+/// S4: subplot grouping - hold on one axes does not affect sibling axes.
+#[test]
+fn test_s4_hold_per_axes_independent() {
+    let mut session = Session::new();
+    let script = r#"
+        subplot(2,1,1);
+        hold('on');
+        plot([1 2 3], [10 20 30]);
+        plot([1 2 3], [15 25 35]);
+        subplot(2,1,2);
+        hold('off');
+        plot([1 2 3], [5 10 15]);
+        plot([1 2 3], [20 25 30]);
+"#;
+    let res = session.exec(script, None);
+    assert!(res.error.is_none(), "Execution failed: {:?}", res.error);
+
+    let g = session.graphics.lock().unwrap();
+    assert_eq!(g.figures.len(), 1);
+    let fig = &g.figures[0];
+    assert_eq!(fig.axes.len(), 2);
+    assert_eq!(fig.axes[0].items.len(), 2, "Held axes keeps both series");
+    assert_eq!(
+        fig.axes[1].items.len(),
+        1,
+        "Non-held axes replaced with last series"
     );
 }

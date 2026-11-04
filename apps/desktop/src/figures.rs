@@ -104,9 +104,10 @@ impl FiguresPanel {
             ui.horizontal_wrapped(|ui| {
                 ui.label(RichText::new(&fig.title).strong().color(theme.accent));
                 ui.separator();
-                ui.checkbox(&mut fig.grid, "Grid");
+                let ax = fig.current_axes_mut();
+                ui.checkbox(&mut ax.grid, "Grid");
                 ui.separator();
-                ui.label(format!("Series: {}", fig.items.len()));
+                ui.label(format!("Series: {}", fig.total_series()));
             });
 
             ui.add_space(4.0);
@@ -131,7 +132,9 @@ impl FiguresPanel {
                 StrokeKind::Inside,
             );
 
-            if fig.items.is_empty() {
+            let ax = fig.current_axes_mut();
+
+            if ax.items.is_empty() {
                 let hint = "This panel shows plots from your workspace.";
                 let galley = painter.layout(
                     hint.to_string(),
@@ -151,7 +154,7 @@ impl FiguresPanel {
             let mut min_y = f64::INFINITY;
             let mut max_y = f64::NEG_INFINITY;
 
-            for item in &fig.items {
+            for item in &ax.items {
                 match item {
                     PlotItem::Line { x, y, .. }
                     | PlotItem::Scatter { x, y, .. }
@@ -204,7 +207,7 @@ impl FiguresPanel {
             };
 
             // Draw grid lines
-            if fig.grid {
+            if ax.grid {
                 let grid_stroke =
                     Stroke::new(1.0_f32, Color32::from_rgba_unmultiplied(80, 80, 80, 70));
                 for i in 0..=5 {
@@ -258,20 +261,20 @@ impl FiguresPanel {
             painter.text(
                 Pos2::new(plot_box.center().x, plot_box.max.y + 24.0),
                 egui::Align2::CENTER_TOP,
-                &fig.x_label,
+                &ax.x_label,
                 egui::FontId::proportional(12.0),
                 theme.text_primary,
             );
             painter.text(
                 Pos2::new(plot_box.min.x - 36.0, plot_box.center().y),
                 egui::Align2::CENTER_CENTER,
-                &fig.y_label,
+                &ax.y_label,
                 egui::FontId::proportional(12.0),
                 theme.text_primary,
             );
 
             // Draw plot items
-            for item in &fig.items {
+            for item in &ax.items {
                 match item {
                     PlotItem::Line {
                         x, y, color, width, ..

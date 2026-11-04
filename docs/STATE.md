@@ -76,21 +76,76 @@
   Desktop-crate test runs during S3: 19 -> 20 (lines 1+0+19+0 per binary, then
   +1 new unit test), build/fmt clean; workspace count now 352 (manifest
   snapshot `docs/test-manifest.txt`).
+- **Takeover session (2026-11-04 13:46-14:0x, this block):** the owner asked to
+  resume, open the app, and confirm everything works. During verification,
+  file-hash probes caught a SECOND writer (the parallel Antigravity/Gemini
+  agent) actively editing sources (editor.rs content flip mid-read;
+  current_folder.rs grew 23 KB -> 37 KB across three hashes; one torn save
+  failed to compile). Owner closed it; after 14:05:21 no further foreign
+  writes were observed (30 s stability windows, then 2+ min quiet). The
+  takeover session verified: desktop tests 61/61
+  (`docs/verify-logs/2026-11-04-gui-editor-resume-desktop-tests.log`), clippy
+  `-D warnings` clean, manifest exact parity 393/393, and captured real-window
+  screenshots at 1280x720 / 1920x1080
+  (`docs/screenshots/gui-editor/after/`, SHA-256 prefixes `CCA4ADC994589B05` /
+  `2F7A97262C88BD56`) confirming the single-window, all-panels-visible, ASCII
+  clean layout. Final from-clean `scripts/verify.ps1` runs after the docs
+  commit; its log lands as
+  `docs/verify-logs/2026-11-04-gui-editor-final-verify.log`.
 - Next: proposal — S4 = editor duplicated Run-Section blocks + emoji sweep +
   toolstrip overflow; input-handling fixes (Command-Window focus steal, global
   Ctrl+C intercept, completion popup arrows, gutter row keys) are a separate
   step needing interactive verification (currently recorded in audit section 5).
   STOPPED for owner approval of the S3 report.
+- **S4 prior-session work STAGED (this session, commits `4809d9b`, `ecc7baa`,
+  `3059f72`)**: the working tree was found with a large coherent uncommitted
+  batch (editor rewrite + `actions`/`syntax`/`ui_registry` modules, ribbon
+  registry audit, project-aware Current Folder, `editor_gui_tests` /
+  `gui_clean_tests` suites, rfd folder-picker dependency, evidence logs).
+  Per R14 honesty: this was NOT written this session; it was verified green
+  this session (fmt, clippy `-p matrust_studio` 0 warnings, full workspace
+  `cargo test` exit 0) and committed as its own labeled commits so later work
+  sits on a green base. gui-editor milestone note at `docs/milestones/gui-editor.md`.
+- **S5 file tree + cloud dialog COMPLETE (commit `73495c2`)**, owner-requested
+  feature step on `gui/polish-1`:
+  - Current Folder gained a **Tree view** (default on) with a `Tree view` /
+    `List view` toggle button (`current_folder.view` control): whole-project
+    structure rooted at the project root, folders expand in place via `[-]`/
+    `[+]` toggles, children are read from disk only while expanded, hard caps
+    (depth 24) shared with the totals walk; double-click opens files in the
+    editor, single click selects. Flat list behavior preserved exactly.
+  - **Whole-project totals** line: `project: N folders, M files` under the
+    project root, respecting the Hidden toggle, capped at 65,536 entries
+    (`+` suffix when truncated), cached and recomputed lazily.
+  - **Auto-refresh on save**: all three editor save sites (Ctrl+S, File menu,
+    EDITOR ribbon) now route through `MatStudioApp::save_active_doc`, which
+    invalidates the totals cache; the list itself re-reads the disk every
+    frame, so files created inside the app appear immediately.
+  - **Cloud Drives dialog** (File menu → `Cloud Drives...`): OneDrive,
+    Google Drive, Dropbox, iCloud Drive rows with detected-sync-folder
+    status, one-click Open, official sign-in/download hyperlinks (browser),
+    and an `Open any folder...` picker for custom locations (covers Google
+    Drive desktop's mounted drive letter). SECURITY MODEL: MATSTUDIO never
+    sees or stores passwords/tokens; sign-in happens in the provider's own
+    app or browser; synced folders are read as ordinary local folders.
+    New module `apps/desktop/src/cloud_accounts.rs` with pure, tested
+    detection (`detect_sync_folder` takes an injected env lookup).
+  - +6 new lib tests (3 `current_folder` tree/totals, 3 `cloud_accounts`
+    detection). Tests never decrease: manifest regenerated **352 -> 393**
+    (the +41 delta = +6 this session, +35 staged prior-session tests).
+  - In-app OAuth sign-in is deliberately NOT implemented (would require an
+    owner-registered OAuth client id per provider; no credentials may be
+    invented) — recorded in BACKLOG section 7.
 
 ## Test counts
 
 | Configuration | Passed | Failed | Manifest match |
 | :--- | ---: | ---: | :--- |
-| Default features | 351 | 0 | Exact (351 / 351) |
-| `--all-features` | 351 | 0 | Exact (351 / 351) |
-| `--no-default-features` | 351 | 0 | Exact (351 / 351) |
+| Default features | 393 | 0 | Exact (393 / 393) |
+| `--all-features` | 393 | 0 | Exact (393 / 393) |
+| `--no-default-features` | 393 | 0 | Exact (393 / 393) |
 
-`docs/test-manifest.txt` lists all 351 tests. The CI test-count guard strictly asserts exact parity between manifest and active workspace tests.
+`docs/test-manifest.txt` lists all 393 tests. The CI test-count guard strictly asserts exact parity between manifest and active workspace tests. Counts re-verified this session (2026-11-04): default, all-features, and no-default-features all exit 0 with 393 passing.
 
 ## Recent Milestones Completed
 

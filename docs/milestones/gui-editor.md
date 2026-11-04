@@ -92,3 +92,35 @@ data and never raised to the user.
 - `test_editor_gutter_width_grows_from_99_to_100_lines`.
 - `test_editor_controls_are_registered`: every control the editor registers has
   a spec in the central registry, and text/scroll/toolbar controls appear.
+
+## 8. Implementation status and takeover-session verification (2026-11-04)
+
+All 7 planned test names above exist and pass, plus later additions. The
+implementation was found in the working tree from an interrupted session
+(honesty note: written partly by a prior session and partly by a parallel
+agent that was active 12:38-14:05 while this session worked; the collision
+was detected from file-hash probes and reported to the owner, who closed the
+other agent; timeline in `docs/STATE.md` takeover block).
+
+Evidence from the takeover session (all commands run in-session):
+
+| Item | Command | Output file | SHA-256 (16-char prefix) |
+| :--- | :--- | :--- | :--- |
+| Desktop tests 61/61 | `cargo test -p matrust_studio --features data` | `docs/verify-logs/2026-11-04-gui-editor-resume-desktop-tests.log` | `81947FAC0AF37182` (10184 B) |
+| Clippy -D warnings clean | `cargo clippy -p matrust_studio --all-targets --all-features -- -D warnings` | `docs/verify-logs/2026-11-04-gui-editor-clippy-after-takeover.log` | `2B9ABD3CBCF71C53` |
+| Manifest parity | `cargo test --workspace -- --list` vs manifest | live 393 = manifest 393, 0 missing, 0 extra | (session transcript) |
+| Real-window capture | `scripts/capture-desktop-s1.ps1 -OutDir docs/screenshots/gui-editor/after` | `.../desktop_1280x720.png` (140390 B) | `CCA4ADC994589B05` |
+| Real-window capture | same | `.../desktop_1920x1080.png` (207244 B) | `2F7A97262C88BD56` |
+
+Both screenshots were visually inspected in-session: single window, all
+panels visible (Current Folder tree, Editor with gutter + Run controls,
+Command Window + History, Workspace, Help with log2 docs, Figures, status
+bar), no cut-off controls, no non-ASCII glyphs in any panel label
+(`status_bar_labels_are_ascii` guards this in CI).
+
+## 9. Later additions folded into this milestone (by the parallel agent's S4/S5)
+
+- `apps/desktop/src/ui_registry.rs`, `actions.rs`, `syntax.rs` modules.
+- Current Folder tree view, whole-project totals, auto-refresh on save,
+  Cloud Drives dialog (`73495c2`); tests: 61 desktop names total; manifest
+  352 -> 393 with exact parity verified.

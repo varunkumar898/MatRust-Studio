@@ -130,3 +130,31 @@ New findings recorded while auditing the desktop app (details and evidence in
   drop the "App Designer UI & Graphics" category wording and the
   "Clean-Room"-style test labels; the tracked file still contains them
   (generation is now temp-only per the 9ea305c hygiene fix).
+
+---
+
+## 7. Cloud sign-in (OAuth) inside MATSTUDIO - DEFERRED (owner decision needed)
+
+Owner request (2026-11-04): a login page to access Google Drive / OneDrive
+"and other" from inside the app, with credentials protected.
+
+What was delivered instead (S5, commit `73495c2`) and why it is the SAFE path:
+- The Cloud Drives dialog (File menu) lists providers, detects their synced
+  folders (env vars / known profile folders), opens them in one click, and
+  links to the official sign-in/download pages opened in the user's browser.
+- MATSTUDIO never sees, asks for, or stores any password or OAuth token.
+  Sign-in happens inside the provider's own app or the browser; the app then
+  reads the synced folder like any other local folder. No network code exists
+  in the desktop crate.
+
+What real in-app sign-in would require (NOT done, deliberately):
+1. A free OAuth client registration per provider created BY THE OWNER
+   (Google Cloud Console OAuth client for installed apps; Microsoft Entra app
+   registration with delegated Graph files scope; Dropbox app key). Client
+   ids cannot be invented or borrowed; no secret may ever be committed.
+2. A loopback-redirect OAuth flow plus a token vault (Windows Credential
+   Manager / DPAPI), with tokens never written to disk in plain text.
+3. A REST client per provider (file listing/download/upload), which is
+   network code in a crate that today has none - a deliberate hygiene line.
+Steps 1-3 are implementable when the owner registers the apps and approves
+the scope; until then the sync-folder path is the supported integration.

@@ -145,7 +145,14 @@ pub struct Surface {
 }
 
 impl Surface {
-    pub fn new(name: impl Into<String>, rows: usize, cols: usize, x: Vec<f64>, y: Vec<f64>, z: Vec<f64>) -> Self {
+    pub fn new(
+        name: impl Into<String>,
+        rows: usize,
+        cols: usize,
+        x: Vec<f64>,
+        y: Vec<f64>,
+        z: Vec<f64>,
+    ) -> Self {
         Self {
             name: name.into(),
             rows,
@@ -167,7 +174,10 @@ pub struct Camera {
 
 impl Default for Camera {
     fn default() -> Self {
-        Self { azimuth: -37.5, elevation: 30.0 } // MATLAB default view
+        Self {
+            azimuth: -37.5,
+            elevation: 30.0,
+        } // MATLAB default view
     }
 }
 
@@ -210,11 +220,11 @@ pub fn colormap_lookup(cmap: Colormap, t: f64) -> [f32; 3] {
 /// emerald green (#2ab07f) -> bright yellow (#fde725) -> deep red (#7a0403).
 fn rustlab_colormap(t: f64) -> [f32; 3] {
     let anchors: [(f64, f64, f64, f64); 5] = [
-        (0.0, 0.0, 0.122, 0.247),   // #001f3f
+        (0.0, 0.0, 0.122, 0.247),    // #001f3f
         (0.25, 0.0, 0.455, 0.635),   // #0074a2
-        (0.5, 0.165, 0.690, 0.498),   // #2ab07f
-        (0.75, 0.992, 0.902, 0.145),   // #fde725
-        (1.0, 0.478, 0.016, 0.012),   // #7a0403
+        (0.5, 0.165, 0.690, 0.498),  // #2ab07f
+        (0.75, 0.992, 0.902, 0.145), // #fde725
+        (1.0, 0.478, 0.016, 0.012),  // #7a0403
     ];
     // Find segment
     let mut i0 = 0usize;
@@ -228,7 +238,11 @@ fn rustlab_colormap(t: f64) -> [f32; 3] {
     }
     let (t0, r0, g0, b0) = anchors[i0];
     let (t1, r1, g1, b1) = anchors[i1];
-    let s = if (t1 - t0).abs() < 1e-12 { 0.0 } else { (t - t0) / (t1 - t0) };
+    let s = if (t1 - t0).abs() < 1e-12 {
+        0.0
+    } else {
+        (t - t0) / (t1 - t0)
+    };
     let s = s * s * (3.0 - 2.0 * s); // smoothstep
     [
         (r0 + (r1 - r0) * s) as f32,

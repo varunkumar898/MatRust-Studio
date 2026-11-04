@@ -797,23 +797,39 @@ fn cumulative_slice(vals: &[f64], want_max: bool) -> Vec<f64> {
     if want_max {
         while idx + 3 < len {
             let x0 = vals[idx];
-            if x0.is_nan() { break; }
-            if x0 > current { current = x0; }
+            if x0.is_nan() {
+                break;
+            }
+            if x0 > current {
+                current = x0;
+            }
             out[idx] = current;
 
             let x1 = vals[idx + 1];
-            if x1.is_nan() { break; }
-            if x1 > current { current = x1; }
+            if x1.is_nan() {
+                break;
+            }
+            if x1 > current {
+                current = x1;
+            }
             out[idx + 1] = current;
 
             let x2 = vals[idx + 2];
-            if x2.is_nan() { break; }
-            if x2 > current { current = x2; }
+            if x2.is_nan() {
+                break;
+            }
+            if x2 > current {
+                current = x2;
+            }
             out[idx + 2] = current;
 
             let x3 = vals[idx + 3];
-            if x3.is_nan() { break; }
-            if x3 > current { current = x3; }
+            if x3.is_nan() {
+                break;
+            }
+            if x3 > current {
+                current = x3;
+            }
             out[idx + 3] = current;
 
             idx += 4;
@@ -821,31 +837,51 @@ fn cumulative_slice(vals: &[f64], want_max: bool) -> Vec<f64> {
         // Tail: process remaining elements one at a time
         while idx < len {
             let x = vals[idx];
-            if x.is_nan() { break; }
-            if x > current { current = x; }
+            if x.is_nan() {
+                break;
+            }
+            if x > current {
+                current = x;
+            }
             out[idx] = current;
             idx += 1;
         }
     } else {
         while idx + 3 < len {
             let x0 = vals[idx];
-            if x0.is_nan() { break; }
-            if x0 < current { current = x0; }
+            if x0.is_nan() {
+                break;
+            }
+            if x0 < current {
+                current = x0;
+            }
             out[idx] = current;
 
             let x1 = vals[idx + 1];
-            if x1.is_nan() { break; }
-            if x1 < current { current = x1; }
+            if x1.is_nan() {
+                break;
+            }
+            if x1 < current {
+                current = x1;
+            }
             out[idx + 1] = current;
 
             let x2 = vals[idx + 2];
-            if x2.is_nan() { break; }
-            if x2 < current { current = x2; }
+            if x2.is_nan() {
+                break;
+            }
+            if x2 < current {
+                current = x2;
+            }
             out[idx + 2] = current;
 
             let x3 = vals[idx + 3];
-            if x3.is_nan() { break; }
-            if x3 < current { current = x3; }
+            if x3.is_nan() {
+                break;
+            }
+            if x3 < current {
+                current = x3;
+            }
             out[idx + 3] = current;
 
             idx += 4;
@@ -853,8 +889,12 @@ fn cumulative_slice(vals: &[f64], want_max: bool) -> Vec<f64> {
         // Tail: process remaining elements one at a time
         while idx < len {
             let x = vals[idx];
-            if x.is_nan() { break; }
-            if x < current { current = x; }
+            if x.is_nan() {
+                break;
+            }
+            if x < current {
+                current = x;
+            }
             out[idx] = current;
             idx += 1;
         }

@@ -150,6 +150,7 @@ num2str
 numel
 ones
 orth
+peaks
 permute
 pinv
 plot

@@ -226,10 +226,7 @@ pub fn peaks(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError> {
                 49usize
             };
             if n == 0 {
-                return Err(user_err(
-                    "MATLAB:peaks:badN",
-                    "peaks(n) requires n > 0.",
-                ));
+                return Err(user_err("MATLAB:peaks:badN", "peaks(n) requires n > 0."));
             }
             let linspace_args = vec![
                 Value::scalar(-3.0),
@@ -277,8 +274,7 @@ pub fn peaks(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError> {
             let xp1 = xi + 1.0;
 
             let term1 = 3.0 * (1.0 - xi).powi(2) * (-(xi2) - yp1 * yp1).exp();
-            let term2 =
-                -10.0 * (x_over_5 - xi3 - yi5) * (-(xi2) - yi2).exp();
+            let term2 = -10.0 * (x_over_5 - xi3 - yi5) * (-(xi2) - yi2).exp();
             let term3 = -(1.0 / 3.0) * (-(xp1 * xp1) - yi2).exp();
 
             z_data[i + j * ny] = term1 + term2 + term3;
@@ -552,12 +548,12 @@ mod tests {
 
     #[test]
     fn meshgrid_31x31_orientation() {
-        let x = Value::Double(
-            DenseArray::row_vector((-15..=15).map(|i| i as f64 * 0.2).collect()),
-        );
-        let y = Value::Double(
-            DenseArray::row_vector((-15..=15).map(|i| i as f64 * 0.2).collect()),
-        );
+        let x = Value::Double(DenseArray::row_vector(
+            (-15..=15).map(|i| i as f64 * 0.2).collect(),
+        ));
+        let y = Value::Double(DenseArray::row_vector(
+            (-15..=15).map(|i| i as f64 * 0.2).collect(),
+        ));
         let result = meshgrid(&[x, y], 2).unwrap();
         assert_eq!(result.len(), 2);
         let xg = result[0].to_double_array().unwrap();
@@ -568,13 +564,21 @@ mod tests {
         // X varies along columns: X(1, :) == -3:0.2:3
         let xs = xg.as_slice();
         for j in 0..31 {
-            assert!((xs[j * 31] - (-3.0 + j as f64 * 0.2)).abs() < 1e-12, "X(1, {})", j + 1);
+            assert!(
+                (xs[j * 31] - (-3.0 + j as f64 * 0.2)).abs() < 1e-12,
+                "X(1, {})",
+                j + 1
+            );
         }
 
         // Y varies along rows: Y(:, 1) == -3:0.2:3
         let ys = yg.as_slice();
         for i in 0..31 {
-            assert!((ys[i] - (-3.0 + i as f64 * 0.2)).abs() < 1e-12, "Y({}, 1)", i + 1);
+            assert!(
+                (ys[i] - (-3.0 + i as f64 * 0.2)).abs() < 1e-12,
+                "Y({}, 1)",
+                i + 1
+            );
         }
     }
 
@@ -589,7 +593,12 @@ mod tests {
         let xs = xg.as_slice();
         for i in 0..3 {
             for j in 0..3 {
-                assert!((xs[i + j * 3] - (j + 1) as f64).abs() < 1e-12, "X({}, {})", i + 1, j + 1);
+                assert!(
+                    (xs[i + j * 3] - (j + 1) as f64).abs() < 1e-12,
+                    "X({}, {})",
+                    i + 1,
+                    j + 1
+                );
             }
         }
     }
@@ -616,18 +625,23 @@ mod tests {
         let result = peaks(&[x, y], 1).unwrap();
         let z = result[0].to_double_array().unwrap();
         let expected = (3.0 - 1.0 / 3.0) * (-1.0_f64).exp();
-        assert!((z.as_slice()[0] - expected).abs() < 1e-10, "peaks(0,0) = {}, expected {}", z.as_slice()[0], expected);
+        assert!(
+            (z.as_slice()[0] - expected).abs() < 1e-10,
+            "peaks(0,0) = {}, expected {}",
+            z.as_slice()[0],
+            expected
+        );
     }
 
     #[test]
     fn peaks_xy_matches_meshgrid_size() {
         // peaks(x, y) where x, y come from meshgrid should produce same shape
-        let x = Value::Double(
-            DenseArray::row_vector((-15..=15).map(|i| i as f64 * 0.2).collect()),
-        );
-        let y = Value::Double(
-            DenseArray::row_vector((-15..=15).map(|i| i as f64 * 0.2).collect()),
-        );
+        let x = Value::Double(DenseArray::row_vector(
+            (-15..=15).map(|i| i as f64 * 0.2).collect(),
+        ));
+        let y = Value::Double(DenseArray::row_vector(
+            (-15..=15).map(|i| i as f64 * 0.2).collect(),
+        ));
         let result = peaks(&[x, y], 1).unwrap();
         let z = result[0].to_double_array().unwrap();
         assert_eq!(z.shape(), &[31, 31]);
@@ -636,12 +650,12 @@ mod tests {
     #[test]
     fn sin_sqrt_surface_properties() {
         // z = sin(sqrt(X.^2 + Y.^2)) on meshgrid(-3:0.2:3, -3:0.2:3)
-        let x = Value::Double(
-            DenseArray::row_vector((-15..=15).map(|i| i as f64 * 0.2).collect()),
-        );
-        let y = Value::Double(
-            DenseArray::row_vector((-15..=15).map(|i| i as f64 * 0.2).collect()),
-        );
+        let x = Value::Double(DenseArray::row_vector(
+            (-15..=15).map(|i| i as f64 * 0.2).collect(),
+        ));
+        let y = Value::Double(DenseArray::row_vector(
+            (-15..=15).map(|i| i as f64 * 0.2).collect(),
+        ));
         let mesh = meshgrid(&[x, y], 2).unwrap();
         let xg = mesh[0].to_double_array().unwrap();
         let yg = mesh[1].to_double_array().unwrap();
@@ -664,13 +678,24 @@ mod tests {
                 }
             }
         }
-        assert!((z16_16 - 0.0).abs() < 1e-10, "z(16,16) = {}, expected 0", z16_16);
-        assert!(max_abs <= 1.0 + 1e-10, "max|z| = {}, expected <= 1", max_abs);
+        assert!(
+            (z16_16 - 0.0).abs() < 1e-10,
+            "z(16,16) = {}, expected 0",
+            z16_16
+        );
+        assert!(
+            max_abs <= 1.0 + 1e-10,
+            "max|z| = {}, expected <= 1",
+            max_abs
+        );
     }
 
     #[test]
     fn peaks_rejects_invalid_args() {
-        let result = peaks(&[Value::scalar(0.0), Value::scalar(0.0), Value::scalar(0.0)], 1);
+        let result = peaks(
+            &[Value::scalar(0.0), Value::scalar(0.0), Value::scalar(0.0)],
+            1,
+        );
         assert!(result.is_err(), "peaks with 3 args should error");
     }
 }

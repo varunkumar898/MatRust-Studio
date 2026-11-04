@@ -193,6 +193,13 @@ pub fn get_help_text(name: &str) -> Option<&'static str> {
              Syntax:\n\
                [X1, X2, ...] = ndgrid(x1, x2, ...)\n"
         ),
+        "peaks" => Some(
+            "PEAKS  Peaks function of two variables.\n\n\
+             Syntax:\n\
+               z = peaks\n               z = peaks(n)\n               z = peaks(x, y)\n\n\
+             Description:\
+               peaks returns peaks(49), a 49-by-49 matrix.\n               peaks(n) returns an n-by-n matrix.\n               peaks(x, y) evaluates on the grid from vectors x and y.\n"
+        ),
         "cellfun" => Some("CELLFUN  Apply function to each cell in cell array.\n\nSyntax:\n  B = cellfun(func, C)\n  B = cellfun(func, C, \"UniformOutput\", false)\n"),
         "arrayfun" => Some("ARRAYFUN  Apply function to each element of array.\n\nSyntax:\n  B = arrayfun(func, A)\n"),
         "structfun" => Some("STRUCTFUN  Apply function to each field of scalar structure.\n\nSyntax:\n  B = structfun(func, S)\n"),

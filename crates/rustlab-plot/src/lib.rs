@@ -11,9 +11,19 @@
 //! `plot`, `hold`, `xlabel`, `saveas`, etc. operate on a "current figure"
 //! just like MATLAB's `gcf`/`gca`.
 
-#![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::todo, clippy::unimplemented)]
+#![deny(
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::panic,
+    clippy::todo,
+    clippy::unimplemented
+)]
 #![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used, clippy::panic))]
-#![allow(clippy::needless_range_loop, clippy::type_complexity, clippy::needless_borrow)]
+#![allow(
+    clippy::needless_range_loop,
+    clippy::type_complexity,
+    clippy::needless_borrow
+)]
 
 mod state;
 mod svg;
@@ -225,14 +235,18 @@ impl Axes {
         let x_range = if xs.is_empty() {
             [0.0, 1.0]
         } else {
-            [xs.iter().cloned().fold(f64::INFINITY, f64::min),
-             xs.iter().cloned().fold(f64::NEG_INFINITY, f64::max)]
+            [
+                xs.iter().cloned().fold(f64::INFINITY, f64::min),
+                xs.iter().cloned().fold(f64::NEG_INFINITY, f64::max),
+            ]
         };
         let y_range = if ys.is_empty() {
             [0.0, 1.0]
         } else {
-            [ys.iter().cloned().fold(f64::INFINITY, f64::min),
-             ys.iter().cloned().fold(f64::NEG_INFINITY, f64::max)]
+            [
+                ys.iter().cloned().fold(f64::INFINITY, f64::min),
+                ys.iter().cloned().fold(f64::NEG_INFINITY, f64::max),
+            ]
         };
         Some((x_range, y_range))
     }
@@ -260,11 +274,13 @@ impl Figure {
     }
 
     pub fn current_axes_mut(&mut self) -> Option<&mut Axes> {
-        self.current_axes.and_then(|id| self.axes.iter_mut().find(|a| a.id == id))
+        self.current_axes
+            .and_then(|id| self.axes.iter_mut().find(|a| a.id == id))
     }
 
     pub fn current_axes(&self) -> Option<&Axes> {
-        self.current_axes.and_then(|id| self.axes.iter().find(|a| a.id == id))
+        self.current_axes
+            .and_then(|id| self.axes.iter().find(|a| a.id == id))
     }
 
     pub fn add_axes(&mut self, axes: Axes) {
@@ -369,7 +385,11 @@ mod tests {
     #[test]
     fn axes_data_bounds_line() {
         let mut ax = Axes::new(1);
-        ax.push_series(Series::Line(Line::new("l", vec![1.0, 2.0, 3.0], vec![4.0, 5.0, 6.0])));
+        ax.push_series(Series::Line(Line::new(
+            "l",
+            vec![1.0, 2.0, 3.0],
+            vec![4.0, 5.0, 6.0],
+        )));
         let (xr, yr) = ax.data_bounds().unwrap();
         assert!((xr[0] - 1.0).abs() < 1e-12 && (xr[1] - 3.0).abs() < 1e-12);
         assert!((yr[0] - 4.0).abs() < 1e-12 && (yr[1] - 6.0).abs() < 1e-12);
@@ -392,6 +412,57 @@ mod tests {
         ax.push_series(Series::Line(Line::new("a", vec![1.0], vec![2.0])));
         ax.push_series(Series::Line(Line::new("b", vec![3.0], vec![4.0])));
         assert_eq!(ax.series.len(), 2);
+    }
+
+    #[test]
+    fn hold_off_returns_to_replace() {
+        // With hold on, two plots append; switching hold off makes the next
+        // plot replace the series again (MATLAB hold-off semantics).
+        let mut ax = Axes::new(1);
+        ax.hold = true;
+        ax.push_series(Series::Line(Line::new("a", vec![1.0], vec![2.0])));
+        ax.push_series(Series::Line(Line::new("b", vec![3.0], vec![4.0])));
+        assert_eq!(ax.series.len(), 2);
+        ax.hold = false;
+        ax.push_series(Series::Line(Line::new("c", vec![5.0], vec![6.0])));
+        assert_eq!(ax.series.len(), 1);
+        assert_eq!(series_name(&ax.series[0]), "c");
+    }
+
+    #[test]
+    fn hold_is_independent_across_axes() {
+        // Hold on one axes must not affect a sibling axes (per-axes state,
+        // as required for subplot grouping).
+        let mut fig = Figure::new(1);
+        let mut ax1 = Axes::new(1);
+        ax1.hold = true;
+        ax1.push_series(Series::Line(Line::new("a", vec![1.0], vec![2.0])));
+        ax1.push_series(Series::Line(Line::new("b", vec![3.0], vec![4.0])));
+        fig.add_axes(ax1);
+        let mut ax2 = Axes::new(2);
+        ax2.hold = false;
+        ax2.push_series(Series::Line(Line::new("x", vec![1.0], vec![2.0])));
+        ax2.push_series(Series::Line(Line::new("y", vec![3.0], vec![4.0])));
+        fig.add_axes(ax2);
+        let ax1 = fig.axes.iter().find(|a| a.id == 1).unwrap();
+        let ax2 = fig.axes.iter().find(|a| a.id == 2).unwrap();
+        assert_eq!(ax1.series.len(), 2, "held axes keeps both series");
+        assert_eq!(ax2.series.len(), 1, "non-held axes replaced with last");
+    }
+
+    #[test]
+    fn current_figure_and_axes_tracking() {
+        let mut reg = PlotRegistry::new();
+        let f1 = reg.create_figure();
+        let f2 = reg.create_figure();
+        assert_eq!(reg.current_id, Some(f2)); // last created is current
+        assert!(reg.set_current(f1));
+        assert_eq!(reg.current_id, Some(f1));
+        let fig = reg.current_figure_mut().unwrap();
+        assert_eq!(fig.id, f1);
+        // Adding the first axes makes it current.
+        fig.add_axes(Axes::new(1));
+        assert_eq!(fig.current_axes().unwrap().id, 1);
     }
 
     fn series_name(s: &Series) -> String {

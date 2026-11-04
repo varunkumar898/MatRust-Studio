@@ -544,7 +544,6 @@ pub fn circshift(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalErro
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::helpers::user_err;
 
     #[test]
     fn meshgrid_31x31_orientation() {
@@ -669,7 +668,7 @@ mod tests {
                 let xi = xs[i + j * 31];
                 let yi = ys[i + j * 31];
                 let zi = (xi * xi + yi * yi).sqrt().sin();
-                if (zi.abs() > max_abs) {
+                if zi.abs() > max_abs {
                     max_abs = zi.abs();
                 }
                 // z(16, 16) in 1-indexed = row 16, col 16 = i=15, j=15 (0-indexed)

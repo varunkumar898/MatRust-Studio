@@ -325,7 +325,9 @@ fn project3d(
             depth,
         }
     }
-    project3d_inner(x, y, z, x_min, x_max, y_min, y_max, z_min, z_max, cam, origin, width, height)
+    project3d_inner(
+        x, y, z, x_min, x_max, y_min, y_max, z_min, z_max, cam, origin, width, height,
+    )
 }
 
 /// Render colorbar for the axes.
@@ -505,9 +507,7 @@ fn render_series(series: &crate::Series, ctx: &RenderContext) -> String {
             }
             out
         }
-        crate::Series::Surface(s) => {
-            render_surface(s, ctx)
-        }
+        crate::Series::Surface(s) => render_surface(s, ctx),
     }
 }
 
@@ -526,28 +526,70 @@ fn render_surface(s: &crate::Surface, ctx: &RenderContext) -> String {
             let idx = |i: usize, j: usize| i + j * s.cols;
             let pts = [
                 project3d(
-                    s.x[idx(i, j)], s.y[idx(i, j)], s.z[idx(i, j)],
-                    x_min, x_max, y_min, y_max, z_min, z_max,
-                    &ctx.axes.camera, ctx.px0, ctx.pw, ctx.ph,
+                    s.x[idx(i, j)],
+                    s.y[idx(i, j)],
+                    s.z[idx(i, j)],
+                    x_min,
+                    x_max,
+                    y_min,
+                    y_max,
+                    z_min,
+                    z_max,
+                    &ctx.axes.camera,
+                    ctx.px0,
+                    ctx.pw,
+                    ctx.ph,
                 ),
                 project3d(
-                    s.x[idx(i + 1, j)], s.y[idx(i + 1, j)], s.z[idx(i + 1, j)],
-                    x_min, x_max, y_min, y_max, z_min, z_max,
-                    &ctx.axes.camera, ctx.px0, ctx.pw, ctx.ph,
+                    s.x[idx(i + 1, j)],
+                    s.y[idx(i + 1, j)],
+                    s.z[idx(i + 1, j)],
+                    x_min,
+                    x_max,
+                    y_min,
+                    y_max,
+                    z_min,
+                    z_max,
+                    &ctx.axes.camera,
+                    ctx.px0,
+                    ctx.pw,
+                    ctx.ph,
                 ),
                 project3d(
-                    s.x[idx(i + 1, j + 1)], s.y[idx(i + 1, j + 1)], s.z[idx(i + 1, j + 1)],
-                    x_min, x_max, y_min, y_max, z_min, z_max,
-                    &ctx.axes.camera, ctx.px0, ctx.pw, ctx.ph,
+                    s.x[idx(i + 1, j + 1)],
+                    s.y[idx(i + 1, j + 1)],
+                    s.z[idx(i + 1, j + 1)],
+                    x_min,
+                    x_max,
+                    y_min,
+                    y_max,
+                    z_min,
+                    z_max,
+                    &ctx.axes.camera,
+                    ctx.px0,
+                    ctx.pw,
+                    ctx.ph,
                 ),
                 project3d(
-                    s.x[idx(i, j + 1)], s.y[idx(i, j + 1)], s.z[idx(i, j + 1)],
-                    x_min, x_max, y_min, y_max, z_min, z_max,
-                    &ctx.axes.camera, ctx.px0, ctx.pw, ctx.ph,
+                    s.x[idx(i, j + 1)],
+                    s.y[idx(i, j + 1)],
+                    s.z[idx(i, j + 1)],
+                    x_min,
+                    x_max,
+                    y_min,
+                    y_max,
+                    z_min,
+                    z_max,
+                    &ctx.axes.camera,
+                    ctx.px0,
+                    ctx.pw,
+                    ctx.ph,
                 ),
             ];
             let depth = pts.iter().map(|p| p.depth).sum::<f64>() / 4.0;
-            let avg_z = (s.z[idx(i, j)] + s.z[idx(i + 1, j)] + s.z[idx(i + 1, j + 1)] + s.z[idx(i, j + 1)]) / 4.0;
+            let avg_z =
+                (s.z[idx(i, j)] + s.z[idx(i + 1, j)] + s.z[idx(i + 1, j + 1)] + s.z[idx(i, j + 1)])
+                    / 4.0;
             quads.push((depth, pts.to_vec(), avg_z));
         }
     }
@@ -572,10 +614,14 @@ fn render_surface(s: &crate::Surface, ctx: &RenderContext) -> String {
         out.push_str(&format!(
             r#"<polygon class="series-surface" fill="{}" points="{},{} {},{} {},{} {},{}" />"#,
             color,
-            fmt2(pts[0].sx), fmt2(pts[0].sy),
-            fmt2(pts[1].sx), fmt2(pts[1].sy),
-            fmt2(pts[2].sx), fmt2(pts[2].sy),
-            fmt2(pts[3].sx), fmt2(pts[3].sy),
+            fmt2(pts[0].sx),
+            fmt2(pts[0].sy),
+            fmt2(pts[1].sx),
+            fmt2(pts[1].sy),
+            fmt2(pts[2].sx),
+            fmt2(pts[2].sy),
+            fmt2(pts[3].sx),
+            fmt2(pts[3].sy),
         ));
     }
     out
@@ -691,7 +737,7 @@ mod tests {
             for i in 0..cols {
                 x.push(i as f64);
                 y.push(j as f64);
-                z.push((i as f64 * j as f64) as f64);
+                z.push(i as f64 * j as f64);
             }
         }
         ax.push_series(crate::Series::Surface(crate::Surface::new(
@@ -737,8 +783,12 @@ mod tests {
     #[test]
     fn project3d_is_deterministic() {
         let cam = crate::Camera::default();
-        let p1 = project3d(0.0, 0.0, 0.0, -1.0, 1.0, -1.0, 1.0, -1.0, 1.0, &cam, 0.0, 100.0, 100.0);
-        let p2 = project3d(0.0, 0.0, 0.0, -1.0, 1.0, -1.0, 1.0, -1.0, 1.0, &cam, 0.0, 100.0, 100.0);
+        let p1 = project3d(
+            0.0, 0.0, 0.0, -1.0, 1.0, -1.0, 1.0, -1.0, 1.0, &cam, 0.0, 100.0, 100.0,
+        );
+        let p2 = project3d(
+            0.0, 0.0, 0.0, -1.0, 1.0, -1.0, 1.0, -1.0, 1.0, &cam, 0.0, 100.0, 100.0,
+        );
         assert_eq!(p1.sx, p2.sx);
         assert_eq!(p1.sy, p2.sy);
         assert_eq!(p1.depth, p2.depth);

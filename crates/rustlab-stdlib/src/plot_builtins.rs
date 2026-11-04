@@ -749,7 +749,6 @@ pub fn surf_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError>
     let (x_vec, y_vec, z_arr) = if args.len() == 1 {
         // Implicit X = 1:cols, Y = 1:rows.
         let z_arr = args[0].to_double_array().map_err(math_err)?;
-        let z_slice = z_arr.as_slice();
         let shape = z_arr.shape();
         if shape.len() != 2 {
             return Err(user_err(
@@ -757,8 +756,8 @@ pub fn surf_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError>
                 "surf(Z) requires a 2-D matrix Z.",
             ));
         }
-        let rows = shape[0];
         let cols = shape[1];
+        let rows = shape[0];
         let x_vec: Vec<f64> = (1..=cols).map(|i| i as f64).collect();
         let y_vec: Vec<f64> = (1..=rows).map(|i| i as f64).collect();
         (x_vec, y_vec, z_arr)
@@ -785,15 +784,12 @@ pub fn surf_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError>
 
     let z_slice = z_arr.as_slice();
     let shape = z_arr.shape();
-    if shape.len() != 2 {
-        return Err(user_err(
-            "RUSTLAB:plot:badArgs",
-            "surf requires a 2-D matrix Z.",
-        ));
-    }
     let rows = shape[0];
     let cols = shape[1];
-    if x_vec.len() != rows * cols || y_vec.len() != rows * cols {
+    // Only the explicit (X, Y, Z) form requires X and Y to be full grids of
+    // Z's size; the implicit `surf(Z)` form uses plain coordinate vectors.
+    let grid = args.len() == 3;
+    if grid && (x_vec.len() != rows * cols || y_vec.len() != rows * cols) {
         return Err(user_err(
             "RUSTLAB:plot:badArgs",
             "surf(X, Y, Z) requires X and Y to be Z's size (rows*cols).",
@@ -807,7 +803,12 @@ pub fn surf_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError>
         ))?;
         let ax = ensure_current_axes(fig)?;
         ax.push_series(rustlab_plot::Series::Surface(rustlab_plot::Surface::new(
-            "surface", rows, cols, x_vec, y_vec, z_slice.to_vec(),
+            "surface",
+            rows,
+            cols,
+            x_vec,
+            y_vec,
+            z_slice.to_vec(),
         )));
         ax.colorbar = Some(rustlab_plot::Colorbar {
             location: rustlab_plot::ColorbarLocation::East,
@@ -860,9 +861,7 @@ mod tests {
     fn surf_stores_surface_series() {
         rustlab_plot::plot_state_reset();
         figure_fn(&[], 1).unwrap();
-        let z = Value::Double(
-            DenseArray::from_vec(vec![2, 2], vec![1.0, 2.0, 3.0, 4.0]).unwrap(),
-        );
+        let z = Value::Double(DenseArray::from_vec(vec![2, 2], vec![1.0, 2.0, 3.0, 4.0]).unwrap());
         surf_fn(&[z], 0).unwrap();
         let fig = rustlab_plot::with_plot_state_ref(|reg| reg.current_figure().unwrap().clone());
         let ax = fig.current_axes().unwrap();
@@ -874,9 +873,7 @@ mod tests {
     fn surf_adds_colorbar() {
         rustlab_plot::plot_state_reset();
         figure_fn(&[], 1).unwrap();
-        let z = Value::Double(
-            DenseArray::from_vec(vec![2, 2], vec![1.0, 2.0, 3.0, 4.0]).unwrap(),
-        );
+        let z = Value::Double(DenseArray::from_vec(vec![2, 2], vec![1.0, 2.0, 3.0, 4.0]).unwrap());
         surf_fn(&[z], 0).unwrap();
         let fig = rustlab_plot::with_plot_state_ref(|reg| reg.current_figure().unwrap().clone());
         let ax = fig.current_axes().unwrap();

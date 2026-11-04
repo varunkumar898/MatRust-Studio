@@ -33,6 +33,7 @@ public class MatStudioCapture {
     [DllImport("user32.dll")] public static extern bool MoveWindow(IntPtr hWnd, int x, int y, int width, int height, bool repaint);
     [StructLayout(LayoutKind.Sequential)] public struct RECT { public int Left; public int Top; public int Right; public int Bottom; }
     [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr hWnd, out RECT rect);
+    [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint processId);
 
     // Title must come second so Find uses first-match-by-title-prefix.
     public static IntPtr Find(string titlePrefix) {
@@ -41,6 +42,25 @@ public class MatStudioCapture {
             var sb = new StringBuilder(512);
             GetWindowText(h, sb, 512);
             if (IsWindowVisible(h) && sb.ToString().StartsWith(titlePrefix, StringComparison.Ordinal)) {
+                found = h;
+                return false;
+            }
+            return true;
+        }, IntPtr.Zero);
+        return found;
+    }
+
+    // Same, but the window must BELONG to the given process id: several
+    // unrelated windows (e.g. a terminal "MATSTUDIO — powershell.exe") can
+    // share the title prefix, so the app pid disambiguates.
+    public static IntPtr FindForPid(uint ownerPid, string titlePrefix) {
+        IntPtr found = IntPtr.Zero;
+        EnumWindows((h, l) => {
+            var sb = new StringBuilder(512);
+            GetWindowText(h, sb, 512);
+            uint pid;
+            GetWindowThreadProcessId(h, out pid);
+            if (IsWindowVisible(h) && pid == ownerPid && sb.ToString().StartsWith(titlePrefix, StringComparison.Ordinal)) {
                 found = h;
                 return false;
             }
@@ -60,7 +80,7 @@ try {
     $deadline = (Get-Date).AddSeconds(12)
     $handle = [IntPtr]::Zero
     while ((Get-Date) -lt $deadline) {
-        $handle = [MatStudioCapture]::Find("MATSTUDIO")
+        $handle = [MatStudioCapture]::FindForPid($process.Id, "MATSTUDIO")
         if ($handle -ne [IntPtr]::Zero) { break }
         Start-Sleep -Milliseconds 200
     }

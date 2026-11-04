@@ -91,7 +91,7 @@ impl AddOnsPanel {
         ui.vertical(|ui| {
             // Header
             ui.horizontal(|ui| {
-                ui.heading(RichText::new("🧩 Add-On Explorer").color(theme.text_primary));
+                ui.heading(RichText::new("Add-On Explorer").color(theme.text_primary));
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     ui.label(
                         RichText::new(format!("{} Installed Packages", self.installed_ids.len()))
@@ -104,7 +104,7 @@ impl AddOnsPanel {
 
             // Search Bar
             ui.horizontal(|ui| {
-                ui.label(RichText::new("🔍").size(14.0));
+                ui.label(RichText::new("Filter:").size(14.0));
                 let search_box = egui::TextEdit::singleline(&mut self.search_query)
                     .hint_text("Search add-ons, apps, and toolboxes...")
                     .desired_width(ui.available_width() - 80.0);
@@ -210,16 +210,13 @@ impl AddOnsPanel {
                                     ui.horizontal(|ui| {
                                         if addon.is_builtin {
                                             if ui
-                                                .button(RichText::new("🚀 Launch App").strong())
+                                                .button(RichText::new("Launch App").strong())
                                                 .clicked()
                                             {
                                                 *on_launch_app = Some(addon.id);
                                             }
                                         } else if is_installed {
-                                            if ui
-                                                .button(RichText::new("🚀 Open").strong())
-                                                .clicked()
-                                            {
+                                            if ui.button(RichText::new("Open").strong()).clicked() {
                                                 *on_launch_app = Some(addon.id);
                                             }
                                             if ui.button("Uninstall").clicked() {
@@ -227,7 +224,7 @@ impl AddOnsPanel {
                                             }
                                         } else if ui
                                             .button(
-                                                RichText::new("⬇ Install Package")
+                                                RichText::new("Install Package")
                                                     .color(Color32::from_rgb(100, 200, 255)),
                                             )
                                             .clicked()

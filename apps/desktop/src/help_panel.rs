@@ -360,13 +360,13 @@ impl HelpPanel {
         ui.vertical(|ui| {
             // Header
             ui.horizontal(|ui| {
-                ui.heading(RichText::new("❓ Help & Documentation").color(theme.text_primary));
+                ui.heading(RichText::new("Help & Documentation").color(theme.text_primary));
             });
             ui.separator();
 
             // Search Bar
             ui.horizontal(|ui| {
-                ui.label(RichText::new("🔍").size(14.0));
+                ui.label(RichText::new("Search:").size(14.0));
                 let search_edit = TextEdit::singleline(&mut self.search_query)
                     .hint_text("Search functions (e.g. log2, sum, inv, plot)...")
                     .desired_width(ui.available_width() - 80.0);

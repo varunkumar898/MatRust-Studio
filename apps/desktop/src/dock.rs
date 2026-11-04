@@ -37,15 +37,15 @@ impl PanelId {
 
     pub fn icon(&self) -> &'static str {
         match self {
-            PanelId::CurrentFolder => "📁",
-            PanelId::Editor => "📝",
-            PanelId::Workspace => "📊",
-            PanelId::CommandWindow => "💻",
-            PanelId::Figures => "📈",
-            PanelId::History => "🕒",
-            PanelId::Help => "❓",
-            PanelId::AddOns => "🧩",
-            PanelId::BlockDiagram => "🔄",
+            PanelId::CurrentFolder => "[D]",
+            PanelId::Editor => "[E]",
+            PanelId::Workspace => "[W]",
+            PanelId::CommandWindow => "[C]",
+            PanelId::Figures => "[F]",
+            PanelId::History => "[H]",
+            PanelId::Help => "[?]",
+            PanelId::AddOns => "[A]",
+            PanelId::BlockDiagram => "[B]",
         }
     }
 }
@@ -197,14 +197,16 @@ impl DockTree {
     pub fn standard() -> Self {
         // Left column: Current Folder (top) / Workspace (bottom)
         let left = DockNode::split_v(
-            0.5,
+            0.58,
             DockNode::leaf(PanelId::CurrentFolder),
             DockNode::leaf(PanelId::Workspace),
         );
 
-        // Center column: Editor (top) / Command Window + History (bottom)
+        // Center column: Editor (top) / Command Window + History (bottom).
+        // 0.66 keeps the editor above its 300 px target while leaving the
+        // command input visible at 1280x720.
         let center = DockNode::split_v(
-            0.65,
+            0.66,
             DockNode::leaf(PanelId::Editor),
             DockNode::leaf_multi(vec![PanelId::CommandWindow, PanelId::History]),
         );
@@ -482,6 +484,13 @@ impl DockTree {
         F: FnMut(&mut Ui, PanelId),
     {
         let available_rect = ui.available_rect_before_wrap();
+        if std::env::var_os("MATSTUDIO_DEBUG_LAYOUT").is_some() {
+            eprintln!(
+                "MATSTUDIO dock: available={:?} screen={:?}",
+                available_rect,
+                ui.ctx().screen_rect()
+            );
+        }
         let mut leaf_counter = 0;
         let mut new_drop_target = None;
         let mut tab_closed = None;
@@ -685,6 +694,14 @@ impl DockTree {
                     Pos2::new(rect.min.x, rect.min.y + tab_bar_height),
                     vec2(rect.width(), (rect.height() - tab_bar_height).max(0.0)),
                 );
+                if std::env::var_os("MATSTUDIO_DEBUG_LAYOUT").is_some() {
+                    eprintln!(
+                        "MATSTUDIO leaf {:?}: rect={:?} body={:?}",
+                        tabs.get(*active_tab).map(|p| p.title()).unwrap_or("?"),
+                        rect,
+                        body_rect
+                    );
+                }
 
                 // Tab Bar Background & Border
                 ui.painter().rect_filled(tab_bar_rect, 0.0, theme.panel_bg);
@@ -729,7 +746,7 @@ impl DockTree {
                     if is_active
                         && tabs.len() > 1
                         && child_ui
-                            .small_button("✕")
+                            .small_button("X")
                             .on_hover_text("Close tab")
                             .clicked()
                     {

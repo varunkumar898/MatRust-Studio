@@ -284,15 +284,11 @@ impl BlockDiagramEditor {
 
     fn render_toolbar(&mut self, ui: &mut Ui, theme: &Theme) {
         ui.horizontal(|ui| {
-            ui.heading(RichText::new("🔄 Block Diagram Editor").color(theme.text_primary));
+            ui.heading(RichText::new("Block Diagram Editor").color(theme.text_primary));
             ui.separator();
 
             if ui
-                .button(
-                    RichText::new("▶ Run Simulation")
-                        .color(theme.accent)
-                        .strong(),
-                )
+                .button(RichText::new("Run Simulation").color(theme.accent).strong())
                 .on_hover_text("Execute numerical integration of block diagram (Fixed-Step Euler)")
                 .clicked()
             {
@@ -300,7 +296,7 @@ impl BlockDiagramEditor {
             }
 
             if ui
-                .button(RichText::new("📈 Open Scope").color(theme.text_primary))
+                .button(RichText::new("Open Scope").color(theme.text_primary))
                 .on_hover_text("Open oscilloscope signal waveform viewer")
                 .clicked()
             {
@@ -592,13 +588,13 @@ impl BlockDiagramEditor {
             let icon_str = match block.block_type {
                 BlockType::Constant => "1",
                 BlockType::SineWave => "~",
-                BlockType::Step => "_|¯",
+                BlockType::Step => "[step]",
                 BlockType::Gain => "K",
-                BlockType::Sum => "∑",
+                BlockType::Sum => "[sum]",
                 BlockType::Integrator => "1/s",
-                BlockType::UnitDelay => "z⁻¹",
-                BlockType::Scope => "📈",
-                _ => "▪",
+                BlockType::UnitDelay => "[z-1]",
+                BlockType::Scope => "[scope]",
+                _ => "[ ]",
             };
 
             painter.text(
@@ -716,15 +712,23 @@ impl BlockDiagramEditor {
     fn render_scope_modal(&mut self, ctx: &egui::Context, _theme: &Theme) {
         let mut close_scope = false;
 
-        egui::Window::new("📈 Scope Waveform Viewer")
+        egui::Window::new("Scope Waveform Viewer")
             .default_size([650.0, 400.0])
             .resizable(true)
             .show(ctx, |ui| {
                 if let Some(output) = &self.sim_output {
                     ui.horizontal(|ui| {
-                        ui.label(RichText::new(format!("Time points: {}", output.tout.len())).size(11.0));
+                        ui.label(
+                            RichText::new(format!("Time points: {}", output.tout.len())).size(11.0),
+                        );
                         ui.separator();
-                        ui.label(RichText::new(format!("Duration: 0.0s to {:.2}s", output.tout.last().copied().unwrap_or(0.0))).size(11.0));
+                        ui.label(
+                            RichText::new(format!(
+                                "Duration: 0.0s to {:.2}s",
+                                output.tout.last().copied().unwrap_or(0.0)
+                            ))
+                            .size(11.0),
+                        );
                         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                             if ui.button("Close").clicked() {
                                 close_scope = true;
@@ -744,8 +748,18 @@ impl BlockDiagramEditor {
                     // Plot waveform: output.tout vs output.yout
                     if output.tout.len() >= 2 && output.yout.len() == output.tout.len() {
                         let t_max = output.tout.last().copied().unwrap_or(1.0).max(0.001);
-                        let y_min = output.yout.iter().copied().fold(f64::INFINITY, f64::min).min(-0.2);
-                        let y_max = output.yout.iter().copied().fold(f64::NEG_INFINITY, f64::max).max(1.2);
+                        let y_min = output
+                            .yout
+                            .iter()
+                            .copied()
+                            .fold(f64::INFINITY, f64::min)
+                            .min(-0.2);
+                        let y_max = output
+                            .yout
+                            .iter()
+                            .copied()
+                            .fold(f64::NEG_INFINITY, f64::max)
+                            .max(1.2);
                         let y_span = (y_max - y_min).max(0.001);
 
                         let map_pt = |t: f64, y: f64| -> Pos2 {
@@ -770,13 +784,19 @@ impl BlockDiagramEditor {
                         for i in 0..(output.tout.len() - 1) {
                             let p1 = map_pt(output.tout[i], output.yout[i]);
                             let p2 = map_pt(output.tout[i + 1], output.yout[i + 1]);
-                            painter.line_segment([p1, p2], Stroke::new(2.0_f32, Color32::from_rgb(255, 215, 0)));
+                            painter.line_segment(
+                                [p1, p2],
+                                Stroke::new(2.0_f32, Color32::from_rgb(255, 215, 0)),
+                            );
                         }
 
                         painter.text(
                             pos2(rect.left() + 15.0, rect.top() + 15.0),
                             egui::Align2::LEFT_TOP,
-                            format!("Scope Output Signal (Final: {:.4})", output.yout.last().copied().unwrap_or(0.0)),
+                            format!(
+                                "Scope Output Signal (Final: {:.4})",
+                                output.yout.last().copied().unwrap_or(0.0)
+                            ),
                             egui::FontId::proportional(12.0),
                             Color32::from_rgb(255, 215, 0),
                         );
@@ -784,7 +804,12 @@ impl BlockDiagramEditor {
                 } else {
                     ui.vertical_centered(|ui| {
                         ui.add_space(50.0);
-                        ui.label(RichText::new("No simulation run yet. Click '▶ Run Simulation' to view waveforms.").italics());
+                        ui.label(
+                            RichText::new(
+                                "No simulation run yet. Click 'Run Simulation' to view waveforms.",
+                            )
+                            .italics(),
+                        );
                     });
                 }
             });

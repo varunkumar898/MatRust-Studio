@@ -509,15 +509,14 @@ fn test_dock_tree_help_addons_block_diagram_panels() {
         "Standard dock layout must open Help panel"
     );
     assert_eq!(PanelId::Help.title(), "Help & Documentation");
-    assert_eq!(PanelId::Help.icon(), "❓");
+    assert_eq!(PanelId::Help.icon(), "[?]");
 
     assert_eq!(PanelId::AddOns.title(), "Add-On Explorer");
-    assert_eq!(PanelId::AddOns.icon(), "🧩");
+    assert_eq!(PanelId::AddOns.icon(), "[A]");
 
     assert_eq!(PanelId::BlockDiagram.title(), "Block Diagram Editor");
-    assert_eq!(PanelId::BlockDiagram.icon(), "🔄");
+    assert_eq!(PanelId::BlockDiagram.icon(), "[B]");
 }
-
 #[test]
 fn test_block_diagram_editor_canvas_and_solver() {
     // G2: a fresh editor starts with an EMPTY canvas; the example is

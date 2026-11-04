@@ -1,5 +1,6 @@
 //! Workspace variable browser and detailed matrix inspector.
 
+use crate::actions::AppAction;
 use crate::execution::VariableRow;
 use crate::theme::Theme;
 use egui::{RichText, ScrollArea, Ui, Window};
@@ -21,34 +22,36 @@ impl WorkspacePanel {
         on_refresh: &mut bool,
     ) {
         ui.vertical(|ui| {
-            // Header toolbar
-            ui.horizontal(|ui| {
+            // Header toolbar. Clear Workspace wraps below the title in a
+            // narrow panel instead of overlapping Refresh.
+            ui.horizontal_wrapped(|ui| {
                 ui.heading("Workspace");
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    if ui
-                        .button("🗑 Clear")
-                        .on_hover_text("Clear workspace variables (clear)")
-                        .clicked()
-                    {
-                        *on_clear = true;
-                    }
-                    if ui
-                        .button("🔄")
-                        .on_hover_text("Refresh variable list")
-                        .clicked()
-                    {
-                        *on_refresh = true;
-                    }
-                });
+                let refresh = ui.button("Refresh").on_hover_text("Refresh variable list");
+                let _ = crate::ui_registry::register(
+                    ui.ctx(),
+                    "workspace.refresh",
+                    refresh.id,
+                    refresh.rect,
+                );
+                if refresh.clicked() {
+                    *on_refresh = true;
+                }
+                let clear = ui
+                    .button("Clear Workspace")
+                    .on_hover_text("Clear workspace variables after confirmation");
+                AppAction::ClearWorkspace.register_control(ui.ctx(), clear.id, clear.rect);
+                if clear.clicked() {
+                    *on_clear = true;
+                }
             });
 
             ui.add_space(4.0);
 
             // Filter search box
             ui.horizontal(|ui| {
-                ui.label("🔍");
+                ui.label("Filter:");
                 ui.text_edit_singleline(&mut self.search_query);
-                if !self.search_query.is_empty() && ui.small_button("✕").clicked() {
+                if !self.search_query.is_empty() && ui.small_button("X").clicked() {
                     self.search_query.clear();
                 }
             });

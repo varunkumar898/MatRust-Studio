@@ -21,10 +21,17 @@ impl Default for FiguresPanel {
 }
 
 impl FiguresPanel {
-    pub fn show(&mut self, ui: &mut Ui, theme: &Theme, graphics: &mut GraphicsState) {
+    pub fn show(
+        &mut self,
+        ui: &mut Ui,
+        theme: &Theme,
+        graphics: &mut GraphicsState,
+        on_close_figure: &mut Option<usize>,
+    ) {
         ui.vertical(|ui| {
-            // Figure Tabs header
-            ui.horizontal(|ui| {
+            // Figure tabs and actions. Wrapping is required because the right
+            // dock can be as narrow as one third of a scaled display.
+            ui.horizontal_wrapped(|ui| {
                 ui.heading("Figures");
                 ui.separator();
 
@@ -33,48 +40,43 @@ impl FiguresPanel {
                     graphics.get_or_create_figure(1);
                 }
 
-                let mut to_close = None;
-
                 for fig in &graphics.figures {
                     let is_selected = self.selected_figure_id == fig.id;
-                    let tab_title = if is_selected {
-                        format!("● {}", fig.title)
-                    } else {
-                        fig.title.clone()
-                    };
+                    let tab_title = fig.title.clone();
 
                     let btn = ui.selectable_label(is_selected, tab_title);
                     if btn.clicked() {
                         self.selected_figure_id = fig.id;
                         graphics.current_figure = Some(fig.id);
                     }
-                    if ui.small_button("✕").on_hover_text("Close figure").clicked() {
-                        to_close = Some(fig.id);
+                    let close = ui.small_button("X").on_hover_text("Close Figure");
+                    crate::actions::AppAction::CloseFigure.register_control(
+                        ui.ctx(),
+                        close.id,
+                        close.rect,
+                    );
+                    if close.clicked() {
+                        *on_close_figure = Some(fig.id);
                     }
                 }
 
-                if let Some(id) = to_close {
-                    graphics.close_figure(id);
-                    if let Some(first) = graphics.figures.first() {
-                        self.selected_figure_id = first.id;
-                    }
+                let new_btn = ui
+                    .button("+ New")
+                    .on_hover_text("Create new figure (figure)");
+                let _ =
+                    crate::ui_registry::register(ui.ctx(), "figures.new", new_btn.id, new_btn.rect);
+                if new_btn.clicked() {
+                    let next_id = graphics.figures.iter().map(|f| f.id).max().unwrap_or(0) + 1;
+                    graphics.get_or_create_figure(next_id);
+                    self.selected_figure_id = next_id;
                 }
-
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    if ui
-                        .button("+ New")
-                        .on_hover_text("Create new figure (figure)")
-                        .clicked()
-                    {
-                        let next_id = graphics.figures.iter().map(|f| f.id).max().unwrap_or(0) + 1;
-                        graphics.get_or_create_figure(next_id);
-                        self.selected_figure_id = next_id;
-                    }
-                    if ui.button("Reset View").clicked() {
-                        self.view_offset = Vec2::ZERO;
-                        self.view_zoom = 1.0;
-                    }
-                });
+                let reset = ui.button("Reset View");
+                let _ =
+                    crate::ui_registry::register(ui.ctx(), "figures.reset", reset.id, reset.rect);
+                if reset.clicked() {
+                    self.view_offset = Vec2::ZERO;
+                    self.view_zoom = 1.0;
+                }
             });
 
             ui.separator();
@@ -99,7 +101,7 @@ impl FiguresPanel {
             };
 
             // Plot controls bar
-            ui.horizontal(|ui| {
+            ui.horizontal_wrapped(|ui| {
                 ui.label(RichText::new(&fig.title).strong().color(theme.accent));
                 ui.separator();
                 ui.checkbox(&mut fig.grid, "Grid");
@@ -130,13 +132,16 @@ impl FiguresPanel {
             );
 
             if fig.items.is_empty() {
-                painter.text(
-                    canvas_rect.center(),
-                    egui::Align2::CENTER_CENTER,
-                    "Empty Figure (Run plot(x, y), scatter(x, y), or bar(x, y) to display data)",
+                let hint = "This panel shows plots from your workspace.";
+                let galley = painter.layout(
+                    hint.to_string(),
                     egui::FontId::proportional(14.0),
                     theme.text_secondary,
+                    (canvas_rect.width() - 40.0).max(80.0),
                 );
+                let hint_rect =
+                    egui::Align2::CENTER_CENTER.anchor_size(canvas_rect.center(), galley.size());
+                painter.galley(hint_rect.min, galley, theme.text_secondary);
                 return;
             }
 

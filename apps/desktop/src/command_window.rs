@@ -137,9 +137,21 @@ impl CommandWindow {
         ui.horizontal(|ui| {
             ui.colored_label(theme.accent, ">>");
 
-            // History navigation
-            let up_pressed = ui.input(|i| i.key_pressed(Key::ArrowUp));
-            let down_pressed = ui.input(|i| i.key_pressed(Key::ArrowDown));
+            let response = ui.add_sized(
+                [ui.available_width() - 80.0, 24.0],
+                TextEdit::singleline(&mut self.input_buffer)
+                    .font(egui::TextStyle::Monospace)
+                    .hint_text("Enter expression or statement..."),
+            );
+            let _ =
+                crate::ui_registry::register(ui.ctx(), "command.input", response.id, response.rect);
+
+            // History navigation only when the command input has focus, so
+            // ArrowUp/ArrowDown in the editor or elsewhere don't rewrite this
+            // buffer.
+            let input_focused = response.has_focus();
+            let up_pressed = input_focused && ui.input(|i| i.key_pressed(Key::ArrowUp));
+            let down_pressed = input_focused && ui.input(|i| i.key_pressed(Key::ArrowDown));
 
             if up_pressed && !self.history.is_empty() {
                 let next_cursor = match self.history_cursor {
@@ -161,15 +173,6 @@ impl CommandWindow {
                     }
                 }
             }
-
-            let response = ui.add_sized(
-                [ui.available_width() - 80.0, 24.0],
-                TextEdit::singleline(&mut self.input_buffer)
-                    .font(egui::TextStyle::Monospace)
-                    .hint_text("Enter expression or statement..."),
-            );
-            let _ =
-                crate::ui_registry::register(ui.ctx(), "command.input", response.id, response.rect);
 
             let enter_pressed = response.lost_focus() && ui.input(|i| i.key_pressed(Key::Enter));
             let run = ui.button("Run");
@@ -203,9 +206,11 @@ impl CommandWindow {
                 }
             }
 
-            if !response.has_focus() && self.input_buffer.is_empty() {
-                response.request_focus();
-            }
+            // Only request focus when the panel is empty and nothing else has
+            // focus; never steal focus from the editor or another panel.
+            // Removed auto-focus: never steal focus from the editor or any
+            // other panel. The user clicks into the command window (or tabs)
+            // to focus it; the hint text guides them.
         });
     }
 

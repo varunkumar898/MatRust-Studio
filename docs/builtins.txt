@@ -16,6 +16,7 @@ bitshift
 bitxor
 blackman
 cast
+cla
 cat
 ceil
 cell
@@ -24,7 +25,9 @@ char
 chol
 circshift
 class
+clf
 cond
+close
 confusionmat
 conj
 contains
@@ -68,6 +71,8 @@ flipud
 floor
 fprintf
 full
+gca
+gcf
 gradient
 grid
 hamming
@@ -107,6 +112,7 @@ isnumeric
 isscalar
 issparse
 isvector
+ishhold
 jtraj
 kmeans
 kron
@@ -237,4 +243,5 @@ xlim
 ylabel
 ylim
 zeros
+zlabel
 zscore

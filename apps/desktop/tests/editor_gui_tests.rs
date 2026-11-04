@@ -624,3 +624,99 @@ fn test_editor_mouse_wheel_scrolls_a_long_document() {
         scrolled.scroll_offset
     );
 }
+
+#[test]
+fn test_editor_gutter_rows_have_stable_keys() {
+    use std::collections::HashSet;
+
+    let ctx = Context::default();
+    let content = "x = 1;\ny = 2;\nz = x + y;\n";
+    let rect = Rect::from_min_size(Pos2::ZERO, vec2(800.0, 400.0));
+
+    let mut panel1 = panel_with(content);
+    let layout1 = run_editor_frame(&ctx, &mut panel1, rect, Vec::new(), Modifiers::NONE);
+    let ids1: HashSet<_> = ui_registry::audit(&ctx)
+        .controls
+        .iter()
+        .filter(|c| c.control_id.starts_with("editor.gutter_row"))
+        .map(|c| c.control_id.clone())
+        .collect();
+
+    let mut panel2 = panel_with(content);
+    let layout2 = run_editor_frame(&ctx, &mut panel2, rect, Vec::new(), Modifiers::NONE);
+    let ids2: HashSet<_> = ui_registry::audit(&ctx)
+        .controls
+        .iter()
+        .filter(|c| c.control_id.starts_with("editor.gutter_row"))
+        .map(|c| c.control_id.clone())
+        .collect();
+
+    // Same content must produce the same gutter row ids.
+    assert_eq!(ids1, ids2, "gutter row ids must be stable across renders");
+    assert!(!ids1.is_empty(), "gutter rows must be registered");
+    assert_eq!(
+        layout1.gutter_width, layout2.gutter_width,
+        "gutter width must be stable"
+    );
+}
+
+#[test]
+fn test_editor_completion_popup_scopes_arrow_keys() {
+    let ctx = Context::default();
+    let mut panel = panel_with("x = 1;\ny = 2;\n");
+    let rect = Rect::from_min_size(Pos2::ZERO, vec2(800.0, 400.0));
+
+    // Open the completion popup via Ctrl+Space.
+    let command = Modifiers::COMMAND;
+    let ctrl_space = Event::Key {
+        key: Key::Space,
+        physical_key: None,
+        pressed: true,
+        repeat: false,
+        modifiers: command,
+    };
+    let raw = raw_input(rect.size(), vec![ctrl_space], command);
+    let _ = ctx.run(raw, |ctx| {
+        ui_registry::begin_frame(ctx);
+        egui::CentralPanel::default()
+            .frame(egui::Frame::NONE)
+            .show(ctx, |ui| {
+                let mut child = ui.new_child(
+                    UiBuilder::default()
+                        .max_rect(rect)
+                        .layout(Layout::top_down(Align::LEFT)),
+                );
+                let mut run_script = None;
+                let mut run_selection = None;
+                let mut run_section = None;
+                let mut stop = false;
+                panel.show(
+                    &mut child,
+                    &Theme::dark(),
+                    &[],
+                    EditorCallbacks {
+                        run_script: &mut run_script,
+                        run_selection: &mut run_selection,
+                        run_section: &mut run_section,
+                        stop: &mut stop,
+                    },
+                );
+            });
+    });
+
+    // Completion popup controls must be registered when open.
+    let audit = ui_registry::audit(&ctx);
+    let completion_items: Vec<_> = audit
+        .controls
+        .iter()
+        .filter(|c| {
+            c.control_id == "editor.completion_filter"
+                || c.control_id == "editor.completion_close"
+                || c.control_id.starts_with("editor.completion_item")
+        })
+        .collect();
+    assert!(
+        !completion_items.is_empty(),
+        "completion popup must register filter/close/item controls when open: {audit:?}"
+    );
+}

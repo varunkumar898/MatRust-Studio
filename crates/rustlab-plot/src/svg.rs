@@ -151,7 +151,11 @@ fn axis_limits(axes: &Axes) -> (f64, f64, f64, f64) {
 
 fn margin(lo: f64, hi: f64) -> (f64, f64) {
     if (hi - lo).abs() < 1e-12 {
-        let half = if lo.abs() < 1e-12 { 0.5 } else { (hi - lo).abs() * 0.05 + 0.5 };
+        let half = if lo.abs() < 1e-12 {
+            0.5
+        } else {
+            (hi - lo).abs() * 0.05 + 0.5
+        };
         (lo - half, hi + half)
     } else {
         let pad = (hi - lo) * 0.05;
@@ -230,7 +234,11 @@ fn render_series(series: &crate::Series, ctx: &RenderContext) -> String {
             }
             let mut pts = String::new();
             for (x, y) in l.x.iter().zip(l.y.iter()) {
-                pts.push_str(&format!("{},{} ", fmt2(px(*x, ctx.x_min, ctx.x_max, ctx.px0, ctx.pw)), fmt2(py(*y, ctx.y_min, ctx.y_max, ctx.py0, ctx.ph))));
+                pts.push_str(&format!(
+                    "{},{} ",
+                    fmt2(px(*x, ctx.x_min, ctx.x_max, ctx.px0, ctx.pw)),
+                    fmt2(py(*y, ctx.y_min, ctx.y_max, ctx.py0, ctx.ph))
+                ));
             }
             let color = rgb255(l.color);
             format!(
@@ -252,7 +260,10 @@ fn render_series(series: &crate::Series, ctx: &RenderContext) -> String {
                 let cy = py(*y, ctx.y_min, ctx.y_max, ctx.py0, ctx.ph);
                 out.push_str(&format!(
                     r#"<circle class="series-scatter" fill="{}" cx="{}" cy="{}" r="{}" />"#,
-                    color, fmt2(cx), fmt2(cy), r
+                    color,
+                    fmt2(cx),
+                    fmt2(cy),
+                    r
                 ));
             }
             out
@@ -338,7 +349,11 @@ mod tests {
     fn svg_is_deterministic() {
         let mut fig = Figure::new(1);
         let mut ax = Axes::new(1);
-        ax.push_series(crate::Series::Line(crate::Line::new("l", vec![1.0, 2.0, 3.0], vec![2.0, 4.0, 6.0])));
+        ax.push_series(crate::Series::Line(crate::Line::new(
+            "l",
+            vec![1.0, 2.0, 3.0],
+            vec![2.0, 4.0, 6.0],
+        )));
         fig.add_axes(ax);
         let a = to_svg(&fig, 400.0, 300.0);
         let b = to_svg(&fig, 400.0, 300.0);
@@ -351,7 +366,11 @@ mod tests {
     fn svg_has_stable_ids() {
         let mut fig = Figure::new(7);
         let mut ax = Axes::new(3);
-        ax.push_series(crate::Series::Line(crate::Line::new("s", vec![0.0], vec![0.0])));
+        ax.push_series(crate::Series::Line(crate::Line::new(
+            "s",
+            vec![0.0],
+            vec![0.0],
+        )));
         fig.add_axes(ax);
         let svg = to_svg(&fig, 400.0, 300.0);
         assert!(svg.contains(r#"id="axes-3""#));

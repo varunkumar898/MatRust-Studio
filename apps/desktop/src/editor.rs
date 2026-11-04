@@ -1484,24 +1484,35 @@ impl EditorPanel {
                     .filter(|s| filter.is_empty() || s.to_lowercase().contains(&filter))
                     .collect();
 
-                // Arrow navigation
-                if ui.input(|i| i.key_pressed(Key::ArrowDown)) && !filtered.is_empty() {
-                    self.completion_selected_idx =
-                        (self.completion_selected_idx + 1) % filtered.len();
-                }
-                if ui.input(|i| i.key_pressed(Key::ArrowUp)) && !filtered.is_empty() {
-                    self.completion_selected_idx = self
-                        .completion_selected_idx
-                        .checked_sub(1)
-                        .unwrap_or(filtered.len().saturating_sub(1));
-                }
+                // Only handle navigation keys when the popup (filter text or a
+                // completion item) has focus, so ArrowUp/ArrowDown/Enter in the
+                // editor TextEdit or elsewhere are not swallowed by the popup.
+                let popup_has_focus = ui.ctx().memory(|m| m.focused()).is_some();
 
-                let enter_hit = ui.input(|i| i.key_pressed(Key::Enter) || i.key_pressed(Key::Tab));
-                let esc_hit = ui.input(|i| i.key_pressed(Key::Escape));
+                let mut enter_hit = false;
+                if popup_has_focus {
+                    // Arrow navigation
+                    if ui.input(|i| i.key_pressed(Key::ArrowDown)) && !filtered.is_empty() {
+                        self.completion_selected_idx =
+                            (self.completion_selected_idx + 1) % filtered.len();
+                        let _ =
+                            ui.input_mut(|i| i.consume_key(egui::Modifiers::NONE, Key::ArrowDown));
+                    }
+                    if ui.input(|i| i.key_pressed(Key::ArrowUp)) && !filtered.is_empty() {
+                        self.completion_selected_idx = self
+                            .completion_selected_idx
+                            .checked_sub(1)
+                            .unwrap_or(filtered.len().saturating_sub(1));
+                        let _ =
+                            ui.input_mut(|i| i.consume_key(egui::Modifiers::NONE, Key::ArrowUp));
+                    }
 
-                if esc_hit {
-                    self.completion_open = false;
-                    return;
+                    enter_hit = ui.input(|i| i.key_pressed(Key::Enter) || i.key_pressed(Key::Tab));
+
+                    if ui.input(|i| i.key_pressed(Key::Escape)) {
+                        self.completion_open = false;
+                        return;
+                    }
                 }
 
                 let mut chosen_name: Option<String> = None;

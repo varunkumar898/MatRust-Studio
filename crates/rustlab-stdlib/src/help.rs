@@ -1413,6 +1413,49 @@ pub fn get_help_text(name: &str) -> Option<&'static str> {
              Description:\
                saveas(filename) saves the current figure as SVG.\n               saveas(h, filename) saves figure h as SVG.\n"
         ),
+        "ishhold" => Some("ishhold"),
+        "gcf" => Some(
+            "GCF  Get current figure handle.\n\n\
+             Syntax:\
+               h = gcf\n\n\
+             Description:\
+               gcf returns the handle of the current figure.\n"
+        ),
+        "gca" => Some(
+            "GCA  Get current axes handle.\n\n\
+             Syntax:\
+               h = gca\n\n\
+             Description:\
+               gca returns the handle of the current axes in the current figure.\n"
+        ),
+        "cla" => Some(
+            "CLA  Clear current axes.\n\n\
+             Syntax:\
+               cla\n\n\
+             Description:\
+               cla removes all plot series from the current axes.\n"
+        ),
+        "clf" => Some(
+            "CLF  Clear current figure.\n\n\
+             Syntax:\
+               clf\n\n\
+             Description:\
+               clf removes all axes from the current figure.\n"
+        ),
+        "close" => Some(
+            "CLOSE  Close figure(s).\n\n\
+             Syntax:\
+               close\n               close(h)\n               close all\n\n\
+             Description:\
+               close closes the current figure.\n               close(h) closes figure h.\n               close all closes all figures.\n"
+        ),
+        "zlabel" => Some(
+            "ZLABEL  Set z-axis label.\n\n\
+             Syntax:\
+               zlabel(txt)\n\n\
+             Description:\
+               zlabel(txt) sets the z-axis label on the current axes.\n"
+        ),
         _ => None,
     }
 }

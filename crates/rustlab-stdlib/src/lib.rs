@@ -206,14 +206,22 @@ pub fn register_all(interp: &mut Interpreter) {
     interp.register_builtin("bar", plot_builtins::bar_fn);
     interp.register_builtin("hist", plot_builtins::hist_fn);
     interp.register_builtin("hold", plot_builtins::hold_fn);
+    interp.register_builtin("ishhold", plot_builtins::ishold_fn);
+
     interp.register_builtin("subplot", plot_builtins::subplot_fn);
     interp.register_builtin("xlabel", plot_builtins::xlabel_fn);
     interp.register_builtin("ylabel", plot_builtins::ylabel_fn);
+    interp.register_builtin("zlabel", plot_builtins::zlabel_fn);
     interp.register_builtin("title", plot_builtins::title_fn);
     interp.register_builtin("legend", plot_builtins::legend_fn);
     interp.register_builtin("xlim", plot_builtins::xlim_fn);
     interp.register_builtin("ylim", plot_builtins::ylim_fn);
     interp.register_builtin("grid", plot_builtins::grid_fn);
+    interp.register_builtin("gcf", plot_builtins::gcf_fn);
+    interp.register_builtin("gca", plot_builtins::gca_fn);
+    interp.register_builtin("cla", plot_builtins::cla_fn);
+    interp.register_builtin("clf", plot_builtins::clf_fn);
+    interp.register_builtin("close", plot_builtins::close_fn);
     interp.register_builtin("saveas", plot_builtins::saveas_fn);
 
     // Diagnostics & Assertions

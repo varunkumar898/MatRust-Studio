@@ -20,7 +20,11 @@ pub fn nice_ticks(min: f64, max: f64, count: usize) -> Vec<f64> {
     if (min - max).abs() < 1e-12 {
         // Degenerate range: fabricate a small span around the single value.
         let center = min;
-        let half = if center.abs() < 1e-12 { 0.5 } else { center.abs() * 0.05 };
+        let half = if center.abs() < 1e-12 {
+            0.5
+        } else {
+            center.abs() * 0.05
+        };
         return nice_ticks(center - half, center + half, count);
     }
     let range = max - min;

@@ -7,7 +7,10 @@
 use crate::helpers::{extract_f64_array, extract_string, math_err, user_err};
 use rustlab_eval::EvalError;
 use rustlab_math::Value;
-use rustlab_plot::{Axes, Bar, Figure, Histogram, Legend, LegendLocation, Line, Scatter, Series, to_svg, with_plot_state_ref};
+use rustlab_plot::{
+    to_svg, with_plot_state_ref, Axes, Bar, Figure, Histogram, Legend, LegendLocation, Line,
+    Scatter, Series,
+};
 
 /// `figure` — create a new figure or switch to an existing one.
 /// `h = figure` creates a new figure and returns its handle.
@@ -44,13 +47,13 @@ fn ensure_current_axes(fig: &mut Figure) -> Result<&mut Axes, EvalError> {
         fig.current_axes = Some(1);
         fig.axes.push(ax);
     }
-    let ax_id = fig.current_axes.ok_or_else(|| {
-        user_err("RUSTLAB:plot:noFigure", "No current axes.")
-    })?;
+    let ax_id = fig
+        .current_axes
+        .ok_or(user_err("RUSTLAB:plot:noFigure", "No current axes."))?;
     fig.axes
         .iter_mut()
         .find(|a| a.id == ax_id)
-        .ok_or_else(|| user_err("RUSTLAB:plot:noFigure", "No current axes."))
+        .ok_or(user_err("RUSTLAB:plot:noFigure", "No current axes."))
 }
 
 /// `plot(x, y)` — add a line series to the current axes.
@@ -70,9 +73,10 @@ pub fn plot_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError>
         ));
     }
     rustlab_plot::with_plot_state(|reg| {
-        let fig = reg.current_figure_mut().ok_or_else(|| {
-            user_err("RUSTLAB:plot:noFigure", "No current figure. Call figure first.")
-        })?;
+        let fig = reg.current_figure_mut().ok_or(user_err(
+            "RUSTLAB:plot:noFigure",
+            "No current figure. Call figure first.",
+        ))?;
         let ax = ensure_current_axes(fig)?;
         ax.push_series(Series::Line(Line::new(
             "",
@@ -101,9 +105,10 @@ pub fn scatter_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalErr
         ));
     }
     rustlab_plot::with_plot_state(|reg| {
-        let fig = reg.current_figure_mut().ok_or_else(|| {
-            user_err("RUSTLAB:plot:noFigure", "No current figure. Call figure first.")
-        })?;
+        let fig = reg.current_figure_mut().ok_or(user_err(
+            "RUSTLAB:plot:noFigure",
+            "No current figure. Call figure first.",
+        ))?;
         let ax = ensure_current_axes(fig)?;
         ax.push_series(Series::Scatter(Scatter::new(
             "",
@@ -132,9 +137,10 @@ pub fn bar_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError> 
         ));
     }
     rustlab_plot::with_plot_state(|reg| {
-        let fig = reg.current_figure_mut().ok_or_else(|| {
-            user_err("RUSTLAB:plot:noFigure", "No current figure. Call figure first.")
-        })?;
+        let fig = reg.current_figure_mut().ok_or(user_err(
+            "RUSTLAB:plot:noFigure",
+            "No current figure. Call figure first.",
+        ))?;
         let ax = ensure_current_axes(fig)?;
         ax.push_series(Series::Bar(Bar::new(
             "",
@@ -167,9 +173,10 @@ pub fn hist_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError>
         ));
     }
     rustlab_plot::with_plot_state(|reg| {
-        let fig = reg.current_figure_mut().ok_or_else(|| {
-            user_err("RUSTLAB:plot:noFigure", "No current figure. Call figure first.")
-        })?;
+        let fig = reg.current_figure_mut().ok_or(user_err(
+            "RUSTLAB:plot:noFigure",
+            "No current figure. Call figure first.",
+        ))?;
         let ax = ensure_current_axes(fig)?;
         ax.push_series(Series::Histogram(Histogram::new(
             "",
@@ -181,42 +188,300 @@ pub fn hist_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError>
     Ok(vec![])
 }
 
-/// `hold('on'|'off')` — toggle hold on current axes.
+/// `hold` — toggle hold on current axes.
+/// `hold('on'|'off')` — set hold on current axes.
+/// `hold(ax, 'on'|'off')` — set hold on axes `ax` of the current figure.
 pub fn hold_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError> {
-    if args.len() != 1 {
-        return Err(user_err(
-            "RUSTLAB:plot:badArgs",
-            "hold requires 1 input ('on' or 'off').",
-        ));
-    }
-    let state = extract_string(&args[0])?;
-    let on = match state.as_str() {
-        "on" => true,
-        "off" => false,
+    match args.len() {
+        0 => {
+            // Toggle current axes hold.
+            rustlab_plot::with_plot_state(|reg| {
+                let fig = reg.current_figure_mut().ok_or(user_err(
+                    "RUSTLAB:plot:noFigure",
+                    "No current figure. Call figure first.",
+                ))?;
+                let ax = ensure_current_axes(fig)?;
+                ax.hold = !ax.hold;
+                Ok::<(), EvalError>(())
+            })?;
+        }
+        1 => {
+            let state = extract_string(&args[0]).map_err(|_| {
+                user_err(
+                    "RUSTLAB:plot:badArgs",
+                    "hold requires 1 input ('on' or 'off').",
+                )
+            })?;
+            let on = match state.as_str() {
+                "on" => true,
+                "off" => false,
+                _ => {
+                    return Err(user_err(
+                        "RUSTLAB:plot:badArgs",
+                        "hold state must be 'on' or 'off'.",
+                    ));
+                }
+            };
+            rustlab_plot::with_plot_state(|reg| {
+                let fig = reg.current_figure_mut().ok_or(user_err(
+                    "RUSTLAB:plot:noFigure",
+                    "No current figure. Call figure first.",
+                ))?;
+                let ax = ensure_current_axes(fig)?;
+                ax.hold = on;
+                Ok::<(), EvalError>(())
+            })?;
+        }
+        2 => {
+            let ax_id = args[0].as_scalar_i64().map_err(math_err)? as usize;
+            let state = extract_string(&args[1]).map_err(|_| {
+                user_err(
+                    "RUSTLAB:plot:badArgs",
+                    "hold(ax, state) requires state 'on' or 'off'.",
+                )
+            })?;
+            let on = match state.as_str() {
+                "on" => true,
+                "off" => false,
+                _ => {
+                    return Err(user_err(
+                        "RUSTLAB:plot:badArgs",
+                        "hold state must be 'on' or 'off'.",
+                    ));
+                }
+            };
+            rustlab_plot::with_plot_state(|reg| {
+                let fig = reg.current_figure_mut().ok_or(user_err(
+                    "RUSTLAB:plot:noFigure",
+                    "No current figure. Call figure first.",
+                ))?;
+                let ax = fig.axes.iter_mut().find(|a| a.id == ax_id).ok_or(user_err(
+                    "RUSTLAB:plot:noAxes",
+                    &format!("Axes {ax_id} does not exist."),
+                ))?;
+                ax.hold = on;
+                Ok::<(), EvalError>(())
+            })?;
+        }
         _ => {
             return Err(user_err(
                 "RUSTLAB:plot:badArgs",
-                "hold state must be 'on' or 'off'.",
+                "hold accepts 0, 1, or 2 inputs.",
+            ));
+        }
+    }
+    Ok(vec![])
+}
+
+/// `ishhold()` — return whether hold is on for the current axes.
+/// `ishhold(ax)` — return whether hold is on for axes `ax` of the current figure.
+pub fn ishold_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError> {
+    let hold = match args.len() {
+        0 => rustlab_plot::with_plot_state_ref(|reg| {
+            let fig = reg.current_figure().ok_or_else(|| {
+                user_err(
+                    "RUSTLAB:plot:noFigure",
+                    "No current figure. Call figure first.",
+                )
+            })?;
+            let ax = fig
+                .current_axes()
+                .ok_or_else(|| user_err("RUSTLAB:plot:noAxes", "No current axes."))?;
+            Ok::<bool, EvalError>(ax.hold)
+        })?,
+        1 => {
+            let ax_id = args[0].as_scalar_i64().map_err(math_err)? as usize;
+            rustlab_plot::with_plot_state_ref(|reg| {
+                let fig = reg.current_figure().ok_or_else(|| {
+                    user_err(
+                        "RUSTLAB:plot:noFigure",
+                        "No current figure. Call figure first.",
+                    )
+                })?;
+                let ax = fig.axes.iter().find(|a| a.id == ax_id).ok_or_else(|| {
+                    user_err(
+                        "RUSTLAB:plot:noAxes",
+                        &format!("Axes {ax_id} does not exist."),
+                    )
+                })?;
+                Ok::<bool, EvalError>(ax.hold)
+            })?
+        }
+        _ => {
+            return Err(user_err(
+                "RUSTLAB:plot:badArgs",
+                "ishold accepts 0 or 1 inputs.",
             ));
         }
     };
+    Ok(vec![Value::logical_scalar(hold)])
+}
+
+/// `gcf` — return the id of the current figure.
+pub fn gcf_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError> {
+    if !args.is_empty() {
+        return Err(user_err("RUSTLAB:plot:badArgs", "gcf accepts no inputs."));
+    }
+    let id = rustlab_plot::with_plot_state_ref(|reg| {
+        reg.current_id.ok_or(user_err(
+            "RUSTLAB:plot:noFigure",
+            "No current figure. Call figure first.",
+        ))
+    })?;
+    Ok(vec![Value::scalar(id as f64)])
+}
+
+/// `gca` — return the id of the current axes.
+pub fn gca_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError> {
+    if !args.is_empty() {
+        return Err(user_err("RUSTLAB:plot:badArgs", "gca accepts no inputs."));
+    }
+    let ax_id = rustlab_plot::with_plot_state_ref(|reg| {
+        let fig = reg.current_figure().ok_or(user_err(
+            "RUSTLAB:plot:noFigure",
+            "No current figure. Call figure first.",
+        ))?;
+        fig.current_axes()
+            .map(|a| a.id)
+            .ok_or(user_err("RUSTLAB:plot:noAxes", "No current axes."))
+    })?;
+    Ok(vec![Value::scalar(ax_id as f64)])
+}
+
+/// `cla` — clear the current axes (remove all series).
+pub fn cla_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError> {
+    if !args.is_empty() {
+        return Err(user_err("RUSTLAB:plot:badArgs", "cla accepts no inputs."));
+    }
     rustlab_plot::with_plot_state(|reg| {
-        let fig = reg.current_figure_mut().ok_or_else(|| {
-            user_err("RUSTLAB:plot:noFigure", "No current figure. Call figure first.")
-        })?;
+        let fig = reg.current_figure_mut().ok_or(user_err(
+            "RUSTLAB:plot:noFigure",
+            "No current figure. Call figure first.",
+        ))?;
         let ax = ensure_current_axes(fig)?;
-        ax.hold = on;
+        ax.series.clear();
+        Ok::<(), EvalError>(())
+    })?;
+    Ok(vec![])
+}
+
+/// `clf` — clear the current figure (remove all axes).
+pub fn clf_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError> {
+    if !args.is_empty() {
+        return Err(user_err("RUSTLAB:plot:badArgs", "clf accepts no inputs."));
+    }
+    rustlab_plot::with_plot_state(|reg| {
+        let fig = reg.current_figure_mut().ok_or(user_err(
+            "RUSTLAB:plot:noFigure",
+            "No current figure. Call figure first.",
+        ))?;
+        fig.axes.clear();
+        fig.current_axes = None;
+        Ok::<(), EvalError>(())
+    })?;
+    Ok(vec![])
+}
+
+/// `close` — close the current figure, figure `n`, or all figures (`'all'`).
+pub fn close_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError> {
+    match args.len() {
+        0 => {
+            rustlab_plot::with_plot_state(|reg| {
+                let id = reg
+                    .current_id
+                    .ok_or(user_err("RUSTLAB:plot:noFigure", "No current figure."))?;
+                reg.figures.remove(&id);
+                if reg.current_id == Some(id) {
+                    reg.current_id = reg.figure_ids().first().copied();
+                }
+                Ok::<(), EvalError>(())
+            })?;
+        }
+        1 => {
+            if let Ok(s) = extract_string(&args[0]) {
+                if s == "all" {
+                    rustlab_plot::with_plot_state(|reg| {
+                        reg.figures.clear();
+                        reg.current_id = None;
+                        Ok::<(), EvalError>(())
+                    })?;
+                } else {
+                    return Err(user_err(
+                        "RUSTLAB:plot:badArgs",
+                        "close accepts a figure id or 'all'.",
+                    ));
+                }
+            } else {
+                let id = args[0].as_scalar_i64().map_err(math_err)? as usize;
+                rustlab_plot::with_plot_state(|reg| {
+                    reg.figures.remove(&id);
+                    if reg.current_id == Some(id) {
+                        reg.current_id = reg.figure_ids().first().copied();
+                    }
+                    Ok::<(), EvalError>(())
+                })?;
+            }
+        }
+        _ => {
+            return Err(user_err(
+                "RUSTLAB:plot:badArgs",
+                "close accepts 0 or 1 inputs.",
+            ));
+        }
+    }
+    Ok(vec![])
+}
+
+/// `zlabel(text)` — set z-axis label on the current axes.
+pub fn zlabel_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError> {
+    if args.len() != 1 {
+        return Err(user_err(
+            "RUSTLAB:plot:badArgs",
+            "zlabel requires exactly 1 input.",
+        ));
+    }
+    let text = extract_string(&args[0])
+        .map_err(|_| user_err("RUSTLAB:plot:badArgs", "zlabel requires 1 input (text)."))?;
+    rustlab_plot::with_plot_state(|reg| {
+        let fig = reg.current_figure_mut().ok_or(user_err(
+            "RUSTLAB:plot:noFigure",
+            "No current figure. Call figure first.",
+        ))?;
+        let ax = ensure_current_axes(fig)?;
+        ax.zlabel = text;
         Ok::<(), EvalError>(())
     })?;
     Ok(vec![])
 }
 
 /// `subplot(m, n, p)` — create axes in an m×n grid at position p (1-based).
+/// `subplot(mnp)` — three-digit form, e.g. `subplot(211)` == `subplot(2,1,1)`.
 pub fn subplot_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError> {
-    if args.len() != 3 {
+    let (m, n, p) = if args.len() == 1 {
+        let mnp = args[0].as_scalar_i64().map_err(math_err)? as usize;
+        if !(100..=999).contains(&mnp) {
+            return Err(user_err(
+                "RUSTLAB:plot:badArgs",
+                "subplot(mnp) requires a 3-digit number.",
+            ));
+        }
+        (mnp / 100, (mnp / 10) % 10, mnp % 10)
+    } else if args.len() == 3 {
+        (
+            args[0].as_scalar_i64().map_err(math_err)? as usize,
+            args[1].as_scalar_i64().map_err(math_err)? as usize,
+            args[2].as_scalar_i64().map_err(math_err)? as usize,
+        )
+    } else {
         return Err(user_err(
             "RUSTLAB:plot:badArgs",
-            "subplot requires 3 inputs (m, n, p).",
+            "subplot requires 3 inputs (m, n, p) or 1 input (mnp).",
+        ));
+    };
+    if m == 0 || n == 0 || p == 0 || p > m * n {
+        return Err(user_err(
+            "RUSTLAB:plot:badArgs",
+            "Invalid subplot dimensions.",
         ));
     }
     let m = args[0].as_scalar_i64().map_err(math_err)? as usize;
@@ -229,13 +494,14 @@ pub fn subplot_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalErr
         ));
     }
     rustlab_plot::with_plot_state(|reg| {
-        let fig = reg.current_figure_mut().ok_or_else(|| {
-            user_err("RUSTLAB:plot:noFigure", "No current figure. Call figure first.")
-        })?;
+        let fig = reg.current_figure_mut().ok_or(user_err(
+            "RUSTLAB:plot:noFigure",
+            "No current figure. Call figure first.",
+        ))?;
         // Reuse existing axes with id p if present.
         if fig.axes.iter().any(|a| a.id == p) {
             fig.current_axes = Some(p);
-            return Ok::<(), EvalError>(())
+            return Ok::<(), EvalError>(());
         }
         let mut ax = Axes::new(p);
         ax.title = format!("subplot({m},{n},{p})");
@@ -255,9 +521,10 @@ pub fn xlabel_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalErro
     }
     let text = extract_string(&args[0])?;
     rustlab_plot::with_plot_state(|reg| {
-        let fig = reg.current_figure_mut().ok_or_else(|| {
-            user_err("RUSTLAB:plot:noFigure", "No current figure. Call figure first.")
-        })?;
+        let fig = reg.current_figure_mut().ok_or(user_err(
+            "RUSTLAB:plot:noFigure",
+            "No current figure. Call figure first.",
+        ))?;
         let ax = ensure_current_axes(fig)?;
         ax.xlabel = text;
         Ok::<(), EvalError>(())
@@ -275,9 +542,10 @@ pub fn ylabel_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalErro
     }
     let text = extract_string(&args[0])?;
     rustlab_plot::with_plot_state(|reg| {
-        let fig = reg.current_figure_mut().ok_or_else(|| {
-            user_err("RUSTLAB:plot:noFigure", "No current figure. Call figure first.")
-        })?;
+        let fig = reg.current_figure_mut().ok_or(user_err(
+            "RUSTLAB:plot:noFigure",
+            "No current figure. Call figure first.",
+        ))?;
         let ax = ensure_current_axes(fig)?;
         ax.ylabel = text;
         Ok::<(), EvalError>(())
@@ -295,9 +563,10 @@ pub fn title_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError
     }
     let text = extract_string(&args[0])?;
     rustlab_plot::with_plot_state(|reg| {
-        let fig = reg.current_figure_mut().ok_or_else(|| {
-            user_err("RUSTLAB:plot:noFigure", "No current figure. Call figure first.")
-        })?;
+        let fig = reg.current_figure_mut().ok_or(user_err(
+            "RUSTLAB:plot:noFigure",
+            "No current figure. Call figure first.",
+        ))?;
         fig.title = text;
         Ok::<(), EvalError>(())
     })?;
@@ -326,9 +595,10 @@ pub fn legend_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalErro
         }
     };
     rustlab_plot::with_plot_state(|reg| {
-        let fig = reg.current_figure_mut().ok_or_else(|| {
-            user_err("RUSTLAB:plot:noFigure", "No current figure. Call figure first.")
-        })?;
+        let fig = reg.current_figure_mut().ok_or(user_err(
+            "RUSTLAB:plot:noFigure",
+            "No current figure. Call figure first.",
+        ))?;
         let ax = ensure_current_axes(fig)?;
         ax.legend = Some(Legend { location });
         Ok::<(), EvalError>(())
@@ -353,9 +623,10 @@ pub fn xlim_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError>
         ));
     }
     rustlab_plot::with_plot_state(|reg| {
-        let fig = reg.current_figure_mut().ok_or_else(|| {
-            user_err("RUSTLAB:plot:noFigure", "No current figure. Call figure first.")
-        })?;
+        let fig = reg.current_figure_mut().ok_or(user_err(
+            "RUSTLAB:plot:noFigure",
+            "No current figure. Call figure first.",
+        ))?;
         let ax = ensure_current_axes(fig)?;
         ax.xlim = Some([slice[0], slice[1]]);
         Ok::<(), EvalError>(())
@@ -380,9 +651,10 @@ pub fn ylim_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError>
         ));
     }
     rustlab_plot::with_plot_state(|reg| {
-        let fig = reg.current_figure_mut().ok_or_else(|| {
-            user_err("RUSTLAB:plot:noFigure", "No current figure. Call figure first.")
-        })?;
+        let fig = reg.current_figure_mut().ok_or(user_err(
+            "RUSTLAB:plot:noFigure",
+            "No current figure. Call figure first.",
+        ))?;
         let ax = ensure_current_axes(fig)?;
         ax.ylim = Some([slice[0], slice[1]]);
         Ok::<(), EvalError>(())
@@ -410,9 +682,10 @@ pub fn grid_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError>
         }
     };
     rustlab_plot::with_plot_state(|reg| {
-        let fig = reg.current_figure_mut().ok_or_else(|| {
-            user_err("RUSTLAB:plot:noFigure", "No current figure. Call figure first.")
-        })?;
+        let fig = reg.current_figure_mut().ok_or(user_err(
+            "RUSTLAB:plot:noFigure",
+            "No current figure. Call figure first.",
+        ))?;
         let ax = ensure_current_axes(fig)?;
         ax.grid = on;
         Ok::<(), EvalError>(())
@@ -448,9 +721,10 @@ pub fn saveas_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalErro
     };
 
     let svg = with_plot_state_ref(|reg| {
-        let fig = reg.get_figure(fig_id).ok_or_else(|| {
-            user_err("RUSTLAB:plot:noFigure", &format!("Figure {fig_id} does not exist."))
-        })?;
+        let fig = reg.get_figure(fig_id).ok_or(user_err(
+            "RUSTLAB:plot:noFigure",
+            &format!("Figure {fig_id} does not exist."),
+        ))?;
         Ok::<String, EvalError>(to_svg(fig, 640.0, 480.0))
     })?;
 

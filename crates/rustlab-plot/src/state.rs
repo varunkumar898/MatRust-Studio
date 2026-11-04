@@ -10,7 +10,7 @@ thread_local! {
 }
 
 /// Execute `f` with mutable access to the current plot registry.
-#[allow(dead_code)]       // used by rustlab-stdlib builtins
+#[allow(dead_code)] // used by rustlab-stdlib builtins
 #[allow(clippy::needless_borrow)] // &mut RefMut auto-derefs to &mut PlotRegistry
 pub fn with_plot_state<F, R>(f: F) -> R
 where
@@ -20,7 +20,7 @@ where
 }
 
 /// Execute `f` with shared access to the current plot registry.
-#[allow(dead_code)]       // used by rustlab-stdlib builtins
+#[allow(dead_code)] // used by rustlab-stdlib builtins
 pub fn with_plot_state_ref<F, R>(f: F) -> R
 where
     F: FnOnce(&PlotRegistry) -> R,

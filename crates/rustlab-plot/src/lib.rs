@@ -19,7 +19,7 @@ mod state;
 mod svg;
 mod ticks;
 
-pub use state::plot_state_reset;
+pub use state::{plot_state_reset, with_plot_state, with_plot_state_ref};
 pub use svg::to_svg;
 pub use ticks::nice_ticks;
 
@@ -279,9 +279,9 @@ impl Figure {
 /// mirrors MATLAB's `gcf`/`gca` within one interpreter session.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PlotRegistry {
-    figures: HashMap<usize, Figure>,
-    current_id: Option<usize>,
-    next_id: usize,
+    pub figures: HashMap<usize, Figure>,
+    pub current_id: Option<usize>,
+    pub next_id: usize,
 }
 
 impl PlotRegistry {

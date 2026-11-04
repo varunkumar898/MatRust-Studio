@@ -29,6 +29,7 @@ pub mod ml;
 pub mod nd_ops;
 pub mod numeric_types;
 pub mod numerical;
+pub mod plot_builtins;
 pub mod robotics;
 pub mod search_sort;
 pub mod shape_inspect;
@@ -197,6 +198,23 @@ pub fn register_all(interp: &mut Interpreter) {
     interp.register_builtin("disp", io_format::disp_fn);
     interp.register_builtin("num2str", io_format::num2str_fn);
     interp.register_builtin("mat2str", io_format::mat2str_fn);
+
+    // Plotting (B2.2)
+    interp.register_builtin("figure", plot_builtins::figure_fn);
+    interp.register_builtin("plot", plot_builtins::plot_fn);
+    interp.register_builtin("scatter", plot_builtins::scatter_fn);
+    interp.register_builtin("bar", plot_builtins::bar_fn);
+    interp.register_builtin("hist", plot_builtins::hist_fn);
+    interp.register_builtin("hold", plot_builtins::hold_fn);
+    interp.register_builtin("subplot", plot_builtins::subplot_fn);
+    interp.register_builtin("xlabel", plot_builtins::xlabel_fn);
+    interp.register_builtin("ylabel", plot_builtins::ylabel_fn);
+    interp.register_builtin("title", plot_builtins::title_fn);
+    interp.register_builtin("legend", plot_builtins::legend_fn);
+    interp.register_builtin("xlim", plot_builtins::xlim_fn);
+    interp.register_builtin("ylim", plot_builtins::ylim_fn);
+    interp.register_builtin("grid", plot_builtins::grid_fn);
+    interp.register_builtin("saveas", plot_builtins::saveas_fn);
 
     // Diagnostics & Assertions
     interp.register_builtin("error", diagnostics::error_fn);

@@ -9,7 +9,8 @@ fn reference(name: &str) -> String {
     let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("tests/snapshots")
         .join(format!("{name}.svg"));
-    std::fs::read_to_string(&path).expect(&format!("missing snapshot {path:?}"))
+    let msg = format!("missing snapshot {path:?}");
+    std::fs::read_to_string(&path).expect(&msg)
 }
 
 /// Render a figure and compare byte-for-byte against a stored snapshot.

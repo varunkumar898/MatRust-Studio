@@ -1308,6 +1308,111 @@ pub fn get_help_text(name: &str) -> Option<&'static str> {
              Description:\n\
                q = jtraj(q0, q1, n) computes a smooth quintic polynomial trajectory between joint coordinates q0 and q1.\n"
         ),
+        "figure" => Some(
+            "FIGURE  Create or select a figure window.\n\n\
+             Syntax:\n\
+               h = figure\n               h = figure(n)\n\n\
+             Description:\n\
+               figure creates a new figure window and returns its handle.\n               figure(n) switches to figure n and returns n.\n"
+        ),
+        "plot" => Some(
+            "PLOT  Plot 2D line data.\n\n\
+             Syntax:\n\
+               plot(x, y)\n\n\
+             Description:\
+               plot(x, y) plots y versus x as a line on the current axes.\n               Requires x and y to have the same length.\n"
+        ),
+        "scatter" => Some(
+            "SCATTER  Scatter plot.\n\n\
+             Syntax:\n\
+               scatter(x, y)\n\n\
+             Description:\
+               scatter(x, y) plots y versus x as markers on the current axes.\n"
+        ),
+        "bar" => Some(
+            "BAR  Bar plot.\n\n\
+             Syntax:\
+               bar(x, y)\n\n\
+             Description:\
+               bar(x, y) plots y versus x as bars on the current axes.\n"
+        ),
+        "hist" => Some(
+            "HIST  Histogram.\n\n\
+             Syntax:\
+               hist(y)\n               hist(y, nbins)\n\n\
+             Description:\
+               hist(y) plots a histogram of y with 10 bins.\n               hist(y, nbins) uses nbins bins.\n"
+        ),
+        "hold" => Some(
+            "HOLD  Hold current axes.\n\n\
+             Syntax:\
+               hold on\n               hold off\n\n\
+             Description:\
+               hold on retains current plot data when adding new plots.\n               hold off replaces current plot data.\n"
+        ),
+        "subplot" => Some(
+            "SUBPLOT  Create axes in tiled positions.\n\n\
+             Syntax:\
+               subplot(m, n, p)\n\n\
+             Description:\
+               subplot(m, n, p) creates axes in an m-by-n grid at position p.\n"
+        ),
+        "xlabel" => Some(
+            "XLABEL  Label x-axis.\n\n\
+             Syntax:\
+               xlabel('text')\n\n\
+             Description:\
+               xlabel('text') labels the x-axis of the current axes.\n"
+        ),
+        "ylabel" => Some(
+            "YLABEL  Label y-axis.\n\n\
+             Syntax:\
+               ylabel('text')\n\n\
+             Description:\
+               ylabel('text') labels the y-axis of the current axes.\n"
+        ),
+        "title" => Some(
+            "TITLE  Set figure title.\n\n\
+             Syntax:\
+               title('text')\n\n\
+             Description:\
+               title('text') sets the title of the current figure.\n"
+        ),
+        "legend" => Some(
+            "LEGEND  Set legend location.\n\n\
+             Syntax:\
+               legend('location')\n\n\
+             Description:\
+               legend('location') sets the legend location on the current axes.\n               Location: northeast, northwest, southeast, southwest.\n"
+        ),
+        "xlim" => Some(
+            "XLIM  Set x-axis limits.\n\n\
+             Syntax:\
+               xlim([lo hi])\n\n\
+             Description:\
+               xlim([lo hi]) sets the x-axis limits of the current axes.\n"
+        ),
+        "ylim" => Some(
+            "YLIM  Set y-axis limits.\n\n\
+             Syntax:\
+               ylim([lo hi])\n\n\
+             Description:\
+               ylim([lo hi]) sets the y-axis limits of the current axes.\n"
+        ),
+        "grid" => Some(
+            "GRID  Show or hide grid.\n\n\
+             Syntax:\
+               grid on\n               grid off\n\n\
+             Description:\
+               grid on shows grid lines on the current axes.\n               grid off hides grid lines.\n"
+        ),
+        "saveas" => Some(
+            "SAVEAS  Save figure to SVG file.\n\n\
+             Syntax:\
+               saveas(filename)\n               saveas(h, filename)\n\n\
+             Description:\
+               saveas(filename) saves the current figure as SVG.\n               saveas(h, filename) saves figure h as SVG.\n"
+        ),
         _ => None,
     }
 }

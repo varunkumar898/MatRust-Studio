@@ -32,7 +32,7 @@ Capture evidence (docs/screenshots/before/, real PrintWindow captures of the liv
 
 | # | Observation | Evidence |
 | :--- | :--- | :--- |
-| R1 | Duplicate **egui ScrollArea ID** at runtime: red ribbons visible "First use of ScrollArea ID B61C" (Current Folder panel) and "Second use of ScrollArea ID B61C" (Command Window). Two unsalted `ScrollArea::vertical()`s (`current_folder.rs:73`, `command_window.rs:94`) derive the same auto id `B61C` in one frame and collide. | both 720/1080 shots |
+| R1 | Duplicate **egui ScrollArea ID** at runtime: red ribbons visible "First use of ScrollArea ID B61C" (Current Folder panel) and "Second use of ScrollArea ID B61C" (Command Window). Two unsalted `ScrollArea::vertical()`s (`current_folder.rs:73`, `command_window.rs:94`) derive the same auto id `B61C` in one frame and collide. **→ FIXED in S3** (commit `af930a2`): both ScrollAreas salted (`current_folder_scroll`, `command_window_scroll`); evidence pair = `docs/screenshots/after/desktop_1280x720.png` (ribbons visible) vs `docs/screenshots/s3-ids/desktop_1280x720.png` (zero ribbons). | both 720/1080 shots |
 | R2 | Warning ribbons are drawn **on top of panel content**, over the file list and over the Command Window banner text; with the banner text "Numerical Computing Environment" partially hidden underneath. | 1080 shot, bottom center |
 | R3 | Editor tab bar shows **3 "Run Section" buttons, 2 "Run Selection", 3 duplicated "Clean/Syntax Warning" badges** — literal render of the duplicated code blocks in `editor.rs:306-346, 357-366, 367-386, 388-397, 399-408`. | 720 shot, editor tab bar |
 | R4 | Editor gutter line numbers **desync from the text rows at rest** (visible: gutter shows 1,2,3 while the text shows 4 rows; 4th row `y = sin(x);` has no gutter number). Gutter and text live in two independent ScrollAreas (`editor.rs:443`, `editor.rs:509`) with no sync. | 720/1080 shots |
@@ -102,10 +102,17 @@ exists). G4 will need both the registry and a CI check to be built from scratch.
 | Completion popup also reads global ArrowUp/Down/Enter (multi-subsystem key handling in one frame) | `editor.rs:611-623` |
 | Editor fold/breakpoint gutter rows get ids from a formatted label string; no stable row key | `editor.rs:472-485` |
 
-Runtime ID warnings: only the ScrollArea B61C pair was visible in the default layout. A
-complete EGUI-warning sweep (hover-visited all panels/overlays) was not possible without
-code changes (no logger is wired); the static candidate list above is the audit-level
-result. The B61C pair is confirmed fixed-evidence from the real window.
+Runtime ID warnings: only the ScrollArea B61C pair was visible in the default layout.
+
+S3 finding on the capture channel: in **egui 0.31.1** duplicate-id warnings are NOT
+log-backed — they are painted by `warn_on_id_clash` (debug builds only; source:
+`~/.cargo/registry/src/index.crates.io-6f17d22bba15001f/egui-0.31.1/src/memory/mod.rs`
+lines 278-281). There is no `Context::warnings()` API in 0.31.1 (registry grep: no such
+fn in egui/src), so "wire a logger to collect them" is impossible in this version; the
+verification channel is screenshots of a debug build, and release builds paint nothing.
+Post-fix run evidence (S3): the default-layout shot shows zero id-warn ribbons in both
+previously affected panels. A hover-visited sweep across panels/overlays (param modals,
+popups) remains open — it needs interactive input, planned for the W-suite step.
 
 ## 6. Layout / G6 evidence (also see section 1)
 

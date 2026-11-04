@@ -108,14 +108,22 @@ New findings recorded while auditing the desktop app (details and evidence in
   (+ `NaN` alias) as zero-arg builtins in `rustlab-stdlib`, with docs/help, so
   the W2 quick-math scenarios ("pi" currently errors as unsupported) and the
   docs coverage stay coherent. Core scope, not GUI-only.
-- 6.2 Current Folder dot-entry policy: `.git`, `.github`, `.re-ghidra` are
-  listed today (`current_folder.rs:51-76`, no filter). Decide hide-by-default
-  vs a "show hidden files" toggle (S3).
+- 6.2 Current Folder dot-entry policy: **RESOLVED in S3**
+  (commit `f153d9c`): dot-entries (`.git`, `.github`, `.re-ghidra`, ...) are
+  hidden by default; a per-session `Hidden` checkbox in the Current Folder
+  header toggles them back on. Not persisted across restarts (persistence is
+  the %TEMP%/G15 work, untouched here). Unit test
+  `current_folder::tests::hidden_filter_is_dotfile_only`.
 - 6.3 Status bar active-file label must consider open UNTITLED editor tabs
   (`statusbar.rs:72-79` keys on the file PATH only) (S5 status wiring).
-- 6.4 egui-warning capture instrumentation (wire a logger so every duplicate-id
-  warning is collected during the full panel sweep) — S3; carried from S1 audit
-  section 5.
+- 6.4 egui-warning capture instrumentation — **CLOSED in S3 as infeasible
+  for egui 0.31.1** (audit section 5, "S3 finding"): duplicate-id warnings
+  are `warn_on_id_clash` debug-build paint only (egui 0.31.1
+  `src/memory/mod.rs:278-281`); there is no `Context::warnings()` API and no
+  log message, so a logger cannot see them. Channel = debug-build
+  screenshots. If a programmatic sweep is ever needed, it arrives with an
+  egui upgrade that exposes the warnings API, or a custom `Id`-hashing
+  wrapper. The hover-visited panel sweep itself stays in the W-suite step.
 - 6.5 Release-binary strings check for Simulink/clean-room wordings — S8;
   carried from S1 audit section 2.
 - 6.6 `docs/SUPPORTED_FUNCTIONS.md` regeneration (next docs task) should also

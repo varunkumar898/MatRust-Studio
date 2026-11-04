@@ -1,6 +1,6 @@
 # MatRust Studio / RustLab Project State
 
-**Current branch:** `main`
+**Current branch:** `gui/polish-1` (polish milestone branch; owner instruction: branch of `main` @ `425f54e`)
 **Repository:** `https://github.com/varunkumar898/MatRust-Studio.git`
 **Current code commit:** `4ae9c687e0ea5e89d81373305a415ff648aa0c31` (PR #20 merged)
 **Date:** 2026-11-03
@@ -48,8 +48,39 @@
   SHA-256 `CFB1018FE5CE9F9461D5FC8CFBD8E8C868E86C2B24FF6CE63B9EEA4BD5D63C82`): title
   "MATSTUDIO", empty editor, single-line command-window hint, no watermark overlays;
   remaining known red ribbons (ScrollArea B61C duplicates) belong to S3 as documented.
-- Next: S3 (ids/action registry, logger-wired warning sweep, dot-entry policy) after
-  owner approval of the S2 report.
+- **S3 COMPLETE** (owner approved S2 with "proceed"): id hygiene + dot-entry
+  policy. Commits: `af930a2` (G5 id hygiene: salted both unsalted ScrollAreas —
+  the B61C pair — per-row `push_id` in Workspace/Current Folder/Help/Add-Ons
+  lists, station-scoped `.id()` on the block-params modal; note: egui 0.31's
+  `Window` takes `.id(Id)`, ScrollArea takes `.id_salt(...)`), `f153d9c`
+  (Current Folder hides dot-entries by default with a per-session `Hidden`
+  checkbox, BACKLOG 6.2; +1 test `hidden_filter_is_dotfile_only`; manifest
+  regenerated: 351 -> 352 names), `67f9126` (capture-script fix: window find
+  now filters by the launched process id because the terminal window's title
+  also starts with "MATSTUDIO"; first S3 capture had grabbed — and moved — the
+  wrong window; + runtime evidence shot).
+  Runtime evidence pair (both read in-session): BEFORE
+  `docs/screenshots/after/desktop_1280x720.png` (99036 B, SHA-256
+  `CFB1018FE5CE9F9461D5FC8CFBD8E8C868E86C2B24FF6CE63B9EEA4BD5D63C82`) shows red
+  "First use of ScrollArea ID B61C" in Current Folder and "Second use of
+  ScrollArea ID B61C" in Command Window over `.git/.github/.re-ghidra` rows;
+  AFTER `docs/screenshots/s3-ids/desktop_1280x720.png` (93120 B, SHA-256
+  `B2E79E0D110C3DD79AD0A51FD3F8CDB8C8DD6A937E50987EC0D47979BD6FD931`) shows zero
+  ribbons, no dot-entries (list starts at `apps`), and the Hidden checkbox.
+  egui 0.31.1 findings (recorded in audit section 5 + BACKLOG 6.4): duplicate-id
+  warnings are `warn_on_id_clash` debug-build paint only
+  (`egui-0.31.1/src/memory/mod.rs:278-281`), no `Context::warnings()` API and no
+  log channel — a logger wiring cannot capture them; screenshots of debug
+  builds are the verification channel, and the hover-visited sweep across
+  panels/overlays moves to the W-suite step (needs interactive input).
+  Desktop-crate test runs during S3: 19 -> 20 (lines 1+0+19+0 per binary, then
+  +1 new unit test), build/fmt clean; workspace count now 352 (manifest
+  snapshot `docs/test-manifest.txt`).
+- Next: proposal — S4 = editor duplicated Run-Section blocks + emoji sweep +
+  toolstrip overflow; input-handling fixes (Command-Window focus steal, global
+  Ctrl+C intercept, completion popup arrows, gutter row keys) are a separate
+  step needing interactive verification (currently recorded in audit section 5).
+  STOPPED for owner approval of the S3 report.
 
 ## Test counts
 

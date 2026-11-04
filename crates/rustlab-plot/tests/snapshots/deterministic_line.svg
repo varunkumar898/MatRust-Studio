@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="300.00" height="200.00" viewBox="0 0 300.00 200.00" class="rustlab-plot"><defs><style>
+.rustlab-plot { background:#ffffff; font-family: sans-serif; font-size: 11px; }
+.axes-bg { fill:#ffffff; stroke:#cccccc; stroke-width:1; }
+.grid-line { stroke:#eaeaea; stroke-width:1; }
+.axis-line { stroke:#333333; stroke-width:1; }
+.fig-title { fill:#111111; font-weight: bold; font-size: 14px; }
+.axes-label { fill:#333333; font-size: 11px; text-anchor: middle; }
+.series-line { fill:none; stroke-width:2; }
+.series-scatter { fill:#0072BD; }
+.series-bar { fill:#0072BD; }
+.legend { fill:#ffffff; stroke:#999999; stroke-width:1; }
+.legend-text { font-size: 10px; fill:#222222; }
+</style></defs><text x="150.00" y="28" class="fig-title" text-anchor="middle">Figure 3</text><g id="axes-1"><rect x="50.00" y="60.00" width="200.00" height="100.00" class="axes-bg"/><line class="grid-line" x1="13.64" y1="60.00" x2="13.64" y2="160.00" /><line class="grid-line" x1="59.09" y1="60.00" x2="59.09" y2="160.00" /><line class="grid-line" x1="104.55" y1="60.00" x2="104.55" y2="160.00" /><line class="grid-line" x1="150.00" y1="60.00" x2="150.00" y2="160.00" /><line class="grid-line" x1="195.45" y1="60.00" x2="195.45" y2="160.00" /><line class="grid-line" x1="240.91" y1="60.00" x2="240.91" y2="160.00" /><line class="grid-line" x1="50.00" y1="200.91" x2="250.00" y2="200.91" /><line class="grid-line" x1="50.00" y1="155.45" x2="250.00" y2="155.45" /><line class="grid-line" x1="50.00" y1="110.00" x2="250.00" y2="110.00" /><line class="grid-line" x1="50.00" y1="64.55" x2="250.00" y2="64.55" /><rect x="50.00" y="60.00" width="200.00" height="100.00" class="axis-line" fill="none" /><polyline class="series-line" stroke="#0072bd" stroke-width="1.50" points="59.09,155.45 150.00,64.55 240.91,155.45" /></g>
+</svg>

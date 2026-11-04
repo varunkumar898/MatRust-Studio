@@ -696,7 +696,10 @@ impl Parser {
                 }
                 TokenKind::LParen => {
                     // Function call or indexing: A(x, y)
-                    let start_span = self.advance().span;
+                    // The span must start at the callee (`expr.span()`), not at
+                    // the opening paren, so that diagnostics point at the
+                    // function/variable name rather than past it.
+                    let _ = self.advance(); // consume '('
                     let mut args = Vec::new();
                     while !self.is_eof() && self.peek().kind != TokenKind::RParen {
                         if self.peek().kind == TokenKind::Colon {
@@ -709,15 +712,16 @@ impl Parser {
                         }
                     }
                     let end_span = self.expect(TokenKind::RParen)?.span;
+                    let callee_span = expr.span();
                     expr = Expr::Index {
                         callee: Box::new(expr),
                         args,
-                        span: start_span.merge(end_span),
+                        span: callee_span.merge(end_span),
                     };
                 }
                 TokenKind::LBrace => {
                     // Cell array indexing: C{x, y}
-                    let start_span = self.advance().span;
+                    let _ = self.advance(); // consume '{'
                     let mut args = Vec::new();
                     while !self.is_eof() && self.peek().kind != TokenKind::RBrace {
                         if self.peek().kind == TokenKind::Colon {
@@ -730,10 +734,11 @@ impl Parser {
                         }
                     }
                     let end_span = self.expect(TokenKind::RBrace)?.span;
+                    let callee_span = expr.span();
                     expr = Expr::CellIndex {
                         callee: Box::new(expr),
                         args,
-                        span: start_span.merge(end_span),
+                        span: callee_span.merge(end_span),
                     };
                 }
                 TokenKind::Dot => {

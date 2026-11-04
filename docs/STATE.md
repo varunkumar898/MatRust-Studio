@@ -206,7 +206,18 @@
    - Snapshot tests with byte-equal `.svg` reference files.
    - No GUI, no egui, no resvg; works under `--no-default-features`.
 
+6. **GUI Polish S4: input-handling fixes** (`apps/desktop`):
+   - Command Window no longer steals focus when buffer is empty
+   - Command Window arrow keys scoped to focused input only
+   - Completion popup arrow keys scoped to popup focus
+   - Editor gutter rows use stable per-row ids
+   - Fixed pre-existing B2.2 rustlab-stdlib compile errors (ishhold_fn,
+     ok_or_else on Option, nice_step clippy lint)
+   - Added 2 new regression tests; all 63 desktop tests pass
+
 ## Next steps
 
 1. Keep CI strictly green on every push without loosening `-D warnings` or deleting tests.
 2. Provide real `.mlapp` fixtures via `MLAPP_REAL_APPS_DIR` when available to test full third-party App Designer packages.
+3. GUI polish S5 (layout fixes: toolstrip overflow, help panel clipping,
+   figures empty state) is the next proposed step.

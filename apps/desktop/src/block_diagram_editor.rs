@@ -15,6 +15,12 @@ use mlapp_sim::{
 };
 use std::collections::HashMap;
 
+const DEFAULT_LIBRARY_WIDTH: f32 = 220.0;
+const MIN_LIBRARY_WIDTH: f32 = 160.0;
+const MIN_CANVAS_WIDTH: f32 = 300.0;
+const MIN_CANVAS_HEIGHT: f32 = 200.0;
+const MIN_TAB_BODY_HEIGHT: f32 = 300.0;
+
 /// Canvas representation of a block node.
 #[derive(Clone, Debug)]
 pub struct CanvasBlock {
@@ -298,17 +304,19 @@ impl BlockDiagramEditor {
 
     fn show_layout(&mut self, ui: &mut Ui, theme: &Theme) -> BlockDiagramLayout {
         let body_rect = ui.available_rect_before_wrap();
-        let layout = if body_rect.width() < 460.0 || body_rect.height() < 300.0 {
-            ScrollArea::both()
-                .id_salt("block_diagram_body_scroll")
-                .auto_shrink([false, false])
-                .min_scrolled_width(460.0)
-                .min_scrolled_height(300.0)
-                .show(ui, |ui| self.render_panels(ui, theme, body_rect))
-                .inner
-        } else {
-            self.render_panels(ui, theme, body_rect)
-        };
+        let min_body_width = DEFAULT_LIBRARY_WIDTH + MIN_CANVAS_WIDTH + ui.spacing().item_spacing.x;
+        let layout =
+            if body_rect.width() < min_body_width || body_rect.height() < MIN_TAB_BODY_HEIGHT {
+                ScrollArea::both()
+                    .id_salt("block_diagram_body_scroll")
+                    .auto_shrink([false, false])
+                    .min_scrolled_width(min_body_width)
+                    .min_scrolled_height(MIN_TAB_BODY_HEIGHT)
+                    .show(ui, |ui| self.render_panels(ui, theme, body_rect))
+                    .inner
+            } else {
+                self.render_panels(ui, theme, body_rect)
+            };
 
         // Scope Window if opened
         if self.show_scope_window {
@@ -348,8 +356,8 @@ impl BlockDiagramEditor {
         let max_library_width = ui.available_width() * 0.4;
         let library = egui::SidePanel::left("block_diagram_library")
             .resizable(true)
-            .default_width(220.0)
-            .width_range(160.0..=max_library_width.max(160.0))
+            .default_width(DEFAULT_LIBRARY_WIDTH)
+            .width_range(MIN_LIBRARY_WIDTH..=max_library_width.max(MIN_LIBRARY_WIDTH))
             .frame(egui::Frame::NONE)
             .show_inside(ui, |ui| self.render_library_browser(ui, theme, &mut layout));
         layout.library = library.response.rect;
@@ -667,7 +675,9 @@ impl BlockDiagramEditor {
     }
 
     fn render_canvas(&mut self, ui: &mut Ui, _theme: &Theme) -> Rect {
-        let canvas_size = ui.available_size().max(vec2(300.0, 200.0));
+        let canvas_size = ui
+            .available_size()
+            .max(vec2(MIN_CANVAS_WIDTH, MIN_CANVAS_HEIGHT));
         let (rect, response) = ui.allocate_exact_size(canvas_size, Sense::click_and_drag());
         let painter = ui.painter_at(rect);
         painter.rect_filled(rect, CornerRadius::ZERO, Color32::from_rgb(24, 26, 32));
@@ -1273,6 +1283,24 @@ mod tests {
         }
         assert!(heights[0] > heights[2]);
         assert!(heights[1] > heights[0]);
+    }
+
+    #[test]
+    fn block_diagram_small_tab_scrolls_without_clipping_minimum_canvas() {
+        let ctx = egui::Context::default();
+        let mut editor = BlockDiagramEditor::default();
+        let layout = run_frame(&ctx, &mut editor, vec2(400.0, 220.0), Vec::new());
+        let min_body_width =
+            DEFAULT_LIBRARY_WIDTH + MIN_CANVAS_WIDTH + ctx.style().spacing.item_spacing.x;
+
+        assert!(layout.toolbar.width() >= min_body_width - 2.0);
+        assert!(layout.canvas.width() >= MIN_CANVAS_WIDTH);
+        assert!(layout.canvas.height() >= MIN_CANVAS_HEIGHT);
+        assert!(layout.canvas.min.x >= layout.library.max.x - 1.0);
+        assert!(layout
+            .toolbar_widgets
+            .iter()
+            .all(|widget| widget.max.x <= layout.toolbar.max.x + 2.0));
     }
 
     #[test]

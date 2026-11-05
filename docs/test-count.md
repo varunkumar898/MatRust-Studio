@@ -32,6 +32,7 @@ This document tracks the cumulative and per-suite test counts across milestones,
 | **Phase 15 Runtime Execution Bridge Integration (`mlapp-runtime`, `mlapp-host`, `mlapp-cli`)** | **351** | **351** | +2 `mlapp-runtime` tests (`test_runtime_configure_bridges_octave_delegation`, `test_runtime_unsupported_function_hints_both_bridges`) | First-class GNU Octave execution bridge delegation (`--allow-octave`), unified `configure_bridges` engine, updated diagnostic hints for unsupported builtins. Net +2 tests. 0 regressions. |
 | **GUI polish S3 (`f153d9c`)** | **352** | **352** | +1 `matrust_studio` (`hidden_filter_is_dotfile_only`) | Current Folder hides dot-entries by default with a Hidden toggle. Net +1 test. 0 regressions. |
 | **GUI file tree + cloud dialog (this session)** | **393** | **393** | +6 `matrust_studio` lib tests (3 `current_folder` tree/totals, 3 `cloud_accounts` detection), +35 prior-session staged tests (11 `editor_gui_tests`, 10 `gui_clean_tests`, 3 `current_folder_tests`, +11 desktop/lib additions) | Project tree view with whole-project totals, auto-refresh on save, Cloud Drives dialog. Manifest regenerated 352 -> 393. 0 regressions. |
+| **Block Diagram Editor layout (this task)** | **457** | **457** | +8 `block_diagram_editor::tests` layout and interaction tests | Workspace listing reconciled the prior 393-entry manifest with 56 pre-existing unlisted tests and 8 new editor tests; regenerated to 457 entries with no removals. Default, all-features, and no-default-features runs each passed 457 tests. |
 
 ---
 

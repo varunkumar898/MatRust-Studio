@@ -47,7 +47,7 @@ MatRust Studio is architected as a modular Cargo workspace decoupling the core n
 
 ## Verification & Test Suite
 
-The default-feature test count is **336** (same names under `--all-features` and `--no-default-features`). Every test name is recorded in `docs/test-manifest.txt`, and CI fails if the real total differs from that manifest.
+The workspace test count is **457** (same names under `--all-features` and `--no-default-features`). Every test name is recorded in `docs/test-manifest.txt`, and CI fails if the real total differs from that manifest.
 
 ```bash
 cargo test --workspace

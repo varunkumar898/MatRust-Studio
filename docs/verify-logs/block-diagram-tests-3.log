@@ -1,0 +1,27 @@
+﻿   Compiling matrust_studio v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\apps\desktop)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 4.67s
+     Running unittests src\lib.rs (target\debug\deps\matrust_studio-2db82bff6a06a1d1.exe)
+
+running 7 tests
+test block_diagram_editor::tests::block_diagram_library_drag_drops_a_block_at_the_cursor ... ok
+test block_diagram_editor::tests::block_diagram_canvas_pans_and_zooms_at_pointer ... ok
+test block_diagram_editor::tests::block_diagram_library_scrolls_to_subsystems ... ok
+test block_diagram_editor::tests::block_diagram_canvas_tracks_dock_splitter_resize ... ok
+System.Management.Automation.RemoteException
+thread 'block_diagram_editor::tests::block_diagram_canvas_selects_and_deletes_blocks_and_wires' (9036) panicked at apps\desktop\src\block_diagram_editor.rs:665:9:
+assertion `left == right` failed
+  left: 5
+ right: 4
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test block_diagram_editor::tests::block_diagram_canvas_selects_and_deletes_blocks_and_wires ... FAILED
+test block_diagram_editor::tests::block_diagram_canvas_fills_tab_body_at_common_window_sizes ... ok
+test block_diagram_editor::tests::block_diagram_canvas_allocation_is_not_fixed_height ... ok
+
+failures:
+
+failures:
+    block_diagram_editor::tests::block_diagram_canvas_selects_and_deletes_blocks_and_wires
+
+test result: FAILED. 6 passed; 1 failed; 0 ignored; 0 measured; 27 filtered out; finished in 0.08s
+
+error: test failed, to rerun pass `-p matrust_studio --lib`

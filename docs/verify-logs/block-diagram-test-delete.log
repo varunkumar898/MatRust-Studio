@@ -1,0 +1,9 @@
+﻿   Compiling matrust_studio v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\apps\desktop)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 4.09s
+     Running unittests src\lib.rs (target\debug\deps\matrust_studio-2db82bff6a06a1d1.exe)
+
+running 1 test
+test block_diagram_editor::tests::block_diagram_canvas_selects_and_deletes_blocks_and_wires ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 33 filtered out; finished in 0.06s
+

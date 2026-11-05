@@ -121,6 +121,9 @@ impl BlockDiagramEditor {
     pub fn load_default_feedback_example(&mut self) {
         self.blocks.clear();
         self.wires.clear();
+        self.selected_block_sid = None;
+        self.selected_wire = None;
+        self.connecting_from = None;
 
         // 1. Step block
         let mut step = CanvasBlock {
@@ -435,6 +438,9 @@ impl BlockDiagramEditor {
             if clear.clicked() {
                 self.blocks.clear();
                 self.wires.clear();
+                self.selected_block_sid = None;
+                self.selected_wire = None;
+                self.connecting_from = None;
                 self.sim_output = None;
                 self.sim_status = "Canvas cleared".to_string();
             }
@@ -587,7 +593,15 @@ impl BlockDiagramEditor {
     }
 
     fn add_block_at(&mut self, block_type: BlockType, name: &str, pos: Pos2) {
-        let new_id = (self.blocks.len() + 1).to_string();
+        let next_id = (1..=self.blocks.len() + 1)
+            .find(|candidate| {
+                !self
+                    .blocks
+                    .iter()
+                    .any(|block| block.sid == candidate.to_string())
+            })
+            .unwrap_or(self.blocks.len() + 1);
+        let new_id = next_id.to_string();
         let mut block = CanvasBlock {
             sid: new_id,
             name: name.to_string(),
@@ -1552,13 +1566,16 @@ mod tests {
             &ctx,
             &mut editor,
             size,
-            vec![Event::PointerMoved(block_end), Event::Key {
-                key: Key::Delete,
-                physical_key: None,
-                pressed: true,
-                repeat: false,
-                modifiers: Modifiers::NONE,
-            }],
+            vec![
+                Event::PointerMoved(block_end),
+                Event::Key {
+                    key: Key::Delete,
+                    physical_key: None,
+                    pressed: true,
+                    repeat: false,
+                    modifiers: Modifiers::NONE,
+                },
+            ],
         );
         assert_eq!(editor.blocks.len(), 4);
         assert!(!editor

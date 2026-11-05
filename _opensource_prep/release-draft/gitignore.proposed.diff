@@ -1,0 +1,16 @@
+--- a/.gitignore
++++ b/.gitignore
+@@ -39,3 +39,13 @@
+ dist/
+ build/
+ .pytest_cache/
++
++# Local build and scratch logs
++/build_debug.log
++/build_release.log
++/mylog.txt
++/now.txt
++
++# Local analysis workspace and machine-specific verification transcripts
++/re-ghidra/
++/docs/verify-logs/

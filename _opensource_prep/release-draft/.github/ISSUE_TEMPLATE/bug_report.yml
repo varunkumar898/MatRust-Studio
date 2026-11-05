@@ -1,0 +1,52 @@
+name: Bug report
+description: Report a reproducible problem in MatRust Studio.
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not include proprietary `.mlapp`/`.slx` files, private data, or secrets.
+  - type: input
+    id: version
+    attributes:
+      label: Commit or release
+      description: Include the commit hash or release tag.
+      placeholder: "e.g. v0.1.0-alpha or commit hash"
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: Operating system and Rust version
+      placeholder: "Windows/Linux/macOS; rustc --version"
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Minimal reproduction
+      description: Use a small synthetic script or model.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant error or logs
+      description: Redact usernames, local paths, private files, and tokens.
+      render: text
+    validations:
+      required: false

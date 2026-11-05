@@ -1582,5 +1582,12 @@ mod tests {
             .wires
             .iter()
             .any(|wire| wire.src_block == "1" || wire.dst_block == "1"));
+        editor.add_block(BlockType::Constant, "New Constant");
+        let ids = editor
+            .blocks
+            .iter()
+            .map(|block| block.sid.as_str())
+            .collect::<std::collections::HashSet<_>>();
+        assert_eq!(ids.len(), editor.blocks.len());
     }
 }

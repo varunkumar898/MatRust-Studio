@@ -348,6 +348,7 @@ impl BlockDiagramEditor {
         let toolbar = egui::TopBottomPanel::top("block_diagram_toolbar")
             .frame(egui::Frame::NONE)
             .show_inside(ui, |ui| {
+                ui.set_clip_rect(ui.clip_rect().intersect(tab_body));
                 self.render_toolbar(ui, theme, &mut toolbar_widgets)
             });
         layout.toolbar = toolbar.response.rect;
@@ -359,12 +360,18 @@ impl BlockDiagramEditor {
             .default_width(DEFAULT_LIBRARY_WIDTH)
             .width_range(MIN_LIBRARY_WIDTH..=max_library_width.max(MIN_LIBRARY_WIDTH))
             .frame(egui::Frame::NONE)
-            .show_inside(ui, |ui| self.render_library_browser(ui, theme, &mut layout));
+            .show_inside(ui, |ui| {
+                ui.set_clip_rect(ui.clip_rect().intersect(tab_body));
+                self.render_library_browser(ui, theme, &mut layout)
+            });
         layout.library = library.response.rect;
 
         egui::CentralPanel::default()
             .frame(egui::Frame::NONE)
-            .show_inside(ui, |ui| layout.canvas = self.render_canvas(ui, theme));
+            .show_inside(ui, |ui| {
+                ui.set_clip_rect(ui.clip_rect().intersect(tab_body));
+                layout.canvas = self.render_canvas(ui, theme);
+            });
         layout
     }
 

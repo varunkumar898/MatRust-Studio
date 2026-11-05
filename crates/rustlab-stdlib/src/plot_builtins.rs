@@ -9,7 +9,7 @@ use rustlab_eval::EvalError;
 use rustlab_math::Value;
 use rustlab_plot::{
     to_svg, with_plot_state_ref, Axes, Bar, Figure, Histogram, Legend, LegendLocation, Line,
-    Scatter, Series,
+    Scatter, Series, Shading,
 };
 
 /// `figure` — create a new figure or switch to an existing one.
@@ -662,13 +662,26 @@ pub fn ylim_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError>
     Ok(vec![])
 }
 
-/// `grid('on'|'off')` — toggle grid on current axes.
+/// `grid` — toggle grid on current axes.
+/// `grid('on'|'off')` — set grid state.
 pub fn grid_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError> {
-    if args.len() != 1 {
+    if args.len() > 1 {
         return Err(user_err(
             "RUSTLAB:plot:badArgs",
-            "grid requires 1 input ('on' or 'off').",
+            "grid accepts 0 or 1 inputs ('on' or 'off').",
         ));
+    }
+    if args.is_empty() {
+        rustlab_plot::with_plot_state(|reg| {
+            let fig = reg.current_figure_mut().ok_or(user_err(
+                "RUSTLAB:plot:noFigure",
+                "No current figure. Call figure first.",
+            ))?;
+            let ax = ensure_current_axes(fig)?;
+            ax.grid = !ax.grid;
+            Ok::<(), EvalError>(())
+        })?;
+        return Ok(Vec::new());
     }
     let state = extract_string(&args[0])?;
     let on = match state.as_str() {
@@ -817,6 +830,239 @@ pub fn surf_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError>
         Ok::<(), EvalError>(())
     })?;
     Ok(vec![])
+}
+
+/// `colorbar` — show the colorbar for the current axes.
+/// `colorbar(ax)` — show the colorbar for axes `ax` of the current figure.
+pub fn colorbar_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError> {
+    if args.len() > 1 {
+        return Err(user_err(
+            "RUSTLAB:plot:badArgs",
+            "colorbar accepts 0 or 1 inputs.",
+        ));
+    }
+    rustlab_plot::with_plot_state(|reg| {
+        let fig = reg.current_figure_mut().ok_or_else(|| {
+            user_err(
+                "RUSTLAB:plot:noFigure",
+                "No current figure. Call figure first.",
+            )
+        })?;
+        let ax: &mut Axes = if args.is_empty() {
+            ensure_current_axes(fig)?
+        } else {
+            let id = args[0].as_scalar_i64().map_err(math_err)? as usize;
+            fig.axes.iter_mut().find(|a| a.id == id).ok_or_else(|| {
+                user_err("RUSTLAB:plot:noAxes", &format!("Axes {id} does not exist."))
+            })?
+        };
+        if ax.colorbar.is_none() {
+            ax.colorbar = Some(rustlab_plot::Colorbar {
+                location: rustlab_plot::ColorbarLocation::East,
+                label: "Z".to_string(),
+            });
+        }
+        Ok::<(), EvalError>(())
+    })?;
+    Ok(Vec::new())
+}
+
+/// `colormap(name)` — set the colormap of the current axes.
+/// `colormap` — return the name of the current colormap.
+pub fn colormap_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError> {
+    if args.len() > 1 {
+        return Err(user_err(
+            "RUSTLAB:plot:badArgs",
+            "colormap accepts 0 or 1 inputs.",
+        ));
+    }
+    if args.is_empty() {
+        let name = rustlab_plot::with_plot_state_ref(|reg| {
+            let fig = reg.current_figure().ok_or_else(|| {
+                user_err(
+                    "RUSTLAB:plot:noFigure",
+                    "No current figure. Call figure first.",
+                )
+            })?;
+            let ax = fig
+                .current_axes()
+                .ok_or_else(|| user_err("RUSTLAB:plot:noAxes", "No current axes."))?;
+            Ok::<&'static str, EvalError>(colormap_name(ax.colormap))
+        })?;
+        return Ok(vec![Value::string_scalar(name)]);
+    }
+    let name = extract_string(&args[0])?;
+    let cmap = match name.as_str() {
+        "rustlab" => rustlab_plot::Colormap::Rustlab,
+        _ => {
+            return Err(user_err(
+                "RUSTLAB:plot:badArgs",
+                &format!("Unknown colormap '{name}'. Supported: rustlab."),
+            ));
+        }
+    };
+    rustlab_plot::with_plot_state(|reg| {
+        let fig = reg.current_figure_mut().ok_or_else(|| {
+            user_err(
+                "RUSTLAB:plot:noFigure",
+                "No current figure. Call figure first.",
+            )
+        })?;
+        let ax = ensure_current_axes(fig)?;
+        ax.colormap = cmap;
+        Ok::<(), EvalError>(())
+    })?;
+    Ok(Vec::new())
+}
+
+fn colormap_name(c: rustlab_plot::Colormap) -> &'static str {
+    match c {
+        rustlab_plot::Colormap::Rustlab => "rustlab",
+    }
+}
+
+/// `shading(mode)` — set surface shading on the current axes.
+/// `mode` is 'flat' (default) or 'interp'.
+pub fn shading_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError> {
+    if args.len() != 1 {
+        return Err(user_err(
+            "RUSTLAB:plot:badArgs",
+            "shading requires 1 input ('flat' or 'interp').",
+        ));
+    }
+    let mode = extract_string(&args[0])?;
+    let shading = match mode.as_str() {
+        "flat" => Shading::Flat,
+        "interp" => Shading::Interp,
+        _ => {
+            return Err(user_err(
+                "RUSTLAB:plot:badArgs",
+                "shading mode must be 'flat' or 'interp'.",
+            ));
+        }
+    };
+    rustlab_plot::with_plot_state(|reg| {
+        let fig = reg.current_figure_mut().ok_or_else(|| {
+            user_err(
+                "RUSTLAB:plot:noFigure",
+                "No current figure. Call figure first.",
+            )
+        })?;
+        let ax = ensure_current_axes(fig)?;
+        ax.shading = shading;
+        Ok::<(), EvalError>(())
+    })?;
+    Ok(Vec::new())
+}
+
+/// `view(az, el)` — set the 3-D camera azimuth and elevation in degrees.
+pub fn view_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError> {
+    if args.len() != 2 {
+        return Err(user_err(
+            "RUSTLAB:plot:badArgs",
+            "view requires 2 inputs (azimuth, elevation).",
+        ));
+    }
+    let azimuth = args[0].as_scalar_f64().map_err(math_err)?;
+    let elevation = args[1].as_scalar_f64().map_err(math_err)?;
+    if !azimuth.is_finite() || !elevation.is_finite() {
+        return Err(user_err(
+            "RUSTLAB:plot:badArgs",
+            "view angles must be finite scalars.",
+        ));
+    }
+    rustlab_plot::with_plot_state(|reg| {
+        let fig = reg.current_figure_mut().ok_or_else(|| {
+            user_err(
+                "RUSTLAB:plot:noFigure",
+                "No current figure. Call figure first.",
+            )
+        })?;
+        let ax = ensure_current_axes(fig)?;
+        ax.camera = rustlab_plot::Camera {
+            azimuth,
+            elevation,
+        };
+        Ok::<(), EvalError>(())
+    })?;
+    Ok(Vec::new())
+}
+
+/// `axis(mode)` — set axis scaling: 'auto', 'tight', or 'equal'.
+/// `axis([lo hi])` — set the x-axis limits of the current axes.
+pub fn axis_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError> {
+    if args.len() != 1 {
+        return Err(user_err(
+            "RUSTLAB:plot:badArgs",
+            "axis requires 1 input (mode or [lo hi]).",
+        ));
+    }
+    if let Ok(mode) = extract_string(&args[0]) {
+        rustlab_plot::with_plot_state(|reg| {
+            let fig = reg.current_figure_mut().ok_or_else(|| {
+                user_err(
+                    "RUSTLAB:plot:noFigure",
+                    "No current figure. Call figure first.",
+                )
+            })?;
+            let ax = ensure_current_axes(fig)?;
+            match mode.as_str() {
+                "auto" => {
+                    ax.xlim = None;
+                    ax.ylim = None;
+                    ax.zlim = None;
+                }
+                "tight" => {
+                    if let Some((xr, yr, zr)) = ax.data_bounds() {
+                        ax.xlim = Some(xr);
+                        ax.ylim = Some(yr);
+                        if ax.series.iter().any(|s| matches!(s, Series::Surface(_))) {
+                            ax.zlim = Some(zr);
+                        }
+                    }
+                }
+                "equal" => {
+                    if let Some((xr, yr, _zr)) = ax.data_bounds() {
+                        let xspan = xr[1] - xr[0];
+                        let yspan = yr[1] - yr[0];
+                        let span = xspan.max(yspan).max(1e-12);
+                        let xc = 0.5 * (xr[0] + xr[1]);
+                        let yc = 0.5 * (yr[0] + yr[1]);
+                        ax.xlim = Some([xc - 0.5 * span, xc + 0.5 * span]);
+                        ax.ylim = Some([yc - 0.5 * span, yc + 0.5 * span]);
+                    }
+                }
+                _ => {
+                    return Err(user_err(
+                        "RUSTLAB:plot:badArgs",
+                        "axis mode must be 'auto', 'tight', or 'equal'.",
+                    ));
+                }
+            }
+            Ok::<(), EvalError>(())
+        })?;
+        return Ok(Vec::new());
+    }
+    let arr = extract_f64_array(&args[0])?;
+    let slice = arr.as_slice();
+    if slice.len() != 2 {
+        return Err(user_err(
+            "RUSTLAB:plot:badArgs",
+            "axis requires a mode string or a 2-element vector [lo hi].",
+        ));
+    }
+    rustlab_plot::with_plot_state(|reg| {
+        let fig = reg.current_figure_mut().ok_or_else(|| {
+            user_err(
+                "RUSTLAB:plot:noFigure",
+                "No current figure. Call figure first.",
+            )
+        })?;
+        let ax = ensure_current_axes(fig)?;
+        ax.xlim = Some([slice[0], slice[1]]);
+        Ok::<(), EvalError>(())
+    })?;
+    Ok(Vec::new())
 }
 
 #[cfg(test)]

@@ -197,6 +197,15 @@ pub enum ColorbarLocation {
     South,
 }
 
+/// Surface mesh shading mode.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum Shading {
+    /// One color per quad (MATLAB default).
+    Flat,
+    /// Smooth interpolation between height samples.
+    Interp,
+}
+
 /// Our own perceptual colormap: "rustlab". Built from hand-picked anchor
 /// colors (dark navy -> steel blue -> emerald green -> bright yellow -> deep
 /// red) interpolated in CIE-like perceptual space. Not copied from any
@@ -300,6 +309,7 @@ pub struct Axes {
     pub grid: bool,
     pub hold: bool,
     pub colormap: Colormap,
+    pub shading: Shading,
     pub series: Vec<Series>,
     pub texts: Vec<Text>,
     pub legend: Option<Legend>,
@@ -324,6 +334,7 @@ impl Axes {
             grid: true,
             hold: false,
             colormap: Colormap::Rustlab,
+            shading: Shading::Flat,
             series: Vec::new(),
             texts: Vec::new(),
             legend: None,

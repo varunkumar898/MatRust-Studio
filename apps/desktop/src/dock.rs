@@ -818,6 +818,15 @@ impl DockTree {
                             .max_rect(body_rect)
                             .layout(Layout::top_down(Align::LEFT)),
                     );
+                    // C1: the panel body owns clipping for its children.
+                    let panel_clip =
+                        crate::layout_contract::PanelClip::new(&mut body_ui, active_panel_id);
+                    crate::ui_registry::register_panel(
+                        ui.ctx(),
+                        active_panel_id,
+                        panel_clip.panel_rect,
+                        panel_clip.clip_rect,
+                    );
                     render_panel(&mut body_ui, active_panel_id);
                 } else if tabs.is_empty() {
                     ui.painter().text(

@@ -9,6 +9,7 @@
 //! It does not change layout or input handling, which keeps R13 (feature flags
 //! and core semantics) untouched.
 
+use crate::dock::PanelId;
 use egui::{Context, Id, Rect};
 use std::collections::HashMap;
 
@@ -158,6 +159,21 @@ pub struct RegisteredControl {
     pub rect: Rect,
 }
 
+/// One dock panel body observed during the current pass.
+///
+/// This is intentionally separate from the interactive-control inventory: a
+/// panel is a container, while [`RegisteredControl`] is a leaf the user can
+/// operate. The layout contract uses both to check clipping and C2 minimums.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct RegisteredPanel {
+    /// Which dock panel owns this body.
+    pub panel_id: PanelId,
+    /// Body rect after the tab strip.
+    pub body_rect: Rect,
+    /// egui clip rect in force when the panel body was built.
+    pub clip_rect: Rect,
+}
+
 /// Two controls in one pass used the same egui id at different positions.
 #[derive(Clone, Debug)]
 pub struct IdClash {
@@ -180,6 +196,8 @@ pub struct UiAudit {
     pub pass: u64,
     /// Controls built in this pass.
     pub controls: Vec<RegisteredControl>,
+    /// Dock panel bodies built in this pass.
+    pub panels: Vec<RegisteredPanel>,
     /// Duplicate egui ids detected in this pass.
     pub clashes: Vec<IdClash>,
 }
@@ -204,6 +222,7 @@ pub fn begin_frame(ctx: &Context) {
         state.started = true;
         state.audit.pass = state.pass;
         state.audit.controls.clear();
+        state.audit.panels.clear();
         state.audit.clashes.clear();
         state.seen.clear();
     });
@@ -254,6 +273,27 @@ pub fn register(ctx: &Context, control_id: &str, egui_id: Id, rect: Rect) -> boo
         state.audit.controls.push(control);
         ok
     })
+}
+
+/// Register a dock panel body for the current pass.
+///
+/// Called by the dock immediately before it builds the active panel body. It
+/// does not allocate a widget or affect layout; it only records the two rects
+/// needed by [`crate::layout_contract`].
+pub fn register_panel(ctx: &Context, panel_id: PanelId, body_rect: Rect, clip_rect: Rect) {
+    ctx.data_mut(|data| {
+        let state = data.get_temp_mut_or_default::<RegistryState>(state_id());
+        if !state.started {
+            state.pass = state.pass.wrapping_add(1);
+            state.started = true;
+            state.audit.pass = state.pass;
+        }
+        state.audit.panels.push(RegisteredPanel {
+            panel_id,
+            body_rect,
+            clip_rect,
+        });
+    });
 }
 
 /// Read the current pass audit. The returned value is a clone, so the caller

@@ -348,8 +348,16 @@ impl BlockDiagramEditor {
         let toolbar = egui::TopBottomPanel::top("block_diagram_toolbar")
             .frame(egui::Frame::NONE)
             .show_inside(ui, |ui| {
-                ui.set_clip_rect(ui.clip_rect().intersect(tab_body));
-                self.render_toolbar(ui, theme, &mut toolbar_widgets)
+                let min = ui.next_widget_position();
+                let max_y = ui.available_rect_before_wrap().max.y;
+                let max = egui::pos2(min.x + tab_body.width(), max_y);
+                ui.scope_builder(
+                    egui::UiBuilder::new().max_rect(Rect::from_min_max(min, max)),
+                    |ui| {
+                        ui.set_clip_rect(ui.clip_rect().intersect(tab_body));
+                        self.render_toolbar(ui, theme, &mut toolbar_widgets);
+                    },
+                );
             });
         layout.toolbar = toolbar.response.rect;
         layout.toolbar_widgets = toolbar_widgets;
@@ -1308,6 +1316,15 @@ mod tests {
             .toolbar_widgets
             .iter()
             .all(|widget| widget.max.x <= layout.toolbar.max.x + 2.0));
+        assert!(layout
+            .toolbar_widgets
+            .iter()
+            .all(|widget| widget.max.x <= layout.tab_body.max.x + 2.0),
+            "tab body: {:?}; toolbar: {:?}; widgets: {:?}",
+            layout.tab_body,
+            layout.toolbar,
+            layout.toolbar_widgets
+        );
     }
 
     #[test]

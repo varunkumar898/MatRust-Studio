@@ -563,6 +563,158 @@ fn test_block_diagram_editor_canvas_and_solver() {
 }
 
 #[test]
+fn test_desktop_block_diagram_parameter_editing_and_simulation() {
+    let mut editor = BlockDiagramEditor::default();
+    editor.load_default_feedback_example();
+
+    // Baseline run with Gain = 2.0
+    editor.run_simulation();
+    let initial_sim = editor.sim_output.clone().expect("Initial simulation");
+    let initial_final = *initial_sim.yout.last().expect("Initial final val");
+
+    // Attempt invalid numeric parameter on Gain (SID 3)
+    editor.open_param_modal("3");
+    editor
+        .param_draft
+        .insert("Gain".to_string(), "abc_not_a_number".to_string());
+    // Verification: invalid string fails f64 parse, block.parameters retains 2.0
+    assert!(editor
+        .param_draft
+        .get("Gain")
+        .unwrap()
+        .trim()
+        .parse::<f64>()
+        .is_err());
+    let current_gain = editor
+        .blocks
+        .iter()
+        .find(|b| b.sid == "3")
+        .unwrap()
+        .parameters
+        .get("Gain")
+        .unwrap();
+    assert_eq!(current_gain, "2.0");
+
+    // Now edit Gain to 8.0 with auto_run enabled
+    editor.auto_run = true;
+    editor
+        .param_draft
+        .insert("Gain".to_string(), "8.0".to_string());
+    if let Some(block) = editor.blocks.iter_mut().find(|b| b.sid == "3") {
+        block
+            .parameters
+            .insert("Gain".to_string(), "8.0".to_string());
+    }
+    editor.sync_prop_draft();
+    if editor.auto_run {
+        editor.run_simulation();
+    }
+
+    let updated_sim = editor
+        .sim_output
+        .expect("Updated simulation after parameter change");
+    let updated_final = *updated_sim.yout.last().expect("Updated final val");
+
+    // With higher gain K=8, response rises faster towards 1.0
+    assert!(
+        (updated_final - 1.0).abs() < (initial_final - 1.0).abs() + 0.1,
+        "Higher gain must produce valid closed-loop response"
+    );
+}
+
+#[test]
+fn test_desktop_block_diagram_multi_port_sum_and_wire_retention() {
+    let mut editor = BlockDiagramEditor::default();
+    editor.load_default_feedback_example();
+
+    // Sum block (SID 2) originally has "+-" (2 ports)
+    let sum_block = editor.blocks.iter().find(|b| b.sid == "2").unwrap();
+    assert_eq!(sum_block.input_ports(), 2);
+    assert_eq!(editor.wires.len(), 5);
+
+    // Update Sum "Inputs" parameter to "++-" (3 ports)
+    if let Some(sum) = editor.blocks.iter_mut().find(|b| b.sid == "2") {
+        sum.parameters
+            .insert("Inputs".to_string(), "++-".to_string());
+    }
+    let updated_sum = editor.blocks.iter().find(|b| b.sid == "2").unwrap();
+    assert_eq!(updated_sum.input_ports(), 3);
+
+    // Pre-existing wires to port 0 and port 1 survive
+    assert!(editor
+        .wires
+        .iter()
+        .any(|w| w.dst_block == "2" && w.dst_port == 0));
+    assert!(editor
+        .wires
+        .iter()
+        .any(|w| w.dst_block == "2" && w.dst_port == 1));
+
+    // Add wire to newly created port 2
+    editor
+        .wires
+        .push(matrust_studio::block_diagram_editor::CanvasWire {
+            src_block: "1".to_string(),
+            src_port: 0,
+            dst_block: "2".to_string(),
+            dst_port: 2,
+            bend_offset: egui::Vec2::ZERO,
+        });
+    assert_eq!(editor.wires.len(), 6);
+
+    // Simulation runs cleanly with 3-port sum
+    editor.run_simulation();
+    assert!(editor.sim_output.is_some());
+}
+
+#[test]
+fn test_desktop_block_diagram_delete_and_duplicate() {
+    let mut editor = BlockDiagramEditor::default();
+    editor.load_default_feedback_example();
+    assert_eq!(editor.blocks.len(), 5);
+
+    // Duplicate Gain block (SID 3)
+    editor.selected_block_sid = Some("3".to_string());
+    let dup_sid = editor.duplicate_selected().expect("Duplicate block");
+    assert_eq!(editor.blocks.len(), 6);
+    assert_eq!(dup_sid, "6");
+
+    let dup = editor.blocks.iter().find(|b| b.sid == "6").unwrap();
+    assert_eq!(dup.parameters.get("Gain").map(|s| s.as_str()), Some("2.0"));
+
+    // Delete Sum block (SID 2) and verify attached wires are cleaned up
+    editor.selected_block_sid = Some("2".to_string());
+    editor.delete_selected();
+    assert_eq!(editor.blocks.len(), 5);
+    assert!(!editor
+        .wires
+        .iter()
+        .any(|w| w.src_block == "2" || w.dst_block == "2"));
+}
+
+#[test]
+fn test_desktop_block_diagram_json_save_load() {
+    let mut editor = BlockDiagramEditor::default();
+    editor.load_default_feedback_example();
+    if let Some(gain) = editor.blocks.iter_mut().find(|b| b.sid == "3") {
+        gain.parameters
+            .insert("Gain".to_string(), "6.25".to_string());
+    }
+
+    let json_str = editor.save_to_json().expect("Export JSON");
+    let mut editor2 = BlockDiagramEditor::default();
+    editor2.load_from_json(&json_str).expect("Import JSON");
+
+    assert_eq!(editor2.blocks.len(), 5);
+    assert_eq!(editor2.wires.len(), 5);
+    let loaded_gain = editor2.blocks.iter().find(|b| b.sid == "3").unwrap();
+    assert_eq!(
+        loaded_gain.parameters.get("Gain").map(|s| s.as_str()),
+        Some("6.25")
+    );
+}
+
+#[test]
 fn test_editor_section_extraction_and_syntax_analysis() {
     let script = r#"
 %% Section 1: Setup

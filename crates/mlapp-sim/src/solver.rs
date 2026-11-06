@@ -336,24 +336,31 @@ fn get_block_inputs(
     diagram: &BlockDiagram,
     states: &HashMap<String, BlockState>,
 ) -> Vec<f64> {
-    let mut inputs = Vec::new();
+    let num_inputs = block.input_ports();
+    let mut inputs = vec![0.0; num_inputs];
 
     // Find all lines whose destination is this block
-    let mut incoming_lines: Vec<_> = diagram
+    let incoming_lines: Vec<_> = diagram
         .lines
         .iter()
         .filter(|l| l.dst.block_sid == block.sid || l.dst.block_sid == block.name)
         .collect();
-
-    // Sort by destination port index
-    incoming_lines.sort_by_key(|l| l.dst.port_index);
 
     for line in incoming_lines {
         let src_val = diagram
             .find_block(&line.src.block_sid)
             .and_then(|src_block| states.get(&src_block.sid).map(|st| st.output))
             .unwrap_or(0.0);
-        inputs.push(src_val);
+        let port_idx = if line.dst.port_index > 0 {
+            line.dst.port_index - 1
+        } else {
+            0
+        };
+        if port_idx < num_inputs {
+            inputs[port_idx] = src_val;
+        } else {
+            inputs.push(src_val);
+        }
     }
 
     inputs

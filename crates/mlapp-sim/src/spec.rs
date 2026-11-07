@@ -2,7 +2,8 @@
 //!
 //! Drives the editor, validator, documentation, and code generator without duplicated lists.
 
-use crate::model::BlockType;
+use crate::diagnostics::Diagnostic;
+use crate::model::{BlockRotation, BlockType, PortKind};
 use std::collections::HashMap;
 
 /// Parameter data type and editing representation.
@@ -867,6 +868,244 @@ static BLOCK_SPECS: &[BlockSpec] = &[
         default_feedthrough: true,
         doc: "Encapsulated sub-model diagram.",
     },
+    // --- Electrical (Milestone M4) ---
+    BlockSpec {
+        block_type: BlockType::Resistor,
+        display_name: "Resistor",
+        category: "Electrical",
+        params: &[ParamSpec {
+            key: "Resistance",
+            label: "Resistance",
+            unit: "Ohm",
+            default_val: "1000",
+            kind: ParamKind::Numeric,
+            doc: "Linear resistance value in Ohms (must be > 0).",
+        }],
+        min_inputs: 0,
+        max_inputs: 0,
+        outputs: 0,
+        default_feedthrough: false,
+        doc: "Linear electrical resistor adhering to Ohm's law V = I * R.",
+    },
+    BlockSpec {
+        block_type: BlockType::Capacitor,
+        display_name: "Capacitor",
+        category: "Electrical",
+        params: &[
+            ParamSpec {
+                key: "Capacitance",
+                label: "Capacitance",
+                unit: "F",
+                default_val: "1e-6",
+                kind: ParamKind::Numeric,
+                doc: "Capacitance in Farads (must be > 0).",
+            },
+            ParamSpec {
+                key: "InitialVoltage",
+                label: "Initial Voltage",
+                unit: "V",
+                default_val: "0.0",
+                kind: ParamKind::Numeric,
+                doc: "Initial capacitor potential difference at t = 0.",
+            },
+        ],
+        min_inputs: 0,
+        max_inputs: 0,
+        outputs: 0,
+        default_feedthrough: false,
+        doc: "Linear electrical capacitor adhering to I = C * dV/dt.",
+    },
+    BlockSpec {
+        block_type: BlockType::Inductor,
+        display_name: "Inductor",
+        category: "Electrical",
+        params: &[
+            ParamSpec {
+                key: "Inductance",
+                label: "Inductance",
+                unit: "H",
+                default_val: "1e-3",
+                kind: ParamKind::Numeric,
+                doc: "Inductance in Henries (must be > 0).",
+            },
+            ParamSpec {
+                key: "InitialCurrent",
+                label: "Initial Current",
+                unit: "A",
+                default_val: "0.0",
+                kind: ParamKind::Numeric,
+                doc: "Initial inductor branch current at t = 0.",
+            },
+        ],
+        min_inputs: 0,
+        max_inputs: 0,
+        outputs: 0,
+        default_feedthrough: false,
+        doc: "Linear electrical inductor adhering to V = L * dI/dt.",
+    },
+    BlockSpec {
+        block_type: BlockType::DcVoltageSource,
+        display_name: "DC Voltage Source",
+        category: "Electrical",
+        params: &[ParamSpec {
+            key: "Voltage",
+            label: "Constant Voltage",
+            unit: "V",
+            default_val: "5.0",
+            kind: ParamKind::Numeric,
+            doc: "DC output potential difference between positive and negative terminals.",
+        }],
+        min_inputs: 0,
+        max_inputs: 0,
+        outputs: 0,
+        default_feedthrough: false,
+        doc: "Ideal constant DC voltage source.",
+    },
+    BlockSpec {
+        block_type: BlockType::AcVoltageSource,
+        display_name: "AC Voltage Source",
+        category: "Electrical",
+        params: &[
+            ParamSpec {
+                key: "Amplitude",
+                label: "Amplitude",
+                unit: "V",
+                default_val: "10.0",
+                kind: ParamKind::Numeric,
+                doc: "Peak sinusoidal voltage amplitude (must be >= 0).",
+            },
+            ParamSpec {
+                key: "Frequency",
+                label: "Frequency",
+                unit: "Hz",
+                default_val: "50.0",
+                kind: ParamKind::Numeric,
+                doc: "Sinusoidal frequency in Hertz (must be > 0; use DC source for 0 Hz).",
+            },
+            ParamSpec {
+                key: "Phase",
+                label: "Phase",
+                unit: "deg",
+                default_val: "0.0",
+                kind: ParamKind::Numeric,
+                doc: "Phase shift angle in degrees.",
+            },
+            ParamSpec {
+                key: "Offset",
+                label: "Offset",
+                unit: "V",
+                default_val: "0.0",
+                kind: ParamKind::Numeric,
+                doc: "DC bias voltage offset.",
+            },
+        ],
+        min_inputs: 0,
+        max_inputs: 0,
+        outputs: 0,
+        default_feedthrough: false,
+        doc: "Ideal sinusoidal AC voltage source.",
+    },
+    BlockSpec {
+        block_type: BlockType::DcCurrentSource,
+        display_name: "DC Current Source",
+        category: "Electrical",
+        params: &[ParamSpec {
+            key: "Current",
+            label: "Constant Current",
+            unit: "A",
+            default_val: "1.0",
+            kind: ParamKind::Numeric,
+            doc: "Constant branch current flowing from positive to negative terminal.",
+        }],
+        min_inputs: 0,
+        max_inputs: 0,
+        outputs: 0,
+        default_feedthrough: false,
+        doc: "Ideal constant DC current source.",
+    },
+    BlockSpec {
+        block_type: BlockType::Ground,
+        display_name: "Ground",
+        category: "Electrical",
+        params: &[],
+        min_inputs: 0,
+        max_inputs: 0,
+        outputs: 0,
+        default_feedthrough: false,
+        doc: "Circuit reference ground node establishing 0 V potential.",
+    },
+    BlockSpec {
+        block_type: BlockType::Diode,
+        display_name: "Diode",
+        category: "Electrical",
+        params: &[
+            ParamSpec {
+                key: "ForwardVoltage",
+                label: "Forward Voltage",
+                unit: "V",
+                default_val: "0.7",
+                kind: ParamKind::Numeric,
+                doc: "Forward diode threshold voltage Vf (must be >= 0).",
+            },
+            ParamSpec {
+                key: "OnResistance",
+                label: "On Resistance",
+                unit: "Ohm",
+                default_val: "0.01",
+                kind: ParamKind::Numeric,
+                doc: "Forward conduction on-resistance Ron (must be > 0).",
+            },
+            ParamSpec {
+                key: "OffResistance",
+                label: "Off Resistance",
+                unit: "Ohm",
+                default_val: "1e6",
+                kind: ParamKind::Numeric,
+                doc: "Reverse blocking off-resistance Roff (must be > Ron).",
+            },
+        ],
+        min_inputs: 0,
+        max_inputs: 0,
+        outputs: 0,
+        default_feedthrough: false,
+        doc: "Piecewise linear electrical diode with forward voltage Vf, Ron, and Roff.",
+    },
+    BlockSpec {
+        block_type: BlockType::IdealSwitch,
+        display_name: "Ideal Switch",
+        category: "Electrical",
+        params: &[
+            ParamSpec {
+                key: "OnResistance",
+                label: "On Resistance",
+                unit: "Ohm",
+                default_val: "0.01",
+                kind: ParamKind::Numeric,
+                doc: "Closed switch on-resistance Ron (must be > 0).",
+            },
+            ParamSpec {
+                key: "OffResistance",
+                label: "Off Resistance",
+                unit: "Ohm",
+                default_val: "1e6",
+                kind: ParamKind::Numeric,
+                doc: "Open switch off-resistance Roff (must be > Ron).",
+            },
+            ParamSpec {
+                key: "Threshold",
+                label: "Threshold",
+                unit: "",
+                default_val: "0.5",
+                kind: ParamKind::Numeric,
+                doc: "Gate switching control threshold (closed when control input v >= Threshold).",
+            },
+        ],
+        min_inputs: 1,
+        max_inputs: 1,
+        outputs: 0,
+        default_feedthrough: false,
+        doc: "Controlled bilateral switch operated by signal control input v.",
+    },
 ];
 
 /// Returns the full list of supported block specifications.
@@ -912,4 +1151,280 @@ pub fn spec_feedthrough(
             .map(|s| s.default_feedthrough)
             .unwrap_or(true),
     }
+}
+
+/// Returns the normalized relative pin position [0.0..1.0, 0.0..1.0] for a given port/terminal and rotation.
+pub fn pin_geometry(
+    block_type: &BlockType,
+    port_kind: PortKind,
+    port_index: usize,
+    rotation: BlockRotation,
+) -> (f32, f32) {
+    let (u, v) = match block_type {
+        BlockType::Ground => (0.5, 0.0),
+        BlockType::IdealSwitch => {
+            if port_kind == PortKind::Signal {
+                (0.5, 0.0) // Control input v on top
+            } else if port_index == 0 {
+                (0.0, 0.5) // Terminal p on left
+            } else {
+                (1.0, 0.5) // Terminal n on right
+            }
+        }
+        BlockType::Resistor
+        | BlockType::Capacitor
+        | BlockType::Inductor
+        | BlockType::DcVoltageSource
+        | BlockType::AcVoltageSource
+        | BlockType::DcCurrentSource
+        | BlockType::Diode => {
+            if port_index == 0 {
+                (0.0, 0.5) // Terminal p on left
+            } else {
+                (1.0, 0.5) // Terminal n on right
+            }
+        }
+        _ => (0.0, 0.5),
+    };
+
+    // Rotate point (u, v) clockwise around (0.5, 0.5)
+    match rotation {
+        BlockRotation::R0 => (u, v),
+        BlockRotation::R90 => (1.0 - v, u),
+        BlockRotation::R180 => (1.0 - u, 1.0 - v),
+        BlockRotation::R270 => (v, 1.0 - u),
+    }
+}
+
+/// Validates parameters for an electrical or signal block and returns any diagnostics.
+pub fn validate_block_params(
+    block_type: &BlockType,
+    block_sid: &str,
+    params: &HashMap<String, String>,
+) -> Vec<Diagnostic> {
+    let mut diags = Vec::new();
+
+    let parse_num = |key: &str, default_val: f64| -> Option<f64> {
+        params
+            .get(key)
+            .map(|s| s.trim())
+            .filter(|s| !s.is_empty())
+            .map(|s| s.parse::<f64>().ok())
+            .unwrap_or(Some(default_val))
+    };
+
+    match block_type {
+        BlockType::Resistor => {
+            let r = parse_num("Resistance", 1000.0);
+            match r {
+                Some(val) if val.is_finite() && val > 0.0 => {}
+                _ => diags.push(Diagnostic::error(
+                    "E-PARAM",
+                    format!(
+                        "Invalid parameter Resistance on block '{block_sid}': value must be a positive finite number (> 0) -> parsed value <= 0 or invalid -> specify a positive resistance in Ohms (e.g. 1000)"
+                    ),
+                    vec![block_sid.to_string()],
+                )),
+            }
+        }
+        BlockType::Capacitor => {
+            let c = parse_num("Capacitance", 1e-6);
+            match c {
+                Some(val) if val.is_finite() && val > 0.0 => {}
+                _ => diags.push(Diagnostic::error(
+                    "E-PARAM",
+                    format!(
+                        "Invalid parameter Capacitance on block '{block_sid}': value must be a positive finite number (> 0) -> parsed value <= 0 or invalid -> specify a positive capacitance in Farads (e.g. 1e-6)"
+                    ),
+                    vec![block_sid.to_string()],
+                )),
+            }
+            let v0 = parse_num("InitialVoltage", 0.0);
+            match v0 {
+                Some(val) if val.is_finite() => {}
+                _ => diags.push(Diagnostic::error(
+                    "E-PARAM",
+                    format!(
+                        "Invalid parameter InitialVoltage on block '{block_sid}': value must be finite -> parsed value is non-finite -> specify a finite initial voltage in Volts"
+                    ),
+                    vec![block_sid.to_string()],
+                )),
+            }
+        }
+        BlockType::Inductor => {
+            let l = parse_num("Inductance", 1e-3);
+            match l {
+                Some(val) if val.is_finite() && val > 0.0 => {}
+                _ => diags.push(Diagnostic::error(
+                    "E-PARAM",
+                    format!(
+                        "Invalid parameter Inductance on block '{block_sid}': value must be a positive finite number (> 0) -> parsed value <= 0 or invalid -> specify a positive inductance in Henries (e.g. 1e-3)"
+                    ),
+                    vec![block_sid.to_string()],
+                )),
+            }
+            let i0 = parse_num("InitialCurrent", 0.0);
+            match i0 {
+                Some(val) if val.is_finite() => {}
+                _ => diags.push(Diagnostic::error(
+                    "E-PARAM",
+                    format!(
+                        "Invalid parameter InitialCurrent on block '{block_sid}': value must be finite -> parsed value is non-finite -> specify a finite initial current in Amperes"
+                    ),
+                    vec![block_sid.to_string()],
+                )),
+            }
+        }
+        BlockType::DcVoltageSource => {
+            let v = parse_num("Voltage", 5.0);
+            match v {
+                Some(val) if val.is_finite() => {}
+                _ => diags.push(Diagnostic::error(
+                    "E-PARAM",
+                    format!(
+                        "Invalid parameter Voltage on block '{block_sid}': value must be finite -> parsed value is non-finite -> specify a finite voltage in Volts"
+                    ),
+                    vec![block_sid.to_string()],
+                )),
+            }
+        }
+        BlockType::AcVoltageSource => {
+            let amp = parse_num("Amplitude", 10.0);
+            match amp {
+                Some(val) if val.is_finite() && val >= 0.0 => {}
+                _ => diags.push(Diagnostic::error(
+                    "E-PARAM",
+                    format!(
+                        "Invalid parameter Amplitude on block '{block_sid}': value must be a non-negative finite number (>= 0) -> parsed value < 0 or invalid -> specify a non-negative amplitude in Volts"
+                    ),
+                    vec![block_sid.to_string()],
+                )),
+            }
+            let freq = parse_num("Frequency", 50.0);
+            match freq {
+                Some(val) if val.is_finite() && val > 0.0 => {}
+                _ => diags.push(Diagnostic::error(
+                    "E-PARAM",
+                    format!(
+                        "Invalid parameter Frequency on block '{block_sid}': frequency must be strictly positive (> 0) -> parsed frequency <= 0 -> specify a positive frequency in Hz, or use a DC Voltage Source for 0 Hz"
+                    ),
+                    vec![block_sid.to_string()],
+                )),
+            }
+            let phase = parse_num("Phase", 0.0);
+            match phase {
+                Some(val) if val.is_finite() => {}
+                _ => diags.push(Diagnostic::error(
+                    "E-PARAM",
+                    format!(
+                        "Invalid parameter Phase on block '{block_sid}': value must be finite -> parsed value is non-finite -> specify a finite phase angle in degrees"
+                    ),
+                    vec![block_sid.to_string()],
+                )),
+            }
+            let offset = parse_num("Offset", 0.0);
+            match offset {
+                Some(val) if val.is_finite() => {}
+                _ => diags.push(Diagnostic::error(
+                    "E-PARAM",
+                    format!(
+                        "Invalid parameter Offset on block '{block_sid}': value must be finite -> parsed value is non-finite -> specify a finite bias offset in Volts"
+                    ),
+                    vec![block_sid.to_string()],
+                )),
+            }
+        }
+        BlockType::DcCurrentSource => {
+            let i = parse_num("Current", 1.0);
+            match i {
+                Some(val) if val.is_finite() => {}
+                _ => diags.push(Diagnostic::error(
+                    "E-PARAM",
+                    format!(
+                        "Invalid parameter Current on block '{block_sid}': value must be finite -> parsed value is non-finite -> specify a finite current in Amperes"
+                    ),
+                    vec![block_sid.to_string()],
+                )),
+            }
+        }
+        BlockType::Diode => {
+            let vf = parse_num("ForwardVoltage", 0.7);
+            match vf {
+                Some(val) if val.is_finite() && val >= 0.0 => {}
+                _ => diags.push(Diagnostic::error(
+                    "E-PARAM",
+                    format!(
+                        "Invalid parameter ForwardVoltage on block '{block_sid}': value must be non-negative (>= 0) -> parsed value < 0 -> specify a non-negative forward voltage in Volts (e.g. 0.7)"
+                    ),
+                    vec![block_sid.to_string()],
+                )),
+            }
+            let ron = parse_num("OnResistance", 0.01);
+            let ron_val = match ron {
+                Some(val) if val.is_finite() && val > 0.0 => Some(val),
+                _ => {
+                    diags.push(Diagnostic::error(
+                        "E-PARAM",
+                        format!(
+                            "Invalid parameter OnResistance on block '{block_sid}': value must be strictly positive (> 0) -> parsed value <= 0 -> specify a positive on-resistance in Ohms (e.g. 0.01)"
+                        ),
+                        vec![block_sid.to_string()],
+                    ));
+                    None
+                }
+            };
+            let roff = parse_num("OffResistance", 1e6);
+            match (ron_val, roff) {
+                (Some(ron_v), Some(roff_v)) if roff_v.is_finite() && roff_v > ron_v => {}
+                _ => diags.push(Diagnostic::error(
+                    "E-PARAM",
+                    format!(
+                        "Invalid parameter OffResistance on block '{block_sid}': off-resistance must be strictly greater than OnResistance -> parsed value <= OnResistance -> specify an off-resistance larger than OnResistance in Ohms (e.g. 1e6)"
+                    ),
+                    vec![block_sid.to_string()],
+                )),
+            }
+        }
+        BlockType::IdealSwitch => {
+            let ron = parse_num("OnResistance", 0.01);
+            let ron_val = match ron {
+                Some(val) if val.is_finite() && val > 0.0 => Some(val),
+                _ => {
+                    diags.push(Diagnostic::error(
+                        "E-PARAM",
+                        format!(
+                            "Invalid parameter OnResistance on block '{block_sid}': value must be strictly positive (> 0) -> parsed value <= 0 -> specify a positive on-resistance in Ohms (e.g. 0.01)"
+                        ),
+                        vec![block_sid.to_string()],
+                    ));
+                    None
+                }
+            };
+            let roff = parse_num("OffResistance", 1e6);
+            match (ron_val, roff) {
+                (Some(ron_v), Some(roff_v)) if roff_v.is_finite() && roff_v > ron_v => {}
+                _ => diags.push(Diagnostic::error(
+                    "E-PARAM",
+                    format!(
+                        "Invalid parameter OffResistance on block '{block_sid}': off-resistance must be strictly greater than OnResistance -> parsed value <= OnResistance -> specify an off-resistance larger than OnResistance in Ohms (e.g. 1e6)"
+                    ),
+                    vec![block_sid.to_string()],
+                )),
+            }
+            let th = parse_num("Threshold", 0.5);
+            match th {
+                Some(val) if val.is_finite() => {}
+                _ => diags.push(Diagnostic::error(
+                    "E-PARAM",
+                    format!(
+                        "Invalid parameter Threshold on block '{block_sid}': value must be finite -> parsed value is non-finite -> specify a finite switching threshold"
+                    ),
+                    vec![block_sid.to_string()],
+                )),
+            }
+        }
+        _ => {}
+    }
+
+    diags
 }

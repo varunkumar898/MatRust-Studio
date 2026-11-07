@@ -7,6 +7,60 @@ pub use crate::spec::{
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+/// Domain kind of a block port or line connection.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum PortKind {
+    Signal,
+    Electrical,
+}
+
+/// Role of a port on a block.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum PortRole {
+    Input,
+    Output,
+    Terminal,
+}
+
+/// Description of a block port: domain kind, direction/role, label, and index.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PortDesc {
+    pub kind: PortKind,
+    pub role: PortRole,
+    pub label: String,
+    pub index: usize,
+}
+
+/// Clockwise block rotation in 90-degree increments.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
+pub enum BlockRotation {
+    #[default]
+    R0,
+    R90,
+    R180,
+    R270,
+}
+
+impl BlockRotation {
+    pub fn rotated_cw(&self) -> Self {
+        match self {
+            BlockRotation::R0 => BlockRotation::R90,
+            BlockRotation::R90 => BlockRotation::R180,
+            BlockRotation::R180 => BlockRotation::R270,
+            BlockRotation::R270 => BlockRotation::R0,
+        }
+    }
+
+    pub fn angle_degrees(&self) -> f32 {
+        match self {
+            BlockRotation::R0 => 0.0,
+            BlockRotation::R90 => 90.0,
+            BlockRotation::R180 => 180.0,
+            BlockRotation::R270 => 270.0,
+        }
+    }
+}
+
 /// Standard block types supported or recognized in Simulink block diagrams.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "PascalCase")]
@@ -40,6 +94,16 @@ pub enum BlockType {
     Inport,
     Outport,
     Subsystem,
+    // Electrical blocks (Milestone M4)
+    Resistor,
+    Capacitor,
+    Inductor,
+    DcVoltageSource,
+    AcVoltageSource,
+    DcCurrentSource,
+    Ground,
+    Diode,
+    IdealSwitch,
     Unknown(String),
 }
 
@@ -121,7 +185,38 @@ impl BlockType {
         )
     }
 
-    /// Returns the number of input ports for this block type given its configuration parameters.
+    pub fn is_electrical(&self) -> bool {
+        matches!(
+            self,
+            BlockType::Resistor
+                | BlockType::Capacitor
+                | BlockType::Inductor
+                | BlockType::DcVoltageSource
+                | BlockType::AcVoltageSource
+                | BlockType::DcCurrentSource
+                | BlockType::Ground
+                | BlockType::Diode
+                | BlockType::IdealSwitch
+        )
+    }
+
+    /// Number of physical electrical terminals on this block.
+    pub fn terminal_count(&self) -> usize {
+        match self {
+            BlockType::Ground => 1,
+            BlockType::Resistor
+            | BlockType::Capacitor
+            | BlockType::Inductor
+            | BlockType::DcVoltageSource
+            | BlockType::AcVoltageSource
+            | BlockType::DcCurrentSource
+            | BlockType::Diode
+            | BlockType::IdealSwitch => 2,
+            _ => 0,
+        }
+    }
+
+    /// Returns the number of signal input ports for this block type given its configuration parameters.
     pub fn input_ports(&self, parameters: &HashMap<String, String>) -> usize {
         match self {
             BlockType::Constant
@@ -133,7 +228,16 @@ impl BlockType {
             | BlockType::RepeatingSequence
             | BlockType::RepeatingSequenceStair
             | BlockType::Clock
-            | BlockType::Inport => 0,
+            | BlockType::Inport
+            | BlockType::Resistor
+            | BlockType::Capacitor
+            | BlockType::Inductor
+            | BlockType::DcVoltageSource
+            | BlockType::AcVoltageSource
+            | BlockType::DcCurrentSource
+            | BlockType::Ground
+            | BlockType::Diode => 0,
+            BlockType::IdealSwitch => 1,
             BlockType::Sum => {
                 let signs = parameters.get("Inputs").map(|s| s.as_str()).unwrap_or("++");
                 let count = signs.chars().filter(|&c| c == '+' || c == '-').count();
@@ -187,12 +291,103 @@ impl BlockType {
         }
     }
 
-    /// Returns the number of output ports for this block type.
+    /// Returns the number of signal output ports for this block type.
     pub fn output_ports(&self) -> usize {
         match self {
-            BlockType::Scope | BlockType::ToWorkspace | BlockType::Outport => 0,
+            BlockType::Scope
+            | BlockType::ToWorkspace
+            | BlockType::Outport
+            | BlockType::Resistor
+            | BlockType::Capacitor
+            | BlockType::Inductor
+            | BlockType::DcVoltageSource
+            | BlockType::AcVoltageSource
+            | BlockType::DcCurrentSource
+            | BlockType::Ground
+            | BlockType::Diode
+            | BlockType::IdealSwitch => 0,
             _ => 1,
         }
+    }
+
+    /// Returns a list of all port descriptions (kind, role, label, and index) for this block type.
+    pub fn ports(&self, parameters: &HashMap<String, String>) -> Vec<PortDesc> {
+        let mut list = Vec::new();
+        match self {
+            BlockType::Ground => {
+                list.push(PortDesc {
+                    kind: PortKind::Electrical,
+                    role: PortRole::Terminal,
+                    label: "gnd".to_string(),
+                    index: 0,
+                });
+            }
+            BlockType::Resistor
+            | BlockType::Capacitor
+            | BlockType::Inductor
+            | BlockType::DcVoltageSource
+            | BlockType::AcVoltageSource
+            | BlockType::DcCurrentSource
+            | BlockType::Diode => {
+                list.push(PortDesc {
+                    kind: PortKind::Electrical,
+                    role: PortRole::Terminal,
+                    label: "p".to_string(),
+                    index: 0,
+                });
+                list.push(PortDesc {
+                    kind: PortKind::Electrical,
+                    role: PortRole::Terminal,
+                    label: "n".to_string(),
+                    index: 1,
+                });
+            }
+            BlockType::IdealSwitch => {
+                list.push(PortDesc {
+                    kind: PortKind::Signal,
+                    role: PortRole::Input,
+                    label: "v".to_string(),
+                    index: 0,
+                });
+                list.push(PortDesc {
+                    kind: PortKind::Electrical,
+                    role: PortRole::Terminal,
+                    label: "p".to_string(),
+                    index: 0,
+                });
+                list.push(PortDesc {
+                    kind: PortKind::Electrical,
+                    role: PortRole::Terminal,
+                    label: "n".to_string(),
+                    index: 1,
+                });
+            }
+            _ => {
+                let in_count = self.input_ports(parameters);
+                for i in 0..in_count {
+                    list.push(PortDesc {
+                        kind: PortKind::Signal,
+                        role: PortRole::Input,
+                        label: format!("in{}", i + 1),
+                        index: i,
+                    });
+                }
+                let out_count = self.output_ports();
+                for j in 0..out_count {
+                    list.push(PortDesc {
+                        kind: PortKind::Signal,
+                        role: PortRole::Output,
+                        label: if out_count == 1 {
+                            "out".to_string()
+                        } else {
+                            format!("out{}", j + 1)
+                        },
+                        index: j,
+                    });
+                }
+            }
+        }
+        list
     }
 }
 
@@ -204,6 +399,8 @@ pub struct Block {
     pub block_type: BlockType,
     pub parameters: HashMap<String, String>,
     pub position: Option<[f64; 4]>,
+    #[serde(default)]
+    pub rotation: BlockRotation,
 }
 
 impl Block {
@@ -214,6 +411,7 @@ impl Block {
             block_type,
             parameters: HashMap::new(),
             position: None,
+            rotation: BlockRotation::R0,
         }
     }
 
@@ -225,8 +423,21 @@ impl Block {
         self.block_type.output_ports()
     }
 
+    pub fn terminal_count(&self) -> usize {
+        self.block_type.terminal_count()
+    }
+
+    pub fn ports(&self) -> Vec<PortDesc> {
+        self.block_type.ports(&self.parameters)
+    }
+
     pub fn with_param(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
         self.parameters.insert(key.into(), value.into());
+        self
+    }
+
+    pub fn with_rotation(mut self, rotation: BlockRotation) -> Self {
+        self.rotation = rotation;
         self
     }
 
@@ -244,9 +455,37 @@ impl Block {
 pub struct PortRef {
     pub block_sid: String,
     pub port_index: usize,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub port_kind: Option<PortKind>,
 }
 
-/// A directed connection line between two block ports.
+impl PortRef {
+    pub fn new(block_sid: impl Into<String>, port_index: usize) -> Self {
+        Self {
+            block_sid: block_sid.into(),
+            port_index,
+            port_kind: None,
+        }
+    }
+
+    pub fn signal(block_sid: impl Into<String>, port_index: usize) -> Self {
+        Self {
+            block_sid: block_sid.into(),
+            port_index,
+            port_kind: Some(PortKind::Signal),
+        }
+    }
+
+    pub fn electrical(block_sid: impl Into<String>, terminal_index: usize) -> Self {
+        Self {
+            block_sid: block_sid.into(),
+            port_index: terminal_index,
+            port_kind: Some(PortKind::Electrical),
+        }
+    }
+}
+
+/// A connection line between two block ports or terminals.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Line {
     pub src: PortRef,
@@ -270,7 +509,9 @@ pub struct BlockDiagram {
     pub simulation_config: Option<crate::solver::SimulationConfig>,
     pub blocks: Vec<Block>,
     pub lines: Vec<Line>,
+    #[serde(default)]
     pub toolboxes: Vec<String>,
+    #[serde(default)]
     pub properties: HashMap<String, String>,
 }
 
@@ -280,7 +521,7 @@ impl BlockDiagram {
             name: name.into(),
             version: None,
             release: None,
-            schema_version: 2,
+            schema_version: 3,
             simulation_config: None,
             blocks: Vec::new(),
             lines: Vec::new(),
@@ -298,13 +539,35 @@ impl BlockDiagram {
             src: PortRef {
                 block_sid: src_sid.to_string(),
                 port_index: src_port,
+                port_kind: None,
             },
             dst: PortRef {
                 block_sid: dst_sid.to_string(),
                 port_index: dst_port,
+                port_kind: None,
             },
             name: None,
         });
+    }
+
+    pub fn add_electrical_line(
+        &mut self,
+        src_sid: &str,
+        src_term: usize,
+        dst_sid: &str,
+        dst_term: usize,
+    ) {
+        self.lines.push(Line {
+            src: PortRef::electrical(src_sid, src_term),
+            dst: PortRef::electrical(dst_sid, dst_term),
+            name: None,
+        });
+    }
+
+    pub fn migrate_schema(&mut self) {
+        if self.schema_version < 3 {
+            self.schema_version = 3;
+        }
     }
 
     pub fn find_block(&self, name_or_sid: &str) -> Option<&Block> {

@@ -50,6 +50,9 @@ pub enum SimError {
     #[error("{message}")]
     Parameter { code: String, message: String },
 
+    #[error("{message}")]
+    Unsupported { code: String, message: String },
+
     #[error("Block not found: {0}")]
     BlockNotFound(String),
 }
@@ -151,6 +154,41 @@ impl SimError {
         SimError::Parameter {
             code: "E-PARAM".to_string(),
             message,
+        }
+    }
+
+    pub fn unsupported(msg: impl Into<String>) -> Self {
+        let detail = msg.into();
+        let message = format!("Unsupported simulation capability (E-UNSUPPORTED): {detail}");
+        SimError::Unsupported {
+            code: "E-UNSUPPORTED".to_string(),
+            message,
+        }
+    }
+
+    pub fn code(&self) -> &str {
+        match self {
+            SimError::Execution(_) => "E-EXEC",
+            SimError::AlgebraicLoop { code, .. } => code.as_str(),
+            SimError::StepSize { code, .. } => code.as_str(),
+            SimError::NonFinite { code, .. } => code.as_str(),
+            SimError::SampleTime { code, .. } => code.as_str(),
+            SimError::Parameter { code, .. } => code.as_str(),
+            SimError::Unsupported { code, .. } => code.as_str(),
+            SimError::BlockNotFound(_) => "E-PARAM",
+        }
+    }
+
+    pub fn message(&self) -> &str {
+        match self {
+            SimError::Execution(msg) => msg.as_str(),
+            SimError::AlgebraicLoop { message, .. } => message.as_str(),
+            SimError::StepSize { message, .. } => message.as_str(),
+            SimError::NonFinite { message, .. } => message.as_str(),
+            SimError::SampleTime { message, .. } => message.as_str(),
+            SimError::Parameter { message, .. } => message.as_str(),
+            SimError::Unsupported { message, .. } => message.as_str(),
+            SimError::BlockNotFound(msg) => msg.as_str(),
         }
     }
 }

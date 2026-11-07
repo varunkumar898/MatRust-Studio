@@ -27,7 +27,7 @@ mlapp-sim = { path = "../../crates/mlapp-sim" }
 png = "0.18"
 # Native folder picker for Current Folder. MIT; no helper processes are launched;
 # the Windows backend uses the system IFileDialog and is only opened on click.
-rfd = { version = "0.17.2", default-features = false, features = ["common-controls-v6"] }
+rfd = { version = "0.17.2", default-features = false, features = ["common-controls-v6", "xdg-portal"] }
 
 [features]
 default = ["faer", "data"]

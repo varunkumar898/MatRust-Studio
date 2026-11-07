@@ -251,6 +251,18 @@ impl<'de> Deserialize<'de> for SolverType {
     }
 }
 
+fn default_start_time() -> f64 {
+    0.0
+}
+fn default_stop_time() -> f64 {
+    10.0
+}
+fn default_step_size() -> f64 {
+    0.01
+}
+fn default_solver() -> SolverType {
+    SolverType::FixedStepEuler
+}
 fn default_abs_tol() -> f64 {
     1e-6
 }
@@ -264,9 +276,13 @@ fn default_max_steps() -> usize {
 /// Simulation configuration parameters.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct SimulationConfig {
+    #[serde(default = "default_start_time")]
     pub start_time: f64,
+    #[serde(default = "default_stop_time")]
     pub stop_time: f64,
+    #[serde(default = "default_step_size")]
     pub step_size: f64,
+    #[serde(default = "default_solver")]
     pub solver: SolverType,
     #[serde(default = "default_abs_tol")]
     pub abs_tol: f64,

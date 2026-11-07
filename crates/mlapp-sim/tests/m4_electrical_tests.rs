@@ -435,18 +435,31 @@ fn test_deterministic_net_ids_invariant_to_wire_order() {
 
 #[test]
 fn test_spec_parameter_validation_rules() {
-    // 1. Resistor R <= 0
+    // 1. Resistor R <= 0 and non-finite
     let mut p_r = HashMap::new();
     p_r.insert("Resistance".to_string(), "-10.0".to_string());
     let diags_r = validate_block_params(&BlockType::Resistor, "r1", &p_r);
     assert_eq!(diags_r.len(), 1);
     assert_eq!(diags_r[0].code, "E-PARAM");
 
-    // 2. Capacitor C <= 0, non-finite V0
+    let mut p_r_nan = HashMap::new();
+    p_r_nan.insert("Resistance".to_string(), "NaN".to_string());
+    assert_eq!(
+        validate_block_params(&BlockType::Resistor, "r1_nan", &p_r_nan)[0].code,
+        "E-PARAM"
+    );
+
+    // 2. Capacitor C <= 0, non-finite C, non-finite V0
     let mut p_c1 = HashMap::new();
     p_c1.insert("Capacitance".to_string(), "0.0".to_string());
     assert_eq!(
         validate_block_params(&BlockType::Capacitor, "c1", &p_c1)[0].code,
+        "E-PARAM"
+    );
+    let mut p_c_inf = HashMap::new();
+    p_c_inf.insert("Capacitance".to_string(), "Inf".to_string());
+    assert_eq!(
+        validate_block_params(&BlockType::Capacitor, "c_inf", &p_c_inf)[0].code,
         "E-PARAM"
     );
     let mut p_c2 = HashMap::new();
@@ -456,11 +469,17 @@ fn test_spec_parameter_validation_rules() {
         "E-PARAM"
     );
 
-    // 3. Inductor L <= 0, non-finite I0
+    // 3. Inductor L <= 0, non-finite L, non-finite I0
     let mut p_l1 = HashMap::new();
     p_l1.insert("Inductance".to_string(), "-0.001".to_string());
     assert_eq!(
         validate_block_params(&BlockType::Inductor, "l1", &p_l1)[0].code,
+        "E-PARAM"
+    );
+    let mut p_l_nan = HashMap::new();
+    p_l_nan.insert("Inductance".to_string(), "NaN".to_string());
+    assert_eq!(
+        validate_block_params(&BlockType::Inductor, "l_nan", &p_l_nan)[0].code,
         "E-PARAM"
     );
     let mut p_l2 = HashMap::new();
@@ -486,11 +505,17 @@ fn test_spec_parameter_validation_rules() {
         "E-PARAM"
     );
 
-    // 6. AC Voltage Source Amplitude < 0, Frequency <= 0, non-finite Phase, Offset
+    // 6. AC Voltage Source Amplitude < 0, Amplitude non-finite, Frequency <= 0, Frequency non-finite, Phase non-finite, Offset non-finite
     let mut p_ac1 = HashMap::new();
     p_ac1.insert("Amplitude".to_string(), "-5.0".to_string());
     assert_eq!(
         validate_block_params(&BlockType::AcVoltageSource, "ac1", &p_ac1)[0].code,
+        "E-PARAM"
+    );
+    let mut p_ac_amp_nan = HashMap::new();
+    p_ac_amp_nan.insert("Amplitude".to_string(), "NaN".to_string());
+    assert_eq!(
+        validate_block_params(&BlockType::AcVoltageSource, "ac_amp_nan", &p_ac_amp_nan)[0].code,
         "E-PARAM"
     );
 
@@ -502,11 +527,43 @@ fn test_spec_parameter_validation_rules() {
         .message
         .contains("use a DC Voltage Source for 0 Hz"));
 
-    // 7. Diode Vf < 0, Ron <= 0, Roff <= Ron
+    let mut p_ac_freq_inf = HashMap::new();
+    p_ac_freq_inf.insert("Frequency".to_string(), "Inf".to_string());
+    assert_eq!(
+        validate_block_params(&BlockType::AcVoltageSource, "ac_freq_inf", &p_ac_freq_inf)[0].code,
+        "E-PARAM"
+    );
+
+    let mut p_ac_phase_nan = HashMap::new();
+    p_ac_phase_nan.insert("Phase".to_string(), "NaN".to_string());
+    assert_eq!(
+        validate_block_params(&BlockType::AcVoltageSource, "ac_phase_nan", &p_ac_phase_nan)[0].code,
+        "E-PARAM"
+    );
+
+    let mut p_ac_offset_inf = HashMap::new();
+    p_ac_offset_inf.insert("Offset".to_string(), "Inf".to_string());
+    assert_eq!(
+        validate_block_params(
+            &BlockType::AcVoltageSource,
+            "ac_offset_inf",
+            &p_ac_offset_inf
+        )[0]
+        .code,
+        "E-PARAM"
+    );
+
+    // 7. Diode Vf < 0, non-finite Vf, Ron <= 0, non-finite Ron, Roff <= Ron, non-finite Roff
     let mut p_d1 = HashMap::new();
     p_d1.insert("ForwardVoltage".to_string(), "-0.7".to_string());
     assert_eq!(
         validate_block_params(&BlockType::Diode, "d1", &p_d1)[0].code,
+        "E-PARAM"
+    );
+    let mut p_d_vf_nan = HashMap::new();
+    p_d_vf_nan.insert("ForwardVoltage".to_string(), "NaN".to_string());
+    assert_eq!(
+        validate_block_params(&BlockType::Diode, "d_vf_nan", &p_d_vf_nan)[0].code,
         "E-PARAM"
     );
 
@@ -514,6 +571,12 @@ fn test_spec_parameter_validation_rules() {
     p_d2.insert("OnResistance".to_string(), "0.0".to_string());
     assert_eq!(
         validate_block_params(&BlockType::Diode, "d2", &p_d2)[0].code,
+        "E-PARAM"
+    );
+    let mut p_d_ron_inf = HashMap::new();
+    p_d_ron_inf.insert("OnResistance".to_string(), "Inf".to_string());
+    assert_eq!(
+        validate_block_params(&BlockType::Diode, "d_ron_inf", &p_d_ron_inf)[0].code,
         "E-PARAM"
     );
 
@@ -526,11 +589,25 @@ fn test_spec_parameter_validation_rules() {
         .message
         .contains("off-resistance must be strictly greater than OnResistance"));
 
-    // 8. Ideal Switch Ron <= 0, Roff <= Ron, non-finite Threshold
+    let mut p_d_roff_nan = HashMap::new();
+    p_d_roff_nan.insert("OnResistance".to_string(), "1.0".to_string());
+    p_d_roff_nan.insert("OffResistance".to_string(), "NaN".to_string());
+    assert_eq!(
+        validate_block_params(&BlockType::Diode, "d_roff_nan", &p_d_roff_nan)[0].code,
+        "E-PARAM"
+    );
+
+    // 8. Ideal Switch Ron <= 0, non-finite Ron, Roff <= Ron, non-finite Roff, non-finite Threshold
     let mut p_sw1 = HashMap::new();
     p_sw1.insert("OnResistance".to_string(), "-0.01".to_string());
     assert_eq!(
         validate_block_params(&BlockType::IdealSwitch, "sw1", &p_sw1)[0].code,
+        "E-PARAM"
+    );
+    let mut p_sw_ron_nan = HashMap::new();
+    p_sw_ron_nan.insert("OnResistance".to_string(), "NaN".to_string());
+    assert_eq!(
+        validate_block_params(&BlockType::IdealSwitch, "sw_ron_nan", &p_sw_ron_nan)[0].code,
         "E-PARAM"
     );
 
@@ -539,6 +616,13 @@ fn test_spec_parameter_validation_rules() {
     p_sw2.insert("OffResistance".to_string(), "100.0".to_string()); // Roff == Ron
     assert_eq!(
         validate_block_params(&BlockType::IdealSwitch, "sw2", &p_sw2)[0].code,
+        "E-PARAM"
+    );
+    let mut p_sw_roff_inf = HashMap::new();
+    p_sw_roff_inf.insert("OnResistance".to_string(), "10.0".to_string());
+    p_sw_roff_inf.insert("OffResistance".to_string(), "Inf".to_string());
+    assert_eq!(
+        validate_block_params(&BlockType::IdealSwitch, "sw_roff_inf", &p_sw_roff_inf)[0].code,
         "E-PARAM"
     );
 
@@ -649,4 +733,178 @@ fn test_slx_safety_foreign_resistor_stays_unknown() {
 
     let foreign3 = BlockType::from_str_name("SimscapeBlock");
     assert_eq!(foreign3, BlockType::Unknown("SimscapeBlock".to_string()));
+}
+
+#[test]
+fn test_migration_v1_v2_handwritten_json_identical_simulation() {
+    // Minimal hand-written v1 diagram (only required fields: name, blocks with sid/name/block_type/parameters, lines with src/dst)
+    // Non-core fields omitted: version, release, schema_version, simulation_config, toolboxes, properties, position, rotation, line name, port_kind.
+    let json_v1 = r#"{
+        "name": "MinimalV1",
+        "blocks": [
+            {
+                "sid": "1",
+                "name": "Const",
+                "block_type": "Constant",
+                "parameters": {"Value": "5.0"}
+            },
+            {
+                "sid": "2",
+                "name": "Gain",
+                "block_type": "Gain",
+                "parameters": {"Gain": "3.0"}
+            },
+            {
+                "sid": "3",
+                "name": "Out",
+                "block_type": "Outport"
+            }
+        ],
+        "lines": [
+            {
+                "src": {"block_sid": "1", "port_index": 0},
+                "dst": {"block_sid": "2", "port_index": 0}
+            },
+            {
+                "src": {"block_sid": "2", "port_index": 0},
+                "dst": {"block_sid": "3", "port_index": 0}
+            }
+        ]
+    }"#;
+
+    // Minimal hand-written v2 diagram (with partial simulation_config)
+    let json_v2 = r#"{
+        "name": "MinimalV2",
+        "schema_version": 2,
+        "simulation_config": {
+            "start_time": 0.0,
+            "stop_time": 1.0,
+            "step_size": 0.1,
+            "solver": "FixedStepEuler"
+        },
+        "blocks": [
+            {
+                "sid": "1",
+                "name": "Const",
+                "block_type": "Constant",
+                "parameters": {"Value": "5.0"}
+            },
+            {
+                "sid": "2",
+                "name": "Gain",
+                "block_type": "Gain",
+                "parameters": {"Gain": "3.0"}
+            },
+            {
+                "sid": "3",
+                "name": "Out",
+                "block_type": "Outport"
+            }
+        ],
+        "lines": [
+            {
+                "src": {"block_sid": "1", "port_index": 0},
+                "dst": {"block_sid": "2", "port_index": 0}
+            },
+            {
+                "src": {"block_sid": "2", "port_index": 0},
+                "dst": {"block_sid": "3", "port_index": 0}
+            }
+        ]
+    }"#;
+
+    let d_v1: BlockDiagram = serde_json::from_str(json_v1).expect("Minimal v1 must deserialize");
+    let d_v2: BlockDiagram = serde_json::from_str(json_v2).expect("Minimal v2 must deserialize");
+
+    assert_eq!(d_v1.schema_version, 1);
+    assert_eq!(d_v2.schema_version, 2);
+
+    let config = SimulationConfig {
+        start_time: 0.0,
+        stop_time: 1.0,
+        step_size: 0.1,
+        solver: mlapp_sim::solver::SolverType::FixedStepEuler,
+        ..Default::default()
+    };
+
+    let res_v1 = simulate_diagram(&d_v1, &config).expect("v1 simulation succeeds");
+    let res_v2 = simulate_diagram(&d_v2, &config).expect("v2 simulation succeeds");
+
+    // Both simulations must produce bit-for-bit identical results
+    assert_eq!(res_v1.tout.len(), res_v2.tout.len());
+    for (t1, t2) in res_v1.tout.iter().zip(res_v2.tout.iter()) {
+        assert_eq!(t1.to_bits(), t2.to_bits());
+    }
+    assert_eq!(res_v1.yout.len(), res_v2.yout.len());
+    for (y1, y2) in res_v1.yout.iter().zip(res_v2.yout.iter()) {
+        assert_eq!(y1.to_bits(), y2.to_bits());
+        assert_eq!(*y1, 15.0); // 5.0 * 3.0
+    }
+    let out_sig_v1 = res_v1.signals.get("Out").expect("Out signal exists");
+    let out_sig_v2 = res_v2.signals.get("Out").expect("Out signal exists");
+    assert_eq!(out_sig_v1.len(), out_sig_v2.len());
+    for (s1, s2) in out_sig_v1.iter().zip(out_sig_v2.iter()) {
+        assert_eq!(s1.to_bits(), s2.to_bits());
+        assert_eq!(*s1, 15.0); // 5.0 * 3.0
+    }
+}
+
+#[test]
+fn test_island_semantics_shared_ground_and_partitioning() {
+    // Island A: V1 (dc voltage source) in parallel with R1, grounded at GND_A.
+    // Island B: V2 (dc voltage source) in parallel with R2, grounded at GND_B.
+    // There are NO direct connections between Island A and Island B except their Ground references.
+    let mut d = BlockDiagram::new("DualIslandSubcircuits");
+    // Island A blocks
+    d.add_block(Block::new("gnd_a", "GND_A", BlockType::Ground));
+    d.add_block(Block::new("v1", "V1", BlockType::DcVoltageSource));
+    d.add_block(Block::new("r1", "R1", BlockType::Resistor));
+
+    // Island B blocks
+    d.add_block(Block::new("gnd_b", "GND_B", BlockType::Ground));
+    d.add_block(Block::new("v2", "V2", BlockType::DcVoltageSource));
+    d.add_block(Block::new("r2", "R2", BlockType::Resistor));
+
+    // Island A wires: V1(n) to GND_A, R1(n) to GND_A, V1(p) to R1(p)
+    d.add_electrical_line("v1", 1, "gnd_a", 0);
+    d.add_electrical_line("r1", 1, "gnd_a", 0);
+    d.add_electrical_line("v1", 0, "r1", 0);
+
+    // Island B wires: V2(n) to GND_B, R2(n) to GND_B, V2(p) to R2(p)
+    d.add_electrical_line("v2", 1, "gnd_b", 0);
+    d.add_electrical_line("r2", 1, "gnd_b", 0);
+    d.add_electrical_line("v2", 0, "r2", 0);
+
+    let res = resolve_electrical_nets(&d);
+    assert!(
+        res.diagnostics
+            .iter()
+            .all(|diag| diag.severity != DiagnosticSeverity::Error),
+        "Islands sharing ground must produce no E-GND errors: {:?}",
+        res.diagnostics
+    );
+    let top = res.topology.expect("Topology must be valid");
+
+    // Both GND_A and GND_B merge into global reference Net 0
+    let gnd_a_net = top.terminal_to_net.get(&("gnd_a".to_string(), 0)).copied();
+    let gnd_b_net = top.terminal_to_net.get(&("gnd_b".to_string(), 0)).copied();
+    assert_eq!(gnd_a_net, Some(0));
+    assert_eq!(gnd_b_net, Some(0));
+
+    // Non-ground nodes in Island A and Island B are strictly distinct
+    let v1_p_net = *top.terminal_to_net.get(&("v1".to_string(), 0)).unwrap();
+    let r1_p_net = *top.terminal_to_net.get(&("r1".to_string(), 0)).unwrap();
+    assert_eq!(v1_p_net, r1_p_net);
+    assert_ne!(v1_p_net, 0);
+
+    let v2_p_net = *top.terminal_to_net.get(&("v2".to_string(), 0)).unwrap();
+    let r2_p_net = *top.terminal_to_net.get(&("r2".to_string(), 0)).unwrap();
+    assert_eq!(v2_p_net, r2_p_net);
+    assert_ne!(v2_p_net, 0);
+
+    // Island A and Island B have disjoint non-ground net sets
+    assert_ne!(v1_p_net, v2_p_net);
+    // In M5, since Node 0 is eliminated from MNA equations, the conductance matrix [G]
+    // for this system has zero coupling between Net {v1_p_net} and Net {v2_p_net},
+    // forming a block-diagonal matrix.
 }

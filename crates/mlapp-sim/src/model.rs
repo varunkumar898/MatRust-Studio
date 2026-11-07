@@ -397,7 +397,9 @@ pub struct Block {
     pub sid: String,
     pub name: String,
     pub block_type: BlockType,
+    #[serde(default)]
     pub parameters: HashMap<String, String>,
+    #[serde(default)]
     pub position: Option<[f64; 4]>,
     #[serde(default)]
     pub rotation: BlockRotation,
@@ -490,6 +492,7 @@ impl PortRef {
 pub struct Line {
     pub src: PortRef,
     pub dst: PortRef,
+    #[serde(default)]
     pub name: Option<String>,
 }
 
@@ -501,7 +504,9 @@ fn default_schema_version() -> u32 {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct BlockDiagram {
     pub name: String,
+    #[serde(default)]
     pub version: Option<String>,
+    #[serde(default)]
     pub release: Option<String>,
     #[serde(default = "default_schema_version")]
     pub schema_version: u32,

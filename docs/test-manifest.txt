@@ -239,6 +239,8 @@ test_cross_domain_signal_to_electrical_error: test
 test_deterministic_net_ids_invariant_to_wire_order: test
 test_duplicate_and_self_wire_warnings: test
 test_ground_merging_and_missing_ground_detection: test
+test_island_semantics_shared_ground_and_partitioning: test
+test_migration_v1_v2_handwritten_json_identical_simulation: test
 test_multi_wire_terminal_and_reversed_line_invariance: test
 test_pin_geometry_and_rotation_invariance: test
 test_schema_v1_v2_v3_backward_compatibility_and_rotation_serde: test
@@ -248,7 +250,7 @@ test_spec_parameter_validation_rules: test
 test_terminal_count_and_port_kinds_per_block_type: test
 test_unknown_sid_or_terminal_error_not_panic: test
 
-12 tests, 0 benchmarks
+14 tests, 0 benchmarks
 test_algebraic_loop_saturation_gives_e_alg: test
 test_algebraic_loop_self_loop_gives_e_alg: test
 test_algebraic_loop_two_independent_loops_reported: test

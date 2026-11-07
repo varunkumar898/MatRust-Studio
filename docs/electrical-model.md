@@ -2,7 +2,7 @@
 
 ## 1. Overview and Architecture
 
-Milestone M4 introduces the multi-domain electrical circuit data model and editor integration to RustLab / MatRust Studio (`crates/mlapp-sim` and `apps/desktop`). 
+Milestone M4 introduces the multi-domain electrical circuit data model and editor integration to RustLab / MatRust Studio (`crates/mlapp-sim` and `apps/desktop`).
 
 The electrical data model provides:
 1. **Multi-Domain Ports**: Block ports are explicitly categorized by domain into `PortKind::Signal` and `PortKind::Electrical`, with roles `PortRole::Input`, `PortRole::Output`, and `PortRole::Terminal`.
@@ -120,12 +120,18 @@ All diagnostics follow the standard message format:
 
 ---
 
-## 6. Known Limitation: No Galvanic Isolation
+## 6. Island Semantics & MNA Matrix Partitioning
+
+Subcircuits or topological components that are physically disconnected except through one or more Ground blocks share the global reference potential Node 0 (0 V). Because Node 0 is eliminated from the Modified Nodal Analysis (MNA) equations as the datum node, nodes from distinct subcircuits have zero mutual conductances, capacitances, or inductances ($G_{ij} = 0, C_{ij} = 0$ for node $i$ in island $A$ and node $j$ in island $B$). Consequently, in Milestone M5, subcircuits that connect only through Ground form independent diagonal blocks in the overall MNA system matrix $[G + \frac{C}{dt}]$. The solver engine can either simulate the composite system as a single uncoupled block-diagonal sparse matrix or partition the diagram into independent MNA linear systems solved in parallel, guaranteeing zero numerical cross-talk between isolated subcircuits.
+
+---
+
+## 7. Known Limitation: No Galvanic Isolation
 
 All Ground blocks in a diagram are merged into a single reference node (Net 0). The simulator does not currently support separate reference nodes or galvanic isolation (e.g. isolated transformer primaries and secondaries). All subcircuits must share the common global ground.
 
 ---
 
-## 7. Zero-Allocation Guarantee
+## 8. Zero-Allocation Guarantee
 
 The disjoint-set netlist resolution and validation algorithm runs strictly once prior to simulation. The per-step simulation path (`eval` and `update_discrete`) performs zero heap allocations.

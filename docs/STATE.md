@@ -8,7 +8,7 @@
 **Local stable toolchain:** Rust 1.99.1
 **Declared MSRV:** Rust 1.88.0
 **Verification status:** 
-- Local default, all-features, and no-default-features test runs pass at **495/495/495**.
+- Local default, all-features, and no-default-features test runs pass at **503/503/503**.
 - Local clippy (all-features, no-default-features, per-crate no-default-features) passes with 0 warnings.
 - `cargo fmt --all -- --check` passes cleanly.
 - `scripts/verify.ps1` runs from cargo clean and exits 0 with all verification steps passing.
@@ -138,11 +138,11 @@
 
 | Configuration | Passed | Failed | Manifest match |
 | :--- | ---: | ---: | :--- |
-| Default features | 495 | 0 | Exact (495 / 495) |
-| `--all-features` | 495 | 0 | Exact (495 / 495) |
-| `--no-default-features` | 495 | 0 | Exact (495 / 495) |
+| Default features | 503 | 0 | Exact (503 / 503) |
+| `--all-features` | 503 | 0 | Exact (503 / 503) |
+| `--no-default-features` | 503 | 0 | Exact (503 / 503) |
 
-`docs/test-manifest.txt` lists all 495 tests. The CI test-count guard strictly asserts exact parity between manifest and active workspace tests. Counts re-verified this session (2026-11-07): default, all-features, and no-default-features all exit 0 with 495 passing.
+`docs/test-manifest.txt` lists all 503 tests. The CI test-count guard strictly asserts exact parity between manifest and active workspace tests. Counts re-verified this session (2026-11-07): default, all-features, and no-default-features all exit 0 with 503 passing.
 
 ## Recent Milestones Completed
 

@@ -9,6 +9,7 @@ asin
 assert
 atan
 atan2
+bar
 bitand
 bitor
 bitshift
@@ -22,7 +23,10 @@ cellfun
 char
 chol
 circshift
+cla
 class
+clf
+close
 cond
 confusionmat
 conj
@@ -54,6 +58,7 @@ fft
 fft2
 fftshift
 fieldnames
+figure
 filter
 filtfilt
 find
@@ -66,12 +71,17 @@ flipud
 floor
 fprintf
 full
+gca
+gcf
 gradient
+grid
 hamming
 hann
 head
 help
+hist
 histcounts
+hold
 horzcat
 idivide
 ifft
@@ -94,6 +104,7 @@ isempty
 isfield
 isfinite
 isfloat
+ishhold
 isinf
 isinteger
 ismatrix
@@ -105,6 +116,7 @@ isvector
 jtraj
 kmeans
 kron
+legend
 length
 linspace
 load
@@ -138,8 +150,10 @@ num2str
 numel
 ones
 orth
+peaks
 permute
 pinv
+plot
 polyfit
 polyval
 prctile
@@ -169,6 +183,8 @@ roty
 rotz
 round
 save
+saveas
+scatter
 sign
 sin
 single
@@ -195,12 +211,15 @@ strsplit
 strtrim
 struct
 structfun
+subplot
 sum
 summary
+surf
 svd
 tail
 tan
 tf
+title
 trace
 transl
 trapz
@@ -221,5 +240,10 @@ which
 writematrix
 writetable
 xcorr
+xlabel
+xlim
+ylabel
+ylim
 zeros
+zlabel
 zscore

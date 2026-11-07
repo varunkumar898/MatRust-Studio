@@ -1,0 +1,287 @@
+crate	0BSD	Apache-2.0	Apache-2.0 WITH LLVM-exception	BSD-2-Clause	BSD-3-Clause	BSL-1.0	ISC	MIT	OFL-1.1	Ubuntu-font-1.0	Unicode-3.0	Unlicense	Zlib
+ab_glyph@0.2.32		X											
+ab_glyph_rasterizer@0.1.10		X											
+adler2@2.0.1	X	X						X					
+ahash@0.8.12		X						X					
+aho-corasick@1.1.5								X				X	
+anstream@1.0.0		X						X					
+anstyle@1.0.14		X						X					
+anstyle-parse@1.0.0		X						X					
+anstyle-query@1.1.5		X						X					
+anstyle-wincon@3.0.11		X						X					
+anyhow@1.0.104		X						X					
+arboard@3.7.0		X						X					
+as-raw-xcb-connection@1.0.1		X						X					
+autocfg@1.5.1		X						X					
+bitflags@2.13.2		X						X					
+bumpalo@3.20.3		X						X					
+bytemuck@1.25.2		X						X					X
+bytemuck_derive@1.12.1		X						X					X
+byteorder-lite@0.1.0								X				X	
+calloop@0.13.0								X					
+calloop@0.14.5								X					
+calloop-wayland-source@0.3.0								X					
+calloop-wayland-source@0.4.1								X					
+cc@1.10.0		X						X					
+cfg-if@1.0.5		X						X					
+cfg_aliases@0.2.2								X					
+clap@4.6.7		X						X					
+clap_builder@4.6.7		X						X					
+clap_derive@4.6.7		X						X					
+clap_lex@1.1.1		X						X					
+clipboard-win@5.4.3						X							
+colorchoice@1.0.5		X						X					
+concurrent-queue@2.5.0		X						X					
+crc32fast@1.5.3		X						X					
+crossbeam-utils@0.8.23		X						X					
+csv@1.4.0								X				X	
+csv-core@0.1.13								X				X	
+cursor-icon@1.2.0		X						X					X
+defer@0.2.1		X						X					
+displaydoc@0.2.7		X						X					
+dlib@0.5.3								X					
+document-features@0.2.12		X						X					
+downcast-rs@1.2.1		X						X					
+dpi@0.1.2		X						X					
+dyn-stack@0.13.2								X					
+dyn-stack-macros@0.1.3								X					
+ecolor@0.31.1		X						X					
+eframe@0.31.1		X						X					
+egui@0.31.1		X						X					
+egui-winit@0.31.1		X						X					
+egui_glow@0.31.1		X						X					
+emath@0.31.1		X						X					
+endian-type@0.1.2								X					
+epaint@0.31.1		X						X					
+epaint_default_fonts@0.31.1		X						X	X	X			
+equator@0.2.2								X					
+equator@0.6.0								X					
+equator-macro@0.2.1								X					
+equator-macro@0.6.0								X					
+equivalent@1.0.3		X						X					
+errno@0.3.14		X						X					
+error-code@3.4.0						X							
+faer@0.24.4								X					
+faer-traits@0.24.0								X					
+fd-lock@4.0.4		X						X					
+fdeflate@0.3.7		X						X					
+find-msvc-tools@0.1.15		X						X					
+flate2@1.1.10		X						X					
+form_urlencoded@1.2.2		X						X					
+gemm@0.19.0								X					
+gemm-c32@0.19.0								X					
+gemm-c64@0.19.0								X					
+gemm-common@0.19.0								X					
+gemm-f32@0.19.0								X					
+gemm-f64@0.19.0								X					
+generativity@1.2.1		X						X					
+gethostname@1.1.0		X											
+getrandom@0.3.4		X						X					
+getrandom@0.4.3		X						X					
+gl_generator@0.14.0		X											
+glow@0.16.0		X						X					X
+glutin@0.32.3		X											
+glutin-winit@0.5.0								X					
+glutin_egl_sys@0.7.1		X											
+glutin_glx_sys@0.6.1		X											
+glutin_wgl_sys@0.6.1		X											
+hashbrown@0.17.1		X						X					
+heck@0.5.0		X						X					
+home@0.5.12		X						X					
+icu_collections@2.3.0											X		
+icu_locale_core@2.3.0											X		
+icu_normalizer@2.3.0											X		
+icu_normalizer_data@2.3.0											X		
+icu_properties@2.3.0											X		
+icu_properties_data@2.3.0											X		
+icu_provider@2.3.1											X		
+idna@1.1.0		X						X					
+idna_adapter@1.2.2		X						X					
+image@0.25.10		X						X					
+indexmap@2.14.2		X						X					
+indoc@2.0.8		X						X					
+interpol@0.2.1								X					
+is_terminal_polyfill@1.70.2		X						X					
+itoa@1.0.18		X						X					
+khronos_api@3.1.0		X											
+libc@0.2.191		X						X					
+libloading@0.8.9							X						
+libm@0.2.16								X					
+linux-raw-sys@0.12.1		X	X					X					
+linux-raw-sys@0.4.15		X	X					X					
+litemap@0.8.3											X		
+litrs@1.0.1		X						X					
+lock_api@0.4.14		X						X					
+log@0.4.34		X						X					
+matrixmultiply@0.3.11		X						X					
+matrust_studio@0.1.0		X						X					
+memchr@2.8.3								X				X	
+memmap2@0.9.11		X						X					
+memoffset@0.9.1								X					
+miniz_oxide@0.8.9		X						X					X
+miniz_oxide@0.9.1		X						X					X
+mlapp-cli@0.1.0		X						X					
+mlapp-container@0.1.0		X						X					
+mlapp-ffi@0.1.0		X						X					
+mlapp-host@0.1.0		X						X					
+mlapp-lang@0.1.0		X						X					
+mlapp-matlab@0.1.0		X						X					
+mlapp-octave@0.1.0		X						X					
+mlapp-plot@0.1.0		X						X					
+mlapp-py@0.1.0		X						X					
+mlapp-render@0.1.0		X						X					
+mlapp-runtime@0.1.0		X						X					
+mlapp-sim@0.1.0		X						X					
+mlapp-ui@0.1.0		X						X					
+moxcms@0.8.1		X			X								
+nano-gemm@0.2.2								X					
+nano-gemm-c32@0.2.1								X					
+nano-gemm-c64@0.2.1								X					
+nano-gemm-codegen@0.2.1								X					
+nano-gemm-core@0.2.1								X					
+nano-gemm-f32@0.2.1								X					
+nano-gemm-f64@0.2.1								X					
+nibble_vec@0.1.0								X					
+nix@0.29.0								X					
+nohash-hasher@0.2.0		X						X					
+num-complex@0.4.6		X						X					
+num-integer@0.1.47		X						X					
+num-traits@0.2.19		X						X					
+num_cpus@1.17.0		X						X					
+once_cell@1.21.4		X						X					
+once_cell_polyfill@1.70.2		X						X					
+owned_ttf_parser@0.25.1		X											
+parking_lot@0.12.5		X						X					
+parking_lot_core@0.9.12		X						X					
+paste@1.0.15		X						X					
+percent-encoding@2.3.2		X						X					
+pin-project-lite@0.2.17		X						X					
+pkg-config@0.3.34		X						X					
+png@0.18.1		X						X					
+polling@3.11.0		X						X					
+potential_utf@0.1.6											X		
+primal-check@0.3.4		X						X					
+private-gemm-x86@0.1.22								X					
+proc-macro2@1.0.107		X						X					
+profiling@1.0.18		X						X					
+pulp@0.22.3								X					
+pulp-wasm-simd-flag@0.1.1								X					
+pxfm@0.1.30		X			X								
+pyo3@0.22.6		X						X					
+pyo3-build-config@0.22.6		X						X					
+pyo3-ffi@0.22.6		X						X					
+pyo3-macros@0.22.6		X						X					
+pyo3-macros-backend@0.22.6		X						X					
+qd@0.8.0								X					
+quick-xml@0.41.0								X					
+quote@1.0.47		X						X					
+radix_trie@0.2.1								X					
+rand_core@0.10.1		X						X					
+raw-cpuid@11.6.0								X					
+raw-window-handle@0.6.2		X						X					X
+rawpointer@0.2.1		X						X					
+reborrow@0.5.5								X					
+regex@1.13.1		X						X					
+regex-automata@0.4.18		X						X					
+regex-syntax@0.8.11		X						X					
+rfd@0.17.2								X					
+rustfft@6.4.1		X						X					
+rustix@0.38.44		X	X					X					
+rustix@1.1.5		X	X					X					
+rustlab-cli@0.1.0		X						X					
+rustlab-data@0.1.0		X						X					
+rustlab-eval@0.1.0		X						X					
+rustlab-math@0.1.0		X						X					
+rustlab-matio@0.1.0		X						X					
+rustlab-parse@0.1.0		X						X					
+rustlab-plot@0.1.0		X						X					
+rustlab-stdlib@0.1.0		X						X					
+rustversion@1.0.23		X						X					
+rustyline@15.0.0								X					
+ryu@1.0.23		X				X							
+scoped-tls@1.0.1		X						X					
+scopeguard@1.2.0		X						X					
+seq-macro@0.3.6		X						X					
+serde@1.0.229		X						X					
+serde_core@1.0.229		X						X					
+serde_derive@1.0.229		X						X					
+serde_json@1.0.154		X						X					
+shlex@2.0.1		X						X					
+simd-adler32@0.3.10								X					
+slab@0.4.12								X					
+smallvec@1.16.4		X						X					
+smithay-client-toolkit@0.19.2								X					
+smithay-client-toolkit@0.20.0								X					
+smithay-clipboard@0.7.3								X					
+smol_str@0.2.2		X						X					
+stable_deref_trait@1.2.1		X						X					
+static_assertions@1.1.0		X						X					
+strength_reduce@0.2.4		X						X					
+strsim@0.11.1								X					
+syn@1.0.109		X						X					
+syn@2.0.119		X						X					
+syn@3.0.9		X						X					
+synstructure@0.14.0								X					
+target-lexicon@0.12.16			X										
+thiserror@1.0.69		X						X					
+thiserror@2.0.21		X						X					
+thiserror-impl@1.0.69		X						X					
+thiserror-impl@2.0.21		X						X					
+tinystr@0.8.4											X		
+tracing@0.1.44								X					
+tracing-core@0.1.36								X					
+transpose@0.2.3		X						X					
+ttf-parser@0.25.1		X						X					
+typed-path@0.13.0		X						X					
+unicode-ident@1.0.27		X						X			X		
+unicode-segmentation@1.13.3		X						X					
+unicode-width@0.2.2		X						X					
+unindent@0.2.4		X						X					
+url@2.5.8		X						X					
+utf8_iter@1.0.4		X						X					
+utf8parse@0.2.2		X						X					
+version_check@0.9.5		X						X					
+wayland-backend@0.3.17								X					
+wayland-client@0.31.15								X					
+wayland-csd-frame@0.3.0								X					
+wayland-cursor@0.31.14								X					
+wayland-protocols@0.32.13								X					
+wayland-protocols-experimental@20250721.0.1								X					
+wayland-protocols-misc@0.3.12								X					
+wayland-protocols-plasma@0.3.12								X					
+wayland-protocols-wlr@0.3.12								X					
+wayland-scanner@0.31.11								X					
+wayland-sys@0.31.11								X					
+web-time@1.1.0		X						X					
+webbrowser@1.2.4		X						X					
+winapi@0.3.9		X						X					
+windows-link@0.2.1		X						X					
+windows-sys@0.52.0		X						X					
+windows-sys@0.59.0		X						X					
+windows-sys@0.61.2		X						X					
+windows-targets@0.52.6		X						X					
+windows_aarch64_gnullvm@0.52.6		X						X					
+windows_x86_64_gnu@0.52.6		X						X					
+windows_x86_64_msvc@0.52.6		X						X					
+winit@0.30.13		X											
+writeable@0.6.4											X		
+x11-dl@2.21.0								X					
+x11rb@0.13.2		X						X					
+x11rb-protocol@0.13.2		X						X					
+xcursor@0.3.11								X					
+xkbcommon-dl@0.4.2								X					
+xkeysym@0.2.1		X						X					X
+xml-rs@0.8.29								X					
+yoke@0.8.3											X		
+yoke-derive@0.8.4											X		
+zerocopy@0.8.63		X		X				X					
+zerocopy-derive@0.8.63		X		X				X					
+zerofrom@0.1.8											X		
+zerofrom-derive@0.1.8											X		
+zerotrie@0.2.5											X		
+zerovec@0.11.8											X		
+zerovec-derive@0.11.6											X		
+zip@9.2.0								X					
+zlib-rs@0.6.8													X
+zmij@1.0.23								X					
+zopfli@0.8.4		X											

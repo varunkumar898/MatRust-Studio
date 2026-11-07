@@ -115,6 +115,15 @@ fn test_supported_functions_doc_parity_and_coverage() {
         generated.push_str("## 4. GNU Octave Bridge (Tier 4) — NOT IMPLEMENTED\n\n");
         generated.push_str("The GNU Octave bridge is currently **NOT IMPLEMENTED** (documented stub). In current versions, unsupported functions fail loudly with a runtime error diagnostic.\n");
 
-        std::fs::write(&doc_path, generated).expect("write updated docs/SUPPORTED_FUNCTIONS.md");
+        // Tests must not modify repository files (scripts/verify.ps1 fails
+        // on a dirty tree): the regenerated catalog is written to a temp
+        // location and the maintainer copies it over
+        // docs/SUPPORTED_FUNCTIONS.md deliberately after review.
+        let temp_out = std::env::temp_dir().join("rustlab-SUPPORTED_FUNCTIONS.generated.md");
+        std::fs::write(&temp_out, generated).expect("write regenerated catalog to temp dir");
+        println!(
+            "UPDATE_DOCS=1: regenerated catalog written to {} (review it; copy over {doc_path} manually if intended)",
+            temp_out.display()
+        );
     }
 }

@@ -1,0 +1,26 @@
+commit	subject	status	file
+f863b14348a2e0fa9af3a508ca8a2be0734bddc6	Add verification logs for plot staged surface, style commit, and tests after cleanup	M	apps/desktop/src/dock.rs
+f863b14348a2e0fa9af3a508ca8a2be0734bddc6	Add verification logs for plot staged surface, style commit, and tests after cleanup	A	apps/desktop/src/layout_contract.rs
+f863b14348a2e0fa9af3a508ca8a2be0734bddc6	Add verification logs for plot staged surface, style commit, and tests after cleanup	M	apps/desktop/src/lib.rs
+f863b14348a2e0fa9af3a508ca8a2be0734bddc6	Add verification logs for plot staged surface, style commit, and tests after cleanup	M	apps/desktop/src/ui_registry.rs
+f863b14348a2e0fa9af3a508ca8a2be0734bddc6	Add verification logs for plot staged surface, style commit, and tests after cleanup	M	crates/rustlab-plot/src/lib.rs
+f863b14348a2e0fa9af3a508ca8a2be0734bddc6	Add verification logs for plot staged surface, style commit, and tests after cleanup	M	crates/rustlab-stdlib/src/plot_builtins.rs
+f863b14348a2e0fa9af3a508ca8a2be0734bddc6	Add verification logs for plot staged surface, style commit, and tests after cleanup	A	docs/layout-audit.md
+f863b14348a2e0fa9af3a508ca8a2be0734bddc6	Add verification logs for plot staged surface, style commit, and tests after cleanup	A	docs/verify-logs/2026-11-04-bench-contract-fixes-final-verify.log
+f863b14348a2e0fa9af3a508ca8a2be0734bddc6	Add verification logs for plot staged surface, style commit, and tests after cleanup	A	docs/verify-logs/2026-11-04-layout-l1-baseline-verify.log
+f863b14348a2e0fa9af3a508ca8a2be0734bddc6	Add verification logs for plot staged surface, style commit, and tests after cleanup	A	docs/verify-logs/2026-11-04-layout-l2-c1-tests.log
+f863b14348a2e0fa9af3a508ca8a2be0734bddc6	Add verification logs for plot staged surface, style commit, and tests after cleanup	A	docs/verify-logs/2026-11-04-layout-l2-clippy.log
+f863b14348a2e0fa9af3a508ca8a2be0734bddc6	Add verification logs for plot staged surface, style commit, and tests after cleanup	A	docs/verify-logs/2026-11-04-layout-l2-desktop-tests.log
+f863b14348a2e0fa9af3a508ca8a2be0734bddc6	Add verification logs for plot staged surface, style commit, and tests after cleanup	A	docs/verify-logs/2026-11-04-layout-l2-lib-start.log
+f863b14348a2e0fa9af3a508ca8a2be0734bddc6	Add verification logs for plot staged surface, style commit, and tests after cleanup	A	docs/verify-logs/2026-11-04-layout-l2-panel-registry-lib.log
+f863b14348a2e0fa9af3a508ca8a2be0734bddc6	Add verification logs for plot staged surface, style commit, and tests after cleanup	A	docs/verify-logs/2026-11-04-layout-l2-plot-start.log
+f863b14348a2e0fa9af3a508ca8a2be0734bddc6	Add verification logs for plot staged surface, style commit, and tests after cleanup	A	docs/verify-logs/2026-11-04-plot-clippy-fix.log
+f863b14348a2e0fa9af3a508ca8a2be0734bddc6	Add verification logs for plot staged surface, style commit, and tests after cleanup	A	docs/verify-logs/2026-11-04-plot-code-commit.log
+f863b14348a2e0fa9af3a508ca8a2be0734bddc6	Add verification logs for plot staged surface, style commit, and tests after cleanup	A	docs/verify-logs/2026-11-04-plot-docs-commit.log
+f863b14348a2e0fa9af3a508ca8a2be0734bddc6	Add verification logs for plot staged surface, style commit, and tests after cleanup	A	docs/verify-logs/2026-11-04-plot-fmt-check.log
+f863b14348a2e0fa9af3a508ca8a2be0734bddc6	Add verification logs for plot staged surface, style commit, and tests after cleanup	A	docs/verify-logs/2026-11-04-plot-snapshot-commit.log
+f863b14348a2e0fa9af3a508ca8a2be0734bddc6	Add verification logs for plot staged surface, style commit, and tests after cleanup	A	docs/verify-logs/2026-11-04-plot-staged-plot-all.log
+f863b14348a2e0fa9af3a508ca8a2be0734bddc6	Add verification logs for plot staged surface, style commit, and tests after cleanup	A	docs/verify-logs/2026-11-04-plot-staged-stdlib-lib.log
+f863b14348a2e0fa9af3a508ca8a2be0734bddc6	Add verification logs for plot staged surface, style commit, and tests after cleanup	A	docs/verify-logs/2026-11-04-plot-staged-surf.log
+f863b14348a2e0fa9af3a508ca8a2be0734bddc6	Add verification logs for plot staged surface, style commit, and tests after cleanup	A	docs/verify-logs/2026-11-04-plot-style-commit.log
+f863b14348a2e0fa9af3a508ca8a2be0734bddc6	Add verification logs for plot staged surface, style commit, and tests after cleanup	A	docs/verify-logs/2026-11-04-plot-tests-after-cleanup.log

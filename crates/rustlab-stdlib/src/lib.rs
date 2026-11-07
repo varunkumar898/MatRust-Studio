@@ -29,6 +29,7 @@ pub mod ml;
 pub mod nd_ops;
 pub mod numeric_types;
 pub mod numerical;
+pub mod plot_builtins;
 pub mod robotics;
 pub mod search_sort;
 pub mod shape_inspect;
@@ -79,6 +80,7 @@ pub fn register_all(interp: &mut Interpreter) {
     interp.register_builtin("ipermute", nd_ops::ipermute);
     interp.register_builtin("circshift", nd_ops::circshift);
     interp.register_builtin("meshgrid", nd_ops::meshgrid);
+    interp.register_builtin("peaks", nd_ops::peaks);
     interp.register_builtin("ndgrid", nd_ops::ndgrid);
 
     // Elementary Math & Predicates (Tier 3)
@@ -197,6 +199,32 @@ pub fn register_all(interp: &mut Interpreter) {
     interp.register_builtin("disp", io_format::disp_fn);
     interp.register_builtin("num2str", io_format::num2str_fn);
     interp.register_builtin("mat2str", io_format::mat2str_fn);
+
+    // Plotting (B2.2)
+    interp.register_builtin("figure", plot_builtins::figure_fn);
+    interp.register_builtin("plot", plot_builtins::plot_fn);
+    interp.register_builtin("scatter", plot_builtins::scatter_fn);
+    interp.register_builtin("bar", plot_builtins::bar_fn);
+    interp.register_builtin("hist", plot_builtins::hist_fn);
+    interp.register_builtin("hold", plot_builtins::hold_fn);
+    interp.register_builtin("ishhold", plot_builtins::ishold_fn);
+
+    interp.register_builtin("subplot", plot_builtins::subplot_fn);
+    interp.register_builtin("xlabel", plot_builtins::xlabel_fn);
+    interp.register_builtin("ylabel", plot_builtins::ylabel_fn);
+    interp.register_builtin("zlabel", plot_builtins::zlabel_fn);
+    interp.register_builtin("title", plot_builtins::title_fn);
+    interp.register_builtin("legend", plot_builtins::legend_fn);
+    interp.register_builtin("xlim", plot_builtins::xlim_fn);
+    interp.register_builtin("ylim", plot_builtins::ylim_fn);
+    interp.register_builtin("grid", plot_builtins::grid_fn);
+    interp.register_builtin("gcf", plot_builtins::gcf_fn);
+    interp.register_builtin("gca", plot_builtins::gca_fn);
+    interp.register_builtin("cla", plot_builtins::cla_fn);
+    interp.register_builtin("clf", plot_builtins::clf_fn);
+    interp.register_builtin("close", plot_builtins::close_fn);
+    interp.register_builtin("saveas", plot_builtins::saveas_fn);
+    interp.register_builtin("surf", plot_builtins::surf_fn);
 
     // Diagnostics & Assertions
     interp.register_builtin("error", diagnostics::error_fn);

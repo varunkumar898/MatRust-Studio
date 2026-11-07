@@ -1,0 +1,15 @@
+diff --git a/crates/rustlab-stdlib/src/plot_builtins.rs b/crates/rustlab-stdlib/src/plot_builtins.rs
+--- a/crates/rustlab-stdlib/src/plot_builtins.rs
++++ b/crates/rustlab-stdlib/src/plot_builtins.rs
+@@ -977,10 +977,7 @@
+                 "RUSTLAB:plot:noFigure",
+                 "No current figure. Call figure first.",
+             )
+         })?;
+         let ax = ensure_current_axes(fig)?;
+-        ax.camera = rustlab_plot::Camera {
+-            azimuth,
+-            elevation,
+-        };
++        ax.camera = rustlab_plot::Camera { azimuth, elevation };
+         Ok::<(), EvalError>(())

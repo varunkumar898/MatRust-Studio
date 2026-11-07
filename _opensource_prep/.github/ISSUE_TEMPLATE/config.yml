@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions and project discussion
+    url: https://github.com/varunkumar898/MatRust-Studio/discussions
+    about: Ask questions or discuss ideas here.
+  - name: Report a security vulnerability privately
+    url: https://github.com/varunkumar898/MatRust-Studio/security/advisories/new
+    about: Do not report undisclosed vulnerabilities in public issues.

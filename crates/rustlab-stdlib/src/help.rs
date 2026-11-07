@@ -193,6 +193,13 @@ pub fn get_help_text(name: &str) -> Option<&'static str> {
              Syntax:\n\
                [X1, X2, ...] = ndgrid(x1, x2, ...)\n"
         ),
+        "peaks" => Some(
+            "PEAKS  Peaks function of two variables.\n\n\
+             Syntax:\n\
+               z = peaks\n               z = peaks(n)\n               z = peaks(x, y)\n\n\
+             Description:\
+               peaks returns peaks(49), a 49-by-49 matrix.\n               peaks(n) returns an n-by-n matrix.\n               peaks(x, y) evaluates on the grid from vectors x and y.\n"
+        ),
         "cellfun" => Some("CELLFUN  Apply function to each cell in cell array.\n\nSyntax:\n  B = cellfun(func, C)\n  B = cellfun(func, C, \"UniformOutput\", false)\n"),
         "arrayfun" => Some("ARRAYFUN  Apply function to each element of array.\n\nSyntax:\n  B = arrayfun(func, A)\n"),
         "structfun" => Some("STRUCTFUN  Apply function to each field of scalar structure.\n\nSyntax:\n  B = structfun(func, S)\n"),
@@ -1307,6 +1314,161 @@ pub fn get_help_text(name: &str) -> Option<&'static str> {
                q = jtraj(q0, q1, n)\n\n\
              Description:\n\
                q = jtraj(q0, q1, n) computes a smooth quintic polynomial trajectory between joint coordinates q0 and q1.\n"
+        ),
+        "figure" => Some(
+            "FIGURE  Create or select a figure window.\n\n\
+             Syntax:\n\
+               h = figure\n               h = figure(n)\n\n\
+             Description:\n\
+               figure creates a new figure window and returns its handle.\n               figure(n) switches to figure n and returns n.\n"
+        ),
+        "plot" => Some(
+            "PLOT  Plot 2D line data.\n\n\
+             Syntax:\n\
+               plot(x, y)\n\n\
+             Description:\
+               plot(x, y) plots y versus x as a line on the current axes.\n               Requires x and y to have the same length.\n"
+        ),
+        "scatter" => Some(
+            "SCATTER  Scatter plot.\n\n\
+             Syntax:\n\
+               scatter(x, y)\n\n\
+             Description:\
+               scatter(x, y) plots y versus x as markers on the current axes.\n"
+        ),
+        "bar" => Some(
+            "BAR  Bar plot.\n\n\
+             Syntax:\
+               bar(x, y)\n\n\
+             Description:\
+               bar(x, y) plots y versus x as bars on the current axes.\n"
+        ),
+        "hist" => Some(
+            "HIST  Histogram.\n\n\
+             Syntax:\
+               hist(y)\n               hist(y, nbins)\n\n\
+             Description:\
+               hist(y) plots a histogram of y with 10 bins.\n               hist(y, nbins) uses nbins bins.\n"
+        ),
+        "hold" => Some(
+            "HOLD  Hold current axes.\n\n\
+             Syntax:\
+               hold on\n               hold off\n\n\
+             Description:\
+               hold on retains current plot data when adding new plots.\n               hold off replaces current plot data.\n"
+        ),
+        "subplot" => Some(
+            "SUBPLOT  Create axes in tiled positions.\n\n\
+             Syntax:\
+               subplot(m, n, p)\n\n\
+             Description:\
+               subplot(m, n, p) creates axes in an m-by-n grid at position p.\n"
+        ),
+        "xlabel" => Some(
+            "XLABEL  Label x-axis.\n\n\
+             Syntax:\
+               xlabel('text')\n\n\
+             Description:\
+               xlabel('text') labels the x-axis of the current axes.\n"
+        ),
+        "ylabel" => Some(
+            "YLABEL  Label y-axis.\n\n\
+             Syntax:\
+               ylabel('text')\n\n\
+             Description:\
+               ylabel('text') labels the y-axis of the current axes.\n"
+        ),
+        "title" => Some(
+            "TITLE  Set figure title.\n\n\
+             Syntax:\
+               title('text')\n\n\
+             Description:\
+               title('text') sets the title of the current figure.\n"
+        ),
+        "legend" => Some(
+            "LEGEND  Set legend location.\n\n\
+             Syntax:\
+               legend('location')\n\n\
+             Description:\
+               legend('location') sets the legend location on the current axes.\n               Location: northeast, northwest, southeast, southwest.\n"
+        ),
+        "xlim" => Some(
+            "XLIM  Set x-axis limits.\n\n\
+             Syntax:\
+               xlim([lo hi])\n\n\
+             Description:\
+               xlim([lo hi]) sets the x-axis limits of the current axes.\n"
+        ),
+        "ylim" => Some(
+            "YLIM  Set y-axis limits.\n\n\
+             Syntax:\
+               ylim([lo hi])\n\n\
+             Description:\
+               ylim([lo hi]) sets the y-axis limits of the current axes.\n"
+        ),
+        "grid" => Some(
+            "GRID  Show or hide grid.\n\n\
+             Syntax:\
+               grid on\n               grid off\n\n\
+             Description:\
+               grid on shows grid lines on the current axes.\n               grid off hides grid lines.\n"
+        ),
+        "saveas" => Some(
+            "SAVEAS  Save figure to SVG file.\n\n\
+             Syntax:\
+               saveas(filename)\n               saveas(h, filename)\n\n\
+             Description:\
+               saveas(filename) saves the current figure as SVG.\n               saveas(h, filename) saves figure h as SVG.\n"
+        ),
+        "surf" => Some(
+            "SURF  3-D surface plot.\n\n\
+             Syntax:\
+               surf(X, Y, Z)\n               surf(Z)\n\n\
+             Description:\
+               surf(X, Y, Z) plots a surface from grid matrices X, Y, Z.\n               surf(Z) uses implicit X = 1:cols(Z), Y = 1:rows(Z).\n               A colorbar is added showing the Z scale.\n"
+        ),
+        "ishhold" => Some("ishhold"),
+        "gcf" => Some(
+            "GCF  Get current figure handle.\n\n\
+             Syntax:\
+               h = gcf\n\n\
+             Description:\
+               gcf returns the handle of the current figure.\n"
+        ),
+        "gca" => Some(
+            "GCA  Get current axes handle.\n\n\
+             Syntax:\
+               h = gca\n\n\
+             Description:\
+               gca returns the handle of the current axes in the current figure.\n"
+        ),
+        "cla" => Some(
+            "CLA  Clear current axes.\n\n\
+             Syntax:\
+               cla\n\n\
+             Description:\
+               cla removes all plot series from the current axes.\n"
+        ),
+        "clf" => Some(
+            "CLF  Clear current figure.\n\n\
+             Syntax:\
+               clf\n\n\
+             Description:\
+               clf removes all axes from the current figure.\n"
+        ),
+        "close" => Some(
+            "CLOSE  Close figure(s).\n\n\
+             Syntax:\
+               close\n               close(h)\n               close all\n\n\
+             Description:\
+               close closes the current figure.\n               close(h) closes figure h.\n               close all closes all figures.\n"
+        ),
+        "zlabel" => Some(
+            "ZLABEL  Set z-axis label.\n\n\
+             Syntax:\
+               zlabel(txt)\n\n\
+             Description:\
+               zlabel(txt) sets the z-axis label on the current axes.\n"
         ),
         _ => None,
     }

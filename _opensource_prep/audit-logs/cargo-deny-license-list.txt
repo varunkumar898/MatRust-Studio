@@ -1,0 +1,5 @@
+error: unexpected argument '--workspace' found
+
+Usage: cargo-deny.exe list [OPTIONS]
+
+For more information, try '--help'.

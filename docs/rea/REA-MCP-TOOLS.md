@@ -1,6 +1,6 @@
 # REA MCP Tools Inventory and Schema Reference
 
-This catalog documents the tools exposed by the Reverse Engineering Analysis (REA) MCP server running in Antigravity (`node C:\Users\varun\.antigravity\rea\scripts\rea.mjs mcp`), as verified during the MatRust Studio desktop GUI research phase.
+This catalog documents the tools exposed by the Reverse Engineering Analysis (REA) MCP server running in Antigravity (`node ~/.antigravity/rea/scripts/rea.mjs mcp`), as verified during the MatRust Studio desktop GUI research phase.
 
 ## Total Discovered Tools: 116
 

@@ -210,6 +210,7 @@ fn test_generate_and_verify_sample_model_fixture() {
     diagram.add_line("4", 1, "5", 1);
     diagram.add_line("4", 1, "2", 2);
 
+    // Locate the tracked fixture (READ-ONLY reference).
     let fixture_dir = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .unwrap()
@@ -217,20 +218,163 @@ fn test_generate_and_verify_sample_model_fixture() {
         .unwrap()
         .join("fixtures")
         .join("sample_models");
-    std::fs::create_dir_all(&fixture_dir).expect("Create fixture dir");
     let fixture_path = fixture_dir.join("simple_feedback.slx");
+    assert!(
+        fixture_path.is_file(),
+        "tracked fixture {} must exist",
+        fixture_path.display()
+    );
 
-    let f = std::fs::File::create(&fixture_path).expect("Create fixture file");
-    export_slx(f, &diagram).expect("Export slx fixture");
+    // The test itself must not write inside the repository (scripts/verify.ps1
+    // fails on a dirty tree): the freshly built diagram goes to a temp file,
+    // and the tracked fixture is only read back to confirm the checked-in
+    // model still decodes to the same model name and block/line counts.
+    let temp_path = std::env::temp_dir().join("rustlab-simple-feedback-generated.slx");
 
-    // Inspect the generated fixture file
-    let f_in = std::fs::File::open(&fixture_path).expect("Open fixture file");
-    let (read_diag, report) =
-        inspect_slx(f_in, ContainerLimits::default()).expect("Inspect fixture");
+    for (label, generate) in [("generated", true), ("tracked fixture", false)] {
+        let path = if generate {
+            temp_path.clone()
+        } else {
+            fixture_path.clone()
+        };
+        if generate {
+            let f = std::fs::File::create(&path).expect("Create temp fixture file");
+            export_slx(f, &diagram).expect("Export slx fixture to temp");
+        }
+        let f_in = std::fs::File::open(&path).expect("Open fixture file");
+        let (read_diag, report) = inspect_slx(f_in, ContainerLimits::default())
+            .unwrap_or_else(|e| panic!("inspect {label}: {e}"));
 
-    assert_eq!(report.model_name, "simple_feedback");
-    assert_eq!(report.total_blocks, 5);
-    assert_eq!(report.total_lines, 5);
-    assert!(report.is_solver_supported);
-    assert_eq!(read_diag.blocks.len(), 5);
+        assert_eq!(report.model_name, "simple_feedback", "{label}");
+        assert_eq!(report.total_blocks, 5, "{label}");
+        assert_eq!(report.total_lines, 5, "{label}");
+        assert!(report.is_solver_supported, "{label}");
+        assert_eq!(read_diag.blocks.len(), 5, "{label}");
+    }
+}
+
+#[test]
+fn test_simulation_gain_parameter_change() {
+    // Closed-loop step response with Gain K = 2.0 vs K = 5.0
+    let build_model = |gain_val: &str| -> BlockDiagram {
+        let mut diagram = BlockDiagram::new("GainTestModel");
+        diagram.add_block(
+            Block::new("1", "StepInput", BlockType::Step)
+                .with_param("Time", "0.0")
+                .with_param("Before", "0.0")
+                .with_param("After", "1.0"),
+        );
+        diagram.add_block(Block::new("2", "Sum", BlockType::Sum).with_param("Inputs", "+-"));
+        diagram.add_block(Block::new("3", "Gain", BlockType::Gain).with_param("Gain", gain_val));
+        diagram.add_block(
+            Block::new("4", "Integrator", BlockType::Integrator)
+                .with_param("InitialCondition", "0.0"),
+        );
+        diagram.add_block(Block::new("5", "Out", BlockType::Outport));
+
+        diagram.add_line("1", 1, "2", 1);
+        diagram.add_line("2", 1, "3", 1);
+        diagram.add_line("3", 1, "4", 1);
+        diagram.add_line("4", 1, "5", 1);
+        diagram.add_line("4", 1, "2", 2);
+        diagram
+    };
+
+    let config = SimulationConfig {
+        start_time: 0.0,
+        stop_time: 0.5,
+        step_size: 0.001,
+        solver: "FixedStepEuler".to_string(),
+    };
+
+    let out_2 = simulate_diagram(&build_model("2.0"), &config).expect("sim gain 2.0");
+    let out_5 = simulate_diagram(&build_model("5.0"), &config).expect("sim gain 5.0");
+
+    let val_2 = *out_2.yout.last().expect("last val 2.0");
+    let val_5 = *out_5.yout.last().expect("last val 5.0");
+
+    // Analytical: y(t) = 1 - exp(-K*t). At t=0.5:
+    // K=2.0 -> 1 - exp(-1.0) ~ 0.6321
+    // K=5.0 -> 1 - exp(-2.5) ~ 0.9179
+    assert!(
+        (val_5 - val_2).abs() > 0.1,
+        "Changing Gain from 2.0 to 5.0 must change output significantly: val_2={val_2}, val_5={val_5}"
+    );
+    assert!((val_2 - 0.632).abs() < 0.05);
+    assert!((val_5 - 0.918).abs() < 0.05);
+}
+
+#[test]
+fn test_simulation_sine_wave_parameters() {
+    let mut diagram = BlockDiagram::new("SineTestModel");
+    let sine = Block::new("1", "Sine Wave", BlockType::SineWave)
+        .with_param("Amplitude", "3.0")
+        .with_param("Frequency", "2.0")
+        .with_param("Phase", "1.5707963267948966") // pi / 2
+        .with_param("Bias", "1.5");
+    let out = Block::new("2", "Out", BlockType::Outport);
+
+    diagram.add_block(sine);
+    diagram.add_block(out);
+    diagram.add_line("1", 1, "2", 1);
+
+    let config = SimulationConfig {
+        start_time: 0.0,
+        stop_time: 2.0,
+        step_size: 0.01,
+        solver: "FixedStepEuler".to_string(),
+    };
+
+    let sim_out = simulate_diagram(&diagram, &config).expect("sim sine");
+    assert!(!sim_out.tout.is_empty());
+    // At t=0: y(0) = 3.0 * sin(0 + pi/2) + 1.5 = 3.0 * 1.0 + 1.5 = 4.5
+    let y0 = sim_out.yout[0];
+    assert!(
+        (y0 - 4.5).abs() < 1e-4,
+        "Expected y(0) = 4.5 from Amplitude=3, Phase=pi/2, Bias=1.5; got {y0}"
+    );
+
+    // Maximum value should reach ~4.5, minimum should reach ~(-3.0 + 1.5) = -1.5
+    let max_val = sim_out
+        .yout
+        .iter()
+        .copied()
+        .fold(f64::NEG_INFINITY, f64::max);
+    let min_val = sim_out.yout.iter().copied().fold(f64::INFINITY, f64::min);
+    assert!((max_val - 4.5).abs() < 0.05);
+    assert!((min_val - (-1.5)).abs() < 0.05);
+}
+
+#[test]
+fn test_block_diagram_json_roundtrip() {
+    let mut diagram = BlockDiagram::new("RoundTripModel");
+    diagram.release = Some("R2024b".to_string());
+    diagram.version = Some("2.0".to_string());
+    diagram.add_block(
+        Block::new("1", "Step Input", BlockType::Step)
+            .with_param("Time", "0.5")
+            .with_param("Before", "0.0")
+            .with_param("After", "2.5"),
+    );
+    diagram.add_block(Block::new("2", "Sum", BlockType::Sum).with_param("Inputs", "+-+"));
+    diagram.add_block(Block::new("3", "Gain", BlockType::Gain).with_param("Gain", "4.2"));
+    diagram.add_block(
+        Block::new("4", "Integrator", BlockType::Integrator).with_param("InitialCondition", "1.0"),
+    );
+    diagram.add_block(Block::new("5", "Scope", BlockType::Scope));
+
+    diagram.add_line("1", 1, "2", 1);
+    diagram.add_line("3", 1, "2", 3); // port 3
+    diagram.add_line("2", 1, "4", 1);
+    diagram.add_line("4", 1, "5", 1);
+
+    let json_str = serde_json::to_string_pretty(&diagram).expect("serialize diagram to JSON");
+    let deserialized: BlockDiagram =
+        serde_json::from_str(&json_str).expect("deserialize diagram from JSON");
+
+    assert_eq!(diagram, deserialized);
+    assert_eq!(deserialized.blocks.len(), 5);
+    assert_eq!(deserialized.lines.len(), 4);
+    assert_eq!(deserialized.blocks[1].get_param("Inputs"), Some("+-+"));
+    assert_eq!(deserialized.lines[1].dst.port_index, 3);
 }

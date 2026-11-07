@@ -1,3 +1,0 @@
-﻿default=196
-all=196
-no-default=195

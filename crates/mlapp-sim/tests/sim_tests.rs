@@ -378,3 +378,292 @@ fn test_block_diagram_json_roundtrip() {
     assert_eq!(deserialized.blocks[1].get_param("Inputs"), Some("+-+"));
     assert_eq!(deserialized.lines[1].dst.port_index, 3);
 }
+
+#[test]
+fn test_algebraic_loop_saturation_gives_e_alg() {
+    let mut diagram = BlockDiagram::new("SaturationLoop");
+    diagram.add_block(Block::new("1", "Const", BlockType::Constant).with_param("Value", "1.0"));
+    diagram.add_block(Block::new("2", "Sum", BlockType::Sum).with_param("Inputs", "+-"));
+    diagram.add_block(
+        Block::new("3", "Sat", BlockType::Saturation)
+            .with_param("LowerLimit", "-10.0")
+            .with_param("UpperLimit", "10.0"),
+    );
+    diagram.add_block(Block::new("4", "Gain", BlockType::Gain).with_param("Gain", "2.0"));
+    diagram.add_block(Block::new("5", "Out", BlockType::Outport));
+
+    // 1 -> 2 port 1
+    diagram.add_line("1", 1, "2", 1);
+    // 2 -> 3
+    diagram.add_line("2", 1, "3", 1);
+    // 3 -> 4
+    diagram.add_line("3", 1, "4", 1);
+    // 4 -> 2 port 2 (algebraic feedback through direct-feedthrough blocks!)
+    diagram.add_line("4", 1, "2", 2);
+    // 4 -> 5
+    diagram.add_line("4", 1, "5", 1);
+
+    let config = SimulationConfig::default();
+    let res = simulate_diagram(&diagram, &config);
+    match res {
+        Err(mlapp_sim::SimError::AlgebraicLoop {
+            code,
+            blocks,
+            message,
+        }) => {
+            assert_eq!(code, "E-ALG");
+            let sids: Vec<_> = blocks.iter().map(|b| b.sid.as_str()).collect();
+            assert!(sids.contains(&"2"), "Sum must be in loop");
+            assert!(sids.contains(&"3"), "Saturation must be in loop");
+            assert!(sids.contains(&"4"), "Gain must be in loop");
+            assert!(message.contains("E-ALG"));
+            assert!(message.contains("Unit Delay") || message.contains("Integrator"));
+        }
+        other => panic!("Expected E-ALG AlgebraicLoop error, got {other:?}"),
+    }
+}
+
+#[test]
+fn test_loop_through_unit_delay_is_accepted() {
+    let mut diagram = BlockDiagram::new("UnitDelayLoop");
+    diagram.add_block(Block::new("1", "Const", BlockType::Constant).with_param("Value", "1.0"));
+    diagram.add_block(Block::new("2", "Sum", BlockType::Sum).with_param("Inputs", "+-"));
+    diagram.add_block(
+        Block::new("3", "Delay", BlockType::UnitDelay).with_param("InitialCondition", "0.0"),
+    );
+    diagram.add_block(Block::new("4", "Gain", BlockType::Gain).with_param("Gain", "0.5"));
+    diagram.add_block(Block::new("5", "Out", BlockType::Outport));
+
+    diagram.add_line("1", 1, "2", 1);
+    diagram.add_line("2", 1, "3", 1);
+    diagram.add_line("3", 1, "4", 1);
+    diagram.add_line("4", 1, "2", 2); // feedback through UnitDelay is non-direct-feedthrough!
+    diagram.add_line("3", 1, "5", 1);
+
+    let config = SimulationConfig {
+        start_time: 0.0,
+        stop_time: 0.1,
+        step_size: 0.01,
+        solver: "FixedStepEuler".to_string(),
+    };
+    let out = simulate_diagram(&diagram, &config).expect("UnitDelay breaks loop; must succeed");
+    assert!(!out.yout.is_empty());
+}
+
+#[test]
+fn test_loop_through_integrator_is_accepted() {
+    let mut diagram = BlockDiagram::new("IntegratorLoop");
+    diagram.add_block(Block::new("1", "Const", BlockType::Constant).with_param("Value", "2.0"));
+    diagram.add_block(Block::new("2", "Sum", BlockType::Sum).with_param("Inputs", "+-"));
+    diagram.add_block(Block::new("3", "Gain", BlockType::Gain).with_param("Gain", "3.0"));
+    diagram.add_block(
+        Block::new("4", "Int", BlockType::Integrator).with_param("InitialCondition", "0.0"),
+    );
+    diagram.add_block(Block::new("5", "Out", BlockType::Outport));
+
+    diagram.add_line("1", 1, "2", 1);
+    diagram.add_line("2", 1, "3", 1);
+    diagram.add_line("3", 1, "4", 1);
+    diagram.add_line("4", 1, "2", 2); // feedback through Integrator is non-direct-feedthrough!
+    diagram.add_line("4", 1, "5", 1);
+
+    let config = SimulationConfig {
+        start_time: 0.0,
+        stop_time: 1.0,
+        step_size: 0.01,
+        solver: "FixedStepEuler".to_string(),
+    };
+    let out = simulate_diagram(&diagram, &config).expect("Integrator breaks loop; must succeed");
+    assert!(!out.yout.is_empty());
+}
+
+#[test]
+fn test_algebraic_loop_self_loop_gives_e_alg() {
+    let mut diagram = BlockDiagram::new("SelfLoop");
+    diagram.add_block(Block::new("1", "GainSelf", BlockType::Gain).with_param("Gain", "1.0"));
+
+    // Self-loop: output 1 to input 1
+    diagram.add_line("1", 1, "1", 1);
+
+    let config = SimulationConfig::default();
+    let res = simulate_diagram(&diagram, &config);
+    match res {
+        Err(mlapp_sim::SimError::AlgebraicLoop { code, blocks, .. }) => {
+            assert_eq!(code, "E-ALG");
+            assert!(blocks.iter().any(|b| b.sid == "1"));
+        }
+        other => panic!("Expected E-ALG AlgebraicLoop error for self loop, got {other:?}"),
+    }
+}
+
+#[test]
+fn test_algebraic_loop_two_independent_loops_reported() {
+    let mut diagram = BlockDiagram::new("TwoLoops");
+    // Loop A: 1 <-> 2
+    diagram.add_block(Block::new("1", "GainA1", BlockType::Gain).with_param("Gain", "1.0"));
+    diagram.add_block(Block::new("2", "GainA2", BlockType::Gain).with_param("Gain", "1.0"));
+    diagram.add_line("1", 1, "2", 1);
+    diagram.add_line("2", 1, "1", 1);
+
+    // Loop B: 3 <-> 4
+    diagram.add_block(Block::new("3", "GainB1", BlockType::Gain).with_param("Gain", "1.0"));
+    diagram.add_block(Block::new("4", "GainB2", BlockType::Gain).with_param("Gain", "1.0"));
+    diagram.add_line("3", 1, "4", 1);
+    diagram.add_line("4", 1, "3", 1);
+
+    let config = SimulationConfig::default();
+    let res = simulate_diagram(&diagram, &config);
+    match res {
+        Err(mlapp_sim::SimError::AlgebraicLoop { code, blocks, .. }) => {
+            assert_eq!(code, "E-ALG");
+            let sids: Vec<_> = blocks.iter().map(|b| b.sid.as_str()).collect();
+            assert!(sids.contains(&"1"), "Loop A block 1 must be reported");
+            assert!(sids.contains(&"2"), "Loop A block 2 must be reported");
+            assert!(sids.contains(&"3"), "Loop B block 3 must be reported");
+            assert!(sids.contains(&"4"), "Loop B block 4 must be reported");
+        }
+        other => panic!("Expected E-ALG AlgebraicLoop error reporting both loops, got {other:?}"),
+    }
+}
+
+#[test]
+fn test_disconnected_subgraphs_run() {
+    let mut diagram = BlockDiagram::new("DisconnectedSubgraphs");
+    // Subgraph 1: Sine -> Gain -> OutA
+    diagram.add_block(
+        Block::new("1", "Sine", BlockType::SineWave)
+            .with_param("Amplitude", "2.0")
+            .with_param("Frequency", "1.0"),
+    );
+    diagram.add_block(Block::new("2", "Gain1", BlockType::Gain).with_param("Gain", "3.0"));
+    diagram.add_block(Block::new("3", "OutA", BlockType::Outport));
+    diagram.add_line("1", 1, "2", 1);
+    diagram.add_line("2", 1, "3", 1);
+
+    // Subgraph 2: Step -> Gain -> OutB
+    diagram.add_block(
+        Block::new("4", "Step", BlockType::Step)
+            .with_param("Time", "0.0")
+            .with_param("After", "4.0"),
+    );
+    diagram.add_block(Block::new("5", "Gain2", BlockType::Gain).with_param("Gain", "2.0"));
+    diagram.add_block(Block::new("6", "OutB", BlockType::Outport));
+    diagram.add_line("4", 1, "5", 1);
+    diagram.add_line("5", 1, "6", 1);
+
+    let config = SimulationConfig {
+        start_time: 0.0,
+        stop_time: 1.0,
+        step_size: 0.05,
+        solver: "FixedStepEuler".to_string(),
+    };
+    let out = simulate_diagram(&diagram, &config).expect("Disconnected subgraphs must run");
+    assert!(out.signals.contains_key("OutA"));
+    assert!(out.signals.contains_key("OutB"));
+    let sig_b = &out.signals["OutB"];
+    assert!((sig_b[0] - 8.0).abs() < 1e-4); // 4.0 * 2.0 = 8.0
+}
+
+#[test]
+fn test_topological_order_is_stable_across_runs() {
+    let mut diagram = BlockDiagram::new("ParallelBranches");
+    diagram.add_block(Block::new("1", "Const", BlockType::Constant).with_param("Value", "3.0"));
+    diagram.add_block(Block::new("2", "GainA", BlockType::Gain).with_param("Gain", "2.0"));
+    diagram.add_block(Block::new("3", "GainB", BlockType::Gain).with_param("Gain", "4.0"));
+    diagram.add_block(Block::new("4", "Sum", BlockType::Sum).with_param("Inputs", "++"));
+    diagram.add_block(Block::new("5", "Out", BlockType::Outport));
+
+    diagram.add_line("1", 1, "2", 1);
+    diagram.add_line("1", 1, "3", 1);
+    diagram.add_line("2", 1, "4", 1);
+    diagram.add_line("3", 1, "4", 2);
+    diagram.add_line("4", 1, "5", 1);
+
+    let config = SimulationConfig {
+        start_time: 0.0,
+        stop_time: 1.0,
+        step_size: 0.05,
+        solver: "FixedStepEuler".to_string(),
+    };
+    let run1 = simulate_diagram(&diagram, &config).expect("run 1");
+    let run2 = simulate_diagram(&diagram, &config).expect("run 2");
+    let run3 = simulate_diagram(&diagram, &config).expect("run 3");
+
+    // Bit-identical verification across runs
+    assert_eq!(run1.yout.len(), run2.yout.len());
+    for i in 0..run1.yout.len() {
+        assert_eq!(
+            run1.yout[i].to_bits(),
+            run2.yout[i].to_bits(),
+            "Run 1 vs Run 2 mismatch at step {i}"
+        );
+        assert_eq!(
+            run2.yout[i].to_bits(),
+            run3.yout[i].to_bits(),
+            "Run 2 vs Run 3 mismatch at step {i}"
+        );
+    }
+}
+
+#[test]
+fn test_unconnected_input_behaviour_is_unchanged() {
+    let mut diagram = BlockDiagram::new("UnconnectedInput");
+    diagram.add_block(Block::new("1", "Const", BlockType::Constant).with_param("Value", "7.5"));
+    diagram.add_block(Block::new("2", "Sum", BlockType::Sum).with_param("Inputs", "+-"));
+    diagram.add_block(Block::new("3", "Out", BlockType::Outport));
+
+    // Connect Const to port 1; port 2 is unconnected!
+    diagram.add_line("1", 1, "2", 1);
+    diagram.add_line("2", 1, "3", 1);
+
+    let config = SimulationConfig {
+        start_time: 0.0,
+        stop_time: 0.1,
+        step_size: 0.01,
+        solver: "FixedStepEuler".to_string(),
+    };
+    let out = simulate_diagram(&diagram, &config).expect("unconnected port is 0.0");
+    for val in &out.yout {
+        assert_eq!(val.to_bits(), 7.5f64.to_bits(), "7.5 - 0.0 must equal 7.5");
+    }
+}
+
+#[test]
+fn test_feedback_example_produces_identical_output() {
+    let mut diagram = BlockDiagram::new("FeedbackExample");
+    diagram.add_block(
+        Block::new("1", "Step", BlockType::Step)
+            .with_param("Time", "0.0")
+            .with_param("After", "1.0"),
+    );
+    diagram.add_block(Block::new("2", "Sum", BlockType::Sum).with_param("Inputs", "+-"));
+    diagram.add_block(Block::new("3", "Gain", BlockType::Gain).with_param("Gain", "2.0"));
+    diagram.add_block(
+        Block::new("4", "Integrator", BlockType::Integrator).with_param("InitialCondition", "0.0"),
+    );
+    diagram.add_block(Block::new("5", "Scope", BlockType::Scope));
+
+    diagram.add_line("1", 1, "2", 1);
+    diagram.add_line("2", 1, "3", 1);
+    diagram.add_line("3", 1, "4", 1);
+    diagram.add_line("4", 1, "5", 1);
+    diagram.add_line("4", 1, "2", 2);
+
+    let config = SimulationConfig {
+        start_time: 0.0,
+        stop_time: 1.0,
+        step_size: 0.01,
+        solver: "FixedStepEuler".to_string(),
+    };
+    let run1 = simulate_diagram(&diagram, &config).expect("sim feedback 1");
+    let run2 = simulate_diagram(&diagram, &config).expect("sim feedback 2");
+
+    assert_eq!(run1.yout.len(), run2.yout.len());
+    for i in 0..run1.yout.len() {
+        assert_eq!(
+            run1.yout[i].to_bits(),
+            run2.yout[i].to_bits(),
+            "Step response bit equality at {i}"
+        );
+    }
+}

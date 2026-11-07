@@ -155,6 +155,9 @@ test_a3_sparse_memory_efficiency: test
 test_a3_sparse_memory_efficiency_10000x10000: test
 test_a3_sparse_parity_and_residual: test
 test_acceptance_t_entropy: test
+test_algebraic_loop_saturation_gives_e_alg: test
+test_algebraic_loop_self_loop_gives_e_alg: test
+test_algebraic_loop_two_independent_loops_reported: test
 test_all_aspect_ratio_targets_have_a_status_name_and_theme: test
 test_anonymous_function: test
 test_app_host_session_lifecycle: test
@@ -257,6 +260,7 @@ test_desktop_session_numerical_methods_and_data: test
 test_desktop_session_simulation_and_robotics: test
 test_diagnostic_error_formatting: test
 test_diagnostics_error_and_assert: test
+test_disconnected_subgraphs_run: test
 test_dock_tree_help_addons_block_diagram_panels: test
 test_dock_tree_move_panel_and_tab_operations: test
 test_dock_tree_presets_and_json_persistence: test
@@ -294,6 +298,7 @@ test_extract_security_reserved_device_names: test
 test_extract_security_symlink_not_allowed: test
 test_extract_security_unc_path: test
 test_extract_zip_in_zip_nested_bomb: test
+test_feedback_example_produces_identical_output: test
 test_file_count_limit: test
 test_file_save_and_load: test
 test_fixtures_generation_and_inspection: test
@@ -330,6 +335,8 @@ test_inspect_mlapp_structure: test
 test_inspect_mlappinstall_manifest: test
 test_interp1_linear_and_nearest: test
 test_linear_algebra_and_system_solve: test
+test_loop_through_integrator_is_accepted: test
+test_loop_through_unit_delay_is_accepted: test
 test_machine_learning_fitlm_predict_kmeans: test
 test_matio_builtin_load_save: test
 test_matio_image_sparse_and_empty_roundtrip: test
@@ -438,10 +445,12 @@ test_struct_arrays: test
 test_summary_and_writetable_roundtrip: test
 test_supported_functions_doc_parity_and_coverage: test
 test_top_level_figure_geometry_exact_values: test
+test_topological_order_is_stable_across_runs: test
 test_transpose_vs_char_vector: test
 test_trapz_and_cumtrapz: test
 test_try_catch_mexception: test
 test_uncompressed_roundtrip: test
+test_unconnected_input_behaviour_is_unchanged: test
 test_unsupported_function_diagnostics: test
 test_user_defined_functions_and_multiple_returns: test
 test_value_changed_callback_receives_event_value_and_app_field: test

@@ -6,16 +6,45 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use thiserror::Error;
 
-#[derive(Debug, Error)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct BlockRef {
+    pub sid: String,
+    pub name: String,
+}
+
+#[derive(Debug, Clone, Error, PartialEq)]
 pub enum SimError {
     #[error("Simulation error: {0}")]
     Execution(String),
 
-    #[error("Algebraic loop failed to converge after {0} iterations")]
-    AlgebraicLoop(usize),
+    #[error("Algebraic loop detected ({code}): {message}")]
+    AlgebraicLoop {
+        code: String,
+        blocks: Vec<BlockRef>,
+        message: String,
+    },
 
     #[error("Block not found: {0}")]
     BlockNotFound(String),
+}
+
+impl SimError {
+    pub fn algebraic_loop(blocks: Vec<BlockRef>) -> Self {
+        let block_list = blocks
+            .iter()
+            .map(|b| format!("{} (SID: {})", b.name, b.sid))
+            .collect::<Vec<_>>()
+            .join(", ");
+        let message = format!(
+            "Algebraic loop detected (E-ALG): Direct-feedthrough dependency cycle detected among blocks: [{}]. The outputs of these blocks instantaneously depend on their own inputs. To fix: insert a Unit Delay or Integrator in the loop to break the instantaneous algebraic feedback.",
+            block_list
+        );
+        SimError::AlgebraicLoop {
+            code: "E-ALG".to_string(),
+            blocks,
+            message,
+        }
+    }
 }
 
 /// Simulation configuration parameters.
@@ -72,15 +101,7 @@ impl SimulationOutput {
     }
 }
 
-/// Internal runtime state for a single block during simulation.
-struct BlockState {
-    continuous_state: f64,
-    discrete_state: f64,
-    derivative: f64,
-    output: f64,
-}
-
-/// Runs a fixed-step simulation of the provided block diagram.
+/// Runs a fixed-step simulation of the provided block diagram using the execution engine.
 pub fn simulate_diagram(
     diagram: &BlockDiagram,
     config: &SimulationConfig,
@@ -94,36 +115,27 @@ pub fn simulate_diagram(
         ));
     }
 
+    // 1. Compile diagram into execution engine (topological order, E-ALG cycle check, pre-parsed blocks)
+    let engine = crate::engine::ExecutionEngine::compile(diagram)?;
     let num_steps = ((config.stop_time - config.start_time) / config.step_size).round() as usize;
 
-    // Initialize block states
-    let mut states: HashMap<String, BlockState> = HashMap::new();
-    for b in &diagram.blocks {
-        let init_cond = b
-            .get_param("InitialCondition")
-            .and_then(|s| s.parse::<f64>().ok())
-            .unwrap_or(0.0);
+    let mut continuous_states = engine.initial_continuous_states.clone();
+    let mut discrete_states = engine.initial_discrete_states.clone();
 
-        states.insert(
-            b.sid.clone(),
-            BlockState {
-                continuous_state: init_cond,
-                discrete_state: init_cond,
-                derivative: 0.0,
-                output: 0.0,
-            },
-        );
-    }
+    // 2. Pre-allocate workspace buffers once per run (zero heap allocations in the simulation step loop)
+    let mut workspace =
+        crate::engine::SimWorkspace::new(diagram.blocks.len(), engine.layout.num_continuous_states);
 
     let mut tout = Vec::with_capacity(num_steps + 1);
     let mut yout = Vec::with_capacity(num_steps + 1);
     let mut signals: HashMap<String, Vec<f64>> = HashMap::new();
 
     // Identify log sinks (Scope, ToWorkspace, Outport)
-    let log_blocks: Vec<&Block> = diagram
+    let log_blocks: Vec<(usize, &Block)> = diagram
         .blocks
         .iter()
-        .filter(|b| {
+        .enumerate()
+        .filter(|(_, b)| {
             matches!(
                 b.block_type,
                 BlockType::Scope | BlockType::ToWorkspace | BlockType::Outport
@@ -131,7 +143,7 @@ pub fn simulate_diagram(
         })
         .collect();
 
-    for b in &log_blocks {
+    for (_, b) in &log_blocks {
         signals.insert(b.name.clone(), Vec::with_capacity(num_steps + 1));
     }
 
@@ -140,187 +152,31 @@ pub fn simulate_diagram(
     for step in 0..=num_steps {
         let t = config.start_time + (step as f64) * dt;
 
-        // 1. Initial output evaluation from stateful and source blocks
-        for b in &diagram.blocks {
-            let st = states
-                .get_mut(&b.sid)
-                .ok_or_else(|| SimError::BlockNotFound(b.sid.clone()))?;
-            match b.block_type {
-                BlockType::Constant => {
-                    let val = b
-                        .get_param("Value")
-                        .and_then(|s| s.parse::<f64>().ok())
-                        .unwrap_or(1.0);
-                    st.output = val;
-                }
-                BlockType::SineWave => {
-                    let amp = b
-                        .get_param("Amplitude")
-                        .and_then(|s| s.parse::<f64>().ok())
-                        .unwrap_or(1.0);
-                    let freq = b
-                        .get_param("Frequency")
-                        .and_then(|s| s.parse::<f64>().ok())
-                        .unwrap_or(1.0);
-                    let phase = b
-                        .get_param("Phase")
-                        .and_then(|s| s.parse::<f64>().ok())
-                        .unwrap_or(0.0);
-                    let bias = b
-                        .get_param("Bias")
-                        .and_then(|s| s.parse::<f64>().ok())
-                        .unwrap_or(0.0);
-                    st.output = amp * (freq * t + phase).sin() + bias;
-                }
-                BlockType::Step => {
-                    let step_t = b
-                        .get_param("Time")
-                        .or_else(|| b.get_param("StepTime"))
-                        .and_then(|s| s.parse::<f64>().ok())
-                        .unwrap_or(1.0);
-                    let before = b
-                        .get_param("Before")
-                        .and_then(|s| s.parse::<f64>().ok())
-                        .unwrap_or(0.0);
-                    let after = b
-                        .get_param("After")
-                        .and_then(|s| s.parse::<f64>().ok())
-                        .unwrap_or(1.0);
-                    st.output = if t >= step_t { after } else { before };
-                }
-                BlockType::Integrator => {
-                    st.output = st.continuous_state;
-                }
-                BlockType::UnitDelay => {
-                    st.output = st.discrete_state;
-                }
-                _ => {}
-            }
-        }
+        // Pure evaluation of block outputs and derivatives
+        engine.eval(t, &continuous_states, &discrete_states, &mut workspace);
 
-        // 2. Feedforward algebraic resolution (Gauss-Seidel iterations for feedforward blocks)
-        let max_iter = 20;
-        let mut converged = false;
-
-        for _iter in 0..max_iter {
-            let mut max_change = 0.0f64;
-
-            for b in &diagram.blocks {
-                let inputs = get_block_inputs(b, diagram, &states);
-
-                let new_output = match b.block_type {
-                    BlockType::Gain => {
-                        let gain = b
-                            .get_param("Gain")
-                            .and_then(|s| s.parse::<f64>().ok())
-                            .unwrap_or(1.0);
-                        let u = inputs.first().copied().unwrap_or(0.0);
-                        gain * u
-                    }
-                    BlockType::Sum => {
-                        let signs = b.get_param("Inputs").unwrap_or("++");
-                        let mut sum = 0.0;
-                        let mut sign_chars = signs.chars().filter(|&c| c == '+' || c == '-');
-                        for &u in &inputs {
-                            let s = sign_chars.next().unwrap_or('+');
-                            if s == '-' {
-                                sum -= u;
-                            } else {
-                                sum += u;
-                            }
-                        }
-                        sum
-                    }
-                    BlockType::Product => {
-                        if inputs.is_empty() {
-                            0.0
-                        } else {
-                            inputs.iter().product()
-                        }
-                    }
-                    BlockType::Saturation => {
-                        let lower = b
-                            .get_param("LowerLimit")
-                            .and_then(|s| s.parse::<f64>().ok())
-                            .unwrap_or(-1.0);
-                        let upper = b
-                            .get_param("UpperLimit")
-                            .and_then(|s| s.parse::<f64>().ok())
-                            .unwrap_or(1.0);
-                        let u = inputs.first().copied().unwrap_or(0.0);
-                        u.clamp(lower, upper)
-                    }
-                    BlockType::Scope | BlockType::ToWorkspace | BlockType::Outport => {
-                        inputs.first().copied().unwrap_or(0.0)
-                    }
-                    _ => {
-                        // Already computed in step 1
-                        states.get(&b.sid).map(|s| s.output).unwrap_or(0.0)
-                    }
-                };
-
-                if let Some(st) = states.get_mut(&b.sid) {
-                    let diff = (new_output - st.output).abs();
-                    if diff > max_change {
-                        max_change = diff;
-                    }
-                    st.output = new_output;
-                }
-            }
-
-            if max_change < 1e-9 {
-                converged = true;
-                break;
-            }
-        }
-
-        if !converged {
-            return Err(SimError::AlgebraicLoop(max_iter));
-        }
-
-        // 3. Record logged signals at this time step
+        // Record logged signals at this time step
         tout.push(t);
 
-        // Find primary output signal (first outport or scope)
         let primary_val = log_blocks
             .first()
-            .and_then(|b| states.get(&b.sid).map(|s| s.output))
-            .unwrap_or_else(|| {
-                // If no log block, pick the last block in diagram
-                diagram
-                    .blocks
-                    .last()
-                    .and_then(|b| states.get(&b.sid).map(|s| s.output))
-                    .unwrap_or(0.0)
-            });
+            .map(|(idx, _)| workspace.outputs[*idx])
+            .unwrap_or_else(|| workspace.outputs.last().copied().unwrap_or(0.0));
         yout.push(primary_val);
 
-        for b in &log_blocks {
-            if let Some(st) = states.get(&b.sid) {
-                if let Some(vec) = signals.get_mut(&b.name) {
-                    vec.push(st.output);
-                }
+        for (idx, b) in &log_blocks {
+            if let Some(vec) = signals.get_mut(&b.name) {
+                vec.push(workspace.outputs[*idx]);
             }
         }
 
-        // 4. Update states for next step: Integrator and UnitDelay
-        for b in &diagram.blocks {
-            let inputs = get_block_inputs(b, diagram, &states);
-            let u = inputs.first().copied().unwrap_or(0.0);
-
-            if let Some(st) = states.get_mut(&b.sid) {
-                match b.block_type {
-                    BlockType::Integrator => {
-                        st.derivative = u;
-                        st.continuous_state += dt * u;
-                    }
-                    BlockType::UnitDelay => {
-                        st.discrete_state = u;
-                    }
-                    _ => {}
-                }
-            }
+        // Advance continuous states using fixed-step Euler integration
+        for (state, &deriv) in continuous_states.iter_mut().zip(&workspace.derivatives) {
+            *state += dt * deriv;
         }
+
+        // Advance discrete states (UnitDelay) once per accepted major step
+        engine.update_discrete(&workspace.outputs, &mut discrete_states);
     }
 
     Ok(SimulationOutput {
@@ -328,40 +184,4 @@ pub fn simulate_diagram(
         yout,
         signals,
     })
-}
-
-/// Helper to get input signal values to a given block from connected lines.
-fn get_block_inputs(
-    block: &Block,
-    diagram: &BlockDiagram,
-    states: &HashMap<String, BlockState>,
-) -> Vec<f64> {
-    let num_inputs = block.input_ports();
-    let mut inputs = vec![0.0; num_inputs];
-
-    // Find all lines whose destination is this block
-    let incoming_lines: Vec<_> = diagram
-        .lines
-        .iter()
-        .filter(|l| l.dst.block_sid == block.sid || l.dst.block_sid == block.name)
-        .collect();
-
-    for line in incoming_lines {
-        let src_val = diagram
-            .find_block(&line.src.block_sid)
-            .and_then(|src_block| states.get(&src_block.sid).map(|st| st.output))
-            .unwrap_or(0.0);
-        let port_idx = if line.dst.port_index > 0 {
-            line.dst.port_index - 1
-        } else {
-            0
-        };
-        if port_idx < num_inputs {
-            inputs[port_idx] = src_val;
-        } else {
-            inputs.push(src_val);
-        }
-    }
-
-    inputs
 }

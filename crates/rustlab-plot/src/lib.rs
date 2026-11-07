@@ -215,7 +215,7 @@ pub enum Colormap {
     Rustlab,
 }
 
-/// Look up an RGB color in [0,1] at normalized position t in [0,1] for the
+/// Look up an RGB color in `[0,1]` at normalized position `t` in `[0,1]` for the
 /// given colormap.
 pub fn colormap_lookup(cmap: Colormap, t: f64) -> [f32; 3] {
     let t = t.clamp(0.0, 1.0);

@@ -33,6 +33,8 @@ This document tracks the cumulative and per-suite test counts across milestones,
 | **GUI polish S3 (`f153d9c`)** | **352** | **352** | +1 `matrust_studio` (`hidden_filter_is_dotfile_only`) | Current Folder hides dot-entries by default with a Hidden toggle. Net +1 test. 0 regressions. |
 | **GUI file tree + cloud dialog (this session)** | **393** | **393** | +6 `matrust_studio` lib tests (3 `current_folder` tree/totals, 3 `cloud_accounts` detection), +35 prior-session staged tests (11 `editor_gui_tests`, 10 `gui_clean_tests`, 3 `current_folder_tests`, +11 desktop/lib additions) | Project tree view with whole-project totals, auto-refresh on save, Cloud Drives dialog. Manifest regenerated 352 -> 393. 0 regressions. |
 | **Block Diagram Editor layout (this task)** | **457** | **457** | +8 `block_diagram_editor::tests` layout and interaction tests | Workspace listing reconciled the prior 393-entry manifest with 56 pre-existing unlisted tests and 8 new editor tests; regenerated to 457 entries with no removals. Default, all-features, and no-default-features runs each passed 457 tests. |
+| **M1/M2 Solvers & Engine Integration** | **470** | **470** | +13 `solver_tests` (Euler, RK4, Dormand-Prince DP45, discrete sample times) | Core execution engine with topological sort and algebraic loop detection, high-order continuous solvers, and bit-level regression fixtures. |
+| **PR #22 GUI Polish & Cross-Platform CI Integration (this session)** | **495** | **495** | +25 desktop GUI, editor interaction, and layout suite tests | Current Folder tree, cloud storage integration, multi-file editor tabs, diagnostic jump, Linux xdg-portal file dialogs, doc parity, and manifest match. Default, all-features, and no-default-features pass 495 tests. |
 
 ---
 

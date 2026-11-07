@@ -19,6 +19,7 @@ block_diagram_editor::tests::test_block_diagram_duplicate: test
 block_diagram_editor::tests::test_block_diagram_editor_json_roundtrip: test
 block_diagram_editor::tests::test_deleting_block_removes_wires: test
 block_diagram_editor::tests::test_editing_numeric_param_persists_across_frames: test
+block_diagram_editor::tests::test_editor_solver_config_persistence: test
 block_diagram_editor::tests::test_invalid_numeric_param_rejected_old_value_kept: test
 block_diagram_editor::tests::test_sum_signs_creates_ports_and_wires_survive: test
 broadcast::tests::test_broadcast_iterator_outer_sum: test
@@ -210,11 +211,13 @@ test_basic_arithmetic_evaluation: test
 test_bit_for_bit_regression_against_old_solver_and_fixtures: test
 test_block_diagram_editor_canvas_and_solver: test
 test_block_diagram_json_roundtrip: test
+test_blowup_system_ends_with_e_step_or_e_nan: test
 test_boolean_mask_indexing_and_assignment: test
 test_boolean_mask_shape_rules_and_deletion: test
 test_breakpoint_execution_pause_inspect_and_continue: test
 test_breakpoint_execution_stop: test
 test_broadcasting_elementwise_binary: test
+test_butcher_tableau_weights_and_orders: test
 test_c_abi_null_and_invalid_inputs_with_handle_ids: test
 test_c_abi_package_and_session_flow_with_handle_ids: test
 test_c_header_parity_and_declarations: test
@@ -265,6 +268,7 @@ test_disconnected_subgraphs_run: test
 test_dock_tree_help_addons_block_diagram_panels: test
 test_dock_tree_move_panel_and_tab_operations: test
 test_dock_tree_presets_and_json_persistence: test
+test_dormand_prince_tolerance_compliance: test
 test_dos_100k_terms_addition: test
 test_dos_huge_zeros_allocation_cap: test
 test_dos_long_dot_and_call_chains: test
@@ -289,6 +293,7 @@ test_editor_section_extraction_and_syntax_analysis: test
 test_editor_toolbar_has_exactly_one_run_control_set: test
 test_elementwise_elementary_math: test
 test_end_to_end_callback_with_advanced_matlab_features: test
+test_euler_rk4_convergence_rates: test
 test_extract_aggregate_decompressed_bytes_limit: test
 test_extract_code_from_xml: test
 test_extract_security_backslash_traversal: test
@@ -334,6 +339,7 @@ test_indexing_and_end: test
 test_indexing_with_end: test
 test_inspect_mlapp_structure: test
 test_inspect_mlappinstall_manifest: test
+test_integrator_sin_analytical_parity: test
 test_interp1_linear_and_nearest: test
 test_linear_algebra_and_system_solve: test
 test_loop_through_integrator_is_accepted: test
@@ -360,6 +366,7 @@ test_nd_array_trailing_end_expansion: test
 test_nested_anonymous_functions_and_closure_handles: test
 test_nested_end_contexts: test
 test_no_ai_crates_or_symbols: test
+test_non_uniform_tout_and_signals: test
 test_num2str_and_mat2str: test
 test_num2str_noninteger_matrix_g_style_unverified: test
 test_number_display_format_short_golden: test
@@ -378,6 +385,7 @@ test_octave_value_roundtrip_all_types: test
 test_operator_precedence: test
 test_opt_in_real_apps_validation: test
 test_panel_action_controls_are_registered_and_reachable: test
+test_parameter_validation_e_param: test
 test_parse_app_classdef_structure: test
 test_parse_app_xml_component_tree: test
 test_parser_nesting_depth_limit: test
@@ -401,6 +409,7 @@ test_reference_offset_1e8_plus_noise: test
 test_reference_random_data: test
 test_reference_window_edges_and_k_equals_len: test
 test_regexp_and_regexprep: test
+test_rejected_step_preserves_discrete_state: test
 test_relational_and_logical_operations: test
 test_ribbon_controls_stay_inside_panel_at_all_target_sizes: test
 test_ribbon_registry_inventory_is_complete: test
@@ -436,10 +445,12 @@ test_simulation_tf_and_step: test
 test_simulink_app_designer_integration: test
 test_simulink_error_paths: test
 test_slx_inspect_and_parser: test
+test_solver_config_serde_backward_compat: test
 test_sprintf_format_recycling_golden: test
 test_sprintf_fprintf_edge_cases: test
 test_static_compatibility_scanner: test
 test_status_error_count_is_clickable_and_jumps_to_first_error: test
+test_step_block_lands_exactly_on_step_time: test
 test_string_library_core: test
 test_strings_and_chars: test
 test_struct_arrays: test
@@ -452,6 +463,8 @@ test_trapz_and_cumtrapz: test
 test_try_catch_mexception: test
 test_uncompressed_roundtrip: test
 test_unconnected_input_behaviour_is_unchanged: test
+test_unit_delay_sample_time_under_dp: test
+test_unit_delay_sample_time_under_dp_fsal_agreement: test
 test_unsupported_function_diagnostics: test
 test_user_defined_functions_and_multiple_returns: test
 test_value_changed_callback_receives_event_value_and_app_field: test
@@ -461,6 +474,7 @@ test_worker_client_async_execution: test
 test_worker_panic_recovery_and_session_reset: test
 test_xml_nesting_depth_limit: test
 test_zero_allocations_during_eval_and_update_discrete: test
+test_zero_continuous_states_under_variable_step: test
 test_zip_bomb_protection: test
 test_zip_slip_protection: test
 tests::axes_data_bounds_empty: test

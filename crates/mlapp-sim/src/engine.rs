@@ -59,6 +59,7 @@ pub enum CompiledKind {
     },
     UnitDelay {
         state_idx: usize,
+        sample_time: Option<f64>,
     },
     Saturation {
         lower: f64,
@@ -274,7 +275,13 @@ impl ExecutionEngine {
                 }
                 BlockType::UnitDelay => {
                     let state_idx = layout.discrete_offsets[i].unwrap_or(0);
-                    CompiledKind::UnitDelay { state_idx }
+                    let sample_time = b
+                        .get_param("SampleTime")
+                        .and_then(|s| s.parse::<f64>().ok());
+                    CompiledKind::UnitDelay {
+                        state_idx,
+                        sample_time,
+                    }
                 }
                 BlockType::Saturation => {
                     let lower = b
@@ -395,14 +402,15 @@ impl ExecutionEngine {
     }
 
     /// Pure evaluation function: computes algebraic outputs and continuous derivatives
-    /// at time t without mutating engine or solver state.
+    /// at time t without mutating engine or solver state. Returns an E-NAN error if any
+    /// output or derivative is non-finite.
     pub fn eval(
         &self,
         t: f64,
         continuous_states: &[f64],
         discrete_states: &[f64],
         workspace: &mut SimWorkspace,
-    ) {
+    ) -> Result<(), crate::solver::SimError> {
         let outputs = &mut workspace.outputs;
 
         // Evaluate all blocks in precomputed topological schedule order
@@ -430,7 +438,7 @@ impl ExecutionEngine {
                 CompiledKind::Integrator { state_idx } => {
                     outputs[idx] = continuous_states[*state_idx];
                 }
-                CompiledKind::UnitDelay { state_idx } => {
+                CompiledKind::UnitDelay { state_idx, .. } => {
                     outputs[idx] = discrete_states[*state_idx];
                 }
                 CompiledKind::Gain { gain } => {
@@ -490,6 +498,18 @@ impl ExecutionEngine {
                     outputs[idx] = 0.0;
                 }
             }
+
+            if !outputs[idx].is_finite() {
+                return Err(crate::solver::SimError::non_finite(
+                    Some(crate::solver::BlockRef {
+                        sid: b.sid.clone(),
+                        name: b.name.clone(),
+                    }),
+                    outputs[idx],
+                    t,
+                    "output",
+                ));
+            }
         }
 
         // Evaluate continuous state derivatives
@@ -502,16 +522,29 @@ impl ExecutionEngine {
                     .and_then(|opt| *opt)
                     .map(|src| outputs[src])
                     .unwrap_or(0.0);
+                if !u.is_finite() {
+                    return Err(crate::solver::SimError::non_finite(
+                        Some(crate::solver::BlockRef {
+                            sid: b.sid.clone(),
+                            name: b.name.clone(),
+                        }),
+                        u,
+                        t,
+                        "derivative",
+                    ));
+                }
                 derivatives[state_idx] = u;
             }
         }
+
+        Ok(())
     }
 
-    /// Discrete state update: updates UnitDelay states from current outputs.
-    /// Called once per accepted major simulation step.
+    /// Discrete state update: updates UnitDelay states unconditionally from current outputs.
+    /// Called once per accepted major simulation step in fixed-step without sample times.
     pub fn update_discrete(&self, outputs: &[f64], discrete_states: &mut [f64]) {
         for b in &self.compiled_blocks {
-            if let CompiledKind::UnitDelay { state_idx } = b.kind {
+            if let CompiledKind::UnitDelay { state_idx, .. } = b.kind {
                 let u = b
                     .input_sources
                     .first()
@@ -519,6 +552,132 @@ impl ExecutionEngine {
                     .map(|src| outputs[src])
                     .unwrap_or(0.0);
                 discrete_states[state_idx] = u;
+            }
+        }
+    }
+
+    /// Finds the earliest scheduled breakpoint strictly after time t.
+    pub fn next_breakpoint(&self, t: f64) -> Option<f64> {
+        let mut next: Option<f64> = None;
+        for b in &self.compiled_blocks {
+            if let CompiledKind::Step { step_time, .. } = b.kind {
+                if step_time > t + 1e-12 {
+                    next = Some(next.map_or(step_time, |n| n.min(step_time)));
+                }
+            }
+        }
+        next
+    }
+
+    /// Validates discrete block sample times according to the active solver rules.
+    pub fn validate_sample_times(
+        &self,
+        config: &crate::solver::SimulationConfig,
+    ) -> Result<(), crate::solver::SimError> {
+        for b in &self.compiled_blocks {
+            if let CompiledKind::UnitDelay { sample_time, .. } = b.kind {
+                let blk = crate::solver::BlockRef {
+                    sid: b.sid.clone(),
+                    name: b.name.clone(),
+                };
+                match config.solver {
+                    crate::solver::SolverType::VariableStepDormandPrince => match sample_time {
+                        None => return Err(crate::solver::SimError::sample_time_missing(blk)),
+                        Some(ts) if ts <= 0.0 || !ts.is_finite() => {
+                            return Err(crate::solver::SimError::sample_time_invalid(blk, ts));
+                        }
+                        _ => {}
+                    },
+                    crate::solver::SolverType::FixedStepEuler
+                    | crate::solver::SolverType::FixedStepRk4 => {
+                        if let Some(ts) = sample_time {
+                            if ts <= 0.0 || !ts.is_finite() {
+                                return Err(crate::solver::SimError::sample_time_invalid(blk, ts));
+                            }
+                            let m = (ts / config.step_size).round();
+                            if m < 1.0
+                                || ((ts - m * config.step_size).abs() / config.step_size) > 1e-9
+                            {
+                                return Err(crate::solver::SimError::sample_time_not_multiple(
+                                    blk,
+                                    ts,
+                                    config.step_size,
+                                ));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// Finds the next discrete sample hit strictly after time t.
+    pub fn next_sample_hit(
+        &self,
+        t: f64,
+        t_start: f64,
+        _config: &crate::solver::SimulationConfig,
+    ) -> Option<f64> {
+        let mut next_hit: Option<f64> = None;
+        for b in &self.compiled_blocks {
+            if let CompiledKind::UnitDelay {
+                sample_time: Some(ts),
+                ..
+            } = b.kind
+            {
+                let k = ((t - t_start) / ts + 1e-9).floor() as i64 + 1;
+                let tk = t_start + (k as f64) * ts;
+                if tk > t + 1e-12 {
+                    next_hit = Some(next_hit.map_or(tk, |n| n.min(tk)));
+                }
+            }
+        }
+        next_hit
+    }
+
+    /// Checks whether the given block with optional sample_time hits at time t.
+    pub fn is_sample_hit(
+        &self,
+        t: f64,
+        t_start: f64,
+        sample_time: Option<f64>,
+        _config: &crate::solver::SimulationConfig,
+    ) -> bool {
+        match sample_time {
+            None => true,
+            Some(ts) => {
+                let k = ((t - t_start) / ts).round();
+                ((t - t_start) - k * ts).abs() < 1e-8
+            }
+        }
+    }
+
+    /// Discrete state update with sample hit checking: updates UnitDelay states
+    /// only for blocks whose sample hit occurs at time t on accepted steps.
+    pub fn update_discrete_at(
+        &self,
+        t: f64,
+        t_start: f64,
+        outputs: &[f64],
+        discrete_states: &mut [f64],
+        config: &crate::solver::SimulationConfig,
+    ) {
+        for b in &self.compiled_blocks {
+            if let CompiledKind::UnitDelay {
+                state_idx,
+                sample_time,
+            } = b.kind
+            {
+                if self.is_sample_hit(t, t_start, sample_time, config) {
+                    let u = b
+                        .input_sources
+                        .first()
+                        .and_then(|opt| *opt)
+                        .map(|src| outputs[src])
+                        .unwrap_or(0.0);
+                    discrete_states[state_idx] = u;
+                }
             }
         }
     }

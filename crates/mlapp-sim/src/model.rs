@@ -156,12 +156,20 @@ pub struct Line {
     pub name: Option<String>,
 }
 
+fn default_schema_version() -> u32 {
+    1
+}
+
 /// A parsed Simulink block diagram model.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct BlockDiagram {
     pub name: String,
     pub version: Option<String>,
     pub release: Option<String>,
+    #[serde(default = "default_schema_version")]
+    pub schema_version: u32,
+    #[serde(default)]
+    pub simulation_config: Option<crate::solver::SimulationConfig>,
     pub blocks: Vec<Block>,
     pub lines: Vec<Line>,
     pub toolboxes: Vec<String>,
@@ -174,6 +182,8 @@ impl BlockDiagram {
             name: name.into(),
             version: None,
             release: None,
+            schema_version: 2,
+            simulation_config: None,
             blocks: Vec::new(),
             lines: Vec::new(),
             toolboxes: Vec::new(),

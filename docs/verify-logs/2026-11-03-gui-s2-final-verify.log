@@ -165,12 +165,12 @@
    Compiling clap_derive v4.6.7
     Checking bytemuck v1.25.2
     Checking num-complex v0.4.6
-    Checking rustlab-parse v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-parse)
-    Checking rustlab-math v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-math)
+    Checking rustlab-parse v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\rustlab-parse)
+    Checking rustlab-math v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\rustlab-math)
     Checking dyn-stack v0.13.2
-    Checking rustlab-eval v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-eval)
-    Checking rustlab-matio v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-matio)
-    Checking rustlab-data v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-data)
+    Checking rustlab-eval v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\rustlab-eval)
+    Checking rustlab-matio v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\rustlab-matio)
+    Checking rustlab-data v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\rustlab-data)
     Checking rustfft v6.4.1
     Checking clap v4.6.7
    Compiling zerofrom-derive v0.1.8
@@ -178,22 +178,22 @@
    Compiling yoke-derive v0.8.4
    Compiling zerovec-derive v0.11.6
     Checking zerofrom v0.1.8
-    Checking mlapp-container v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\mlapp-container)
+    Checking mlapp-container v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\mlapp-container)
    Compiling displaydoc v0.2.7
-    Checking mlapp-sim v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\mlapp-sim)
-    Checking mlapp-lang v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\mlapp-lang)
+    Checking mlapp-sim v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\mlapp-sim)
+    Checking mlapp-lang v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\mlapp-lang)
     Checking yoke v0.8.3
-    Checking mlapp-ui v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\mlapp-ui)
+    Checking mlapp-ui v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\mlapp-ui)
     Checking half v2.7.1
-    Checking mlapp-matlab v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\mlapp-matlab)
-    Checking mlapp-octave v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\mlapp-octave)
+    Checking mlapp-matlab v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\mlapp-matlab)
+    Checking mlapp-octave v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\mlapp-octave)
     Checking zerovec v0.11.8
     Checking zerotrie v0.2.5
     Checking ciborium-ll v0.2.2
     Checking tinytemplate v1.2.1
     Checking emath v0.31.1
     Checking ciborium v0.2.2
-    Checking mlapp-plot v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\mlapp-plot)
+    Checking mlapp-plot v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\mlapp-plot)
     Checking tinystr v0.8.4
     Checking potential_utf v0.1.6
     Checking ecolor v0.31.1
@@ -272,24 +272,24 @@
     Checking unindent v0.2.4
    Compiling indoc v2.0.8
    Compiling pyo3-macros v0.22.6
-    Checking rustlab-stdlib v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-stdlib)
-    Checking mlapp-runtime v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\mlapp-runtime)
-    Checking rustlab-cli v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-cli)
-    Checking matrust_studio v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\apps\desktop)
-    Checking mlapp-host v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\mlapp-host)
-    Checking mlapp-render v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\mlapp-render)
-    Checking mlapp-ffi v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\mlapp-ffi)
-    Checking mlapp-py v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\mlapp-py)
-    Checking mlapp-cli v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\mlapp-cli)
+    Checking rustlab-stdlib v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\rustlab-stdlib)
+    Checking mlapp-runtime v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\mlapp-runtime)
+    Checking rustlab-cli v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\rustlab-cli)
+    Checking matrust_studio v0.1.0 (<repo>\Desktop\MATSTUDIO\apps\desktop)
+    Checking mlapp-host v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\mlapp-host)
+    Checking mlapp-render v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\mlapp-render)
+    Checking mlapp-ffi v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\mlapp-ffi)
+    Checking mlapp-py v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\mlapp-py)
+    Checking mlapp-cli v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\mlapp-cli)
     Finished `dev` profile [unoptimized + debuginfo] target(s) in 2m 04s
 === 3. Running clippy (workspace no default features) ===
    Compiling pyo3-build-config v0.22.6
-    Checking matrust_studio v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\apps\desktop)
+    Checking matrust_studio v0.1.0 (<repo>\Desktop\MATSTUDIO\apps\desktop)
    Compiling pyo3-macros-backend v0.22.6
    Compiling pyo3-ffi v0.22.6
    Compiling pyo3 v0.22.6
    Compiling pyo3-macros v0.22.6
-    Checking mlapp-py v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\mlapp-py)
+    Checking mlapp-py v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\mlapp-py)
     Finished `dev` profile [unoptimized + debuginfo] target(s) in 15.64s
 === 4. Running clippy (per-crate truly without default features) ===
 --- Clippy: rustlab-stdlib (--no-default-features) ---
@@ -320,14 +320,14 @@
    Compiling serde_derive v1.0.229
    Compiling zerocopy-derive v0.8.63
     Checking thiserror v2.0.21
-    Checking rustlab-parse v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-parse)
-    Checking rustlab-math v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-math)
+    Checking rustlab-parse v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\rustlab-parse)
+    Checking rustlab-math v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\rustlab-math)
     Checking zerocopy v0.8.63
     Checking serde v1.0.229
-    Checking rustlab-matio v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-matio)
-    Checking rustlab-eval v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-eval)
+    Checking rustlab-matio v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\rustlab-matio)
+    Checking rustlab-eval v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\rustlab-eval)
     Checking tinytemplate v1.2.1
-    Checking rustlab-stdlib v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-stdlib)
+    Checking rustlab-stdlib v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\rustlab-stdlib)
     Checking half v2.7.1
     Checking ciborium-ll v0.2.2
     Checking ciborium v0.2.2
@@ -336,7 +336,7 @@
 --- Clippy: rustlab-math (--no-default-features) ---
     Checking once_cell v1.21.4
     Checking windows-sys v0.61.2
-    Checking rustlab-math v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-math)
+    Checking rustlab-math v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\rustlab-math)
 error: unused variable: `m_isize`
    --> crates\rustlab-math\src\ops.rs:121:9
     |
@@ -376,13 +376,13 @@ warning: build failed, waiting for other jobs to finish...
    Compiling thiserror-impl v2.0.21
    Compiling clap_derive v4.6.7
     Checking thiserror v2.0.21
-    Checking rustlab-parse v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-parse)
+    Checking rustlab-parse v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\rustlab-parse)
     Checking clap v4.6.7
-    Checking rustlab-math v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-math)
-    Checking rustlab-eval v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-eval)
-    Checking rustlab-matio v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-matio)
-    Checking rustlab-stdlib v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-stdlib)
-    Checking rustlab-cli v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-cli)
+    Checking rustlab-math v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\rustlab-math)
+    Checking rustlab-eval v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\rustlab-eval)
+    Checking rustlab-matio v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\rustlab-matio)
+    Checking rustlab-stdlib v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\rustlab-stdlib)
+    Checking rustlab-cli v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\rustlab-cli)
     Finished `dev` profile [unoptimized + debuginfo] target(s) in 9.30s
 --- Clippy: matrust_studio (--no-default-features) ---
     Checking windows-sys v0.61.2
@@ -402,21 +402,21 @@ warning: build failed, waiting for other jobs to finish...
     Checking anstream v1.0.0
     Checking home v0.5.12
     Checking quick-xml v0.41.0
-    Checking rustlab-data v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-data)
+    Checking rustlab-data v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\rustlab-data)
     Checking clap_builder v4.6.7
     Checking rustyline v15.0.0
-    Checking mlapp-container v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\mlapp-container)
+    Checking mlapp-container v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\mlapp-container)
     Checking clap v4.6.7
-    Checking mlapp-sim v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\mlapp-sim)
+    Checking mlapp-sim v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\mlapp-sim)
     Checking ahash v0.8.12
     Checking epaint v0.31.1
     Checking egui v0.31.1
     Checking egui_glow v0.31.1
     Checking egui-winit v0.31.1
     Checking eframe v0.31.1
-    Checking rustlab-stdlib v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-stdlib)
-    Checking rustlab-cli v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-cli)
-    Checking matrust_studio v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\apps\desktop)
+    Checking rustlab-stdlib v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\rustlab-stdlib)
+    Checking rustlab-cli v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\rustlab-cli)
+    Checking matrust_studio v0.1.0 (<repo>\Desktop\MATSTUDIO\apps\desktop)
     Finished `dev` profile [unoptimized + debuginfo] target(s) in 1m 05s
 === 5. Running tests (workspace default features) ===
    Compiling cfg-if v1.0.5
@@ -429,7 +429,7 @@ warning: build failed, waiting for other jobs to finish...
    Compiling thiserror v2.0.21
    Compiling windows-sys v0.61.2
    Compiling serde_core v1.0.229
-   Compiling rustlab-parse v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-parse)
+   Compiling rustlab-parse v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\rustlab-parse)
    Compiling rand_core v0.10.1
    Compiling rawpointer v0.2.1
    Compiling bitflags v2.13.2
@@ -442,13 +442,13 @@ warning: build failed, waiting for other jobs to finish...
    Compiling crc32fast v1.5.3
    Compiling miniz_oxide v0.9.1
    Compiling zlib-rs v0.6.8
-   Compiling rustlab-math v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-math)
+   Compiling rustlab-math v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\rustlab-math)
    Compiling regex-syntax v0.8.11
    Compiling libm v0.2.16
    Compiling reborrow v0.5.5
    Compiling serde v1.0.229
    Compiling serde_json v1.0.154
-   Compiling rustlab-eval v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-eval)
+   Compiling rustlab-eval v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\rustlab-eval)
    Compiling pulp-wasm-simd-flag v0.1.1
    Compiling pulp v0.22.3
    Compiling dyn-stack v0.13.2
@@ -458,7 +458,7 @@ warning: build failed, waiting for other jobs to finish...
    Compiling csv v1.4.0
    Compiling aho-corasick v1.1.5
    Compiling nano-gemm-core v0.2.1
-   Compiling rustlab-data v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-data)
+   Compiling rustlab-data v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\rustlab-data)
    Compiling log v0.4.34
    Compiling regex-automata v0.4.18
    Compiling num-integer v0.1.47
@@ -469,7 +469,7 @@ warning: build failed, waiting for other jobs to finish...
    Compiling gemm-common v0.19.0
    Compiling regex v1.13.1
    Compiling flate2 v1.1.10
-   Compiling rustlab-matio v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-matio)
+   Compiling rustlab-matio v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\rustlab-matio)
    Compiling gemm-c32 v0.19.0
    Compiling gemm-f32 v0.19.0
    Compiling gemm-c64 v0.19.0
@@ -512,20 +512,20 @@ warning: build failed, waiting for other jobs to finish...
    Compiling libc v0.2.191
    Compiling windows-targets v0.52.6
    Compiling zerofrom v0.1.8
-   Compiling mlapp-container v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\mlapp-container)
+   Compiling mlapp-container v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\mlapp-container)
    Compiling clap v4.6.7
-   Compiling mlapp-sim v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\mlapp-sim)
+   Compiling mlapp-sim v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\mlapp-sim)
    Compiling stable_deref_trait v1.2.1
    Compiling yoke v0.8.3
-   Compiling mlapp-ui v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\mlapp-ui)
-   Compiling mlapp-lang v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\mlapp-lang)
+   Compiling mlapp-ui v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\mlapp-ui)
+   Compiling mlapp-lang v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\mlapp-lang)
    Compiling zerovec v0.11.8
    Compiling unicode-segmentation v1.13.3
    Compiling error-code v3.4.0
    Compiling clipboard-win v5.4.3
-   Compiling mlapp-matlab v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\mlapp-matlab)
+   Compiling mlapp-matlab v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\mlapp-matlab)
    Compiling windows-sys v0.59.0
-   Compiling mlapp-octave v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\mlapp-octave)
+   Compiling mlapp-octave v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\mlapp-octave)
    Compiling nano-gemm v0.2.2
    Compiling tinystr v0.8.4
    Compiling faer v0.24.4
@@ -545,7 +545,7 @@ warning: build failed, waiting for other jobs to finish...
    Compiling icu_normalizer_data v2.3.0
    Compiling half v2.7.1
    Compiling winapi-util v0.1.11
-   Compiling mlapp-plot v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\mlapp-plot)
+   Compiling mlapp-plot v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\mlapp-plot)
    Compiling ttf-parser v0.25.1
    Compiling scopeguard v1.2.0
    Compiling plotters-backend v0.3.7
@@ -658,15 +658,15 @@ warning: build failed, waiting for other jobs to finish...
    Compiling bstr v1.13.1
    Compiling assert_cmd v2.2.2
    Compiling pyo3-macros v0.22.6
-   Compiling rustlab-stdlib v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-stdlib)
-   Compiling mlapp-runtime v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\mlapp-runtime)
-   Compiling rustlab-cli v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-cli)
-   Compiling matrust_studio v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\apps\desktop)
-   Compiling mlapp-host v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\mlapp-host)
-   Compiling mlapp-render v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\mlapp-render)
-   Compiling mlapp-ffi v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\mlapp-ffi)
-   Compiling mlapp-py v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\mlapp-py)
-   Compiling mlapp-cli v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\mlapp-cli)
+   Compiling rustlab-stdlib v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\rustlab-stdlib)
+   Compiling mlapp-runtime v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\mlapp-runtime)
+   Compiling rustlab-cli v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\rustlab-cli)
+   Compiling matrust_studio v0.1.0 (<repo>\Desktop\MATSTUDIO\apps\desktop)
+   Compiling mlapp-host v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\mlapp-host)
+   Compiling mlapp-render v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\mlapp-render)
+   Compiling mlapp-ffi v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\mlapp-ffi)
+   Compiling mlapp-py v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\mlapp-py)
+   Compiling mlapp-cli v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\mlapp-cli)
     Finished `test` profile [unoptimized + debuginfo] target(s) in 3m 24s
      Running unittests src\lib.rs (target\debug\deps\matrust_studio-a6d34bae22bc4eeb.exe)
 
@@ -1524,7 +1524,7 @@ running 0 tests
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
 === 6. Running tests (workspace all features) ===
-   Compiling mlapp-py v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\mlapp-py)
+   Compiling mlapp-py v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\mlapp-py)
     Finished `test` profile [unoptimized + debuginfo] target(s) in 10.75s
      Running unittests src\lib.rs (target\debug\deps\matrust_studio-a6d34bae22bc4eeb.exe)
 
@@ -2383,12 +2383,12 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
 
 === 7. Running tests (workspace no default features) ===
    Compiling pyo3-build-config v0.22.6
-   Compiling matrust_studio v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\apps\desktop)
+   Compiling matrust_studio v0.1.0 (<repo>\Desktop\MATSTUDIO\apps\desktop)
    Compiling pyo3-ffi v0.22.6
    Compiling pyo3-macros-backend v0.22.6
    Compiling pyo3 v0.22.6
    Compiling pyo3-macros v0.22.6
-   Compiling mlapp-py v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\mlapp-py)
+   Compiling mlapp-py v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\mlapp-py)
     Finished `test` profile [unoptimized + debuginfo] target(s) in 19.40s
      Running unittests src\lib.rs (target\debug\deps\matrust_studio-32ce34484158e5d1.exe)
 
@@ -3255,13 +3255,13 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
    Compiling zerocopy v0.8.63
    Compiling simd-adler32 v0.3.10
    Compiling crc32fast v1.5.3
-   Compiling rustlab-parse v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-parse)
+   Compiling rustlab-parse v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\rustlab-parse)
    Compiling miniz_oxide v0.9.1
    Compiling clap_builder v4.6.7
    Compiling aho-corasick v1.1.5
    Compiling rustfft v6.4.1
    Compiling winapi-util v0.1.11
-   Compiling rustlab-math v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-math)
+   Compiling rustlab-math v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\rustlab-math)
    Compiling regex-automata v0.4.18
    Compiling serde v1.0.229
    Compiling serde_json v1.0.154
@@ -3270,13 +3270,13 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
    Compiling flate2 v1.1.10
    Compiling walkdir v2.5.0
    Compiling tinytemplate v1.2.1
-   Compiling rustlab-matio v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-matio)
-   Compiling rustlab-eval v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-eval)
+   Compiling rustlab-matio v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\rustlab-matio)
+   Compiling rustlab-eval v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\rustlab-eval)
    Compiling clap v4.6.7
    Compiling is-terminal v0.4.17
    Compiling getrandom v0.4.3
    Compiling tempfile v3.27.0
-   Compiling rustlab-stdlib v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-stdlib)
+   Compiling rustlab-stdlib v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\rustlab-stdlib)
    Compiling half v2.7.1
    Compiling ciborium-ll v0.2.2
    Compiling ciborium v0.2.2
@@ -3478,7 +3478,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
 --- Tests: rustlab-math (--no-default-features) ---
    Compiling once_cell v1.21.4
    Compiling windows-sys v0.61.2
-   Compiling rustlab-math v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-math)
+   Compiling rustlab-math v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\rustlab-math)
 warning: unused variable: `m_isize`
    --> crates\rustlab-math\src\ops.rs:121:9
     |
@@ -3558,10 +3558,10 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
    Compiling windows-sys v0.59.0
    Compiling error-code v3.4.0
    Compiling log v0.4.34
-   Compiling rustlab-parse v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-parse)
+   Compiling rustlab-parse v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\rustlab-parse)
    Compiling clipboard-win v5.4.3
    Compiling nibble_vec v0.1.0
-   Compiling rustlab-math v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-math)
+   Compiling rustlab-math v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\rustlab-math)
    Compiling radix_trie v0.2.1
    Compiling fd-lock v4.0.4
    Compiling anstyle-query v1.1.5
@@ -3570,12 +3570,12 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
    Compiling anstream v1.0.0
    Compiling rustyline v15.0.0
    Compiling clap_builder v4.6.7
-   Compiling rustlab-matio v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-matio)
-   Compiling rustlab-eval v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-eval)
+   Compiling rustlab-matio v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\rustlab-matio)
+   Compiling rustlab-eval v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\rustlab-eval)
    Compiling regex v1.13.1
    Compiling clap v4.6.7
-   Compiling rustlab-stdlib v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-stdlib)
-   Compiling rustlab-cli v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-cli)
+   Compiling rustlab-stdlib v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\rustlab-stdlib)
+   Compiling rustlab-cli v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\rustlab-cli)
     Finished `test` profile [unoptimized + debuginfo] target(s) in 46.42s
      Running unittests src\lib.rs (target\debug\deps\rustlab_cli-d972a38e07b56970.exe)
 
@@ -3637,24 +3637,24 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
    Compiling anstyle-wincon v3.0.11
    Compiling anstream v1.0.0
    Compiling quick-xml v0.41.0
-   Compiling rustlab-data v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-data)
+   Compiling rustlab-data v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\rustlab-data)
    Compiling zip v9.2.0
    Compiling clap_builder v4.6.7
    Compiling arboard v3.7.0
    Compiling home v0.5.12
    Compiling rustyline v15.0.0
    Compiling clap v4.6.7
-   Compiling mlapp-container v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\mlapp-container)
-   Compiling mlapp-sim v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\mlapp-sim)
+   Compiling mlapp-container v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\mlapp-container)
+   Compiling mlapp-sim v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\mlapp-sim)
    Compiling ahash v0.8.12
    Compiling epaint v0.31.1
    Compiling egui v0.31.1
    Compiling egui_glow v0.31.1
    Compiling egui-winit v0.31.1
    Compiling eframe v0.31.1
-   Compiling rustlab-stdlib v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-stdlib)
-   Compiling rustlab-cli v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-cli)
-   Compiling matrust_studio v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\apps\desktop)
+   Compiling rustlab-stdlib v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\rustlab-stdlib)
+   Compiling rustlab-cli v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\rustlab-cli)
+   Compiling matrust_studio v0.1.0 (<repo>\Desktop\MATSTUDIO\apps\desktop)
     Finished `test` profile [unoptimized + debuginfo] target(s) in 2m 00s
      Running unittests src\lib.rs (target\debug\deps\matrust_studio-19367ec7c124f15e.exe)
 
@@ -3700,7 +3700,7 @@ running 0 tests
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
 === 9. Verifying test manifest integrity & feature-gated tests ===
-   Compiling mlapp-py v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\mlapp-py)
+   Compiling mlapp-py v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\mlapp-py)
     Finished `test` profile [unoptimized + debuginfo] target(s) in 5.21s
      Running unittests src\lib.rs (target\debug\deps\matrust_studio-a6d34bae22bc4eeb.exe)
      Running unittests src\main.rs (target\debug\deps\matrust_studio-89d295d033d4b5f0.exe)
@@ -3796,15 +3796,15 @@ Test manifest check passed: all 351 manifest entries are present.
    Compiling dyn-stack v0.13.2
    Compiling ciborium v0.2.2
    Compiling pulp v0.22.3
-   Compiling rustlab-math v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-math)
+   Compiling rustlab-math v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\rustlab-math)
    Compiling nano-gemm-c64 v0.2.1
    Compiling nano-gemm-c32 v0.2.1
    Compiling rustfft v6.4.1
    Compiling tinytemplate v1.2.1
    Compiling criterion v0.5.1
-   Compiling rustlab-eval v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-eval)
-   Compiling rustlab-matio v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-matio)
-   Compiling rustlab-data v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-data)
+   Compiling rustlab-eval v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\rustlab-eval)
+   Compiling rustlab-matio v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\rustlab-matio)
+   Compiling rustlab-data v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\rustlab-data)
    Compiling gemm-common v0.19.0
    Compiling qd v0.8.0
    Compiling faer-traits v0.24.0
@@ -3815,7 +3815,7 @@ Test manifest check passed: all 351 manifest entries are present.
    Compiling gemm v0.19.0
    Compiling nano-gemm v0.2.2
    Compiling faer v0.24.4
-   Compiling rustlab-stdlib v0.1.0 (C:\Users\varun\Desktop\MATSTUDIO\crates\rustlab-stdlib)
+   Compiling rustlab-stdlib v0.1.0 (<repo>\Desktop\MATSTUDIO\crates\rustlab-stdlib)
     Finished `test` profile [unoptimized + debuginfo] target(s) in 2m 09s
      Running unittests src\lib.rs (target\debug\deps\rustlab_stdlib-f164f6b49204ec79.exe)
      Running tests\conformance_tests.rs (target\debug\deps\conformance_tests-0c6734f993d61672.exe)

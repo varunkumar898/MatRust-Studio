@@ -333,6 +333,6 @@ in-session evidence.
 
 Section-11 note: the test-pollution finding (10) was FIXED in commit 9ea305c — every test
 artifact writer now targets `%TEMP%` and `scripts/verify.ps1` step 10 fails the run on a
-dirty tree. Evidence: `docs/verify-logs/2026-11-03-gui-s2-hygiene-verify.log`, SHA-256
+dirty tree. Evidence: `docs/VERIFICATION.md` (historical SHA-256
 `09287F07129071D3FE34ADBA131D984FB4E4273150F1078B2C76FE7E417F571E` (from-clean, ends
 "All verification steps passed successfully!", manifest check passed: all 351 entries present).

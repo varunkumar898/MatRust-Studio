@@ -24,9 +24,12 @@ re/targets/*.exe
 Thumbs.db
 ehthumbs.db
 
-# Logs: ignore root and temporary logs, but track formal verify logs
+# Logs
 *.log
-!docs/verify-logs/*.log
+build_*.log
+mylog.txt
+now.txt
+docs/verify-logs/
 
 # Python artifacts
 __pycache__/

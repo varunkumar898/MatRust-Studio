@@ -31,8 +31,8 @@
   and the T-ENTROPY screenshot) now write only to `%TEMP%`; `docs/builtins.txt` is verified
   read-only against the live registry (225 names under full defaults; drift is a loud test
   failure instead of a silent rewrite). `scripts/verify.ps1` gained step 10: the run fails
-  on any working-tree dirt. From-clean log:
-  `docs/verify-logs/2026-11-03-gui-s2-hygiene-verify.log` (SHA-256
+  on any working-tree dirt. From-clean log summarized in
+  `docs/VERIFICATION.md` (historical SHA-256
   `09287F07129071D3FE34ADBA131D984FB4E4273150F1078B2C76FE7E417F571E`), still 351/351/351
   and all 351 manifest entries present.
 - **S2@C2 audit reconciliation COMPLETE**: six owner-screenshot items reconciled in
@@ -84,7 +84,7 @@
   failed to compile). Owner closed it; after 14:05:21 no further foreign
   writes were observed (30 s stability windows, then 2+ min quiet). The
   takeover session verified: desktop tests 61/61
-  (`docs/verify-logs/2026-11-04-gui-editor-resume-desktop-tests.log`), clippy
+  (`docs/VERIFICATION.md`), clippy
   `-D warnings` clean, manifest exact parity 393/393, and captured real-window
   screenshots at 1280x720 / 1920x1080
   (`docs/screenshots/gui-editor/after/`, SHA-256 prefixes `CCA4ADC994589B05` /

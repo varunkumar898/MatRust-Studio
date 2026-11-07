@@ -1,7 +1,7 @@
 # MATSTUDIO Layout Audit — L1 (contract C1–C12)
 
 - **Phase:** LAYOUT master prompt v1 — Phase L1 (AUDIT, no code).
-- **Repo / branch:** `C:\Users\varun\Desktop\MATSTUDIO`, branch `gui/polish-1`.
+- **Repo / branch:** `<repo>\Desktop\MATSTUDIO`, branch `gui/polish-1`.
 - **Date:** 2026-11-04.
 - **Method:** L1 = probe-free reading + real-window captures already produced this session
   (`scripts/capture-desktop-s1.ps1` vs `target\debug\matrust_studio.exe`;

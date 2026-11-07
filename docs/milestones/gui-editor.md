@@ -106,8 +106,8 @@ Evidence from the takeover session (all commands run in-session):
 
 | Item | Command | Output file | SHA-256 (16-char prefix) |
 | :--- | :--- | :--- | :--- |
-| Desktop tests 61/61 | `cargo test -p matrust_studio --features data` | `docs/verify-logs/2026-11-04-gui-editor-resume-desktop-tests.log` | `81947FAC0AF37182` (10184 B) |
-| Clippy -D warnings clean | `cargo clippy -p matrust_studio --all-targets --all-features -- -D warnings` | `docs/verify-logs/2026-11-04-gui-editor-clippy-after-takeover.log` | `2B9ABD3CBCF71C53` |
+| Desktop tests 61/61 | `cargo test -p matrust_studio --features data` | `docs/VERIFICATION.md` | `81947FAC0AF37182` (10184 B) |
+| Clippy -D warnings clean | `cargo clippy -p matrust_studio --all-targets --all-features -- -D warnings` | `docs/VERIFICATION.md` | `2B9ABD3CBCF71C53` |
 | Manifest parity | `cargo test --workspace -- --list` vs manifest | live 393 = manifest 393, 0 missing, 0 extra | (session transcript) |
 | Real-window capture | `scripts/capture-desktop-s1.ps1 -OutDir docs/screenshots/gui-editor/after` | `.../desktop_1280x720.png` (140390 B) | `CCA4ADC994589B05` |
 | Real-window capture | same | `.../desktop_1920x1080.png` (207244 B) | `2F7A97262C88BD56` |

@@ -1,6 +1,6 @@
 # PLOT-1 Design Note — Plot Integration
 
-**Repo:** `C:\Users\varun\Desktop\MATSTUDIO`
+**Repo:** `<repo>\Desktop\MATSTUDIO`
 **Branch:** `gui/polish-1` (owner instruction: same branch; owner also allowed `plot/int-1` from it — not created, stayed on `gui/polish-1`)
 **Phase:** PLOT-1 — design note only, NO code changes
 **Based exclusively on:** PLOT-0 discovery (`docs/plot-int/discovery.md`) — every structural claim cites `file:line`.

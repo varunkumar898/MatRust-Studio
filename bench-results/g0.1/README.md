@@ -18,7 +18,7 @@
 | `preclean-F6A302EB/bench-run3.txt` | Measured run with the pre-`cargo clean` build `F6A302EB...` | No |
 
 The canonical three-run medians and spreads are parsed in
-`docs/verify-logs/2026-10-28-g0.1-verify-bench-summary.txt`. The first
+`docs/VERIFICATION.md`. The first
 invocation after a release build was a cold-cache outlier and was not used for
 the final table; the three canonical runs are the measured set.
 
@@ -28,6 +28,6 @@ the final table; the three canonical runs are the measured set.
 > The raw logs are retained exactly as captured rather than rewritten.
 
 The 1,000,000-row CSV workload is verified separately:
-`docs/verify-logs/2026-10-28-g0.1-verify-csv-1m-rows.txt` (1,000,000 lines,
+`docs/VERIFICATION.md` (1,000,000 lines,
 8,888,896 bytes) and `...-csv-readback-1m.txt` (read back as `[1000000 1]`,
 first value 1, last value 1000000).

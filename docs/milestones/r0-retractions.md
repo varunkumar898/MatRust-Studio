@@ -13,7 +13,7 @@ All are process/documentation mistakes; no product code or test behavior changed
    placed B4 before B3. The file was rewritten from AGENTS.md section 5. A
    mechanical whitespace-normalized comparison (ignoring the inserted G0.1 row)
    reports `EXACT_MATCH=True` over 5,955 characters; output saved in
-   `docs/verify-logs/2026-10-27-r0-roadmap-verbatim.txt`.
+   `docs/VERIFICATION.md`.
 
 3. **STATE.md did not contain the requested next milestone.** The first edit
    changed only the current milestone and left the old "Next milestone is G1"

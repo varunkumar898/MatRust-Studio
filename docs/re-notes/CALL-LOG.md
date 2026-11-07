@@ -120,7 +120,7 @@ All reverse engineering, disassembly, symbol inspection, and binary layout verif
 
 | Timestamp (UTC) | Tool / Method | Target Binary & Checksum | Parameters & Request | Outcome & Observations |
 | :--- | :--- | :--- | :--- | :--- |
-| 2026-10-28 08:19:39 | `opencode mcp list`; `tools.opencode.list_mcp_resources` | `re/targets/rustlab.exe` (shell SHA-256 `78A31A97B1E73696D5EC2EA434AF9878DA543BDA43D4F058CF5C21A6EB42C3C7`, 5,400,064 bytes) | `{"server": "rea"}` | **SKIPPED**: `opencode mcp list` returned `No MCP servers configured`; the list-resources probe returned `MCP server not found: rea`. No session hash and no binary analysis were produced. The shell hash matches the recorded G0.1 copy. Raw command output: `docs/verify-logs/2026-10-28-g0.1-verify-rea-mcp-list.txt`; probe note: `docs/re-notes/g0.1-add-path.md`. |
+| 2026-10-28 08:19:39 | `opencode mcp list`; `tools.opencode.list_mcp_resources` | `re/targets/rustlab.exe` (shell SHA-256 `78A31A97B1E73696D5EC2EA434AF9878DA543BDA43D4F058CF5C21A6EB42C3C7`, 5,400,064 bytes) | `{"server": "rea"}` | **SKIPPED**: `opencode mcp list` returned `No MCP servers configured`; the list-resources probe returned `MCP server not found: rea`. No session hash and no binary analysis were produced. The shell hash matches the recorded G0.1 copy. Raw command output summarized in `docs/VERIFICATION.md`; probe note: `docs/re-notes/g0.1-add-path.md`. |
 
 ---
 

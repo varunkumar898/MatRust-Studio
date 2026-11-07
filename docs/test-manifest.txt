@@ -344,6 +344,13 @@ test_interp1_linear_and_nearest: test
 test_linear_algebra_and_system_solve: test
 test_loop_through_integrator_is_accepted: test
 test_loop_through_unit_delay_is_accepted: test
+test_m3_control_eval_and_feedthrough: test
+test_m3_discrete_blocks_e_sample_rule: test
+test_m3_pid_analytical_and_antiwindup: test
+test_m3_source_breakpoints_hit_under_ode45: test
+test_m3_sources_eval_and_validation: test
+test_m3_spec_table_definitions: test
+test_m3_transfer_function_analytical_step: test
 test_machine_learning_fitlm_predict_kmeans: test
 test_matio_builtin_load_save: test
 test_matio_image_sparse_and_empty_roundtrip: test
@@ -474,6 +481,7 @@ test_worker_client_async_execution: test
 test_worker_panic_recovery_and_session_reset: test
 test_xml_nesting_depth_limit: test
 test_zero_allocations_during_eval_and_update_discrete: test
+test_zero_allocations_m3_blocks_during_eval_and_update_discrete: test
 test_zero_continuous_states_under_variable_step: test
 test_zip_bomb_protection: test
 test_zip_slip_protection: test

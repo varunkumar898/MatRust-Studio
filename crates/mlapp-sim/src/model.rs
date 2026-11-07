@@ -1,5 +1,9 @@
 //! Simulink block diagram data model: blocks, lines, parameters, and metadata.
 
+pub use crate::spec::{
+    all_block_specs, block_spec, param_specs_for, parse_float_vector, BlockSpec, ParamKind,
+    ParamSpec,
+};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -10,11 +14,26 @@ pub enum BlockType {
     Constant,
     SineWave,
     Step,
+    Sawtooth,
+    Triangle,
+    PulseGenerator,
+    RepeatingSequence,
+    RepeatingSequenceStair,
+    Clock,
     Gain,
     Sum,
     Product,
     Integrator,
     UnitDelay,
+    TransferFunction,
+    DiscreteTransferFunction,
+    Pid,
+    ZeroOrderHold,
+    RelationalOperator,
+    LogicalOperator,
+    Switch,
+    Abs,
+    MathFunction,
     Saturation,
     Scope,
     ToWorkspace,
@@ -30,11 +49,34 @@ impl BlockType {
             "Constant" => BlockType::Constant,
             "Sin" | "SineWave" | "Sine Wave" => BlockType::SineWave,
             "Step" => BlockType::Step,
+            "Sawtooth" => BlockType::Sawtooth,
+            "Triangle" => BlockType::Triangle,
+            "PulseGenerator" | "Pulse Generator" => BlockType::PulseGenerator,
+            "RepeatingSequence" | "Repeating Sequence" => BlockType::RepeatingSequence,
+            "RepeatingSequenceStair" | "Repeating Sequence Stair" | "RepeatingSequenceStairs" => {
+                BlockType::RepeatingSequenceStair
+            }
+            "Clock" => BlockType::Clock,
             "Gain" => BlockType::Gain,
             "Sum" | "Add" | "Subtract" => BlockType::Sum,
             "Product" => BlockType::Product,
             "Integrator" => BlockType::Integrator,
             "UnitDelay" | "Delay" => BlockType::UnitDelay,
+            "TransferFunction" | "Transfer Function" | "Transfer Fcn" => {
+                BlockType::TransferFunction
+            }
+            "DiscreteTransferFunction" | "Discrete Transfer Function" | "Discrete Transfer Fcn" => {
+                BlockType::DiscreteTransferFunction
+            }
+            "PID" | "Pid" | "PID Controller" => BlockType::Pid,
+            "ZeroOrderHold" | "Zero-Order Hold" | "Zero Order Hold" | "ZOH" => {
+                BlockType::ZeroOrderHold
+            }
+            "RelationalOperator" | "Relational Operator" => BlockType::RelationalOperator,
+            "LogicalOperator" | "Logical Operator" => BlockType::LogicalOperator,
+            "Switch" => BlockType::Switch,
+            "Abs" => BlockType::Abs,
+            "MathFunction" | "Math Function" => BlockType::MathFunction,
             "Saturate" | "Saturation" => BlockType::Saturation,
             "Scope" => BlockType::Scope,
             "ToWorkspace" | "To Workspace" => BlockType::ToWorkspace,
@@ -51,11 +93,26 @@ impl BlockType {
             BlockType::Constant
                 | BlockType::SineWave
                 | BlockType::Step
+                | BlockType::Sawtooth
+                | BlockType::Triangle
+                | BlockType::PulseGenerator
+                | BlockType::RepeatingSequence
+                | BlockType::RepeatingSequenceStair
+                | BlockType::Clock
                 | BlockType::Gain
                 | BlockType::Sum
                 | BlockType::Product
                 | BlockType::Integrator
                 | BlockType::UnitDelay
+                | BlockType::TransferFunction
+                | BlockType::DiscreteTransferFunction
+                | BlockType::Pid
+                | BlockType::ZeroOrderHold
+                | BlockType::RelationalOperator
+                | BlockType::LogicalOperator
+                | BlockType::Switch
+                | BlockType::Abs
+                | BlockType::MathFunction
                 | BlockType::Saturation
                 | BlockType::Scope
                 | BlockType::ToWorkspace
@@ -67,7 +124,16 @@ impl BlockType {
     /// Returns the number of input ports for this block type given its configuration parameters.
     pub fn input_ports(&self, parameters: &HashMap<String, String>) -> usize {
         match self {
-            BlockType::Constant | BlockType::SineWave | BlockType::Step | BlockType::Inport => 0,
+            BlockType::Constant
+            | BlockType::SineWave
+            | BlockType::Step
+            | BlockType::Sawtooth
+            | BlockType::Triangle
+            | BlockType::PulseGenerator
+            | BlockType::RepeatingSequence
+            | BlockType::RepeatingSequenceStair
+            | BlockType::Clock
+            | BlockType::Inport => 0,
             BlockType::Sum => {
                 let signs = parameters.get("Inputs").map(|s| s.as_str()).unwrap_or("++");
                 let count = signs.chars().filter(|&c| c == '+' || c == '-').count();
@@ -77,10 +143,42 @@ impl BlockType {
                     count
                 }
             }
-            BlockType::Product => 2,
+            BlockType::RelationalOperator | BlockType::Product => 2,
+            BlockType::LogicalOperator => {
+                let op = parameters
+                    .get("Operator")
+                    .map(|s| s.as_str())
+                    .unwrap_or("AND");
+                if op == "NOT" {
+                    1
+                } else {
+                    parameters
+                        .get("Inputs")
+                        .and_then(|s| s.parse::<usize>().ok())
+                        .unwrap_or(2)
+                        .max(1)
+                }
+            }
+            BlockType::Switch => 3,
+            BlockType::MathFunction => {
+                let func = parameters
+                    .get("Function")
+                    .map(|s| s.as_str())
+                    .unwrap_or("sqrt");
+                if func == "pow" {
+                    2
+                } else {
+                    1
+                }
+            }
             BlockType::Gain
             | BlockType::Integrator
             | BlockType::UnitDelay
+            | BlockType::TransferFunction
+            | BlockType::DiscreteTransferFunction
+            | BlockType::Pid
+            | BlockType::ZeroOrderHold
+            | BlockType::Abs
             | BlockType::Saturation
             | BlockType::Scope
             | BlockType::ToWorkspace

@@ -10,7 +10,10 @@ use egui::{
     Sense, Stroke, StrokeKind, Ui, Vec2,
 };
 use mlapp_sim::{
-    model::{Block as SimBlock, BlockDiagram, BlockType, Line as SimLine, PortRef},
+    model::{
+        param_specs_for, parse_float_vector, Block as SimBlock, BlockDiagram, BlockType,
+        Line as SimLine, ParamKind, PortRef,
+    },
     solver::{simulate_diagram, SimError, SimulationConfig, SimulationOutput, SolverType},
 };
 use std::collections::HashMap;
@@ -22,134 +25,6 @@ const MIN_PROPERTIES_WIDTH: f32 = 160.0;
 const MIN_CANVAS_WIDTH: f32 = 200.0;
 const MIN_CANVAS_HEIGHT: f32 = 200.0;
 const MIN_TAB_BODY_HEIGHT: f32 = 300.0;
-
-/// Parameter editing type specification.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum ParamKind {
-    Numeric,
-    SumInputs,
-}
-
-/// Specification for a block parameter shown in the properties panel and modal dialog.
-#[derive(Clone, Debug)]
-pub struct ParamSpec {
-    pub key: &'static str,
-    pub label: &'static str,
-    pub default_val: &'static str,
-    pub kind: ParamKind,
-    pub doc: &'static str,
-}
-
-/// Returns the fixed, logical ordering of parameter specifications for each block type.
-pub fn param_specs_for(block_type: &BlockType) -> &'static [ParamSpec] {
-    match block_type {
-        BlockType::Constant => &[ParamSpec {
-            key: "Value",
-            label: "Constant Value",
-            default_val: "1.0",
-            kind: ParamKind::Numeric,
-            doc: "Numeric output scalar constant value.",
-        }],
-        BlockType::SineWave => &[
-            ParamSpec {
-                key: "Amplitude",
-                label: "Amplitude",
-                default_val: "1.0",
-                kind: ParamKind::Numeric,
-                doc: "Peak amplitude of sinusoidal waveform.",
-            },
-            ParamSpec {
-                key: "Frequency",
-                label: "Frequency (rad/s)",
-                default_val: "1.0",
-                kind: ParamKind::Numeric,
-                doc: "Angular frequency in radians per second (rad/s).",
-            },
-            ParamSpec {
-                key: "Phase",
-                label: "Phase (rad)",
-                default_val: "0.0",
-                kind: ParamKind::Numeric,
-                doc: "Phase shift in radians (rad).",
-            },
-            ParamSpec {
-                key: "Bias",
-                label: "Bias",
-                default_val: "0.0",
-                kind: ParamKind::Numeric,
-                doc: "DC bias offset added to sinusoidal waveform.",
-            },
-        ],
-        BlockType::Step => &[
-            ParamSpec {
-                key: "Time",
-                label: "Step Time (s)",
-                default_val: "1.0",
-                kind: ParamKind::Numeric,
-                doc: "Time in seconds at which the step transition occurs.",
-            },
-            ParamSpec {
-                key: "Before",
-                label: "Initial Value",
-                default_val: "0.0",
-                kind: ParamKind::Numeric,
-                doc: "Output value before step time.",
-            },
-            ParamSpec {
-                key: "After",
-                label: "Final Value",
-                default_val: "1.0",
-                kind: ParamKind::Numeric,
-                doc: "Output value at and after step time.",
-            },
-        ],
-        BlockType::Gain => &[ParamSpec {
-            key: "Gain",
-            label: "Gain Multiplier",
-            default_val: "1.0",
-            kind: ParamKind::Numeric,
-            doc: "Element-wise scalar gain factor: y = K * u.",
-        }],
-        BlockType::Sum => &[ParamSpec {
-            key: "Inputs",
-            label: "List of Signs (+/-)",
-            default_val: "+-",
-            kind: ParamKind::SumInputs,
-            doc: "Sequence of '+' and '-' characters defining input port signs and count.",
-        }],
-        BlockType::Integrator => &[ParamSpec {
-            key: "InitialCondition",
-            label: "Initial Condition",
-            default_val: "0.0",
-            kind: ParamKind::Numeric,
-            doc: "Initial continuous state value at t = t_start.",
-        }],
-        BlockType::UnitDelay => &[ParamSpec {
-            key: "InitialCondition",
-            label: "Initial Condition",
-            default_val: "0.0",
-            kind: ParamKind::Numeric,
-            doc: "Initial discrete delay state value at t = 0.",
-        }],
-        BlockType::Saturation => &[
-            ParamSpec {
-                key: "UpperLimit",
-                label: "Upper Limit",
-                default_val: "1.0",
-                kind: ParamKind::Numeric,
-                doc: "Upper saturation limit (must be >= Lower Limit).",
-            },
-            ParamSpec {
-                key: "LowerLimit",
-                label: "Lower Limit",
-                default_val: "-1.0",
-                kind: ParamKind::Numeric,
-                doc: "Lower saturation limit (must be <= Upper Limit).",
-            },
-        ],
-        _ => &[],
-    }
-}
 
 /// Canvas representation of a block node.
 #[derive(Clone, Debug)]
@@ -1106,6 +981,15 @@ impl BlockDiagramEditor {
                     ("Constant", BlockType::Constant),
                     ("Sine Wave", BlockType::SineWave),
                     ("Step", BlockType::Step),
+                    ("Sawtooth", BlockType::Sawtooth),
+                    ("Triangle", BlockType::Triangle),
+                    ("Pulse Generator", BlockType::PulseGenerator),
+                    ("Repeating Sequence", BlockType::RepeatingSequence),
+                    (
+                        "Repeating Sequence Stair",
+                        BlockType::RepeatingSequenceStair,
+                    ),
+                    ("Clock", BlockType::Clock),
                     ("Inport", BlockType::Inport),
                 ]),
             ),
@@ -1123,14 +1007,27 @@ impl BlockDiagramEditor {
                     ("Gain", BlockType::Gain),
                     ("Sum (+-)", BlockType::Sum),
                     ("Product", BlockType::Product),
+                    ("Abs", BlockType::Abs),
+                    ("Math Function", BlockType::MathFunction),
                     ("Saturation", BlockType::Saturation),
                 ]),
             ),
             (
                 "Continuous",
-                items(&[("Integrator", BlockType::Integrator)]),
+                items(&[
+                    ("Integrator", BlockType::Integrator),
+                    ("Transfer Fcn", BlockType::TransferFunction),
+                    ("PID Controller", BlockType::Pid),
+                ]),
             ),
-            ("Discrete", items(&[("Unit Delay", BlockType::UnitDelay)])),
+            (
+                "Discrete",
+                items(&[
+                    ("Unit Delay", BlockType::UnitDelay),
+                    ("Discrete Transfer Fcn", BlockType::DiscreteTransferFunction),
+                    ("Zero-Order Hold", BlockType::ZeroOrderHold),
+                ]),
+            ),
             (
                 "Signal Routing",
                 items(&[
@@ -1138,7 +1035,14 @@ impl BlockDiagramEditor {
                     ("Outport", BlockType::Outport),
                 ]),
             ),
-            ("Logic", Vec::new()),
+            (
+                "Logic",
+                items(&[
+                    ("Relational Operator", BlockType::RelationalOperator),
+                    ("Logical Operator", BlockType::LogicalOperator),
+                    ("Switch", BlockType::Switch),
+                ]),
+            ),
             ("Subsystems", items(&[("Subsystem", BlockType::Subsystem)])),
         ]
     }
@@ -1289,20 +1193,33 @@ impl BlockDiagramEditor {
                                                     spec.key.to_string(),
                                                     current_val.clone(),
                                                 );
-                                                match current_val.trim().parse::<f64>() {
-                                                    Ok(_) => {
-                                                        self.prop_errors.remove(spec.key);
-                                                        self.blocks[block_idx].parameters.insert(
-                                                            spec.key.to_string(),
-                                                            current_val.trim().to_string(),
-                                                        );
-                                                        param_changed = true;
-                                                    }
-                                                    Err(_) => {
-                                                        self.prop_errors.insert(
-                                                            spec.key.to_string(),
-                                                            "Must be a valid number (e.g. 1.0, -0.5, 1e-3)".to_string(),
-                                                        );
+                                                let is_optional_empty = current_val.trim().is_empty()
+                                                    && (spec.key == "UpperSaturationLimit"
+                                                        || spec.key == "LowerSaturationLimit"
+                                                        || spec.key == "SampleTime");
+                                                if is_optional_empty {
+                                                    self.prop_errors.remove(spec.key);
+                                                    self.blocks[block_idx].parameters.insert(
+                                                        spec.key.to_string(),
+                                                        String::new(),
+                                                    );
+                                                    param_changed = true;
+                                                } else {
+                                                    match current_val.trim().parse::<f64>() {
+                                                        Ok(_) => {
+                                                            self.prop_errors.remove(spec.key);
+                                                            self.blocks[block_idx].parameters.insert(
+                                                                spec.key.to_string(),
+                                                                current_val.trim().to_string(),
+                                                            );
+                                                            param_changed = true;
+                                                        }
+                                                        Err(_) => {
+                                                            self.prop_errors.insert(
+                                                                spec.key.to_string(),
+                                                                "Must be a valid number (e.g. 1.0, -0.5, 1e-3)".to_string(),
+                                                            );
+                                                        }
                                                     }
                                                 }
                                             }
@@ -1336,6 +1253,45 @@ impl BlockDiagramEditor {
                                                     self.prop_errors.remove("LowerLimit");
                                                 }
                                             }
+                                        }
+                                    }
+                                    ParamKind::Choice(choices) => {
+                                        let mut selected_choice = current_val.clone();
+                                        egui::ComboBox::from_id_salt(format!("choice_{}_{}", sid, spec.key))
+                                            .selected_text(&selected_choice)
+                                            .show_ui(ui, |ui| {
+                                                for &choice in choices {
+                                                    if ui.selectable_value(&mut selected_choice, choice.to_string(), choice).changed() {
+                                                        current_val = selected_choice.clone();
+                                                        self.prop_draft.insert(spec.key.to_string(), current_val.clone());
+                                                        self.blocks[block_idx].parameters.insert(spec.key.to_string(), current_val.clone());
+                                                        param_changed = true;
+                                                    }
+                                                }
+                                            });
+                                    }
+                                    ParamKind::Vector => {
+                                        let edit_resp = ui.text_edit_singleline(&mut current_val);
+                                        if edit_resp.changed() {
+                                            self.prop_draft.insert(spec.key.to_string(), current_val.clone());
+                                            match parse_float_vector(&current_val) {
+                                                Ok(_) => {
+                                                    self.prop_errors.remove(spec.key);
+                                                    self.blocks[block_idx].parameters.insert(spec.key.to_string(), current_val.trim().to_string());
+                                                    param_changed = true;
+                                                }
+                                                Err(e) => {
+                                                    self.prop_errors.insert(spec.key.to_string(), e);
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ParamKind::Text => {
+                                        let edit_resp = ui.text_edit_singleline(&mut current_val);
+                                        if edit_resp.changed() {
+                                            self.prop_draft.insert(spec.key.to_string(), current_val.clone());
+                                            self.blocks[block_idx].parameters.insert(spec.key.to_string(), current_val.trim().to_string());
+                                            param_changed = true;
                                         }
                                     }
                                     ParamKind::SumInputs => {
@@ -1870,13 +1826,31 @@ impl BlockDiagramEditor {
                             .unwrap_or(spec.default_val);
                         match spec.kind {
                             ParamKind::Numeric => {
-                                if val.trim().parse::<f64>().is_err() {
+                                let is_optional_empty = val.trim().is_empty()
+                                    && (spec.key == "UpperSaturationLimit"
+                                        || spec.key == "LowerSaturationLimit"
+                                        || spec.key == "SampleTime");
+                                if !is_optional_empty && val.trim().parse::<f64>().is_err() {
                                     self.param_errors.insert(
                                         spec.key.to_string(),
                                         "Must be a valid number (e.g. 1.0, -0.5, 1e-3)".to_string(),
                                     );
                                 }
                             }
+                            ParamKind::Vector => {
+                                if let Err(e) = parse_float_vector(val) {
+                                    self.param_errors.insert(spec.key.to_string(), e);
+                                }
+                            }
+                            ParamKind::Choice(choices) => {
+                                if !choices.iter().any(|c| c.eq_ignore_ascii_case(val.trim())) {
+                                    self.param_errors.insert(
+                                        spec.key.to_string(),
+                                        format!("Must be one of: {}", choices.join(", ")),
+                                    );
+                                }
+                            }
+                            ParamKind::Text => {}
                             ParamKind::SumInputs => {
                                 let is_valid =
                                     !val.is_empty() && val.chars().all(|c| c == '+' || c == '-');

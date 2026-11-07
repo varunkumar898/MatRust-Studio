@@ -16,4 +16,7 @@ pub use engine::{
 pub use inspect::{inspect_slx, InspectError, SlxInspectReport};
 pub use model::{Block, BlockDiagram, BlockType, Line, PortRef};
 pub use parser::{parse_blockdiagram_xml, ParseError};
-pub use solver::{simulate_diagram, BlockRef, SimError, SimulationConfig, SimulationOutput};
+pub use solver::{
+    simulate_diagram, BlockRef, DormandPrinceTableau, SimError, SimulationConfig, SimulationOutput,
+    SolverType,
+};

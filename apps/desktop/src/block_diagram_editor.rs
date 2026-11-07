@@ -11,7 +11,7 @@ use egui::{
 };
 use mlapp_sim::{
     model::{Block as SimBlock, BlockDiagram, BlockType, Line as SimLine, PortRef},
-    solver::{simulate_diagram, SimulationConfig, SimulationOutput},
+    solver::{simulate_diagram, SimError, SimulationConfig, SimulationOutput, SolverType},
 };
 use std::collections::HashMap;
 
@@ -270,7 +270,8 @@ impl Default for BlockDiagramEditor {
                 start_time: 0.0,
                 stop_time: 5.0,
                 step_size: 0.01,
-                solver: "FixedStepEuler".to_string(),
+                solver: SolverType::FixedStepEuler,
+                ..Default::default()
             },
             auto_run: false,
             sim_output: None,
@@ -485,6 +486,13 @@ impl BlockDiagramEditor {
             });
         }
 
+        if let Some(cfg) = &diagram.simulation_config {
+            self.config = cfg.clone();
+        } else {
+            // schema_version 1 migration: default to FixedStepEuler
+            self.config.solver = SolverType::FixedStepEuler;
+        }
+
         self.sim_status = format!(
             "Loaded diagram '{}' ({} blocks, {} wires)",
             diagram.name,
@@ -621,6 +629,8 @@ impl BlockDiagramEditor {
     /// Converts canvas model to `mlapp_sim::BlockDiagram`.
     pub fn to_block_diagram(&self) -> BlockDiagram {
         let mut diagram = BlockDiagram::new("Untitled_Diagram");
+        diagram.schema_version = 2;
+        diagram.simulation_config = Some(self.config.clone());
         for b in &self.blocks {
             let mut sb = SimBlock::new(&b.sid, &b.name, b.block_type.clone());
             sb.position = Some([
@@ -654,6 +664,10 @@ impl BlockDiagramEditor {
 
     /// Executes the simulation model using `mlapp-sim`.
     pub fn run_simulation(&mut self) {
+        if let Err(SimError::Parameter { message, .. }) = self.config.validate() {
+            self.sim_status = format!("Simulation Parameter Error: {message}");
+            return;
+        }
         let diagram = self.to_block_diagram();
         match simulate_diagram(&diagram, &self.config) {
             Ok(output) => {
@@ -831,38 +845,112 @@ impl BlockDiagramEditor {
 
             wrap(ui, 120.0);
             widgets.push(ui.label(RichText::new("Stop Time:").size(12.0)).rect);
-            widgets.push(
-                ui.add(
-                    egui::DragValue::new(&mut self.config.stop_time)
-                        .speed(0.1)
-                        .range(0.1..=100.0),
-                )
-                .rect,
+            let stop_res = ui.add(
+                egui::DragValue::new(&mut self.config.stop_time)
+                    .speed(0.1)
+                    .range(0.1..=100.0),
             );
+            widgets.push(stop_res.rect);
+            if stop_res.changed() && self.auto_run {
+                self.run_simulation();
+            }
 
-            wrap(ui, 80.0);
-            widgets.push(ui.label(RichText::new("dt:").size(12.0)).rect);
-            widgets.push(
-                ui.add(
+            if self.config.solver == SolverType::VariableStepDormandPrince {
+                wrap(ui, 110.0);
+                widgets.push(ui.label(RichText::new("AbsTol:").size(12.0)).rect);
+                let abs_res = ui.add(
+                    egui::DragValue::new(&mut self.config.abs_tol)
+                        .speed(1e-7)
+                        .range(1e-12..=1e-1),
+                );
+                widgets.push(abs_res.rect);
+                if abs_res.changed() && self.auto_run {
+                    self.run_simulation();
+                }
+
+                wrap(ui, 110.0);
+                widgets.push(ui.label(RichText::new("RelTol:").size(12.0)).rect);
+                let rel_res = ui.add(
+                    egui::DragValue::new(&mut self.config.rel_tol)
+                        .speed(1e-4)
+                        .range(1e-12..=1e-1),
+                );
+                widgets.push(rel_res.rect);
+                if rel_res.changed() && self.auto_run {
+                    self.run_simulation();
+                }
+            } else {
+                wrap(ui, 80.0);
+                widgets.push(ui.label(RichText::new("dt:").size(12.0)).rect);
+                let dt_res = ui.add(
                     egui::DragValue::new(&mut self.config.step_size)
                         .speed(0.001)
                         .range(0.001..=0.5),
-                )
-                .rect,
-            );
+                );
+                widgets.push(dt_res.rect);
+                if dt_res.changed() && self.auto_run {
+                    self.run_simulation();
+                }
+            }
 
-            wrap(ui, 160.0);
+            wrap(ui, 180.0);
             widgets.push(ui.label("Solver:").rect);
+            let solver_title = match self.config.solver {
+                SolverType::FixedStepEuler => "Fixed-step Euler (ode1)",
+                SolverType::FixedStepRk4 => "Fixed-step RK4 (ode4)",
+                SolverType::VariableStepDormandPrince => "Variable-step Dormand-Prince (ode45)",
+            };
+            let mut solver_changed = false;
             let solver = egui::ComboBox::from_id_salt("block_diagram_solver")
-                .selected_text("Fixed Step Euler")
+                .selected_text(solver_title)
                 .show_ui(ui, |ui| {
-                    ui.selectable_value(
-                        &mut self.config.solver,
-                        "FixedStepEuler".to_string(),
-                        "Fixed Step Euler",
-                    );
+                    if ui
+                        .selectable_value(
+                            &mut self.config.solver,
+                            SolverType::FixedStepEuler,
+                            "Fixed-step Euler (ode1)",
+                        )
+                        .clicked()
+                    {
+                        solver_changed = true;
+                    }
+                    if ui
+                        .selectable_value(
+                            &mut self.config.solver,
+                            SolverType::FixedStepRk4,
+                            "Fixed-step RK4 (ode4)",
+                        )
+                        .clicked()
+                    {
+                        solver_changed = true;
+                    }
+                    if ui
+                        .selectable_value(
+                            &mut self.config.solver,
+                            SolverType::VariableStepDormandPrince,
+                            "Variable-step Dormand-Prince (ode45)",
+                        )
+                        .clicked()
+                    {
+                        solver_changed = true;
+                    }
                 });
             widgets.push(solver.response.rect);
+            if solver_changed && self.auto_run {
+                self.run_simulation();
+            }
+
+            if let Err(SimError::Parameter { message, .. }) = self.config.validate() {
+                wrap(ui, 120.0);
+                let val_lbl = ui
+                    .label(
+                        RichText::new("⚠️ Invalid Param")
+                            .color(Color32::from_rgb(255, 80, 80))
+                            .size(11.0),
+                    )
+                    .on_hover_text(&message);
+                widgets.push(val_lbl.rect);
+            }
 
             ui.separator();
 
@@ -2826,5 +2914,49 @@ mod tests {
         let dup = editor.blocks.iter().find(|b| b.sid == "6").unwrap();
         assert_eq!(dup.parameters.get("Gain").map(|s| s.as_str()), Some("2.0"));
         assert_eq!(editor.selected_block_sid.as_deref(), Some("6"));
+    }
+
+    #[test]
+    fn test_editor_solver_config_persistence() {
+        let mut editor = BlockDiagramEditor::default();
+        editor.load_default_feedback_example();
+
+        // Configure variable-step Dormand-Prince with custom tolerances
+        editor.config.solver = SolverType::VariableStepDormandPrince;
+        editor.config.stop_time = 12.5;
+        editor.config.abs_tol = 1e-8;
+        editor.config.rel_tol = 1e-5;
+
+        let json = editor.save_to_json().expect("Export JSON");
+        assert!(json.contains("\"schema_version\": 2"));
+        assert!(json.contains("VariableStepDormandPrince"));
+
+        let mut editor2 = BlockDiagramEditor::default();
+        editor2.load_from_json(&json).expect("Import JSON");
+
+        assert_eq!(editor2.config.solver, SolverType::VariableStepDormandPrince);
+        assert_eq!(editor2.config.stop_time, 12.5);
+        assert_eq!(editor2.config.abs_tol, 1e-8);
+        assert_eq!(editor2.config.rel_tol, 1e-5);
+
+        // Test migration of legacy schema_version 1 diagram JSON lacking simulation_config
+        let legacy_json = r#"{
+            "name": "LegacyDiagram",
+            "version": null,
+            "release": null,
+            "blocks": [],
+            "lines": [],
+            "toolboxes": [],
+            "properties": {}
+        }"#;
+        let mut editor_legacy = BlockDiagramEditor::default();
+        editor_legacy
+            .load_from_json(legacy_json)
+            .expect("Import legacy JSON");
+        assert_eq!(
+            editor_legacy.config.solver,
+            SolverType::FixedStepEuler,
+            "Legacy diagram must migrate to FixedStepEuler default"
+        );
     }
 }

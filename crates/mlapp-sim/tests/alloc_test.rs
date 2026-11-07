@@ -86,7 +86,9 @@ fn test_zero_allocations_during_eval_and_update_discrete() {
 
     for step_idx in 0..10_000 {
         let t = step_idx as f64 * 0.001;
-        engine.eval(t, &continuous_states, &discrete_states, &mut workspace);
+        engine
+            .eval(t, &continuous_states, &discrete_states, &mut workspace)
+            .expect("eval");
         engine.update_discrete(&workspace.outputs, &mut discrete_states);
     }
 

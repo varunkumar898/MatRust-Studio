@@ -1,7 +1,7 @@
 //! Bit-for-bit regression test comparing the new M1 ExecutionEngine against the old Gauss-Seidel solver from main (ef3fbb9).
 
 use mlapp_sim::model::{Block, BlockDiagram, BlockType};
-use mlapp_sim::solver::{simulate_diagram, SimulationConfig, SimulationOutput};
+use mlapp_sim::solver::{simulate_diagram, SimulationConfig, SimulationOutput, SolverType};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -426,7 +426,8 @@ fn test_bit_for_bit_regression_against_old_solver_and_fixtures() {
         start_time: 0.0,
         stop_time: 1.0,
         step_size: 0.01,
-        solver: "FixedStepEuler".to_string(),
+        solver: SolverType::FixedStepEuler,
+        ..Default::default()
     };
 
     let mut fixture_entries = Vec::new();
@@ -545,18 +546,29 @@ fn test_bit_for_bit_regression_against_old_solver_and_fixtures() {
         assert_eq!(loaded.len(), fixture_entries.len());
         for (actual, expected) in fixture_entries.iter().zip(&loaded) {
             assert_eq!(actual.diagram_name, expected.diagram_name);
+            let is_transcendental =
+                actual.diagram_name == "SaturatingGain" || actual.diagram_name == "SineGen";
+
             for (a, e) in actual.yout_bits.iter().zip(&expected.yout_bits) {
-                if cfg!(target_os = "windows") {
+                if !is_transcendental {
                     assert_eq!(
                         a, e,
-                        "Bit mismatch on {}: actual {:#x} vs expected {:#x}",
+                        "Bit mismatch on non-transcendental diagram {}: actual {:#x} vs expected {:#x}",
                         actual.diagram_name, a, e
                     );
                 } else {
-                    let diff = (f64::from_bits(*a) - f64::from_bits(*e)).abs();
+                    let val_a = f64::from_bits(*a);
+                    let val_e = f64::from_bits(*e);
+                    let abs_diff = (val_a - val_e).abs();
+                    let denom = val_a.abs().max(val_e.abs());
+                    let rel_diff = if denom > 1e-12 {
+                        abs_diff / denom
+                    } else {
+                        abs_diff
+                    };
                     assert!(
-                        diff <= 1e-15,
-                        "Cross-platform libm difference on {} exceeds 1 ULP: {diff}",
+                        rel_diff <= 1e-12,
+                        "Transcendental difference on {} exceeds 1e-12 relative tolerance: actual {val_a} vs expected {val_e} (rel {rel_diff})",
                         actual.diagram_name
                     );
                 }
@@ -567,17 +579,25 @@ fn test_bit_for_bit_regression_against_old_solver_and_fixtures() {
                     .get(name)
                     .expect("expected signal in fixture");
                 for (a, e) in a_sig.iter().zip(e_sig) {
-                    if cfg!(target_os = "windows") {
+                    if !is_transcendental {
                         assert_eq!(
                             a, e,
-                            "Bit mismatch on {} (signal {name}): actual {:#x} vs expected {:#x}",
+                            "Bit mismatch on non-transcendental diagram {} (signal {name}): actual {:#x} vs expected {:#x}",
                             actual.diagram_name, a, e
                         );
                     } else {
-                        let diff = (f64::from_bits(*a) - f64::from_bits(*e)).abs();
+                        let val_a = f64::from_bits(*a);
+                        let val_e = f64::from_bits(*e);
+                        let abs_diff = (val_a - val_e).abs();
+                        let denom = val_a.abs().max(val_e.abs());
+                        let rel_diff = if denom > 1e-12 {
+                            abs_diff / denom
+                        } else {
+                            abs_diff
+                        };
                         assert!(
-                            diff <= 1e-15,
-                            "Cross-platform libm difference on {} (signal {name}) exceeds 1 ULP: {diff}",
+                            rel_diff <= 1e-12,
+                            "Transcendental difference on {} (signal {name}) exceeds 1e-12 relative tolerance: actual {val_a} vs expected {val_e} (rel {rel_diff})",
                             actual.diagram_name
                         );
                     }

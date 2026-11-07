@@ -1,6 +1,7 @@
 use mlapp_container::ContainerLimits;
 use mlapp_sim::{
     export_slx, inspect_slx, simulate_diagram, Block, BlockDiagram, BlockType, SimulationConfig,
+    SolverType,
 };
 use std::io::Cursor;
 
@@ -79,7 +80,8 @@ fn test_simulation_first_order_step_response() {
         start_time: 0.0,
         stop_time: 5.0,
         step_size: 0.001,
-        solver: "FixedStepEuler".to_string(),
+        solver: SolverType::FixedStepEuler,
+        ..Default::default()
     };
 
     let sim_out = simulate_diagram(&diagram, &config).expect("Simulation failed");
@@ -145,7 +147,8 @@ fn test_simulation_saturation_and_gain() {
         start_time: 0.0,
         stop_time: std::f64::consts::TAU,
         step_size: 0.01,
-        solver: "FixedStepEuler".to_string(),
+        solver: SolverType::FixedStepEuler,
+        ..Default::default()
     };
 
     let sim_out = simulate_diagram(&diagram, &config).expect("Simulation failed");
@@ -284,7 +287,8 @@ fn test_simulation_gain_parameter_change() {
         start_time: 0.0,
         stop_time: 0.5,
         step_size: 0.001,
-        solver: "FixedStepEuler".to_string(),
+        solver: SolverType::FixedStepEuler,
+        ..Default::default()
     };
 
     let out_2 = simulate_diagram(&build_model("2.0"), &config).expect("sim gain 2.0");
@@ -322,7 +326,8 @@ fn test_simulation_sine_wave_parameters() {
         start_time: 0.0,
         stop_time: 2.0,
         step_size: 0.01,
-        solver: "FixedStepEuler".to_string(),
+        solver: SolverType::FixedStepEuler,
+        ..Default::default()
     };
 
     let sim_out = simulate_diagram(&diagram, &config).expect("sim sine");
@@ -444,7 +449,8 @@ fn test_loop_through_unit_delay_is_accepted() {
         start_time: 0.0,
         stop_time: 0.1,
         step_size: 0.01,
-        solver: "FixedStepEuler".to_string(),
+        solver: SolverType::FixedStepEuler,
+        ..Default::default()
     };
     let out = simulate_diagram(&diagram, &config).expect("UnitDelay breaks loop; must succeed");
     assert!(!out.yout.is_empty());
@@ -471,7 +477,8 @@ fn test_loop_through_integrator_is_accepted() {
         start_time: 0.0,
         stop_time: 1.0,
         step_size: 0.01,
-        solver: "FixedStepEuler".to_string(),
+        solver: SolverType::FixedStepEuler,
+        ..Default::default()
     };
     let out = simulate_diagram(&diagram, &config).expect("Integrator breaks loop; must succeed");
     assert!(!out.yout.is_empty());
@@ -555,7 +562,8 @@ fn test_disconnected_subgraphs_run() {
         start_time: 0.0,
         stop_time: 1.0,
         step_size: 0.05,
-        solver: "FixedStepEuler".to_string(),
+        solver: SolverType::FixedStepEuler,
+        ..Default::default()
     };
     let out = simulate_diagram(&diagram, &config).expect("Disconnected subgraphs must run");
     assert!(out.signals.contains_key("OutA"));
@@ -583,7 +591,8 @@ fn test_topological_order_is_stable_across_runs() {
         start_time: 0.0,
         stop_time: 1.0,
         step_size: 0.05,
-        solver: "FixedStepEuler".to_string(),
+        solver: SolverType::FixedStepEuler,
+        ..Default::default()
     };
     let run1 = simulate_diagram(&diagram, &config).expect("run 1");
     let run2 = simulate_diagram(&diagram, &config).expect("run 2");
@@ -620,7 +629,8 @@ fn test_unconnected_input_behaviour_is_unchanged() {
         start_time: 0.0,
         stop_time: 0.1,
         step_size: 0.01,
-        solver: "FixedStepEuler".to_string(),
+        solver: SolverType::FixedStepEuler,
+        ..Default::default()
     };
     let out = simulate_diagram(&diagram, &config).expect("unconnected port is 0.0");
     for val in &out.yout {
@@ -653,7 +663,8 @@ fn test_feedback_example_produces_identical_output() {
         start_time: 0.0,
         stop_time: 1.0,
         step_size: 0.01,
-        solver: "FixedStepEuler".to_string(),
+        solver: SolverType::FixedStepEuler,
+        ..Default::default()
     };
     let run1 = simulate_diagram(&diagram, &config).expect("sim feedback 1");
     let run2 = simulate_diagram(&diagram, &config).expect("sim feedback 2");

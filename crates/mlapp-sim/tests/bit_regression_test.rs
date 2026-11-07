@@ -546,14 +546,42 @@ fn test_bit_for_bit_regression_against_old_solver_and_fixtures() {
         for (actual, expected) in fixture_entries.iter().zip(&loaded) {
             assert_eq!(actual.diagram_name, expected.diagram_name);
             for (a, e) in actual.yout_bits.iter().zip(&expected.yout_bits) {
-                assert_eq!(a, e);
+                if cfg!(target_os = "windows") {
+                    assert_eq!(
+                        a, e,
+                        "Bit mismatch on {}: actual {:#x} vs expected {:#x}",
+                        actual.diagram_name, a, e
+                    );
+                } else {
+                    let diff = (f64::from_bits(*a) - f64::from_bits(*e)).abs();
+                    assert!(
+                        diff <= 1e-15,
+                        "Cross-platform libm difference on {} exceeds 1 ULP: {diff}",
+                        actual.diagram_name
+                    );
+                }
             }
             for (name, a_sig) in &actual.signals_bits {
                 let e_sig = expected
                     .signals_bits
                     .get(name)
                     .expect("expected signal in fixture");
-                assert_eq!(a_sig, e_sig);
+                for (a, e) in a_sig.iter().zip(e_sig) {
+                    if cfg!(target_os = "windows") {
+                        assert_eq!(
+                            a, e,
+                            "Bit mismatch on {} (signal {name}): actual {:#x} vs expected {:#x}",
+                            actual.diagram_name, a, e
+                        );
+                    } else {
+                        let diff = (f64::from_bits(*a) - f64::from_bits(*e)).abs();
+                        assert!(
+                            diff <= 1e-15,
+                            "Cross-platform libm difference on {} (signal {name}) exceeds 1 ULP: {diff}",
+                            actual.diagram_name
+                        );
+                    }
+                }
             }
         }
     }

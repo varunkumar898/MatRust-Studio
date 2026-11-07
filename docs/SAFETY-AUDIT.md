@@ -10,10 +10,10 @@ It does not claim formal verification, Miri coverage, or fuzzing of the C ABI.
 
 | Check | Command | Raw log |
 | :--- | :--- | :--- |
-| Production panic/unsafe marker counts | `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/count-safety-markers.ps1` | `docs/verify-logs/2026-11-01-be5d46fb2f209129bd9b8366f9fe848252a937c8-safety-marker-counts.log` |
-| Every `unsafe` occurrence | `rg -n "\bunsafe\b" crates apps -g '*.rs'` | `docs/verify-logs/2026-11-01-be5d46fb2f209129bd9b8366f9fe848252a937c8-unsafe-sites.log` |
-| Panic strategy and mutex poison handling | `rg -n "rust-version\|panic =\|catch_unwind\|lto =\|overflow-checks" Cargo.toml crates/mlapp-ffi/src/lib.rs apps/desktop/src/execution.rs` plus the poison-handling grep shown in the log | `docs/verify-logs/2026-11-01-be5d46fb2f209129bd9b8366f9fe848252a937c8-panic-unwind-mutex.log` |
-| cbindgen header is current | `cbindgen --config cbindgen.toml --crate mlapp-ffi --output crates/mlapp-ffi/include/mlapp.h` then `git diff --exit-code -- crates/mlapp-ffi/include/mlapp.h` | `docs/verify-logs/2026-11-01-be5d46fb2f209129bd9b8366f9fe848252a937c8-cbindgen-header-check.log` |
+| Production panic/unsafe marker counts | `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/count-safety-markers.ps1` | `docs/VERIFICATION.md` |
+| Every `unsafe` occurrence | `rg -n "\bunsafe\b" crates apps -g '*.rs'` | `docs/VERIFICATION.md` |
+| Panic strategy and mutex poison handling | `rg -n "rust-version\|panic =\|catch_unwind\|lto =\|overflow-checks" Cargo.toml crates/mlapp-ffi/src/lib.rs apps/desktop/src/execution.rs` plus the poison-handling grep shown in the log | `docs/VERIFICATION.md` |
+| cbindgen header is current | `cbindgen --config cbindgen.toml --crate mlapp-ffi --output crates/mlapp-ffi/include/mlapp.h` then `git diff --exit-code -- crates/mlapp-ffi/include/mlapp.h` | `docs/VERIFICATION.md` |
 
 The marker script excludes integration tests under `tests/`, benchmarks under
 `benches/`, and inline `#[cfg(test)]` modules. Its full output is:

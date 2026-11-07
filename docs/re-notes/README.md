@@ -55,7 +55,7 @@ The host environment is **Windows ARM64** (`aarch64-pc-windows-gnullvm`).
    - Status: Available for native binary analysis, but Ghidra tools are not bundled in REA.
 3. **Primary Authoritative Toolchain (Verified)**:
    - Tool: `llvm-objdump.exe`
-   - Location: `C:\Users\varun\.rustup\toolchains\stable-aarch64-pc-windows-gnullvm\lib\rustlib\aarch64-pc-windows-gnullvm\bin\llvm-objdump.exe`
+   - Location: `<user-home>\.rustup\toolchains\stable-aarch64-pc-windows-gnullvm\lib\rustlib\aarch64-pc-windows-gnullvm\bin\llvm-objdump.exe`
    - Version: `LLVM version 23.1.1-rust-1.99.1-stable`
    - Target: `coff-arm64` PE/COFF execution binaries.
 4. **Secondary Toolchain (Verified)**:
@@ -63,7 +63,7 @@ The host environment is **Windows ARM64** (`aarch64-pc-windows-gnullvm`).
    - Location: `C:\msys64\ucrt64\bin\objdump.exe`
    - Version: `GNU objdump (GNU Binutils) 2.45`
 5. **Reference Validation Environment**:
-   - Python: 3.14 (ARM64) at `C:\Users\varun\AppData\Local\Programs\Python\Python314-arm64\python.exe`
+   - Python: 3.14 (ARM64) at `<user-home>\AppData\Local\Programs\Python\Python314-arm64\python.exe`
    - Packages: `scipy` 1.18.1, `numpy` 2.4.1.
 
 ---

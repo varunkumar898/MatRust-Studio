@@ -8,7 +8,7 @@
 **Local stable toolchain:** Rust 1.99.1
 **Declared MSRV:** Rust 1.88.0
 **Verification status:** 
-- Local default, all-features, and no-default-features test runs pass at **351/351/351**.
+- Local default, all-features, and no-default-features test runs pass at **470/470/470**.
 - Local clippy (all-features, no-default-features, per-crate no-default-features) passes with 0 warnings.
 - `cargo fmt --all -- --check` passes cleanly.
 - `scripts/verify.ps1` runs from cargo clean and exits 0 with all verification steps passing.
@@ -24,15 +24,15 @@
   title, missing run-example and 38/225 help coverage, no-Stop cancellation path in plain
   runs, %TEMP% layout persistence, and one repo-hygiene bug: workspace tests rewrite
   `docs/builtins.txt` and re-zip a fixture). Baseline verification from this step: 351/351/351
-  pass (`docs/verify-logs/2026-11-03-gui-s1-baseline-verify.log`).
+  pass (verification log not retained in this repository; CI is the source of truth).
 - **S2@C1 test hygiene COMPLETE** (commit `9ea305c`): all six test-suite writers that
   touched repo files (`docs/builtins.txt`, `docs/SUPPORTED_FUNCTIONS.md` on UPDATE_DOCS=1,
   `fixtures/sample_models/simple_feedback.slx`, the four `fixtures/sample_apps/*.mlapp`,
   and the T-ENTROPY screenshot) now write only to `%TEMP%`; `docs/builtins.txt` is verified
   read-only against the live registry (225 names under full defaults; drift is a loud test
   failure instead of a silent rewrite). `scripts/verify.ps1` gained step 10: the run fails
-  on any working-tree dirt. From-clean log:
-  `docs/verify-logs/2026-11-03-gui-s2-hygiene-verify.log` (SHA-256
+  on any working-tree dirt. From-clean log summarized in
+  `docs/VERIFICATION.md` (historical SHA-256
   `09287F07129071D3FE34ADBA131D984FB4E4273150F1078B2C76FE7E417F571E`), still 351/351/351
   and all 351 manifest entries present.
 - **S2@C2 audit reconciliation COMPLETE**: six owner-screenshot items reconciled in
@@ -40,10 +40,9 @@
   builtins only; "No active file" confirmed as a PATH-based condition bug; dot-entries,
   Help clip, Figures hint recorded) and BACKLOG 6.1-6.6 appended.
 - **S2@C3 code steps COMPLETE**: C3a rename (`774d6f1`), C3b watermark/title (`5d0b301`),
-  C3c demo-content removal (`fcdc88d`). Final from-clean verification
-  (`docs/verify-logs/2026-11-03-gui-s2-final-verify.log`, SHA-256
-  `E51F027AB336904948012CE0D06B8C2ECF51CBD40F63887D19B371B4D0CB1A6F`): steps 5/6/7
-  pass-sums 351/351/351, all 351 manifest entries present, working-tree gate green.
+  C3c demo-content removal (`fcdc88d`). Final from-clean verification: steps 5/6/7
+  pass-sums 351/351/351, all 351 manifest entries present, working-tree gate green
+  (verification log not retained in this repository; CI is the source of truth).
   After-screenshot captured at 1280x720 (`docs/screenshots/after/desktop_1280x720.png`,
   SHA-256 `CFB1018FE5CE9F9461D5FC8CFBD8E8C868E86C2B24FF6CE63B9EEA4BD5D63C82`): title
   "MATSTUDIO", empty editor, single-line command-window hint, no watermark overlays;
@@ -84,14 +83,12 @@
   failed to compile). Owner closed it; after 14:05:21 no further foreign
   writes were observed (30 s stability windows, then 2+ min quiet). The
   takeover session verified: desktop tests 61/61
-  (`docs/verify-logs/2026-11-04-gui-editor-resume-desktop-tests.log`), clippy
+  (`docs/VERIFICATION.md`), clippy
   `-D warnings` clean, manifest exact parity 393/393, and captured real-window
   screenshots at 1280x720 / 1920x1080
   (`docs/screenshots/gui-editor/after/`, SHA-256 prefixes `CCA4ADC994589B05` /
   `2F7A97262C88BD56`) confirming the single-window, all-panels-visible, ASCII
-  clean layout. Final from-clean `scripts/verify.ps1` runs after the docs
-  commit; its log lands as
-  `docs/verify-logs/2026-11-04-gui-editor-final-verify.log`.
+  clean layout (verification log not retained in this repository; CI is the source of truth).
 - Next: proposal — S4 = editor duplicated Run-Section blocks + emoji sweep +
   toolstrip overflow; input-handling fixes (Command-Window focus steal, global
   Ctrl+C intercept, completion popup arrows, gutter row keys) are a separate
@@ -141,11 +138,11 @@
 
 | Configuration | Passed | Failed | Manifest match |
 | :--- | ---: | ---: | :--- |
-| Default features | 393 | 0 | Exact (393 / 393) |
-| `--all-features` | 393 | 0 | Exact (393 / 393) |
-| `--no-default-features` | 393 | 0 | Exact (393 / 393) |
+| Default features | 470 | 0 | Exact (470 / 470) |
+| `--all-features` | 470 | 0 | Exact (470 / 470) |
+| `--no-default-features` | 470 | 0 | Exact (470 / 470) |
 
-`docs/test-manifest.txt` lists all 393 tests. The CI test-count guard strictly asserts exact parity between manifest and active workspace tests. Counts re-verified this session (2026-11-04): default, all-features, and no-default-features all exit 0 with 393 passing.
+`docs/test-manifest.txt` lists all 470 tests. The CI test-count guard strictly asserts exact parity between manifest and active workspace tests. Counts re-verified this session (2026-11-07): default, all-features, and no-default-features all exit 0 with 470 passing.
 
 ## Recent Milestones Completed
 

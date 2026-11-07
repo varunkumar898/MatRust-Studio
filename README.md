@@ -47,7 +47,7 @@ MatRust Studio is architected as a modular Cargo workspace decoupling the core n
 
 ## Verification & Test Suite
 
-The default-feature test count is **336** (same names under `--all-features` and `--no-default-features`). Every test name is recorded in `docs/test-manifest.txt`, and CI fails if the real total differs from that manifest.
+The workspace test count is **470** (same names under `--all-features` and `--no-default-features`). Every test name is recorded in `docs/test-manifest.txt`, and CI fails if the real total differs from that manifest.
 
 ```bash
 cargo test --workspace
@@ -106,6 +106,7 @@ cargo run -p mlapp-cli -- slx-inspect --json model.slx
 
 | Capability Area | Feature | Status | Proving Test | Notes |
 | :--- | :--- | :--- | :--- | :--- |
+| **Desktop IDE** | Resizable Block Diagram Editor canvas | **Implemented** | [block_diagram_editor.rs](apps/desktop/src/block_diagram_editor.rs) `block_diagram_canvas_fills_tab_body_at_common_window_sizes` | Wrapped toolbar, scrollable eight-category library, full remaining canvas, pan/zoom, block and wire interactions |
 | **Container & Security** | Zip-Slip path sanitization | **Implemented** | [container_tests.rs](crates/mlapp-container/tests/container_tests.rs) `test_zip_slip_protection` | Rejects `..`, root `/`, and drive prefixes |
 | **Container & Security** | Zip-Bomb compression ratio caps | **Implemented** | [container_tests.rs](crates/mlapp-container/tests/container_tests.rs) `test_zip_bomb_protection` | Rejects compression ratios > threshold |
 | **Container & Security** | Actual decompressed byte accounting | **Implemented** | [container_tests.rs](crates/mlapp-container/tests/container_tests.rs) `test_decompressed_bytes_limit_with_forged_header` | Enforces `.take(limit)` on stream; catches forged header sizes |

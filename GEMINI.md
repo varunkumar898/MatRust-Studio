@@ -173,7 +173,7 @@ WHAT REA CHECKS PER MILESTONE:
    or scalar, bounds checks left, whether public functions inline into the
    fast path (this explains the Value::add 6.34 ms vs 0.774 ms mystery).
  - Hygiene: imports (a numeric core should not import networking), binary size
-   trend, strings (local paths like C:\Users\varun leak via panic messages;
+   trend, strings (local paths like <user-home> leak via panic messages;
    fix with --remap-path-prefix in release builds).
  - B8: generated C binary: exported symbols, imports, stack usage, no heap
    use in the restricted subset.

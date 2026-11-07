@@ -979,10 +979,7 @@ pub fn view_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError>
             )
         })?;
         let ax = ensure_current_axes(fig)?;
-        ax.camera = rustlab_plot::Camera {
-            azimuth,
-            elevation,
-        };
+        ax.camera = rustlab_plot::Camera { azimuth, elevation };
         Ok::<(), EvalError>(())
     })?;
     Ok(Vec::new())

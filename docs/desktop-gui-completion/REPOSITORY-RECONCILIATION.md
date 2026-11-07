@@ -4,13 +4,13 @@
 
 This report establishes the baseline source code state, environment, and dependency configuration for **MATSTUDIO / MatRust Studio** as required by Phase Zero.
 
-The canonical implementation repository is located locally at `C:\Users\varun\Desktop\MATSTUDIO`.
+The canonical implementation repository is located locally (path omitted).
 
 ---
 
 ## 2. Git Environment & Verification Facts
 
-- **Repository Root:** `C:\Users\varun\Desktop\MATSTUDIO`
+- **Repository Root:** `<repo>`
 - **Active Branch:** `master`
 - **HEAD Commit Hash:** `ca3c32580a2617dcad44b2a2aebc34445747dd91`
 - **HEAD Commit Message:** `G1-FIX: correct benchmark verdicts, add reproducibility evidence`

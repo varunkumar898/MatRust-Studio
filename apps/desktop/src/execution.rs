@@ -91,27 +91,109 @@ pub enum PlotItem {
     },
 }
 
-/// A graphical figure window holding plot series and axes metadata.
+/// A single coordinate system within a figure, holding its own series,
+/// labels, grid, and hold state. This is the unit of subplot grouping:
+/// one figure tab contains one or more axes laid out in a grid.
 #[derive(Clone, Debug)]
-pub struct FigureState {
+pub struct AxesState {
     pub id: usize,
-    pub title: String,
+    /// Subplot grid position: (row, col, span). Default (1, 1, 1).
+    pub position: (usize, usize, usize),
     pub items: Vec<PlotItem>,
     pub x_label: String,
     pub y_label: String,
     pub grid: bool,
+    pub hold: bool,
 }
 
-impl Default for FigureState {
-    fn default() -> Self {
+impl AxesState {
+    pub fn new(id: usize) -> Self {
         Self {
-            id: 1,
-            title: "Figure 1".to_string(),
+            id,
+            position: (1, 1, 1),
             items: Vec::new(),
             x_label: "X".to_string(),
             y_label: "Y".to_string(),
             grid: true,
+            hold: false,
         }
+    }
+
+    /// Push a series, clearing existing series unless hold is on.
+    pub fn push_series(&mut self, item: PlotItem) {
+        if !self.hold {
+            self.items.clear();
+        }
+        self.items.push(item);
+    }
+}
+
+/// A graphical figure window holding one or more axes (subplots).
+#[derive(Clone, Debug)]
+pub struct FigureState {
+    pub id: usize,
+    pub title: String,
+    pub axes: Vec<AxesState>,
+    pub current_axes: Option<usize>,
+}
+
+impl Default for FigureState {
+    fn default() -> Self {
+        Self::new(1)
+    }
+}
+
+impl FigureState {
+    pub fn new(id: usize) -> Self {
+        Self {
+            id,
+            title: format!("Figure {id}"),
+            axes: Vec::new(),
+            current_axes: None,
+        }
+    }
+
+    /// Return the current axes, auto-creating axes 1 if none exist.
+    pub fn current_axes_mut(&mut self) -> &mut AxesState {
+        if self.axes.is_empty() {
+            let mut ax = AxesState::new(1);
+            ax.position = (1, 1, 1);
+            self.current_axes = Some(1);
+            self.axes.push(ax);
+        }
+        let id = self.current_axes.unwrap_or(1);
+        self.axes
+            .iter_mut()
+            .find(|a| a.id == id)
+            .expect("current axes exists")
+    }
+
+    /// Return an immutable reference to the current axes.
+    pub fn current_axes(&self) -> Option<&AxesState> {
+        let id = self.current_axes.unwrap_or(1);
+        self.axes.iter().find(|a| a.id == id)
+    }
+
+    /// Select or create axes at subplot position (m, n, p), 1-based.
+    /// Reuses an existing axes whose position matches; otherwise appends a
+    /// new axes. After this, the selected axes is the figure's current axes.
+    pub fn subplot(&mut self, m: usize, n: usize, p: usize) {
+        if !(1..=m * n).contains(&p) {
+            return;
+        }
+        if let Some(pos) = self.axes.iter().position(|a| a.position == (m, n, p)) {
+            self.current_axes = Some(self.axes[pos].id);
+            return;
+        }
+        let mut ax = AxesState::new(self.axes.len() + 1);
+        ax.position = (m, n, p);
+        self.axes.push(ax);
+        self.current_axes = Some(self.axes.last().unwrap().id);
+    }
+
+    /// Total number of series across all axes in this figure.
+    pub fn total_series(&self) -> usize {
+        self.axes.iter().map(|a| a.items.len()).sum()
     }
 }
 
@@ -128,14 +210,7 @@ impl GraphicsState {
             self.current_figure = Some(id);
             return &mut self.figures[pos];
         }
-        let fig = FigureState {
-            id,
-            title: format!("Figure {id}"),
-            items: Vec::new(),
-            x_label: "X".to_string(),
-            y_label: "Y".to_string(),
-            grid: true,
-        };
+        let fig = FigureState::new(id);
         self.figures.push(fig);
         self.current_figure = Some(id);
         self.figures.last_mut().expect("just pushed")
@@ -255,7 +330,8 @@ impl Session {
                     let x = (1..=y.len()).map(|i| i as f64).collect();
                     (x, y)
                 };
-                let series_idx = fig.items.len() + 1;
+                let ax = fig.current_axes_mut();
+                let series_idx = ax.items.len() + 1;
                 let colors: [[u8; 4]; 5] = [
                     [0, 114, 189, 255],  // MATLAB blue
                     [217, 83, 25, 255],  // MATLAB orange
@@ -264,7 +340,7 @@ impl Session {
                     [119, 172, 48, 255], // MATLAB green
                 ];
                 let color = colors[(series_idx - 1) % colors.len()];
-                fig.items.push(PlotItem::Line {
+                ax.push_series(PlotItem::Line {
                     name: format!("Series {series_idx}"),
                     x,
                     y,
@@ -290,8 +366,9 @@ impl Session {
                 } else {
                     (Vec::new(), Vec::new())
                 };
-                fig.items.push(PlotItem::Scatter {
-                    name: format!("Scatter {}", fig.items.len() + 1),
+                let ax = fig.current_axes_mut();
+                ax.push_series(PlotItem::Scatter {
+                    name: format!("Scatter {}", ax.items.len() + 1),
                     x,
                     y,
                     color: [217, 83, 25, 255],
@@ -316,8 +393,9 @@ impl Session {
                 } else {
                     (Vec::new(), Vec::new())
                 };
-                fig.items.push(PlotItem::Bar {
-                    name: format!("Bar {}", fig.items.len() + 1),
+                let ax = fig.current_axes_mut();
+                ax.push_series(PlotItem::Bar {
+                    name: format!("Bar {}", ax.items.len() + 1),
                     x,
                     y,
                     color: [0, 114, 189, 255],
@@ -344,7 +422,7 @@ impl Session {
             move |args: &[Value], _| -> Result<Vec<Value>, EvalError> {
                 if let Some(s) = args.first().and_then(Self::extract_str) {
                     let mut g = g_xlabel.lock().unwrap_or_else(|e| e.into_inner());
-                    g.current_figure_mut().x_label = s;
+                    g.current_figure_mut().current_axes_mut().x_label = s;
                 }
                 Ok(vec![Value::Double(DenseArray::empty())])
             },
@@ -356,7 +434,7 @@ impl Session {
             move |args: &[Value], _| -> Result<Vec<Value>, EvalError> {
                 if let Some(s) = args.first().and_then(Self::extract_str) {
                     let mut g = g_ylabel.lock().unwrap_or_else(|e| e.into_inner());
-                    g.current_figure_mut().y_label = s;
+                    g.current_figure_mut().current_axes_mut().y_label = s;
                 }
                 Ok(vec![Value::Double(DenseArray::empty())])
             },
@@ -368,14 +446,15 @@ impl Session {
             move |args: &[Value], _| -> Result<Vec<Value>, EvalError> {
                 let mut g = g_grid.lock().unwrap_or_else(|e| e.into_inner());
                 let fig = g.current_figure_mut();
+                let ax = fig.current_axes_mut();
                 if let Some(s) = args.first().and_then(Self::extract_str) {
                     if s == "on" {
-                        fig.grid = true;
+                        ax.grid = true;
                     } else if s == "off" {
-                        fig.grid = false;
+                        ax.grid = false;
                     }
                 } else {
-                    fig.grid = !fig.grid;
+                    ax.grid = !ax.grid;
                 }
                 Ok(vec![Value::Double(DenseArray::empty())])
             },
@@ -402,7 +481,76 @@ impl Session {
             move |_: &[Value], _: usize| -> Result<Vec<Value>, EvalError> {
                 let mut g = g_clf.lock().unwrap_or_else(|e| e.into_inner());
                 let fig = g.current_figure_mut();
-                fig.items.clear();
+                fig.axes.clear();
+                fig.axes.push(AxesState::new(1));
+                fig.current_axes = Some(1);
+                Ok(vec![Value::Double(DenseArray::empty())])
+            },
+        );
+
+        let g_cla = Arc::clone(&graphics);
+        interp.register_builtin(
+            "cla",
+            move |_: &[Value], _: usize| -> Result<Vec<Value>, EvalError> {
+                let mut g = g_cla.lock().unwrap_or_else(|e| e.into_inner());
+                let fig = g.current_figure_mut();
+                fig.current_axes_mut().items.clear();
+                Ok(vec![Value::Double(DenseArray::empty())])
+            },
+        );
+
+        let g_hold = Arc::clone(&graphics);
+        interp.register_builtin(
+            "hold",
+            move |args: &[Value], _| -> Result<Vec<Value>, EvalError> {
+                let mut g = g_hold.lock().unwrap_or_else(|e| e.into_inner());
+                let fig = g.current_figure_mut();
+                let ax = fig.current_axes_mut();
+                if args.is_empty() {
+                    ax.hold = !ax.hold;
+                } else if let Some(s) = args.first().and_then(Self::extract_str) {
+                    ax.hold = s == "on";
+                }
+                Ok(vec![Value::Double(DenseArray::empty())])
+            },
+        );
+
+        let g_subplot = Arc::clone(&graphics);
+        interp.register_builtin(
+            "subplot",
+            move |args: &[Value], _| -> Result<Vec<Value>, EvalError> {
+                let mut g = g_subplot.lock().unwrap_or_else(|e| e.into_inner());
+                let fig = g.current_figure_mut();
+                if args.len() == 3 {
+                    let m = args[0].as_scalar_i64().map_err(|_| EvalError::UserError {
+                        identifier: "RUSTLAB:plot:badArgs".to_string(),
+                        message: "Invalid subplot dimensions.".to_string(),
+                        span: rustlab_parse::Span::default(),
+                    })? as usize;
+                    let n = args[1].as_scalar_i64().map_err(|_| EvalError::UserError {
+                        identifier: "RUSTLAB:plot:badArgs".to_string(),
+                        message: "Invalid subplot dimensions.".to_string(),
+                        span: rustlab_parse::Span::default(),
+                    })? as usize;
+                    let p = args[2].as_scalar_i64().map_err(|_| EvalError::UserError {
+                        identifier: "RUSTLAB:plot:badArgs".to_string(),
+                        message: "Invalid subplot dimensions.".to_string(),
+                        span: rustlab_parse::Span::default(),
+                    })? as usize;
+                    fig.subplot(m, n, p);
+                } else if args.len() == 1 {
+                    let mnp = args[0].as_scalar_i64().map_err(|_| EvalError::UserError {
+                        identifier: "RUSTLAB:plot:badArgs".to_string(),
+                        message: "Invalid subplot dimensions.".to_string(),
+                        span: rustlab_parse::Span::default(),
+                    })? as usize;
+                    if (100..=999).contains(&mnp) {
+                        let m = mnp / 100;
+                        let n = (mnp / 10) % 10;
+                        let p = mnp % 10;
+                        fig.subplot(m, n, p);
+                    }
+                }
                 Ok(vec![Value::Double(DenseArray::empty())])
             },
         );

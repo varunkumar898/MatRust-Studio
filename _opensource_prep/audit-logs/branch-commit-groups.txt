@@ -1,0 +1,441 @@
+f863b14348a2e0fa9af3a508ca8a2be0734bddc6	25	Add verification logs for plot staged surface, style commit, and tests after cleanup
+  M	apps/desktop/src/dock.rs
+  A	apps/desktop/src/layout_contract.rs
+  M	apps/desktop/src/lib.rs
+  M	apps/desktop/src/ui_registry.rs
+  M	crates/rustlab-plot/src/lib.rs
+  M	crates/rustlab-stdlib/src/plot_builtins.rs
+  A	docs/layout-audit.md
+  A	docs/verify-logs/2026-11-04-bench-contract-fixes-final-verify.log
+  A	docs/verify-logs/2026-11-04-layout-l1-baseline-verify.log
+  A	docs/verify-logs/2026-11-04-layout-l2-c1-tests.log
+  A	docs/verify-logs/2026-11-04-layout-l2-clippy.log
+  A	docs/verify-logs/2026-11-04-layout-l2-desktop-tests.log
+  A	docs/verify-logs/2026-11-04-layout-l2-lib-start.log
+  A	docs/verify-logs/2026-11-04-layout-l2-panel-registry-lib.log
+  A	docs/verify-logs/2026-11-04-layout-l2-plot-start.log
+  A	docs/verify-logs/2026-11-04-plot-clippy-fix.log
+  A	docs/verify-logs/2026-11-04-plot-code-commit.log
+  A	docs/verify-logs/2026-11-04-plot-docs-commit.log
+  A	docs/verify-logs/2026-11-04-plot-fmt-check.log
+  A	docs/verify-logs/2026-11-04-plot-snapshot-commit.log
+  A	docs/verify-logs/2026-11-04-plot-staged-plot-all.log
+  A	docs/verify-logs/2026-11-04-plot-staged-stdlib-lib.log
+  A	docs/verify-logs/2026-11-04-plot-staged-surf.log
+  A	docs/verify-logs/2026-11-04-plot-style-commit.log
+  A	docs/verify-logs/2026-11-04-plot-tests-after-cleanup.log
+04ec463d421f7dfd7fac753ab267e49c4116728c	2	docs(plot): update PLOT-0 discovery and PLOT-1 integration notes
+  M	docs/design/plot-integration.md
+  M	docs/plot-int/discovery.md
+8915e7b834d72b5457dfd487102f03c796886a7d	3	test(plot): refresh SVG snapshots for surface style classes
+  M	crates/rustlab-plot/tests/snapshots/deterministic_line.svg
+  M	crates/rustlab-plot/tests/snapshots/scatter_plot.svg
+  M	crates/rustlab-plot/tests/snapshots/single_line_plot.svg
+0c025453c5596e7dadcd3dc8c1047bc25b574ab3	2	style: apply rustfmt to staged stats and plot code
+  M	crates/rustlab-data/src/stats.rs
+  M	crates/rustlab-plot/src/lib.rs
+46a075933b1edf558ade0cd7468a61ecbc78cafd	3	fix(plot): complete implicit surf(Z) grid semantics and clear clippy warnings
+  M	crates/rustlab-plot/src/svg.rs
+  M	crates/rustlab-stdlib/src/nd_ops.rs
+  M	crates/rustlab-stdlib/src/plot_builtins.rs
+a1d4a9889664ab9b08d287bdf6c7c59856b33284	7	feat(plot): add Surface plot model, SVG renderer, surf builtin and docs
+  M	crates/rustlab-plot/src/lib.rs
+  M	crates/rustlab-plot/src/svg.rs
+  M	crates/rustlab-stdlib/src/help.rs
+  M	crates/rustlab-stdlib/src/lib.rs
+  M	crates/rustlab-stdlib/src/plot_builtins.rs
+  M	docs/builtins.txt
+  A	docs/functions/surf.md
+ade41b0fc23f2a35d0b386d33d7f5c718a9f0ba2	1	fix(stats): movmean unsafe pointer fast path + cummax/cummin warning cleanup
+  M	crates/rustlab-data/src/stats.rs
+39ea31c6787c7a3a4fd1de7c848e65e212e561e6	3	feat(gui): S5 peaks function + meshgrid/peaks tests
+  M	crates/rustlab-stdlib/src/help.rs
+  M	crates/rustlab-stdlib/src/nd_ops.rs
+  M	docs/builtins.txt
+7641ec261a4583e810a482c21aaeaa5764480edc	1	docs: add peaks function documentation
+  A	docs/functions/peaks.md
+65b2f198b5b4ed85e4c2f3832a185fe009b757d3	3	feat(stdlib): add peaks builtin + docs: bench-contract-fixes design note
+  M	crates/rustlab-stdlib/src/lib.rs
+  M	crates/rustlab-stdlib/src/nd_ops.rs
+  A	docs/milestones/bench-contract-fixes.md
+0c487d8720e47db5426bf93b6f55dd9e6f20b47b	3	feat(gui): S4 figure tab grouping with per-axes subplots
+  M	apps/desktop/src/execution.rs
+  M	apps/desktop/src/figures.rs
+  M	apps/desktop/tests/desktop_tests.rs
+ccbd5159a62ceff96912fcef00f889cdfa57c22a	1	feat(stats): fix movmean and cummax benchmark contracts
+  M	crates/rustlab-data/src/stats.rs
+0cae38a96196424fe853919044d235637e058d97	1	docs(chore): add B2.2 plot integration design doc
+  A	docs/design/plot-integration.md
+96a5eb7abe53c307cf256e312e18df7831a277f6	1	feat(gui): add plotting builtins S3 (ishhold, gcf, gca, cla, clf, close, zlabel, hold toggle, subplot mnp)
+  M	docs/builtins.txt
+66db6ca188eba316d954eecd5acb45ca7c8edbd2	1	docs(state): record S4 milestone completion
+  M	docs/STATE.md
+b76307fbeaf1d661ef1a04877f46e2d6aab13eb8	30	feat(gui): S4 input-handling fixes for GUI polish milestone
+  M	apps/desktop/src/command_window.rs
+  M	apps/desktop/src/editor.rs
+  M	apps/desktop/tests/editor_gui_tests.rs
+  M	crates/rustlab-plot/src/lib.rs
+  M	crates/rustlab-plot/src/state.rs
+  M	crates/rustlab-plot/src/svg.rs
+  M	crates/rustlab-plot/src/ticks.rs
+  M	crates/rustlab-plot/tests/snapshot_tests.rs
+  M	crates/rustlab-stdlib/src/help.rs
+  M	crates/rustlab-stdlib/src/lib.rs
+  M	crates/rustlab-stdlib/src/plot_builtins.rs
+  M	docs/builtins.txt
+  A	docs/functions/cla.md
+  A	docs/functions/clf.md
+  A	docs/functions/close.md
+  A	docs/functions/gca.md
+  A	docs/functions/gcf.md
+  A	docs/functions/ishhold.md
+  A	docs/functions/zlabel.md
+  A	docs/milestones/s4-input.md
+  A	docs/plot-int/defined_call.out
+  A	docs/plot-int/discovery.md
+  A	docs/plot-int/dump_ast.out
+  A	docs/plot-int/hold_on.out
+  A	docs/plot-int/hold_paren.out
+  A	docs/plot-int/hold_toggle.out
+  A	docs/plot-int/meshgrid.out
+  A	docs/plot-int/nonexistent.out
+  A	docs/plot-int/peaks.out
+  A	docs/plot-int/surf.out
+3b10824010dbb2bcc753164e40c0497fd342cf52	1	feat(plot): add Axes hold-state unit tests (S2)
+  M	crates/rustlab-plot/src/lib.rs
+a8b245dde20f5140c4ee6cbefd41a622ca23c7ea	2	fix(parse): call-expression span starts at callee, not opening paren
+  M	crates/rustlab-parse/src/parser.rs
+  M	crates/rustlab-parse/tests/parser_tests.rs
+e91c24f4ae3e92d5e80759a4c158a1a700bf6eae	1	docs(chore): update Cargo.lock for rustlab-plot dev-dependency
+  M	Cargo.lock
+801706a8df76f0c878390080b41abb95e3c52e14	1	docs(state): record B2.2 milestone completion
+  M	docs/STATE.md
+e6fc666ea8a35c86f1aa178d756cdab48343af62	22	feat(plot): B2.2 rustlab-plot milestone complete
+  M	crates/rustlab-plot/src/lib.rs
+  M	crates/rustlab-plot/tests/snapshot_tests.rs
+  M	crates/rustlab-stdlib/Cargo.toml
+  M	crates/rustlab-stdlib/src/help.rs
+  M	crates/rustlab-stdlib/src/lib.rs
+  A	crates/rustlab-stdlib/src/plot_builtins.rs
+  M	docs/builtins.txt
+  A	docs/functions/bar.md
+  A	docs/functions/figure.md
+  A	docs/functions/grid.md
+  A	docs/functions/hist.md
+  A	docs/functions/hold.md
+  A	docs/functions/legend.md
+  A	docs/functions/plot.md
+  A	docs/functions/saveas.md
+  A	docs/functions/scatter.md
+  A	docs/functions/subplot.md
+  A	docs/functions/title.md
+  A	docs/functions/xlabel.md
+  A	docs/functions/xlim.md
+  A	docs/functions/ylabel.md
+  A	docs/functions/ylim.md
+737800878fe58b52b331f996a5a2cd2da436b14b	11	feat(plot): add snapshot tests for deterministic SVG output
+  M	Cargo.toml
+  A	crates/rustlab-plot/Cargo.toml
+  A	crates/rustlab-plot/src/lib.rs
+  A	crates/rustlab-plot/src/state.rs
+  A	crates/rustlab-plot/src/svg.rs
+  A	crates/rustlab-plot/src/ticks.rs
+  A	crates/rustlab-plot/tests/snapshot_tests.rs
+  A	crates/rustlab-plot/tests/snapshots/deterministic_line.svg
+  A	crates/rustlab-plot/tests/snapshots/scatter_plot.svg
+  A	crates/rustlab-plot/tests/snapshots/single_line_plot.svg
+  A	docs/milestones/b2-2-design.md
+2c312051af75266f285c582a1458ab4128a303c0	2	docs(gui): final from-clean verify log (exit 0, all 10 R11 steps) + clippy evidence
+  A	docs/verify-logs/2026-11-04-gui-editor-clippy-after-takeover.log
+  A	docs/verify-logs/2026-11-04-gui-editor-final-verify.log
+2405c094dbbb320ee62659cbdaa36fc96e189b4a	1	docs(gui): S5 from-clean verify log (exit 0, all 10 steps: fmt, clippy x4, tests x5, manifest, feature gate, tree gate)
+  A	docs/verify-logs/2026-11-04-s5-tree-cloud-verify-final.log
+6187009d76449649a1080dd3afb02736414090b8	1	fix(math): move isize stride checks into the matrixmultiply cfg block (unused under --no-default-features; unblocks R11 clippy gate)
+  M	crates/rustlab-math/src/ops.rs
+43cd589b2b01071ecf92acbd1b57fbefe6e51203	7	docs(gui): S4/S5 records + takeover-session verification evidence; gui-editor milestone completion; cloud OAuth deferral in BACKLOG
+  M	docs/BACKLOG.md
+  M	docs/STATE.md
+  M	docs/milestones/gui-editor.md
+  M	docs/screenshots/gui-editor/after/desktop_1280x720.png
+  M	docs/screenshots/gui-editor/after/desktop_1920x1080.png
+  M	docs/test-count.md
+  A	docs/verify-logs/2026-11-04-s5-tree-cloud-verify.log
+ac6477afa93517ddd81c8d5de4d7f18d13373960	1	feat(gui): GUI-EDITOR - editor fills its panel; clean single-window shell
+  M	docs/test-manifest.txt
+3059f72263508fbaa0229fe433669c3e342724aa	102	wip(gui): stage prior-session gui-clean evidence logs
+  A	docs/verify-logs/2026-11-04-gui-clean-build-after.log
+  A	docs/verify-logs/2026-11-04-gui-clean-build-after2.log
+  A	docs/verify-logs/2026-11-04-gui-clean-build-debug.log
+  A	docs/verify-logs/2026-11-04-gui-clean-build-debug2.log
+  A	docs/verify-logs/2026-11-04-gui-clean-build-debug3.log
+  A	docs/verify-logs/2026-11-04-gui-clean-build-debug4.log
+  A	docs/verify-logs/2026-11-04-gui-clean-build-debug5.log
+  A	docs/verify-logs/2026-11-04-gui-clean-build-diag.log
+  A	docs/verify-logs/2026-11-04-gui-clean-build-final.log
+  A	docs/verify-logs/2026-11-04-gui-clean-build-final2.log
+  A	docs/verify-logs/2026-11-04-gui-clean-build-final3.log
+  A	docs/verify-logs/2026-11-04-gui-clean-build-home.log
+  A	docs/verify-logs/2026-11-04-gui-clean-build-home2.log
+  A	docs/verify-logs/2026-11-04-gui-clean-build-thispc.log
+  A	docs/verify-logs/2026-11-04-gui-clean-build.log
+  A	docs/verify-logs/2026-11-04-gui-clean-capture-2.log
+  A	docs/verify-logs/2026-11-04-gui-clean-capture-3.log
+  A	docs/verify-logs/2026-11-04-gui-clean-capture-4.log
+  A	docs/verify-logs/2026-11-04-gui-clean-capture-apps-final.log
+  A	docs/verify-logs/2026-11-04-gui-clean-capture-apps.log
+  A	docs/verify-logs/2026-11-04-gui-clean-capture-diag-final.log
+  A	docs/verify-logs/2026-11-04-gui-clean-capture-diag.log
+  A	docs/verify-logs/2026-11-04-gui-clean-capture-editor-final.log
+  A	docs/verify-logs/2026-11-04-gui-clean-capture-editor.log
+  A	docs/verify-logs/2026-11-04-gui-clean-capture-final-apps-1280x720.log
+  A	docs/verify-logs/2026-11-04-gui-clean-capture-final-apps-1920x1080.log
+  A	docs/verify-logs/2026-11-04-gui-clean-capture-final-apps.log
+  A	docs/verify-logs/2026-11-04-gui-clean-capture-final-editor-1280x720.log
+  A	docs/verify-logs/2026-11-04-gui-clean-capture-final-editor-1920x1080.log
+  A	docs/verify-logs/2026-11-04-gui-clean-capture-final-editor.log
+  A	docs/verify-logs/2026-11-04-gui-clean-capture-final-home-1280x720.log
+  A	docs/verify-logs/2026-11-04-gui-clean-capture-final-home-1920x1080.log
+  A	docs/verify-logs/2026-11-04-gui-clean-capture-final-home.log
+  A	docs/verify-logs/2026-11-04-gui-clean-capture-final-plots-1280x720.log
+  A	docs/verify-logs/2026-11-04-gui-clean-capture-final-plots-1920x1080.log
+  A	docs/verify-logs/2026-11-04-gui-clean-capture-final-plots.log
+  A	docs/verify-logs/2026-11-04-gui-clean-capture-final-publish-1280x720.log
+  A	docs/verify-logs/2026-11-04-gui-clean-capture-final-publish-1920x1080.log
+  A	docs/verify-logs/2026-11-04-gui-clean-capture-final-publish.log
+  A	docs/verify-logs/2026-11-04-gui-clean-capture-final-view-1280x720.log
+  A	docs/verify-logs/2026-11-04-gui-clean-capture-final-view-1920x1080.log
+  A	docs/verify-logs/2026-11-04-gui-clean-capture-final-view.log
+  A	docs/verify-logs/2026-11-04-gui-clean-capture-home-final.log
+  A	docs/verify-logs/2026-11-04-gui-clean-capture-home-final2.log
+  A	docs/verify-logs/2026-11-04-gui-clean-capture-home.log
+  A	docs/verify-logs/2026-11-04-gui-clean-capture-home2.log
+  A	docs/verify-logs/2026-11-04-gui-clean-capture-home3.log
+  A	docs/verify-logs/2026-11-04-gui-clean-capture-home4.log
+  A	docs/verify-logs/2026-11-04-gui-clean-capture-plots-final.log
+  A	docs/verify-logs/2026-11-04-gui-clean-capture-plots.log
+  A	docs/verify-logs/2026-11-04-gui-clean-capture-publish-final.log
+  A	docs/verify-logs/2026-11-04-gui-clean-capture-publish.log
+  A	docs/verify-logs/2026-11-04-gui-clean-capture-retry-publish-1920x1080.log
+  A	docs/verify-logs/2026-11-04-gui-clean-capture-retry-view-1280x720.log
+  A	docs/verify-logs/2026-11-04-gui-clean-capture-retry-view-1920x1080.log
+  A	docs/verify-logs/2026-11-04-gui-clean-capture-thispc.log
+  A	docs/verify-logs/2026-11-04-gui-clean-capture-view-final.log
+  A	docs/verify-logs/2026-11-04-gui-clean-capture-view.log
+  A	docs/verify-logs/2026-11-04-gui-clean-capture.log
+  A	docs/verify-logs/2026-11-04-gui-clean-check-1.log
+  A	docs/verify-logs/2026-11-04-gui-clean-check-2.log
+  A	docs/verify-logs/2026-11-04-gui-clean-check-3.log
+  A	docs/verify-logs/2026-11-04-gui-clean-check-4.log
+  A	docs/verify-logs/2026-11-04-gui-clean-check-5.log
+  A	docs/verify-logs/2026-11-04-gui-clean-check-6.log
+  A	docs/verify-logs/2026-11-04-gui-clean-check-7.log
+  A	docs/verify-logs/2026-11-04-gui-clean-check-8.log
+  A	docs/verify-logs/2026-11-04-gui-clean-clippy-all-2.log
+  A	docs/verify-logs/2026-11-04-gui-clean-clippy-all-3.log
+  A	docs/verify-logs/2026-11-04-gui-clean-clippy-all.log
+  A	docs/verify-logs/2026-11-04-gui-clean-clippy-desktop-2.log
+  A	docs/verify-logs/2026-11-04-gui-clean-clippy-desktop-3.log
+  A	docs/verify-logs/2026-11-04-gui-clean-clippy-desktop-4.log
+  A	docs/verify-logs/2026-11-04-gui-clean-clippy-desktop.log
+  A	docs/verify-logs/2026-11-04-gui-clean-clippy-nodefault-2.log
+  A	docs/verify-logs/2026-11-04-gui-clean-clippy-nodefault-3.log
+  A	docs/verify-logs/2026-11-04-gui-clean-clippy-nodefault.log
+  A	docs/verify-logs/2026-11-04-gui-clean-deny-licenses.log
+  A	docs/verify-logs/2026-11-04-gui-clean-editor-tests-8.log
+  A	docs/verify-logs/2026-11-04-gui-clean-fmt.log
+  A	docs/verify-logs/2026-11-04-gui-clean-interaction-audit-2.log
+  A	docs/verify-logs/2026-11-04-gui-clean-interaction-audit.log
+  A	docs/verify-logs/2026-11-04-gui-clean-release-build.log
+  A	docs/verify-logs/2026-11-04-gui-clean-ribbon-test-1.log
+  A	docs/verify-logs/2026-11-04-gui-clean-shell-test-1.log
+  A	docs/verify-logs/2026-11-04-gui-clean-test-list.log
+  A	docs/verify-logs/2026-11-04-gui-clean-tests-1.log
+  A	docs/verify-logs/2026-11-04-gui-clean-tests-10.log
+  A	docs/verify-logs/2026-11-04-gui-clean-tests-11.log
+  A	docs/verify-logs/2026-11-04-gui-clean-tests-11b.log
+  A	docs/verify-logs/2026-11-04-gui-clean-tests-12.log
+  A	docs/verify-logs/2026-11-04-gui-clean-tests-13.log
+  A	docs/verify-logs/2026-11-04-gui-clean-tests-14.log
+  A	docs/verify-logs/2026-11-04-gui-clean-tests-15.log
+  A	docs/verify-logs/2026-11-04-gui-clean-tests-2.log
+  A	docs/verify-logs/2026-11-04-gui-clean-tests-3.log
+  A	docs/verify-logs/2026-11-04-gui-clean-tests-4.log
+  A	docs/verify-logs/2026-11-04-gui-clean-tests-5.log
+  A	docs/verify-logs/2026-11-04-gui-clean-tests-6.log
+  A	docs/verify-logs/2026-11-04-gui-clean-tests-7.log
+  A	docs/verify-logs/2026-11-04-gui-clean-tests-8.log
+  A	docs/verify-logs/2026-11-04-gui-clean-tests-9.log
+ecc7baae02b45513e935a0188e99adef13928e37	77	wip(gui): stage prior-session editor/command/clean test suites and their evidence logs (tests required by committed code)
+  A	apps/desktop/tests/editor_gui_tests.rs
+  A	apps/desktop/tests/gui_clean_tests.rs
+  A	docs/milestones/gui-editor.md
+  A	docs/screenshots/gui-clean/after/desktop_1280x720.png
+  A	docs/screenshots/gui-clean/after/desktop_1920x1080.png
+  A	docs/screenshots/gui-clean/after/desktop_fullscreen_1280x720.png
+  A	docs/screenshots/gui-clean/diagnostics/desktop_1280x720.png
+  A	docs/screenshots/gui-clean/diagnostics/desktop_1920x1080.png
+  A	docs/screenshots/gui-clean/tabs/apps/desktop_1280x720.png
+  A	docs/screenshots/gui-clean/tabs/apps/desktop_1920x1080.png
+  A	docs/screenshots/gui-clean/tabs/editor/desktop_1280x720.png
+  A	docs/screenshots/gui-clean/tabs/editor/desktop_1920x1080.png
+  A	docs/screenshots/gui-clean/tabs/home/desktop_1280x720.png
+  A	docs/screenshots/gui-clean/tabs/home/desktop_1920x1080.png
+  A	docs/screenshots/gui-clean/tabs/plots/desktop_1280x720.png
+  A	docs/screenshots/gui-clean/tabs/plots/desktop_1920x1080.png
+  A	docs/screenshots/gui-clean/tabs/publish/desktop_1280x720.png
+  A	docs/screenshots/gui-clean/tabs/publish/desktop_1920x1080.png
+  A	docs/screenshots/gui-clean/tabs/view/desktop_1280x720.png
+  A	docs/screenshots/gui-clean/tabs/view/desktop_1920x1080.png
+  A	docs/screenshots/gui-clean/this-pc/desktop_1280x720.png
+  A	docs/screenshots/gui-editor/after/desktop_1280x720.png
+  A	docs/screenshots/gui-editor/after/desktop_1920x1080.png
+  A	docs/screenshots/gui-editor/before/desktop_1280x720.png
+  A	docs/screenshots/gui-editor/before/desktop_1920x1080.png
+  A	docs/verify-logs/2026-11-04-command-debug-2.log
+  A	docs/verify-logs/2026-11-04-command-debug.log
+  A	docs/verify-logs/2026-11-04-command-input-test.log
+  A	docs/verify-logs/2026-11-04-command-short-panel-test-2.log
+  A	docs/verify-logs/2026-11-04-command-short-panel-test-3.log
+  A	docs/verify-logs/2026-11-04-command-short-panel-test.log
+  A	docs/verify-logs/2026-11-04-current-folder-build-2.log
+  A	docs/verify-logs/2026-11-04-current-folder-build-3.log
+  A	docs/verify-logs/2026-11-04-current-folder-build.log
+  A	docs/verify-logs/2026-11-04-current-folder-capture-home.log
+  A	docs/verify-logs/2026-11-04-current-folder-capture-home2.log
+  A	docs/verify-logs/2026-11-04-current-folder-capture-home3.log
+  A	docs/verify-logs/2026-11-04-current-folder-check-1.log
+  A	docs/verify-logs/2026-11-04-current-folder-check-2.log
+  A	docs/verify-logs/2026-11-04-current-folder-check-3.log
+  A	docs/verify-logs/2026-11-04-current-folder-tests-1.log
+  A	docs/verify-logs/2026-11-04-current-folder-tests-2.log
+  A	docs/verify-logs/2026-11-04-current-folder-tests-3.log
+  A	docs/verify-logs/2026-11-04-current-folder-tests-4.log
+  A	docs/verify-logs/2026-11-04-current-folder-tests-5.log
+  A	docs/verify-logs/2026-11-04-current-folder-tests-6.log
+  A	docs/verify-logs/2026-11-04-current-folder-tests-7.log
+  A	docs/verify-logs/2026-11-04-current-folder-tests-8.log
+  A	docs/verify-logs/2026-11-04-current-folder-tests-9.log
+  A	docs/verify-logs/2026-11-04-dock-rects-1280x720.log
+  A	docs/verify-logs/2026-11-04-dock-rects.log
+  A	docs/verify-logs/2026-11-04-editor-callback-check.log
+  A	docs/verify-logs/2026-11-04-editor-debug-stderr.log
+  A	docs/verify-logs/2026-11-04-editor-test-list.log
+  A	docs/verify-logs/2026-11-04-editor-tests-12.log
+  A	docs/verify-logs/2026-11-04-gui-editor-build-after.log
+  A	docs/verify-logs/2026-11-04-gui-editor-build-before.log
+  A	docs/verify-logs/2026-11-04-gui-editor-capture-after.log
+  A	docs/verify-logs/2026-11-04-gui-editor-capture-before.log
+  A	docs/verify-logs/2026-11-04-gui-editor-clippy-all-first.log
+  A	docs/verify-logs/2026-11-04-gui-editor-clippy-desktop.log
+  A	docs/verify-logs/2026-11-04-gui-editor-clippy-race-diag.log
+  A	docs/verify-logs/2026-11-04-gui-editor-desktop-tests-2.log
+  A	docs/verify-logs/2026-11-04-gui-editor-desktop-tests.log
+  A	docs/verify-logs/2026-11-04-gui-editor-resume-desktop-tests.log
+  A	docs/verify-logs/2026-11-04-gui-editor-tests-before.log
+  A	docs/verify-logs/2026-11-04-gui-editor-tests-first-impl.log
+  A	docs/verify-logs/2026-11-04-gui-editor-tests-second-impl.log
+  A	docs/verify-logs/2026-11-04-gui-editor-tests-third-impl.log
+  A	docs/verify-logs/2026-11-04-layout.log
+  A	docs/verify-logs/2026-11-04-layout2.log
+  A	docs/verify-logs/2026-11-04-manual-window.log
+  A	docs/verify-logs/2026-11-04-section-debug.log
+  A	docs/verify-logs/2026-11-04-section-retry.log
+  A	docs/verify-logs/2026-11-04-section-test.log
+  A	docs/verify-logs/2026-11-04-viewport-resize.log
+  A	docs/verify-logs/2026-11-04-viewport.log
+73495c2a51fb7dcc7a86e68caca4c8e9709a26bb	4	feat(gui): Current Folder project tree view + whole-project totals + auto-refresh on save + Cloud Drives dialog (safe credential model: provider sync folders only, no tokens stored)
+  M	apps/desktop/src/app.rs
+  A	apps/desktop/src/cloud_accounts.rs
+  M	apps/desktop/src/current_folder.rs
+  M	apps/desktop/src/lib.rs
+4809d9bb069c6b5acfb20c520e2bb10b0f504253	17	wip(gui): stage prior-session work verified green this session (editor rewrite, syntax/actions/ui_registry modules, ribbon registry, project browser tests, rfd picker dep)
+  M	Cargo.lock
+  M	apps/desktop/Cargo.toml
+  A	apps/desktop/src/actions.rs
+  M	apps/desktop/src/addons_panel.rs
+  M	apps/desktop/src/block_diagram_editor.rs
+  M	apps/desktop/src/command_window.rs
+  M	apps/desktop/src/dock.rs
+  M	apps/desktop/src/editor.rs
+  M	apps/desktop/src/figures.rs
+  M	apps/desktop/src/help_panel.rs
+  M	apps/desktop/src/statusbar.rs
+  A	apps/desktop/src/syntax.rs
+  A	apps/desktop/src/ui_registry.rs
+  M	apps/desktop/src/workspace_panel.rs
+  A	apps/desktop/tests/current_folder_tests.rs
+  M	apps/desktop/tests/desktop_tests.rs
+  M	scripts/capture-desktop-s1.ps1
+7b9cf1a6ce84f4a8842b2e8c8dcf08820ea7368a	1	docs(gui): S3 final from-clean verify log (exit 0, sections 5/6/7 green incl. manifest step)
+  A	docs/verify-logs/2026-11-04-gui-s3-final-verify.log
+af7c9badbecb0279827c6d603d67f4e04bd271c6	3	docs(gui): S3 records - audit R1 fixed-evidence + egui 0.31 warn_on_id_clash paint-only finding, BACKLOG 6.2 resolved / 6.4 closed infeasible-for-0.31, STATE updated
+  M	docs/BACKLOG.md
+  M	docs/STATE.md
+  M	docs/gui-audit.md
+67f912677c01c0eb5a7da72cffdaf70419071d05	2	fix(scripts): capture finds the app window by pid (terminal shares the MATSTUDIO title prefix); + S3 runtime shot: B61C ribbons gone, dot-entries hidden, Hidden toggle in header
+  A	docs/screenshots/s3-ids/desktop_1280x720.png
+  M	scripts/capture-desktop-s1.ps1
+f153d9c050d6c78dd3e6537a9a38ecbc5e403e59	2	feat(gui): Current Folder hides dot-entries by default with a Hidden toggle (BACKLOG 6.2); +1 unit test (manifest regenerated 351 -> 352)
+  M	apps/desktop/src/current_folder.rs
+  M	docs/test-manifest.txt
+af930a2e069c8b9552d5cfb524a504f318cdef98	6	fix(gui): G5 id hygiene - salted ScrollAreas (B61C pair), per-row push_id in all list panels, station-scoped block-params modal id
+  M	apps/desktop/src/addons_panel.rs
+  M	apps/desktop/src/block_diagram_editor.rs
+  M	apps/desktop/src/command_window.rs
+  M	apps/desktop/src/current_folder.rs
+  M	apps/desktop/src/help_panel.rs
+  M	apps/desktop/src/workspace_panel.rs
+a2be4b813edf374275e99a4400d293f7692ba1e3	2	docs(gui): S2 verify evidence logs (hygiene run 09287F07, final run E51F027A)
+  A	docs/verify-logs/2026-11-03-gui-s2-final-verify.log
+  A	docs/verify-logs/2026-11-03-gui-s2-hygiene-verify.log
+282c5844c06bd4946e3aa22261822c8ccc31f582	3	docs(gui): S2 after-capture (1280x720) + STATE S2 completion notes
+  M	docs/STATE.md
+  A	docs/screenshots/after/desktop_1280x720.png
+  M	scripts/capture-desktop-s1.ps1
+fcdc88d649ccaaedabaa0930560ec74d89c4b677	6	deparasite(gui): new canvas/scripts/command window start empty; fake add-on package and fake set-path bullets removed; authors -> MATSTUDIO; example-load is explicit
+  M	apps/desktop/src/addons_panel.rs
+  M	apps/desktop/src/app.rs
+  M	apps/desktop/src/block_diagram_editor.rs
+  M	apps/desktop/src/command_window.rs
+  M	apps/desktop/src/editor.rs
+  M	apps/desktop/tests/desktop_tests.rs
+5d0b3016f36c4f166ac675b4151ae3633db1e67a	6	remove(gui): Zero-AI/clean-room watermark overlays and demo captions; window title -> MATSTUDIO; Simulink wording gone from scripts/harness
+  M	apps/desktop/src/addons_panel.rs
+  M	apps/desktop/src/app.rs
+  M	apps/desktop/src/help_panel.rs
+  M	apps/desktop/src/main.rs
+  M	scripts/capture-desktop-s1-extras.ps1
+  M	scripts/capture-desktop-s1.ps1
+774d6f15762901c8421847f704ef1b7067be83c5	9	rename(gui): Simulink -> Block Diagram Editor everywhere user-visible (panel title, toolstrip, help catalog, add-on app id, default diagram name, window identity); test fns renamed to match (manifest regenerated, 351 -> 351)
+  M	apps/desktop/src/addons_panel.rs
+  M	apps/desktop/src/app.rs
+  A	apps/desktop/src/block_diagram_editor.rs
+  M	apps/desktop/src/dock.rs
+  M	apps/desktop/src/help_panel.rs
+  M	apps/desktop/src/lib.rs
+  D	apps/desktop/src/simulink_editor.rs
+  M	apps/desktop/tests/desktop_tests.rs
+  M	docs/test-manifest.txt
+a74d9136b7276445bc1e0b4a40e66eb497ef7c36	3	docs(gui): S2 owner-screenshot reconciliation (audit 12, BACKLOG 6.1-6.6, STATE)
+  M	docs/BACKLOG.md
+  M	docs/STATE.md
+  M	docs/gui-audit.md
+9ea305c216858638d23b5b4cef3cc475f70018f4	6	test(hygiene): all test artifacts to temp dirs; verify.ps1 fails on dirty tree
+  M	apps/desktop/tests/desktop_tests.rs
+  M	crates/mlapp-container/tests/fixture_tests.rs
+  M	crates/mlapp-sim/tests/sim_tests.rs
+  M	crates/rustlab-stdlib/tests/doc_generator_tests.rs
+  M	crates/rustlab-stdlib/tests/regression_a312_tests.rs
+  M	scripts/verify.ps1
+b9e6dc7c417487e51f1a4cbdd00bcd0738426bd6	11	docs(gui): S1 audit - full panel inventory, real-window captures, baseline 351/351/351
+  M	docs/STATE.md
+  A	docs/gui-audit.md
+  A	docs/screenshots/before/desktop_1280x720.png
+  A	docs/screenshots/before/desktop_1920x1080.png
+  A	docs/screenshots/before/desktop_addons_panel.png
+  A	docs/screenshots/before/desktop_history_panel.png
+  A	docs/screenshots/before/desktop_simulink_panel.png
+  A	docs/screenshots/before/desktop_view_menu.png
+  A	docs/verify-logs/2026-11-03-gui-s1-baseline-verify.log
+  A	scripts/capture-desktop-s1-extras.ps1
+  A	scripts/capture-desktop-s1.ps1

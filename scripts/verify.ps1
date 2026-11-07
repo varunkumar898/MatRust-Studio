@@ -71,4 +71,18 @@ foreach ($t in $required_faer_tests) {
 }
 Write-Host "Per-crate feature gate check passed: all feature-gated tests correctly gated."
 
+Write-Host "=== 10. Checking that tests left the working tree clean ==="
+# Tests must never write inside the repository. Any modification to a tracked
+# file, or a stray untracked artifact outside the approved output directories,
+# fails the run. Untracked verify/screenshot/bench/example outputs are expected
+# evidence artifacts and do not count as dirt.
+$dirty = git status --porcelain
+$stray = $dirty | Where-Object { $_ -notmatch '^\?\? (docs/verify-logs/|docs/screenshots/|bench-results/|examples/)' }
+if ($stray) {
+    $stray | ForEach-Object { Write-Host "  dirty: $_" }
+    Write-Error "Working tree is dirty after the test suites: a test wrote inside the repository, or files were left uncommitted."
+    exit 1
+}
+Write-Host "Working-tree cleanliness check passed (no tracked modifications, no stray artifacts)."
+
 Write-Host "=== All verification steps passed successfully! ==="

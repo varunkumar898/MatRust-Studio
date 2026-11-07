@@ -1,9 +1,9 @@
 //! Integration tests for MatRust Studio Desktop application backend, docking, editor folding, worker engine, and debugger.
 
+use matrust_studio::block_diagram_editor::BlockDiagramEditor;
 use matrust_studio::dock::{DockTree, DropZone, PanelId};
 use matrust_studio::editor::{check_syntax, extract_active_section, find_foldable_blocks};
 use matrust_studio::execution::{PlotItem, Session, WorkerClient, WorkerResponse};
-use matrust_studio::simulink_editor::SimulinkEditor;
 use std::collections::HashSet;
 use std::fs::File;
 use std::io::Write;
@@ -60,12 +60,13 @@ fn test_session_plotting_builtins_and_state() {
     let fig = &g.figures[0];
     assert_eq!(fig.id, 1);
     assert_eq!(fig.title, "Test Plot");
-    assert_eq!(fig.x_label, "Time (s)");
-    assert_eq!(fig.y_label, "Voltage (V)");
-    assert!(fig.grid);
-    assert_eq!(fig.items.len(), 1);
+    let ax = fig.current_axes().unwrap();
+    assert_eq!(ax.x_label, "Time (s)");
+    assert_eq!(ax.y_label, "Voltage (V)");
+    assert!(ax.grid);
+    assert_eq!(ax.items.len(), 1);
 
-    match &fig.items[0] {
+    match &ax.items[0] {
         PlotItem::Line { x, y, .. } => {
             assert_eq!(x, &[1.0, 2.0, 3.0]);
             assert_eq!(y, &[10.0, 20.0, 30.0]);
@@ -78,7 +79,7 @@ fn test_session_plotting_builtins_and_state() {
     let res2 = session.exec("clf;", None);
     assert!(res2.error.is_none());
     let g2 = session.graphics.lock().unwrap();
-    assert_eq!(g2.figures[0].items.len(), 0);
+    assert_eq!(g2.figures[0].current_axes().unwrap().items.len(), 0);
 }
 
 #[test]
@@ -502,34 +503,41 @@ fn test_no_ai_crates_or_symbols() {
 }
 
 #[test]
-fn test_dock_tree_help_addons_simulink_panels() {
+fn test_dock_tree_help_addons_block_diagram_panels() {
     let tree = DockTree::standard();
     assert!(
         tree.is_open(PanelId::Help),
         "Standard dock layout must open Help panel"
     );
     assert_eq!(PanelId::Help.title(), "Help & Documentation");
-    assert_eq!(PanelId::Help.icon(), "❓");
+    assert_eq!(PanelId::Help.icon(), "[?]");
 
     assert_eq!(PanelId::AddOns.title(), "Add-On Explorer");
-    assert_eq!(PanelId::AddOns.icon(), "🧩");
+    assert_eq!(PanelId::AddOns.icon(), "[A]");
 
-    assert_eq!(PanelId::Simulink.title(), "Simulink Editor");
-    assert_eq!(PanelId::Simulink.icon(), "🔄");
+    assert_eq!(PanelId::BlockDiagram.title(), "Block Diagram Editor");
+    assert_eq!(PanelId::BlockDiagram.icon(), "[B]");
 }
 
 #[test]
-fn test_simulink_editor_canvas_and_solver() {
-    let mut editor = SimulinkEditor::default();
+fn test_block_diagram_editor_canvas_and_solver() {
+    // G2: a fresh editor starts with an EMPTY canvas; the example is
+    // loaded explicitly below.
+    let mut editor = BlockDiagramEditor::default();
+    assert!(
+        editor.blocks.is_empty(),
+        "A fresh block diagram editor must start with an empty canvas"
+    );
+    editor.load_default_feedback_example();
     assert_eq!(
         editor.blocks.len(),
         5,
-        "Default feedback example must contain 5 blocks"
+        "Loaded feedback example must contain 5 blocks"
     );
     assert_eq!(
         editor.wires.len(),
         5,
-        "Default feedback example must contain 5 wires"
+        "Loaded feedback example must contain 5 wires"
     );
 
     let diagram = editor.to_block_diagram();
@@ -539,7 +547,7 @@ fn test_simulink_editor_canvas_and_solver() {
     editor.run_simulation();
     assert!(
         editor.sim_output.is_some(),
-        "SimulinkEditor must produce valid simulation output"
+        "BlockDiagramEditor must produce valid simulation output"
     );
     let out = editor.sim_output.as_ref().unwrap();
     assert!(
@@ -551,6 +559,158 @@ fn test_simulink_editor_canvas_and_solver() {
     assert!(
         (last_val - 1.0).abs() < 0.25,
         "Closed-loop unit step response with integrator and gain 2.0 should converge toward 1.0, got: {last_val}"
+    );
+}
+
+#[test]
+fn test_desktop_block_diagram_parameter_editing_and_simulation() {
+    let mut editor = BlockDiagramEditor::default();
+    editor.load_default_feedback_example();
+
+    // Baseline run with Gain = 2.0
+    editor.run_simulation();
+    let initial_sim = editor.sim_output.clone().expect("Initial simulation");
+    let initial_final = *initial_sim.yout.last().expect("Initial final val");
+
+    // Attempt invalid numeric parameter on Gain (SID 3)
+    editor.open_param_modal("3");
+    editor
+        .param_draft
+        .insert("Gain".to_string(), "abc_not_a_number".to_string());
+    // Verification: invalid string fails f64 parse, block.parameters retains 2.0
+    assert!(editor
+        .param_draft
+        .get("Gain")
+        .unwrap()
+        .trim()
+        .parse::<f64>()
+        .is_err());
+    let current_gain = editor
+        .blocks
+        .iter()
+        .find(|b| b.sid == "3")
+        .unwrap()
+        .parameters
+        .get("Gain")
+        .unwrap();
+    assert_eq!(current_gain, "2.0");
+
+    // Now edit Gain to 8.0 with auto_run enabled
+    editor.auto_run = true;
+    editor
+        .param_draft
+        .insert("Gain".to_string(), "8.0".to_string());
+    if let Some(block) = editor.blocks.iter_mut().find(|b| b.sid == "3") {
+        block
+            .parameters
+            .insert("Gain".to_string(), "8.0".to_string());
+    }
+    editor.sync_prop_draft();
+    if editor.auto_run {
+        editor.run_simulation();
+    }
+
+    let updated_sim = editor
+        .sim_output
+        .expect("Updated simulation after parameter change");
+    let updated_final = *updated_sim.yout.last().expect("Updated final val");
+
+    // With higher gain K=8, response rises faster towards 1.0
+    assert!(
+        (updated_final - 1.0).abs() < (initial_final - 1.0).abs() + 0.1,
+        "Higher gain must produce valid closed-loop response"
+    );
+}
+
+#[test]
+fn test_desktop_block_diagram_multi_port_sum_and_wire_retention() {
+    let mut editor = BlockDiagramEditor::default();
+    editor.load_default_feedback_example();
+
+    // Sum block (SID 2) originally has "+-" (2 ports)
+    let sum_block = editor.blocks.iter().find(|b| b.sid == "2").unwrap();
+    assert_eq!(sum_block.input_ports(), 2);
+    assert_eq!(editor.wires.len(), 5);
+
+    // Update Sum "Inputs" parameter to "++-" (3 ports)
+    if let Some(sum) = editor.blocks.iter_mut().find(|b| b.sid == "2") {
+        sum.parameters
+            .insert("Inputs".to_string(), "++-".to_string());
+    }
+    let updated_sum = editor.blocks.iter().find(|b| b.sid == "2").unwrap();
+    assert_eq!(updated_sum.input_ports(), 3);
+
+    // Pre-existing wires to port 0 and port 1 survive
+    assert!(editor
+        .wires
+        .iter()
+        .any(|w| w.dst_block == "2" && w.dst_port == 0));
+    assert!(editor
+        .wires
+        .iter()
+        .any(|w| w.dst_block == "2" && w.dst_port == 1));
+
+    // Add wire to newly created port 2
+    editor
+        .wires
+        .push(matrust_studio::block_diagram_editor::CanvasWire {
+            src_block: "1".to_string(),
+            src_port: 0,
+            dst_block: "2".to_string(),
+            dst_port: 2,
+            bend_offset: egui::Vec2::ZERO,
+        });
+    assert_eq!(editor.wires.len(), 6);
+
+    // Simulation runs cleanly with 3-port sum
+    editor.run_simulation();
+    assert!(editor.sim_output.is_some());
+}
+
+#[test]
+fn test_desktop_block_diagram_delete_and_duplicate() {
+    let mut editor = BlockDiagramEditor::default();
+    editor.load_default_feedback_example();
+    assert_eq!(editor.blocks.len(), 5);
+
+    // Duplicate Gain block (SID 3)
+    editor.selected_block_sid = Some("3".to_string());
+    let dup_sid = editor.duplicate_selected().expect("Duplicate block");
+    assert_eq!(editor.blocks.len(), 6);
+    assert_eq!(dup_sid, "6");
+
+    let dup = editor.blocks.iter().find(|b| b.sid == "6").unwrap();
+    assert_eq!(dup.parameters.get("Gain").map(|s| s.as_str()), Some("2.0"));
+
+    // Delete Sum block (SID 2) and verify attached wires are cleaned up
+    editor.selected_block_sid = Some("2".to_string());
+    editor.delete_selected();
+    assert_eq!(editor.blocks.len(), 5);
+    assert!(!editor
+        .wires
+        .iter()
+        .any(|w| w.src_block == "2" || w.dst_block == "2"));
+}
+
+#[test]
+fn test_desktop_block_diagram_json_save_load() {
+    let mut editor = BlockDiagramEditor::default();
+    editor.load_default_feedback_example();
+    if let Some(gain) = editor.blocks.iter_mut().find(|b| b.sid == "3") {
+        gain.parameters
+            .insert("Gain".to_string(), "6.25".to_string());
+    }
+
+    let json_str = editor.save_to_json().expect("Export JSON");
+    let mut editor2 = BlockDiagramEditor::default();
+    editor2.load_from_json(&json_str).expect("Import JSON");
+
+    assert_eq!(editor2.blocks.len(), 5);
+    assert_eq!(editor2.wires.len(), 5);
+    let loaded_gain = editor2.blocks.iter().find(|b| b.sid == "3").unwrap();
+    assert_eq!(
+        loaded_gain.parameters.get("Gain").map(|s| s.as_str()),
+        Some("6.25")
     );
 }
 
@@ -625,13 +785,11 @@ disp(['Entropy: ',num2str(entropy)])
         entropy_val
     );
 
-    // Generate screenshot of the executed acceptance test
-    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .unwrap()
-        .parent()
-        .unwrap();
-    let screenshot_dir = root.join("docs/screenshots/ba7137f");
+    // Generate screenshot of the executed acceptance test into a TEMP dir:
+    // tests must never write inside the repository (scripts/verify.ps1 fails
+    // on a dirty tree). The historic artifact docs/screenshots/ba7137f/
+    // remains as the committed record from that milestone.
+    let screenshot_dir = std::env::temp_dir().join("matrust-desktop-test-screenshots");
     let _ = std::fs::create_dir_all(&screenshot_dir);
     let screenshot_path = screenshot_dir.join("01-t-entropy.png");
 
@@ -658,5 +816,139 @@ disp(['Entropy: ',num2str(entropy)])
     assert!(
         png_bytes.starts_with(b"\x89PNG\r\n\x1a\n"),
         "Must be valid PNG file"
+    );
+}
+
+/// S4 Scenario 1: Plotting twice with hold on in one figure -> 1 tab with 2 series.
+#[test]
+fn test_s4_scenario1_plot_twice_without_hold_one_tab_two_series() {
+    let mut session = Session::new();
+    let script = r#"
+        hold on;
+        plot([1 2 3], [10 20 30]);
+        plot([1 2 3], [15 25 35]);
+"#;
+    let res = session.exec(script, None);
+    assert!(res.error.is_none(), "Execution failed: {:?}", res.error);
+
+    let g = session.graphics.lock().unwrap();
+    assert_eq!(g.figures.len(), 1, "Expected exactly 1 figure tab");
+    let fig = &g.figures[0];
+    assert_eq!(fig.axes.len(), 1, "Expected 1 axes in the figure");
+    let ax = fig.current_axes().unwrap();
+    assert_eq!(ax.items.len(), 2, "Expected 2 series in the axes");
+}
+
+/// S4 Scenario 2: subplot(2,1,1) + plot, subplot(2,1,2) + plot ->
+/// 1 figure tab containing 2 axes.
+#[test]
+fn test_s4_scenario2_subplot_two_axes_one_tab() {
+    let mut session = Session::new();
+    let script = r#"
+        subplot(2,1,1);
+        plot([1 2 3], [10 20 30]);
+        subplot(2,1,2);
+        plot([1 2 3], [15 25 35]);
+"#;
+    let res = session.exec(script, None);
+    assert!(res.error.is_none(), "Execution failed: {:?}", res.error);
+
+    let g = session.graphics.lock().unwrap();
+    assert_eq!(g.figures.len(), 1, "Expected exactly 1 figure tab");
+    let fig = &g.figures[0];
+    assert_eq!(
+        fig.axes.len(),
+        2,
+        "Expected 2 axes (subplots) in the figure"
+    );
+    assert_eq!(
+        fig.axes[0].items.len(),
+        1,
+        "Expected 1 series in first subplot"
+    );
+    assert_eq!(
+        fig.axes[1].items.len(),
+        1,
+        "Expected 1 series in second subplot"
+    );
+}
+
+/// S4 Scenario 3: figure(1) + plot, figure(2) + plot -> 2 tabs.
+#[test]
+fn test_s4_scenario3_two_figures_two_tabs() {
+    let mut session = Session::new();
+    let script = r#"
+        figure(1);
+        plot([1 2 3], [10 20 30]);
+        figure(2);
+        plot([1 2 3], [15 25 35]);
+"#;
+    let res = session.exec(script, None);
+    assert!(res.error.is_none(), "Execution failed: {:?}", res.error);
+
+    let g = session.graphics.lock().unwrap();
+    assert_eq!(g.figures.len(), 2, "Expected exactly 2 figure tabs");
+    assert_eq!(g.figures[0].axes.len(), 1);
+    assert_eq!(g.figures[0].current_axes().unwrap().items.len(), 1);
+    assert_eq!(g.figures[1].axes.len(), 1);
+    assert_eq!(g.figures[1].current_axes().unwrap().items.len(), 1);
+}
+
+/// S4 Scenario 4: Plot 10 times without hold -> 1 tab (no tab growth).
+#[test]
+fn test_s4_scenario4_plot_ten_times_no_tab_growth() {
+    let mut session = Session::new();
+    let mut script = String::new();
+    for i in 1..=10 {
+        script.push_str(&format!(
+            "plot([{} {} {}], [{} {} {}]);\n",
+            i,
+            i + 1,
+            i + 2,
+            i * 10,
+            i * 10 + 10,
+            i * 10 + 20
+        ));
+    }
+    let res = session.exec(&script, None);
+    assert!(res.error.is_none(), "Execution failed: {:?}", res.error);
+
+    let g = session.graphics.lock().unwrap();
+    assert_eq!(
+        g.figures.len(),
+        1,
+        "Expected exactly 1 figure tab (no tab growth)"
+    );
+    let fig = &g.figures[0];
+    assert_eq!(fig.axes.len(), 1);
+    assert_eq!(fig.current_axes().unwrap().items.len(), 1);
+}
+
+/// S4: subplot grouping - hold on one axes does not affect sibling axes.
+#[test]
+fn test_s4_hold_per_axes_independent() {
+    let mut session = Session::new();
+    let script = r#"
+        subplot(2,1,1);
+        hold('on');
+        plot([1 2 3], [10 20 30]);
+        plot([1 2 3], [15 25 35]);
+        subplot(2,1,2);
+        hold('off');
+        plot([1 2 3], [5 10 15]);
+        plot([1 2 3], [20 25 30]);
+"#;
+    let res = session.exec(script, None);
+    assert!(res.error.is_none(), "Execution failed: {:?}", res.error);
+
+    let g = session.graphics.lock().unwrap();
+    assert_eq!(g.figures.len(), 1);
+    let fig = &g.figures[0];
+    assert_eq!(fig.axes.len(), 2);
+    assert_eq!(fig.axes[0].items.len(), 2, "Held axes keeps both series");
+    assert_eq!(
+        fig.axes[1].items.len(),
+        1,
+        "Non-held axes replaced with last series"
     );
 }

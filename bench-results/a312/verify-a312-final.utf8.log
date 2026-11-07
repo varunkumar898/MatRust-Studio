@@ -2,7 +2,7 @@
 === 2. Running clippy (all features) ===
 bash.exe : warning: Cargo.toml: `panic` setting is ignored for `bench` profile
 At line:1 char:219
-+ ... argo clean; & 'C:\msys64\usr\bin\bash.exe' -c 'cd /c/Users/varun/.ant ...
++ ... argo clean; & 'C:\msys64\usr\bin\bash.exe' -c 'cd <repo>/.ant ...
 +                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     + CategoryInfo          : NotSpecified: (warning: Cargo....`bench` profile:String) [], RemoteException
     + FullyQualifiedErrorId : NativeCommandError
@@ -74,20 +74,20 @@ warning: workspace (manifest) generated 1 warning
     Checking gemm-c32 v0.19.0
     Checking qd v0.8.0
    Compiling heck v0.5.0
-    Checking rustlab-parse v0.1.0 (C:\Users\varun\.antigravity\rustlab\crates\rustlab-parse)
+    Checking rustlab-parse v0.1.0 (<repo>\crates\rustlab-parse)
     Checking strength_reduce v0.2.4
    Compiling equator-macro v0.6.0
     Checking generativity v1.2.1
     Checking strsim v0.11.1
     Checking clap_lex v1.1.1
-    Checking rustlab-math v0.1.0 (C:\Users\varun\.antigravity\rustlab\crates\rustlab-math)
+    Checking rustlab-math v0.1.0 (<repo>\crates\rustlab-math)
     Checking faer-traits v0.24.0
     Checking clap_builder v4.6.7
     Checking equator v0.6.0
     Checking gemm v0.19.0
     Checking transpose v0.2.3
-    Checking rustlab-matio v0.1.0 (C:\Users\varun\.antigravity\rustlab\crates\rustlab-matio)
-    Checking rustlab-eval v0.1.0 (C:\Users\varun\.antigravity\rustlab\crates\rustlab-eval)
+    Checking rustlab-matio v0.1.0 (<repo>\crates\rustlab-matio)
+    Checking rustlab-eval v0.1.0 (<repo>\crates\rustlab-eval)
    Compiling clap_derive v4.6.7
     Checking regex v1.13.1
     Checking primal-check v0.3.4
@@ -155,19 +155,19 @@ warning: workspace (manifest) generated 1 warning
     Checking ciborium-ll v0.2.2
     Checking ciborium v0.2.2
     Checking criterion v0.5.1
-    Checking rustlab-stdlib v0.1.0 (C:\Users\varun\.antigravity\rustlab\crates\rustlab-stdlib)
-    Checking rustlab-cli v0.1.0 (C:\Users\varun\.antigravity\rustlab\crates\rustlab-cli)
+    Checking rustlab-stdlib v0.1.0 (<repo>\crates\rustlab-stdlib)
+    Checking rustlab-cli v0.1.0 (<repo>\crates\rustlab-cli)
     Finished `dev` profile [unoptimized + debuginfo] target(s) in 29.77s
 === 3. Running clippy (no default features) ===
 warning: Cargo.toml: `panic` setting is ignored for `bench` profile
 warning: workspace (manifest) generated 1 warning
     Checking num-complex v0.4.6
-    Checking rustlab-math v0.1.0 (C:\Users\varun\.antigravity\rustlab\crates\rustlab-math)
+    Checking rustlab-math v0.1.0 (<repo>\crates\rustlab-math)
     Checking rustfft v6.4.1
-    Checking rustlab-matio v0.1.0 (C:\Users\varun\.antigravity\rustlab\crates\rustlab-matio)
-    Checking rustlab-eval v0.1.0 (C:\Users\varun\.antigravity\rustlab\crates\rustlab-eval)
-    Checking rustlab-stdlib v0.1.0 (C:\Users\varun\.antigravity\rustlab\crates\rustlab-stdlib)
-    Checking rustlab-cli v0.1.0 (C:\Users\varun\.antigravity\rustlab\crates\rustlab-cli)
+    Checking rustlab-matio v0.1.0 (<repo>\crates\rustlab-matio)
+    Checking rustlab-eval v0.1.0 (<repo>\crates\rustlab-eval)
+    Checking rustlab-stdlib v0.1.0 (<repo>\crates\rustlab-stdlib)
+    Checking rustlab-cli v0.1.0 (<repo>\crates\rustlab-cli)
     Finished `dev` profile [unoptimized + debuginfo] target(s) in 3.24s
 === 4. Running tests (default features) ===
 warning: Cargo.toml: `panic` setting is ignored for `bench` profile
@@ -182,7 +182,7 @@ warning: workspace (manifest) generated 1 warning
    Compiling thiserror v2.0.21
    Compiling windows-sys v0.61.2
    Compiling regex-syntax v0.8.11
-   Compiling rustlab-parse v0.1.0 (C:\Users\varun\.antigravity\rustlab\crates\rustlab-parse)
+   Compiling rustlab-parse v0.1.0 (<repo>\crates\rustlab-parse)
    Compiling matrixmultiply v0.3.11
    Compiling libm v0.2.16
    Compiling pulp-wasm-simd-flag v0.1.1
@@ -195,7 +195,7 @@ warning: workspace (manifest) generated 1 warning
    Compiling simd-adler32 v0.3.10
    Compiling memchr v2.8.3
    Compiling adler2 v2.0.1
-   Compiling rustlab-math v0.1.0 (C:\Users\varun\.antigravity\rustlab\crates\rustlab-math)
+   Compiling rustlab-math v0.1.0 (<repo>\crates\rustlab-math)
    Compiling pulp v0.22.3
    Compiling miniz_oxide v0.9.1
    Compiling crc32fast v1.5.3
@@ -211,8 +211,8 @@ warning: workspace (manifest) generated 1 warning
    Compiling anstyle-query v1.1.5
    Compiling aho-corasick v1.1.5
    Compiling num-integer v0.1.47
-   Compiling rustlab-matio v0.1.0 (C:\Users\varun\.antigravity\rustlab\crates\rustlab-matio)
-   Compiling rustlab-eval v0.1.0 (C:\Users\varun\.antigravity\rustlab\crates\rustlab-eval)
+   Compiling rustlab-matio v0.1.0 (<repo>\crates\rustlab-matio)
+   Compiling rustlab-eval v0.1.0 (<repo>\crates\rustlab-eval)
    Compiling is_terminal_polyfill v1.70.2
    Compiling colorchoice v1.0.5
    Compiling equator v0.2.2
@@ -301,25 +301,25 @@ warning: workspace (manifest) generated 1 warning
    Compiling anes v0.1.6
    Compiling rustyline v15.0.0
    Compiling criterion v0.5.1
-   Compiling rustlab-stdlib v0.1.0 (C:\Users\varun\.antigravity\rustlab\crates\rustlab-stdlib)
-   Compiling rustlab-cli v0.1.0 (C:\Users\varun\.antigravity\rustlab\crates\rustlab-cli)
+   Compiling rustlab-stdlib v0.1.0 (<repo>\crates\rustlab-stdlib)
+   Compiling rustlab-cli v0.1.0 (<repo>\crates\rustlab-cli)
     Finished `test` profile [unoptimized + debuginfo] target(s) in 52.72s
      Running unittests src\lib.rs 
-(C:\Users\varun\AppData\Local\Temp\opencode\rustlab-target\debug\deps\rustlab_cli-dba2739dd5e88b3f.exe)
+(<temp>\opencode\rustlab-target\debug\deps\rustlab_cli-dba2739dd5e88b3f.exe)
 
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
      Running unittests src\main.rs 
-(C:\Users\varun\AppData\Local\Temp\opencode\rustlab-target\debug\deps\rustlab-02914bf686008428.exe)
+(<temp>\opencode\rustlab-target\debug\deps\rustlab-02914bf686008428.exe)
 
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
      Running tests\cli_tests.rs 
-(C:\Users\varun\AppData\Local\Temp\opencode\rustlab-target\debug\deps\cli_tests-925a1f673528e590.exe)
+(<temp>\opencode\rustlab-target\debug\deps\cli_tests-925a1f673528e590.exe)
 
 running 3 tests
 test test_incomplete_input_detection ... ok
@@ -329,7 +329,7 @@ test test_diagnostic_error_formatting ... ok
 test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
      Running tests\diagnostics_tests.rs 
-(C:\Users\varun\AppData\Local\Temp\opencode\rustlab-target\debug\deps\diagnostics_tests-6a881226079ed3b1.exe)
+(<temp>\opencode\rustlab-target\debug\deps\diagnostics_tests-6a881226079ed3b1.exe)
 
 running 12 tests
 test span_to_location_lf_bookkeeping ... ok
@@ -348,14 +348,14 @@ test undefined_symbol_gets_a_single_caret_lf ... ok
 test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
      Running unittests src\lib.rs 
-(C:\Users\varun\AppData\Local\Temp\opencode\rustlab-target\debug\deps\rustlab_eval-eebf4942dd9683ee.exe)
+(<temp>\opencode\rustlab-target\debug\deps\rustlab_eval-eebf4942dd9683ee.exe)
 
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
      Running tests\eval_tests.rs 
-(C:\Users\varun\AppData\Local\Temp\opencode\rustlab-target\debug\deps\eval_tests-c093fedd721e8797.exe)
+(<temp>\opencode\rustlab-target\debug\deps\eval_tests-c093fedd721e8797.exe)
 
 running 9 tests
 test test_global_scoping ... ok
@@ -371,7 +371,7 @@ test test_while_loop_with_break ... ok
 test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
      Running tests\milestone_a1_tests.rs 
-(C:\Users\varun\AppData\Local\Temp\opencode\rustlab-target\debug\deps\milestone_a1_tests-7e652bf9515041ab.exe)
+(<temp>\opencode\rustlab-target\debug\deps\milestone_a1_tests-7e652bf9515041ab.exe)
 
 running 6 tests
 test test_varargin_varargout_nargin_nargout ... ok
@@ -384,7 +384,7 @@ test test_boolean_mask_indexing_and_assignment ... ok
 test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
      Running unittests src\lib.rs 
-(C:\Users\varun\AppData\Local\Temp\opencode\rustlab-target\debug\deps\rustlab_math-51da0728c7bb5e70.exe)
+(<temp>\opencode\rustlab-target\debug\deps\rustlab_math-51da0728c7bb5e70.exe)
 
 running 10 tests
 test broadcast::tests::test_broadcast_iterator_outer_sum ... ok
@@ -401,7 +401,7 @@ test shape::tests::test_normalize_shape ... ok
 test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
      Running tests\math_tests.rs 
-(C:\Users\varun\AppData\Local\Temp\opencode\rustlab-target\debug\deps\math_tests-37326c8d7401dea2.exe)
+(<temp>\opencode\rustlab-target\debug\deps\math_tests-37326c8d7401dea2.exe)
 
 running 12 tests
 test test_a3_sparse_csc_duplicate_summing_and_algebra ... ok
@@ -420,14 +420,14 @@ test test_a3_sparse_memory_efficiency_10000x10000 ... ok
 test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
      Running unittests src\lib.rs 
-(C:\Users\varun\AppData\Local\Temp\opencode\rustlab-target\debug\deps\rustlab_matio-233b33b216b19da2.exe)
+(<temp>\opencode\rustlab-target\debug\deps\rustlab_matio-233b33b216b19da2.exe)
 
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
      Running tests\matio_tests.rs 
-(C:\Users\varun\AppData\Local\Temp\opencode\rustlab-target\debug\deps\matio_tests-209599b9027493d1.exe)
+(<temp>\opencode\rustlab-target\debug\deps\matio_tests-209599b9027493d1.exe)
 
 running 7 tests
 test test_uncompressed_roundtrip ... ok
@@ -441,7 +441,7 @@ test test_file_save_and_load ... ok
 test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
 
      Running tests\scipy_mat_tests.rs 
-(C:\Users\varun\AppData\Local\Temp\opencode\rustlab-target\debug\deps\scipy_mat_tests-8d102e6333ce49ba.exe)
+(<temp>\opencode\rustlab-target\debug\deps\scipy_mat_tests-8d102e6333ce49ba.exe)
 
 running 1 test
 test test_scipy_generated_files_interop ... ok
@@ -449,14 +449,14 @@ test test_scipy_generated_files_interop ... ok
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
 
      Running unittests src\lib.rs 
-(C:\Users\varun\AppData\Local\Temp\opencode\rustlab-target\debug\deps\rustlab_parse-8a532cf2d3d4d5ca.exe)
+(<temp>\opencode\rustlab-target\debug\deps\rustlab_parse-8a532cf2d3d4d5ca.exe)
 
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
      Running tests\lexer_tests.rs 
-(C:\Users\varun\AppData\Local\Temp\opencode\rustlab-target\debug\deps\lexer_tests-f47e64f171073e14.exe)
+(<temp>\opencode\rustlab-target\debug\deps\lexer_tests-f47e64f171073e14.exe)
 
 running 4 tests
 test test_numeric_literals ... ok
@@ -467,7 +467,7 @@ test test_comments_and_line_continuations ... ok
 test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
      Running tests\parser_tests.rs 
-(C:\Users\varun\AppData\Local\Temp\opencode\rustlab-target\debug\deps\parser_tests-4e9007abf6c8cf56.exe)
+(<temp>\opencode\rustlab-target\debug\deps\parser_tests-4e9007abf6c8cf56.exe)
 
 running 9 tests
 test test_colon_range_expressions ... ok
@@ -483,7 +483,7 @@ test test_power_right_associativity ... ok
 test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
      Running unittests src\lib.rs 
-(C:\Users\varun\AppData\Local\Temp\opencode\rustlab-target\debug\deps\rustlab_stdlib-080a7a7da9d5eadb.exe)
+(<temp>\opencode\rustlab-target\debug\deps\rustlab_stdlib-080a7a7da9d5eadb.exe)
 
 running 7 tests
 test linalg::eig_sym::tests::test_eig_sym_known_2x2 ... ok
@@ -497,7 +497,7 @@ test linalg::eig_sym::tests::test_eig_sym_diagonal ... ok
 test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
      Running tests\regression_a312_tests.rs 
-(C:\Users\varun\AppData\Local\Temp\opencode\rustlab-target\debug\deps\regression_a312_tests-1169fb02120bf23f.exe)
+(<temp>\opencode\rustlab-target\debug\deps\regression_a312_tests-1169fb02120bf23f.exe)
 
 running 11 tests
 test binary_expression_span_covers_full_expression ... ok
@@ -515,7 +515,7 @@ test every_registered_builtin_has_docs_and_help ... ok
 test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
 
      Running tests\stdlib_a1_tests.rs 
-(C:\Users\varun\AppData\Local\Temp\opencode\rustlab-target\debug\deps\stdlib_a1_tests-81c3504ed9074f75.exe)
+(<temp>\opencode\rustlab-target\debug\deps\stdlib_a1_tests-81c3504ed9074f75.exe)
 
 running 13 tests
 test test_nan_comparison_semantics_regression ... ok
@@ -535,7 +535,7 @@ test test_path_which_exist_and_scripts ... ok
 test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.23s
 
      Running tests\stdlib_a2_tests.rs 
-(C:\Users\varun\AppData\Local\Temp\opencode\rustlab-target\debug\deps\stdlib_a2_tests-2b21741d24b8b8e7.exe)
+(<temp>\opencode\rustlab-target\debug\deps\stdlib_a2_tests-2b21741d24b8b8e7.exe)
 
 running 19 tests
 test test_a2_expm_defective_matrix ... ok
@@ -561,7 +561,7 @@ test test_a2_property_fft_ifft_roundtrip_various_lengths ... ok
 test result: ok. 19 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
 
      Running tests\stdlib_a3_tests.rs 
-(C:\Users\varun\AppData\Local\Temp\opencode\rustlab-target\debug\deps\stdlib_a3_tests-c4a4111f19fb15e3.exe)
+(<temp>\opencode\rustlab-target\debug\deps\stdlib_a3_tests-c4a4111f19fb15e3.exe)
 
 running 17 tests
 test test_a3_logical_mask_assignment_errors ... ok
@@ -585,7 +585,7 @@ test test_a3_all_registered_builtins_have_markdown_docs_and_help ... ok
 test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
 
      Running tests\stdlib_tests.rs 
-(C:\Users\varun\AppData\Local\Temp\opencode\rustlab-target\debug\deps\stdlib_tests-f9ff37581747be04.exe)
+(<temp>\opencode\rustlab-target\debug\deps\stdlib_tests-f9ff37581747be04.exe)
 
 running 12 tests
 test test_cell_arrays ... ok
@@ -644,21 +644,21 @@ warning: Cargo.toml: `panic` setting is ignored for `bench` profile
 warning: workspace (manifest) generated 1 warning
     Finished `test` profile [unoptimized + debuginfo] target(s) in 0.23s
      Running unittests src\lib.rs 
-(C:\Users\varun\AppData\Local\Temp\opencode\rustlab-target\debug\deps\rustlab_cli-dba2739dd5e88b3f.exe)
+(<temp>\opencode\rustlab-target\debug\deps\rustlab_cli-dba2739dd5e88b3f.exe)
 
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
      Running unittests src\main.rs 
-(C:\Users\varun\AppData\Local\Temp\opencode\rustlab-target\debug\deps\rustlab-02914bf686008428.exe)
+(<temp>\opencode\rustlab-target\debug\deps\rustlab-02914bf686008428.exe)
 
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
      Running tests\cli_tests.rs 
-(C:\Users\varun\AppData\Local\Temp\opencode\rustlab-target\debug\deps\cli_tests-925a1f673528e590.exe)
+(<temp>\opencode\rustlab-target\debug\deps\cli_tests-925a1f673528e590.exe)
 
 running 3 tests
 test test_incomplete_input_detection ... ok
@@ -668,7 +668,7 @@ test test_diagnostic_error_formatting ... ok
 test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
      Running tests\diagnostics_tests.rs 
-(C:\Users\varun\AppData\Local\Temp\opencode\rustlab-target\debug\deps\diagnostics_tests-6a881226079ed3b1.exe)
+(<temp>\opencode\rustlab-target\debug\deps\diagnostics_tests-6a881226079ed3b1.exe)
 
 running 12 tests
 test span_to_location_crlf_bookkeeping ... ok
@@ -687,14 +687,14 @@ test undefined_symbol_caret_lands_on_symbol_line_lf ... ok
 test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
      Running unittests src\lib.rs 
-(C:\Users\varun\AppData\Local\Temp\opencode\rustlab-target\debug\deps\rustlab_eval-eebf4942dd9683ee.exe)
+(<temp>\opencode\rustlab-target\debug\deps\rustlab_eval-eebf4942dd9683ee.exe)
 
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
      Running tests\eval_tests.rs 
-(C:\Users\varun\AppData\Local\Temp\opencode\rustlab-target\debug\deps\eval_tests-c093fedd721e8797.exe)
+(<temp>\opencode\rustlab-target\debug\deps\eval_tests-c093fedd721e8797.exe)
 
 running 9 tests
 test test_basic_arithmetic_evaluation ... ok
@@ -710,7 +710,7 @@ test test_while_loop_with_break ... ok
 test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
      Running tests\milestone_a1_tests.rs 
-(C:\Users\varun\AppData\Local\Temp\opencode\rustlab-target\debug\deps\milestone_a1_tests-7e652bf9515041ab.exe)
+(<temp>\opencode\rustlab-target\debug\deps\milestone_a1_tests-7e652bf9515041ab.exe)
 
 running 6 tests
 test test_boolean_mask_indexing_and_assignment ... ok
@@ -723,7 +723,7 @@ test test_varargin_varargout_nargin_nargout ... ok
 test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
      Running unittests src\lib.rs 
-(C:\Users\varun\AppData\Local\Temp\opencode\rustlab-target\debug\deps\rustlab_math-51da0728c7bb5e70.exe)
+(<temp>\opencode\rustlab-target\debug\deps\rustlab_math-51da0728c7bb5e70.exe)
 
 running 10 tests
 test array::tests::test_dense_array_creation_and_indexing ... ok
@@ -740,7 +740,7 @@ test shape::tests::test_column_major_strides ... ok
 test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
      Running tests\math_tests.rs 
-(C:\Users\varun\AppData\Local\Temp\opencode\rustlab-target\debug\deps\math_tests-37326c8d7401dea2.exe)
+(<temp>\opencode\rustlab-target\debug\deps\math_tests-37326c8d7401dea2.exe)
 
 running 12 tests
 test test_1_based_indexing_column_major ... ok
@@ -759,14 +759,14 @@ test test_relational_and_logical_operations ... ok
 test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
      Running unittests src\lib.rs 
-(C:\Users\varun\AppData\Local\Temp\opencode\rustlab-target\debug\deps\rustlab_matio-233b33b216b19da2.exe)
+(<temp>\opencode\rustlab-target\debug\deps\rustlab_matio-233b33b216b19da2.exe)
 
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
      Running tests\matio_tests.rs 
-(C:\Users\varun\AppData\Local\Temp\opencode\rustlab-target\debug\deps\matio_tests-209599b9027493d1.exe)
+(<temp>\opencode\rustlab-target\debug\deps\matio_tests-209599b9027493d1.exe)
 
 running 7 tests
 test test_char_and_logical_roundtrip ... ok
@@ -780,7 +780,7 @@ test test_matio_image_sparse_and_empty_roundtrip ... ok
 test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
 
      Running tests\scipy_mat_tests.rs 
-(C:\Users\varun\AppData\Local\Temp\opencode\rustlab-target\debug\deps\scipy_mat_tests-8d102e6333ce49ba.exe)
+(<temp>\opencode\rustlab-target\debug\deps\scipy_mat_tests-8d102e6333ce49ba.exe)
 
 running 1 test
 test test_scipy_generated_files_interop ... ok
@@ -788,14 +788,14 @@ test test_scipy_generated_files_interop ... ok
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
 
      Running unittests src\lib.rs 
-(C:\Users\varun\AppData\Local\Temp\opencode\rustlab-target\debug\deps\rustlab_parse-8a532cf2d3d4d5ca.exe)
+(<temp>\opencode\rustlab-target\debug\deps\rustlab_parse-8a532cf2d3d4d5ca.exe)
 
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
      Running tests\lexer_tests.rs 
-(C:\Users\varun\AppData\Local\Temp\opencode\rustlab-target\debug\deps\lexer_tests-f47e64f171073e14.exe)
+(<temp>\opencode\rustlab-target\debug\deps\lexer_tests-f47e64f171073e14.exe)
 
 running 4 tests
 test test_char_and_string_literals ... ok
@@ -806,7 +806,7 @@ test test_numeric_literals ... ok
 test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
      Running tests\parser_tests.rs 
-(C:\Users\varun\AppData\Local\Temp\opencode\rustlab-target\debug\deps\parser_tests-4e9007abf6c8cf56.exe)
+(<temp>\opencode\rustlab-target\debug\deps\parser_tests-4e9007abf6c8cf56.exe)
 
 running 9 tests
 test test_function_def ... ok
@@ -822,7 +822,7 @@ test test_power_right_associativity ... ok
 test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
      Running unittests src\lib.rs 
-(C:\Users\varun\AppData\Local\Temp\opencode\rustlab-target\debug\deps\rustlab_stdlib-080a7a7da9d5eadb.exe)
+(<temp>\opencode\rustlab-target\debug\deps\rustlab_stdlib-080a7a7da9d5eadb.exe)
 
 running 7 tests
 test linalg::eig_sym::tests::test_eig_sym_diagonal ... ok
@@ -836,7 +836,7 @@ test signal::radix2::tests::test_radix2_roundtrip ... ok
 test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
      Running tests\regression_a312_tests.rs 
-(C:\Users\varun\AppData\Local\Temp\opencode\rustlab-target\debug\deps\regression_a312_tests-1169fb02120bf23f.exe)
+(<temp>\opencode\rustlab-target\debug\deps\regression_a312_tests-1169fb02120bf23f.exe)
 
 running 11 tests
 test binary_expression_span_covers_full_expression ... ok
@@ -854,7 +854,7 @@ test every_registered_builtin_has_docs_and_help ... ok
 test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
 
      Running tests\stdlib_a1_tests.rs 
-(C:\Users\varun\AppData\Local\Temp\opencode\rustlab-target\debug\deps\stdlib_a1_tests-81c3504ed9074f75.exe)
+(<temp>\opencode\rustlab-target\debug\deps\stdlib_a1_tests-81c3504ed9074f75.exe)
 
 running 13 tests
 test test_nan_comparison_semantics_regression ... ok
@@ -874,7 +874,7 @@ test test_regexp_and_regexprep ... ok
 test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
 
      Running tests\stdlib_a2_tests.rs 
-(C:\Users\varun\AppData\Local\Temp\opencode\rustlab-target\debug\deps\stdlib_a2_tests-2b21741d24b8b8e7.exe)
+(<temp>\opencode\rustlab-target\debug\deps\stdlib_a2_tests-2b21741d24b8b8e7.exe)
 
 running 19 tests
 test test_a2_expm_rotation_generator ... ok
@@ -900,7 +900,7 @@ test test_a2_property_fft_ifft_roundtrip_various_lengths ... ok
 test result: ok. 19 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
 
      Running tests\stdlib_a3_tests.rs 
-(C:\Users\varun\AppData\Local\Temp\opencode\rustlab-target\debug\deps\stdlib_a3_tests-c4a4111f19fb15e3.exe)
+(<temp>\opencode\rustlab-target\debug\deps\stdlib_a3_tests-c4a4111f19fb15e3.exe)
 
 running 17 tests
 test test_a3_exact_64bit_integers_and_saturation ... ok
@@ -924,7 +924,7 @@ test test_a3_all_registered_builtins_have_markdown_docs_and_help ... ok
 test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
 
      Running tests\stdlib_tests.rs 
-(C:\Users\varun\AppData\Local\Temp\opencode\rustlab-target\debug\deps\stdlib_tests-f9ff37581747be04.exe)
+(<temp>\opencode\rustlab-target\debug\deps\stdlib_tests-f9ff37581747be04.exe)
 
 running 12 tests
 test test_multiple_return_values ... ok
@@ -982,29 +982,29 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
 warning: Cargo.toml: `panic` setting is ignored for `bench` profile
 warning: workspace (manifest) generated 1 warning
    Compiling num-complex v0.4.6
-   Compiling rustlab-math v0.1.0 (C:\Users\varun\.antigravity\rustlab\crates\rustlab-math)
+   Compiling rustlab-math v0.1.0 (<repo>\crates\rustlab-math)
    Compiling rustfft v6.4.1
-   Compiling rustlab-eval v0.1.0 (C:\Users\varun\.antigravity\rustlab\crates\rustlab-eval)
-   Compiling rustlab-matio v0.1.0 (C:\Users\varun\.antigravity\rustlab\crates\rustlab-matio)
-   Compiling rustlab-stdlib v0.1.0 (C:\Users\varun\.antigravity\rustlab\crates\rustlab-stdlib)
-   Compiling rustlab-cli v0.1.0 (C:\Users\varun\.antigravity\rustlab\crates\rustlab-cli)
+   Compiling rustlab-eval v0.1.0 (<repo>\crates\rustlab-eval)
+   Compiling rustlab-matio v0.1.0 (<repo>\crates\rustlab-matio)
+   Compiling rustlab-stdlib v0.1.0 (<repo>\crates\rustlab-stdlib)
+   Compiling rustlab-cli v0.1.0 (<repo>\crates\rustlab-cli)
     Finished `test` profile [unoptimized + debuginfo] target(s) in 15.37s
      Running unittests src\lib.rs 
-(C:\Users\varun\AppData\Local\Temp\opencode\rustlab-target\debug\deps\rustlab_cli-272be421a359a1d4.exe)
+(<temp>\opencode\rustlab-target\debug\deps\rustlab_cli-272be421a359a1d4.exe)
 
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
      Running unittests src\main.rs 
-(C:\Users\varun\AppData\Local\Temp\opencode\rustlab-target\debug\deps\rustlab-d8da2e2ff3bf2a08.exe)
+(<temp>\opencode\rustlab-target\debug\deps\rustlab-d8da2e2ff3bf2a08.exe)
 
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
      Running tests\cli_tests.rs 
-(C:\Users\varun\AppData\Local\Temp\opencode\rustlab-target\debug\deps\cli_tests-fddaae1f0b9bbae2.exe)
+(<temp>\opencode\rustlab-target\debug\deps\cli_tests-fddaae1f0b9bbae2.exe)
 
 running 3 tests
 test test_incomplete_input_detection ... ok
@@ -1014,7 +1014,7 @@ test test_diagnostic_error_formatting ... ok
 test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
      Running tests\diagnostics_tests.rs 
-(C:\Users\varun\AppData\Local\Temp\opencode\rustlab-target\debug\deps\diagnostics_tests-c38962e39b908f9c.exe)
+(<temp>\opencode\rustlab-target\debug\deps\diagnostics_tests-c38962e39b908f9c.exe)
 
 running 12 tests
 test span_to_location_lf_bookkeeping ... ok
@@ -1033,14 +1033,14 @@ test binary_op_caret_lands_on_spanning_line_lf ... ok
 test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
      Running unittests src\lib.rs 
-(C:\Users\varun\AppData\Local\Temp\opencode\rustlab-target\debug\deps\rustlab_eval-fab0b25bf423cf3f.exe)
+(<temp>\opencode\rustlab-target\debug\deps\rustlab_eval-fab0b25bf423cf3f.exe)
 
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
      Running tests\eval_tests.rs 
-(C:\Users\varun\AppData\Local\Temp\opencode\rustlab-target\debug\deps\eval_tests-b69154ce4931b062.exe)
+(<temp>\opencode\rustlab-target\debug\deps\eval_tests-b69154ce4931b062.exe)
 
 running 9 tests
 test test_global_scoping ... ok
@@ -1056,7 +1056,7 @@ test test_while_loop_with_break ... ok
 test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
      Running tests\milestone_a1_tests.rs 
-(C:\Users\varun\AppData\Local\Temp\opencode\rustlab-target\debug\deps\milestone_a1_tests-80d507de74dcb3b1.exe)
+(<temp>\opencode\rustlab-target\debug\deps\milestone_a1_tests-80d507de74dcb3b1.exe)
 
 running 6 tests
 test test_try_catch_mexception ... ok
@@ -1069,7 +1069,7 @@ test test_cellfun_arrayfun_structfun ... ok
 test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
      Running unittests src\lib.rs 
-(C:\Users\varun\AppData\Local\Temp\opencode\rustlab-target\debug\deps\rustlab_math-d5ac054528d77d0a.exe)
+(<temp>\opencode\rustlab-target\debug\deps\rustlab_math-d5ac054528d77d0a.exe)
 
 running 10 tests
 test broadcast::tests::test_broadcast_iterator_outer_sum ... ok
@@ -1086,7 +1086,7 @@ test shape::tests::test_normalize_shape ... ok
 test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
      Running tests\math_tests.rs 
-(C:\Users\varun\AppData\Local\Temp\opencode\rustlab-target\debug\deps\math_tests-3a9f59953e4a34dc.exe)
+(<temp>\opencode\rustlab-target\debug\deps\math_tests-3a9f59953e4a34dc.exe)
 
 running 12 tests
 test test_a3_sparse_csc_duplicate_summing_and_algebra ... ok
@@ -1105,14 +1105,14 @@ test test_a3_sparse_memory_efficiency_10000x10000 ... ok
 test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
      Running unittests src\lib.rs 
-(C:\Users\varun\AppData\Local\Temp\opencode\rustlab-target\debug\deps\rustlab_matio-e56b982f1296df84.exe)
+(<temp>\opencode\rustlab-target\debug\deps\rustlab_matio-e56b982f1296df84.exe)
 
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
      Running tests\matio_tests.rs 
-(C:\Users\varun\AppData\Local\Temp\opencode\rustlab-target\debug\deps\matio_tests-3b388418eadc5384.exe)
+(<temp>\opencode\rustlab-target\debug\deps\matio_tests-3b388418eadc5384.exe)
 
 running 7 tests
 test test_char_and_logical_roundtrip ... ok
@@ -1126,7 +1126,7 @@ test test_matio_image_sparse_and_empty_roundtrip ... ok
 test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
 
      Running tests\scipy_mat_tests.rs 
-(C:\Users\varun\AppData\Local\Temp\opencode\rustlab-target\debug\deps\scipy_mat_tests-3cac732b82cf3848.exe)
+(<temp>\opencode\rustlab-target\debug\deps\scipy_mat_tests-3cac732b82cf3848.exe)
 
 running 1 test
 test test_scipy_generated_files_interop ... ok
@@ -1134,14 +1134,14 @@ test test_scipy_generated_files_interop ... ok
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
 
      Running unittests src\lib.rs 
-(C:\Users\varun\AppData\Local\Temp\opencode\rustlab-target\debug\deps\rustlab_parse-8a532cf2d3d4d5ca.exe)
+(<temp>\opencode\rustlab-target\debug\deps\rustlab_parse-8a532cf2d3d4d5ca.exe)
 
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
      Running tests\lexer_tests.rs 
-(C:\Users\varun\AppData\Local\Temp\opencode\rustlab-target\debug\deps\lexer_tests-f47e64f171073e14.exe)
+(<temp>\opencode\rustlab-target\debug\deps\lexer_tests-f47e64f171073e14.exe)
 
 running 4 tests
 test test_char_and_string_literals ... ok
@@ -1152,7 +1152,7 @@ test test_comments_and_line_continuations ... ok
 test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
      Running tests\parser_tests.rs 
-(C:\Users\varun\AppData\Local\Temp\opencode\rustlab-target\debug\deps\parser_tests-4e9007abf6c8cf56.exe)
+(<temp>\opencode\rustlab-target\debug\deps\parser_tests-4e9007abf6c8cf56.exe)
 
 running 9 tests
 test test_colon_range_expressions ... ok
@@ -1168,7 +1168,7 @@ test test_power_right_associativity ... ok
 test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
      Running unittests src\lib.rs 
-(C:\Users\varun\AppData\Local\Temp\opencode\rustlab-target\debug\deps\rustlab_stdlib-a4a5a2063c7182ca.exe)
+(<temp>\opencode\rustlab-target\debug\deps\rustlab_stdlib-a4a5a2063c7182ca.exe)
 
 running 7 tests
 test linalg::eig_sym::tests::test_eig_sym_known_2x2 ... ok
@@ -1182,7 +1182,7 @@ test linalg::eig_sym::tests::test_eig_sym_3x3 ... ok
 test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
      Running tests\regression_a312_tests.rs 
-(C:\Users\varun\AppData\Local\Temp\opencode\rustlab-target\debug\deps\regression_a312_tests-d722ddcd0c4e25de.exe)
+(<temp>\opencode\rustlab-target\debug\deps\regression_a312_tests-d722ddcd0c4e25de.exe)
 
 running 11 tests
 test binary_expression_span_covers_full_expression ... ok
@@ -1200,7 +1200,7 @@ test every_registered_builtin_has_docs_and_help ... ok
 test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
 
      Running tests\stdlib_a1_tests.rs 
-(C:\Users\varun\AppData\Local\Temp\opencode\rustlab-target\debug\deps\stdlib_a1_tests-c28d8469c9f92248.exe)
+(<temp>\opencode\rustlab-target\debug\deps\stdlib_a1_tests-c28d8469c9f92248.exe)
 
 running 13 tests
 test test_nd_array_trailing_end_expansion ... ok
@@ -1220,7 +1220,7 @@ test test_regexp_and_regexprep ... ok
 test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
 
      Running tests\stdlib_a2_tests.rs 
-(C:\Users\varun\AppData\Local\Temp\opencode\rustlab-target\debug\deps\stdlib_a2_tests-2cd5b2d3619f571d.exe)
+(<temp>\opencode\rustlab-target\debug\deps\stdlib_a2_tests-2cd5b2d3619f571d.exe)
 
 running 15 tests
 test test_a2_expm_defective_matrix ... ok
@@ -1242,7 +1242,7 @@ test test_a2_property_fft_ifft_roundtrip_various_lengths ... ok
 test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
 
      Running tests\stdlib_a3_tests.rs 
-(C:\Users\varun\AppData\Local\Temp\opencode\rustlab-target\debug\deps\stdlib_a3_tests-85b715a24ce003ac.exe)
+(<temp>\opencode\rustlab-target\debug\deps\stdlib_a3_tests-85b715a24ce003ac.exe)
 
 running 17 tests
 test test_a3_logical_mask_assignment_errors ... ok
@@ -1266,7 +1266,7 @@ test test_a3_all_registered_builtins_have_markdown_docs_and_help ... ok
 test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
 
      Running tests\stdlib_tests.rs 
-(C:\Users\varun\AppData\Local\Temp\opencode\rustlab-target\debug\deps\stdlib_tests-2ed6aad692171016.exe)
+(<temp>\opencode\rustlab-target\debug\deps\stdlib_tests-2ed6aad692171016.exe)
 
 running 12 tests
 test test_multiple_return_values ... ok

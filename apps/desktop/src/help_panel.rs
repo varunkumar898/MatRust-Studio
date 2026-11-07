@@ -1,4 +1,4 @@
-//! Help and Documentation Panel (Offline, Clean-Room, Zero AI).
+//! Help and Documentation Panel (offline, clean-room).
 //!
 //! Provides searchable, categorized function references, syntax guides,
 //! and example code for MATLAB-compatible functions implemented in MatRust Studio.
@@ -285,10 +285,10 @@ pub static DOC_CATALOG: &[DocEntry] = &[
     },
     DocEntry {
         name: "sim",
-        category: "Simulink & Systems",
+        category: "Systems & Simulation",
         syntax: "out = sim(model_name)\nout = sim(model_name, 'StopTime', 10.0)",
         summary: "Simulate a block diagram model.",
-        description: "Executes fixed-step simulation of a Simulink or BlockDiagram model and returns time-series signal outputs.",
+        description: "Executes fixed-step simulation of a block diagram model and returns time-series signal outputs.",
         example: "out = sim('feedback_controller', 'StopTime', 5.0);",
     },
     DocEntry {
@@ -360,20 +360,13 @@ impl HelpPanel {
         ui.vertical(|ui| {
             // Header
             ui.horizontal(|ui| {
-                ui.heading(RichText::new("❓ Help & Documentation").color(theme.text_primary));
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    ui.label(
-                        RichText::new("Offline Clean-Room Reference (Zero AI)")
-                            .size(11.0)
-                            .color(theme.text_secondary),
-                    );
-                });
+                ui.heading(RichText::new("Help & Documentation").color(theme.text_primary));
             });
             ui.separator();
 
             // Search Bar
             ui.horizontal(|ui| {
-                ui.label(RichText::new("🔍").size(14.0));
+                ui.label(RichText::new("Search:").size(14.0));
                 let search_edit = TextEdit::singleline(&mut self.search_query)
                     .hint_text("Search functions (e.g. log2, sum, inv, plot)...")
                     .desired_width(ui.available_width() - 80.0);
@@ -395,7 +388,7 @@ impl HelpPanel {
                 "Plotting & Graphics",
                 "File & I/O",
                 "Programming & Language",
-                "Simulink & Systems",
+                "Systems & Simulation",
             ];
 
             egui::ComboBox::from_label("Category")
@@ -442,9 +435,11 @@ impl HelpPanel {
                                     .unwrap_or(false);
 
                                 let label = format!("{}  - {}", entry.name, entry.summary);
-                                if ui.selectable_label(is_selected, label).clicked() {
-                                    self.selected_entry = Some(entry);
-                                }
+                                ui.push_id(entry.name, |ui| {
+                                    if ui.selectable_label(is_selected, label).clicked() {
+                                        self.selected_entry = Some(entry);
+                                    }
+                                });
                             }
                         });
                 });

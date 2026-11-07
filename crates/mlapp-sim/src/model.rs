@@ -63,6 +63,39 @@ impl BlockType {
                 | BlockType::Outport
         )
     }
+
+    /// Returns the number of input ports for this block type given its configuration parameters.
+    pub fn input_ports(&self, parameters: &HashMap<String, String>) -> usize {
+        match self {
+            BlockType::Constant | BlockType::SineWave | BlockType::Step | BlockType::Inport => 0,
+            BlockType::Sum => {
+                let signs = parameters.get("Inputs").map(|s| s.as_str()).unwrap_or("++");
+                let count = signs.chars().filter(|&c| c == '+' || c == '-').count();
+                if count == 0 {
+                    2
+                } else {
+                    count
+                }
+            }
+            BlockType::Product => 2,
+            BlockType::Gain
+            | BlockType::Integrator
+            | BlockType::UnitDelay
+            | BlockType::Saturation
+            | BlockType::Scope
+            | BlockType::ToWorkspace
+            | BlockType::Outport => 1,
+            BlockType::Subsystem | BlockType::Unknown(_) => 1,
+        }
+    }
+
+    /// Returns the number of output ports for this block type.
+    pub fn output_ports(&self) -> usize {
+        match self {
+            BlockType::Scope | BlockType::ToWorkspace | BlockType::Outport => 0,
+            _ => 1,
+        }
+    }
 }
 
 /// A single block node inside a block diagram.
@@ -84,6 +117,14 @@ impl Block {
             parameters: HashMap::new(),
             position: None,
         }
+    }
+
+    pub fn input_ports(&self) -> usize {
+        self.block_type.input_ports(&self.parameters)
+    }
+
+    pub fn output_ports(&self) -> usize {
+        self.block_type.output_ports()
     }
 
     pub fn with_param(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {

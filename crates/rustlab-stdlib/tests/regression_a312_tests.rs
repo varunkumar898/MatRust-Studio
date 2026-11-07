@@ -417,11 +417,35 @@ fn every_registered_builtin_has_docs_and_help() {
         orphan_docs
     );
 
-    // Export sorted list to docs/builtins.txt
+    // Export the sorted registry list to a TEMP file. Tests must never write
+    // inside the repository (scripts/verify.ps1 fails on a dirty tree); the
+    // tracked docs/builtins.txt is a read-only reference, never regenerated
+    // by the test suite.
+    let builtin_count = names.len();
     let mut sorted_names = names;
     sorted_names.sort();
+    let list_text = sorted_names.join("\n") + "\n";
+    let temp_txt = std::env::temp_dir().join(format!("rustlab-builtins-{builtin_count}.txt"));
+    let _ = std::fs::write(&temp_txt, &list_text);
+    println!(
+        "registered builtins: {builtin_count} (sorted list written to {})",
+        temp_txt.display()
+    );
+
+    // Under the full default feature set (faer + data) the registry must stay
+    // equal to the tracked snapshot; a drift is a loud failure, not a silent
+    // repo-file rewrite. Per-crate --no-default-features runs legitimately
+    // produce a shorter list and skip this check.
+    #[cfg(all(feature = "faer", feature = "data"))]
     if let Some(parent) = docs_dir.parent() {
-        let builtins_txt = parent.join("builtins.txt");
-        let _ = std::fs::write(builtins_txt, sorted_names.join("\n") + "\n");
+        let reference = parent.join("builtins.txt");
+        let tracked = std::fs::read_to_string(&reference)
+            .unwrap_or_else(|e| panic!("cannot read tracked reference {reference:?}: {e}"));
+        assert!(
+            list_text == tracked,
+            "docs/builtins.txt is out of date with the default registry; \
+             compare {} against it and update the tracked file deliberately",
+            temp_txt.display()
+        );
     }
 }

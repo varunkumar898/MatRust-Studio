@@ -96,3 +96,65 @@ From official benchmark runs on 1,000,000 elements against original G0.1 contrac
 - **B6**: Robotics (rotations, SE(3), forward/inverse kinematics, PID, trajectory generation).
 - **B7**: Language completeness (loading path, profiler, parfor, containers.Map, classdef design).
 - **B8**: Hardware and C99 Code Generation (serial, ring buffers, MISRA C99 codegen).
+
+---
+
+## 6. GUI polish discoveries (gui/polish-1, 2026-11-03)
+
+New findings recorded while auditing the desktop app (details and evidence in
+`docs/gui-audit.md`):
+
+- 6.1 Engine constants: register `pi`, `i` (imaginary unit), `j`, and `inf`/`nan`
+  (+ `NaN` alias) as zero-arg builtins in `rustlab-stdlib`, with docs/help, so
+  the W2 quick-math scenarios ("pi" currently errors as unsupported) and the
+  docs coverage stay coherent. Core scope, not GUI-only.
+- 6.2 Current Folder dot-entry policy: **RESOLVED in S3**
+  (commit `f153d9c`): dot-entries (`.git`, `.github`, `.re-ghidra`, ...) are
+  hidden by default; a per-session `Hidden` checkbox in the Current Folder
+  header toggles them back on. Not persisted across restarts (persistence is
+  the %TEMP%/G15 work, untouched here). Unit test
+  `current_folder::tests::hidden_filter_is_dotfile_only`.
+- 6.3 Status bar active-file label must consider open UNTITLED editor tabs
+  (`statusbar.rs:72-79` keys on the file PATH only) (S5 status wiring).
+- 6.4 egui-warning capture instrumentation — **CLOSED in S3 as infeasible
+  for egui 0.31.1** (audit section 5, "S3 finding"): duplicate-id warnings
+  are `warn_on_id_clash` debug-build paint only (egui 0.31.1
+  `src/memory/mod.rs:278-281`); there is no `Context::warnings()` API and no
+  log message, so a logger cannot see them. Channel = debug-build
+  screenshots. If a programmatic sweep is ever needed, it arrives with an
+  egui upgrade that exposes the warnings API, or a custom `Id`-hashing
+  wrapper. The hover-visited panel sweep itself stays in the W-suite step.
+- 6.5 Release-binary strings check for Simulink/clean-room wordings — S8;
+  carried from S1 audit section 2.
+- 6.6 `docs/SUPPORTED_FUNCTIONS.md` regeneration (next docs task) should also
+  drop the "App Designer UI & Graphics" category wording and the
+  "Clean-Room"-style test labels; the tracked file still contains them
+  (generation is now temp-only per the 9ea305c hygiene fix).
+
+---
+
+## 7. Cloud sign-in (OAuth) inside MATSTUDIO - DEFERRED (owner decision needed)
+
+Owner request (2026-11-04): a login page to access Google Drive / OneDrive
+"and other" from inside the app, with credentials protected.
+
+What was delivered instead (S5, commit `73495c2`) and why it is the SAFE path:
+- The Cloud Drives dialog (File menu) lists providers, detects their synced
+  folders (env vars / known profile folders), opens them in one click, and
+  links to the official sign-in/download pages opened in the user's browser.
+- MATSTUDIO never sees, asks for, or stores any password or OAuth token.
+  Sign-in happens inside the provider's own app or the browser; the app then
+  reads the synced folder like any other local folder. No network code exists
+  in the desktop crate.
+
+What real in-app sign-in would require (NOT done, deliberately):
+1. A free OAuth client registration per provider created BY THE OWNER
+   (Google Cloud Console OAuth client for installed apps; Microsoft Entra app
+   registration with delegated Graph files scope; Dropbox app key). Client
+   ids cannot be invented or borrowed; no secret may ever be committed.
+2. A loopback-redirect OAuth flow plus a token vault (Windows Credential
+   Manager / DPAPI), with tokens never written to disk in plain text.
+3. A REST client per provider (file listing/download/upload), which is
+   network code in a crate that today has none - a deliberate hygiene line.
+Steps 1-3 are implementable when the owner registers the apps and approves
+the scope; until then the sync-folder path is the supported integration.

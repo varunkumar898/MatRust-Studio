@@ -1,6 +1,6 @@
 //! Add-On Explorer and Package Manager Panel.
 //!
-//! Provides a catalog of App Designer applications (.mlapp), toolbox packages
+//! Provides a catalog of App Builder applications (.mlapp), toolbox packages
 //! (.mlappinstall), and clean-room built-in utilities.
 
 use crate::theme::Theme;
@@ -19,13 +19,14 @@ pub struct AddOnItem {
     pub is_builtin: bool,
 }
 
-/// Catalog of default clean-room add-on packages.
+/// Catalog of the built-in launcher apps that ship with the IDE. Additional
+/// packages (a real install/download system) are future work.
 pub static DEFAULT_ADDONS: &[AddOnItem] = &[
     AddOnItem {
         id: "app-data-importer",
         title: "Data Importer & Table Cleaner",
         version: "1.2.0",
-        author: "MatRust Studio Clean-Room Team",
+        author: "MATSTUDIO",
         category: "Data Analysis",
         description: "Interactive GUI application for previewing, formatting, and importing delimited CSV, TSV, and tabular data directly into workspace matrices and tables.",
         is_installed: true,
@@ -35,7 +36,7 @@ pub static DEFAULT_ADDONS: &[AddOnItem] = &[
         id: "app-plot-explorer",
         title: "Plot & Curve Explorer",
         version: "1.1.0",
-        author: "MatRust Studio Clean-Room Team",
+        author: "MATSTUDIO",
         category: "Visualization",
         description: "Interactive visualization tool for exploring 2D curves, multi-series plots, histograms, and scatter plots with interactive pan, zoom, and axis styling.",
         is_installed: true,
@@ -45,31 +46,21 @@ pub static DEFAULT_ADDONS: &[AddOnItem] = &[
         id: "app-signal-viewer",
         title: "Signal & Waveform Analyzer",
         version: "1.0.0",
-        author: "MatRust Studio Clean-Room Team",
+        author: "MATSTUDIO",
         category: "Signal Processing",
         description: "Time-domain and frequency-domain waveform viewer supporting FFT spectrum estimation, filtering, and window analysis.",
         is_installed: true,
         is_builtin: true,
     },
     AddOnItem {
-        id: "app-simulink-inspector",
-        title: "Simulink SLX Model Inspector",
+        id: "app-block-diagram-inspector",
+        title: "SLX Block Model Inspector",
         version: "1.0.0",
-        author: "MatRust Studio Clean-Room Team",
+        author: "MATSTUDIO",
         category: "Simulation & Modeling",
-        description: "Inspects block hierarchies, parameter schemas, input/output connectivity, and annotations within Simulink .slx model packages without requiring proprietary runtimes.",
+        description: "Inspects block hierarchies, parameter schemas, input/output connectivity, and annotations within .slx block diagram model packages without requiring proprietary runtimes.",
         is_installed: true,
         is_builtin: true,
-    },
-    AddOnItem {
-        id: "pkg-control-systems",
-        title: "Control System Design Essentials",
-        version: "0.9.4",
-        author: "Community Contributor",
-        category: "Control Systems",
-        description: "State-space and transfer function tools: step response, Bode diagram data generation, root locus, and feedback loop analysis.",
-        is_installed: false,
-        is_builtin: false,
     },
 ];
 
@@ -100,7 +91,7 @@ impl AddOnsPanel {
         ui.vertical(|ui| {
             // Header
             ui.horizontal(|ui| {
-                ui.heading(RichText::new("🧩 Add-On Explorer").color(theme.text_primary));
+                ui.heading(RichText::new("Add-On Explorer").color(theme.text_primary));
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     ui.label(
                         RichText::new(format!("{} Installed Packages", self.installed_ids.len()))
@@ -113,7 +104,7 @@ impl AddOnsPanel {
 
             // Search Bar
             ui.horizontal(|ui| {
-                ui.label(RichText::new("🔍").size(14.0));
+                ui.label(RichText::new("Filter:").size(14.0));
                 let search_box = egui::TextEdit::singleline(&mut self.search_query)
                     .hint_text("Search add-ons, apps, and toolboxes...")
                     .desired_width(ui.available_width() - 80.0);
@@ -167,9 +158,11 @@ impl AddOnsPanel {
 
                                 let label =
                                     format!("{} v{}{}", addon.title, addon.version, status_badge);
-                                if ui.selectable_label(is_selected, label).clicked() {
-                                    self.selected_addon_id = Some(addon.id.to_string());
-                                }
+                                ui.push_id(addon.id, |ui| {
+                                    if ui.selectable_label(is_selected, label).clicked() {
+                                        self.selected_addon_id = Some(addon.id.to_string());
+                                    }
+                                });
                             }
                         });
                 });
@@ -217,16 +210,13 @@ impl AddOnsPanel {
                                     ui.horizontal(|ui| {
                                         if addon.is_builtin {
                                             if ui
-                                                .button(RichText::new("🚀 Launch App").strong())
+                                                .button(RichText::new("Launch App").strong())
                                                 .clicked()
                                             {
                                                 *on_launch_app = Some(addon.id);
                                             }
                                         } else if is_installed {
-                                            if ui
-                                                .button(RichText::new("🚀 Open").strong())
-                                                .clicked()
-                                            {
+                                            if ui.button(RichText::new("Open").strong()).clicked() {
                                                 *on_launch_app = Some(addon.id);
                                             }
                                             if ui.button("Uninstall").clicked() {
@@ -234,7 +224,7 @@ impl AddOnsPanel {
                                             }
                                         } else if ui
                                             .button(
-                                                RichText::new("⬇ Install Package")
+                                                RichText::new("Install Package")
                                                     .color(Color32::from_rgb(100, 200, 255)),
                                             )
                                             .clicked()

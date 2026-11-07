@@ -17,7 +17,7 @@ pub enum PanelId {
     History,
     Help,
     AddOns,
-    Simulink,
+    BlockDiagram,
 }
 
 impl PanelId {
@@ -31,21 +31,21 @@ impl PanelId {
             PanelId::History => "Command History",
             PanelId::Help => "Help & Documentation",
             PanelId::AddOns => "Add-On Explorer",
-            PanelId::Simulink => "Simulink Editor",
+            PanelId::BlockDiagram => "Block Diagram Editor",
         }
     }
 
     pub fn icon(&self) -> &'static str {
         match self {
-            PanelId::CurrentFolder => "📁",
-            PanelId::Editor => "📝",
-            PanelId::Workspace => "📊",
-            PanelId::CommandWindow => "💻",
-            PanelId::Figures => "📈",
-            PanelId::History => "🕒",
-            PanelId::Help => "❓",
-            PanelId::AddOns => "🧩",
-            PanelId::Simulink => "🔄",
+            PanelId::CurrentFolder => "[D]",
+            PanelId::Editor => "[E]",
+            PanelId::Workspace => "[W]",
+            PanelId::CommandWindow => "[C]",
+            PanelId::Figures => "[F]",
+            PanelId::History => "[H]",
+            PanelId::Help => "[?]",
+            PanelId::AddOns => "[A]",
+            PanelId::BlockDiagram => "[B]",
         }
     }
 }
@@ -197,14 +197,16 @@ impl DockTree {
     pub fn standard() -> Self {
         // Left column: Current Folder (top) / Workspace (bottom)
         let left = DockNode::split_v(
-            0.5,
+            0.58,
             DockNode::leaf(PanelId::CurrentFolder),
             DockNode::leaf(PanelId::Workspace),
         );
 
-        // Center column: Editor (top) / Command Window + History (bottom)
+        // Center column: Editor (top) / Command Window + History (bottom).
+        // 0.66 keeps the editor above its 300 px target while leaving the
+        // command input visible at 1280x720.
         let center = DockNode::split_v(
-            0.65,
+            0.66,
             DockNode::leaf(PanelId::Editor),
             DockNode::leaf_multi(vec![PanelId::CommandWindow, PanelId::History]),
         );
@@ -313,7 +315,7 @@ impl DockTree {
             PanelId::Figures | PanelId::Workspace => PanelId::Workspace,
             PanelId::CommandWindow | PanelId::History => PanelId::CommandWindow,
             PanelId::CurrentFolder => PanelId::CurrentFolder,
-            PanelId::Editor | PanelId::Simulink => PanelId::Editor,
+            PanelId::Editor | PanelId::BlockDiagram => PanelId::Editor,
             PanelId::Help | PanelId::AddOns => PanelId::Help,
         };
 
@@ -482,6 +484,13 @@ impl DockTree {
         F: FnMut(&mut Ui, PanelId),
     {
         let available_rect = ui.available_rect_before_wrap();
+        if std::env::var_os("MATSTUDIO_DEBUG_LAYOUT").is_some() {
+            eprintln!(
+                "MATSTUDIO dock: available={:?} screen={:?}",
+                available_rect,
+                ui.ctx().screen_rect()
+            );
+        }
         let mut leaf_counter = 0;
         let mut new_drop_target = None;
         let mut tab_closed = None;
@@ -685,6 +694,14 @@ impl DockTree {
                     Pos2::new(rect.min.x, rect.min.y + tab_bar_height),
                     vec2(rect.width(), (rect.height() - tab_bar_height).max(0.0)),
                 );
+                if std::env::var_os("MATSTUDIO_DEBUG_LAYOUT").is_some() {
+                    eprintln!(
+                        "MATSTUDIO leaf {:?}: rect={:?} body={:?}",
+                        tabs.get(*active_tab).map(|p| p.title()).unwrap_or("?"),
+                        rect,
+                        body_rect
+                    );
+                }
 
                 // Tab Bar Background & Border
                 ui.painter().rect_filled(tab_bar_rect, 0.0, theme.panel_bg);
@@ -729,7 +746,7 @@ impl DockTree {
                     if is_active
                         && tabs.len() > 1
                         && child_ui
-                            .small_button("✕")
+                            .small_button("X")
                             .on_hover_text("Close tab")
                             .clicked()
                     {
@@ -800,6 +817,15 @@ impl DockTree {
                         egui::UiBuilder::default()
                             .max_rect(body_rect)
                             .layout(Layout::top_down(Align::LEFT)),
+                    );
+                    // C1: the panel body owns clipping for its children.
+                    let panel_clip =
+                        crate::layout_contract::PanelClip::new(&mut body_ui, active_panel_id);
+                    crate::ui_registry::register_panel(
+                        ui.ctx(),
+                        active_panel_id,
+                        panel_clip.panel_rect,
+                        panel_clip.clip_rect,
                     );
                     render_panel(&mut body_ui, active_panel_id);
                 } else if tabs.is_empty() {

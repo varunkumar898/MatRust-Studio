@@ -677,42 +677,46 @@ fn movmean_slice(vals: &[f64], k: usize, omit: bool) -> Vec<f64> {
     }
 
     let steady_end = len - right;
-    for i in (left + 1)..steady_end {
-        let val_out = vals[i - left - 1];
-        let val_in = vals[i + right];
-
-        if window_finite && val_in.is_finite() && val_out.is_finite() {
-            // Periodic exact recompute every 1024 steps to prevent floating point drift
-            if (i - left) & 1023 == 0 {
-                let mut sum = 0.0f64;
-                for &x in &vals[(i - left)..=(i + right)] {
-                    sum += x;
-                }
-                running_sum = sum;
-            } else {
+    if window_finite {
+        // Fast path: all values are finite. Use unsafe pointer access to
+        // avoid bounds-checking overhead in the hot loop.
+        //
+        // Safety:
+        //   i ranges from (left + 1) to (steady_end - 1).
+        //   i - left - 1 ranges from 0 to (len - right - 2): in bounds.
+        //   i + right ranges from (left + 1) to (len - 1): in bounds.
+        //   All accesses are within [0, len).
+        unsafe {
+            let vals_ptr = vals.as_ptr();
+            let out_ptr = out.as_mut_ptr();
+            for i in (left + 1)..steady_end {
+                let val_out = vals_ptr.add(i - left - 1).read();
+                let val_in = vals_ptr.add(i + right).read();
                 running_sum += val_in - val_out;
+                out_ptr.add(i).write(running_sum * inv_k);
             }
-            out[i] = running_sum * inv_k;
-        } else {
-            // Window contains or touches non-finite value (NaN or Inf):
-            // Fall back to exact per-window compute
-            out[i] = compute_window(&vals[(i - left)..=(i + right)], omit);
+        }
+    } else {
+        // Slow path: handle NaN/Inf values with bounds-checked access.
+        // running_sum_valid tracks whether `running_sum` reflects the current
+        // window. When we encounter NaN/Inf, running_sum becomes stale and
+        // must be recomputed before reuse.
+        let mut running_sum_valid = false;
+        for i in (left + 1)..steady_end {
+            let val_out = vals[i - left - 1];
+            let val_in = vals[i + right];
 
-            // Check if window has returned to fully finite
-            let mut all_finite = true;
-            let mut sum = 0.0f64;
-            for &x in &vals[(i - left)..=(i + right)] {
-                if !x.is_finite() {
-                    all_finite = false;
-                    break;
+            if val_in.is_finite() && val_out.is_finite() {
+                if running_sum_valid {
+                    running_sum += val_in - val_out;
+                } else {
+                    running_sum = vals[(i - left)..=(i + right)].iter().sum();
+                    running_sum_valid = true;
                 }
-                sum += x;
-            }
-            if all_finite {
-                running_sum = sum;
-                window_finite = true;
+                out[i] = running_sum * inv_k;
             } else {
-                window_finite = false;
+                running_sum_valid = false;
+                out[i] = compute_window(&vals[(i - left)..=(i + right)], omit);
             }
         }
     }
@@ -786,7 +790,51 @@ fn cumulative_slice(vals: &[f64], want_max: bool) -> Vec<f64> {
     out[0] = current;
     let mut idx = 1;
 
+    // Process 4 elements per iteration (unrolled) to hide memory latency
+    // and reduce loop overhead on sequential write passes. Each element
+    // still depends on the previous result, so this is sequential within
+    // the chunk but processes 4 elements per loop iteration.
     if want_max {
+        while idx + 3 < len {
+            let x0 = vals[idx];
+            if x0.is_nan() {
+                break;
+            }
+            if x0 > current {
+                current = x0;
+            }
+            out[idx] = current;
+
+            let x1 = vals[idx + 1];
+            if x1.is_nan() {
+                break;
+            }
+            if x1 > current {
+                current = x1;
+            }
+            out[idx + 1] = current;
+
+            let x2 = vals[idx + 2];
+            if x2.is_nan() {
+                break;
+            }
+            if x2 > current {
+                current = x2;
+            }
+            out[idx + 2] = current;
+
+            let x3 = vals[idx + 3];
+            if x3.is_nan() {
+                break;
+            }
+            if x3 > current {
+                current = x3;
+            }
+            out[idx + 3] = current;
+
+            idx += 4;
+        }
+        // Tail: process remaining elements one at a time
         while idx < len {
             let x = vals[idx];
             if x.is_nan() {
@@ -799,6 +847,46 @@ fn cumulative_slice(vals: &[f64], want_max: bool) -> Vec<f64> {
             idx += 1;
         }
     } else {
+        while idx + 3 < len {
+            let x0 = vals[idx];
+            if x0.is_nan() {
+                break;
+            }
+            if x0 < current {
+                current = x0;
+            }
+            out[idx] = current;
+
+            let x1 = vals[idx + 1];
+            if x1.is_nan() {
+                break;
+            }
+            if x1 < current {
+                current = x1;
+            }
+            out[idx + 1] = current;
+
+            let x2 = vals[idx + 2];
+            if x2.is_nan() {
+                break;
+            }
+            if x2 < current {
+                current = x2;
+            }
+            out[idx + 2] = current;
+
+            let x3 = vals[idx + 3];
+            if x3.is_nan() {
+                break;
+            }
+            if x3 < current {
+                current = x3;
+            }
+            out[idx + 3] = current;
+
+            idx += 4;
+        }
+        // Tail: process remaining elements one at a time
         while idx < len {
             let x = vals[idx];
             if x.is_nan() {

@@ -340,6 +340,6 @@ into a small inline wrapper plus an `#[inline(never)]` mixed-type dispatch.
 Criterion raw was 7.6599 ms and 7.5576 ms respectively; neither improved the
 call-site probe, and both slowed the non-inlined criterion path. The original
 code was restored. Raw logs:
-`docs/verify-logs/2026-10-28-g0.1-verify-add-probe-original-run[1-3].txt`,
-`...-add-criterion-run1.txt`, `...-add-criterion-inline.txt`, and
-`...-add-criterion-split.txt`.
+`docs/VERIFICATION.md`.
+
+

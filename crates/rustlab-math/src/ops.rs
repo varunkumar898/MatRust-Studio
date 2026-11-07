@@ -117,18 +117,6 @@ pub fn matmul_2d(a: &DenseArray<f64>, b: &DenseArray<f64>) -> Result<DenseArray<
         return DenseArray::from_vec(vec![m, n], vec![0.0; total_c]);
     }
 
-    // Verify stride conversions to isize do not overflow
-    let m_isize = isize::try_from(m).map_err(|_| MathError::DimensionMismatch {
-        identifier: "MATLAB:pmaxsize",
-        shape_a: vec![m],
-        shape_b: Vec::new(),
-    })?;
-    let k_isize = isize::try_from(k_a).map_err(|_| MathError::DimensionMismatch {
-        identifier: "MATLAB:pmaxsize",
-        shape_a: vec![k_a],
-        shape_b: Vec::new(),
-    })?;
-
     // Verify input buffer lengths match dimensions
     let total_a = m
         .checked_mul(k_a)
@@ -154,6 +142,19 @@ pub fn matmul_2d(a: &DenseArray<f64>, b: &DenseArray<f64>) -> Result<DenseArray<
 
     #[cfg(feature = "matrixmultiply")]
     {
+        // Verify stride conversions to isize do not overflow. Only the
+        // matrixmultiply kernel consumes isize strides, so the check lives
+        // inside this block; the scalar fallback below never converts.
+        let m_isize = isize::try_from(m).map_err(|_| MathError::DimensionMismatch {
+            identifier: "MATLAB:pmaxsize",
+            shape_a: vec![m],
+            shape_b: Vec::new(),
+        })?;
+        let k_isize = isize::try_from(k_a).map_err(|_| MathError::DimensionMismatch {
+            identifier: "MATLAB:pmaxsize",
+            shape_a: vec![k_a],
+            shape_b: Vec::new(),
+        })?;
         let mut c_data = vec![0.0; total_c];
         let a_data = a.as_slice();
         let b_data = b.as_slice();

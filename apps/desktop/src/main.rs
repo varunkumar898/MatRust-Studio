@@ -1,4 +1,4 @@
-//! Entry point for MatRust Studio Desktop GUI.
+//! Entry point for the MATSTUDIO desktop GUI.
 
 use matrust_studio::app::MatStudioApp;
 
@@ -7,12 +7,12 @@ fn main() -> eframe::Result<()> {
         viewport: egui::ViewportBuilder::default()
             .with_inner_size([1280.0, 800.0])
             .with_min_inner_size([800.0, 500.0])
-            .with_title("MatRust Studio - MATLAB-Compatible Scientific Computing IDE"),
+            .with_title("MATSTUDIO"),
         ..Default::default()
     };
 
     eframe::run_native(
-        "MatRust Studio",
+        "MATSTUDIO",
         native_options,
         Box::new(|_cc| Ok(Box::new(MatStudioApp::default()))),
     )

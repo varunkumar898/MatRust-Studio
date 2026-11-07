@@ -1,0 +1,42 @@
+name: Compatibility report
+description: Report a MATLAB function or App Designer feature that behaves differently
+title: "[Compatibility]: "
+labels:
+  - compatibility
+body:
+  - type: markdown
+    attributes:
+      value: "Do not attach real `.mlapp`, `.mlappinstall`, `.slx`, or other proprietary files. Use a self-authored minimal example or a synthetic fixture."
+  - type: input
+    id: feature
+    attributes:
+      label: Function, syntax, or app feature
+    validations:
+      required: true
+  - type: input
+    id: source
+    attributes:
+      label: Reference source
+      description: Link a public specification or documentation page; do not paste its text.
+  - type: textarea
+    id: input
+    attributes:
+      label: Minimal self-authored example
+      render: matlab
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: MatRust Studio output and version
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior and how it was established
+      description: State the reference implementation and version if you used a legitimate black-box comparison.
+  - type: input
+    id: platform
+    attributes:
+      label: Operating system

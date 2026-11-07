@@ -193,6 +193,28 @@ fn test_indexing_and_end() {
 }
 
 #[test]
+fn test_call_expression_span_starts_at_callee() {
+    // Regression: Expr::Index span must cover the callee identifier, not start
+    // at the opening parenthesis. For `peaks(x,y);` the callee `peaks` starts
+    // at byte 0 and `(` is at byte 5, so the Index span must be 0..10, not 5..10.
+    let stmts = parse("peaks(x,y);").unwrap();
+    if let Stmt::Expr { expr, .. } = &stmts[0] {
+        if let Expr::Index { callee, span, .. } = expr {
+            assert!(matches!(**callee, Expr::Ident(ref s, _) if s == "peaks"));
+            assert_eq!(
+                span.start, 0,
+                "call span must start at callee 'peaks', not at '('"
+            );
+            assert_eq!(span.end, 10);
+        } else {
+            panic!("Expected index expr");
+        }
+    } else {
+        panic!("Expected expr statement");
+    }
+}
+
+#[test]
 fn test_multi_assignment() {
     let stmts = parse("[m, n] = size(A);").unwrap();
     if let Stmt::Assignment { target, value, .. } = &stmts[0] {

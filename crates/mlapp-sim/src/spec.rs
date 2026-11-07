@@ -27,7 +27,7 @@ pub struct ParamSpec {
 }
 
 /// Full specification for a block type.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BlockSpec {
     pub block_type: BlockType,
     pub display_name: &'static str,

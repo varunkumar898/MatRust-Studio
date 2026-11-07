@@ -923,13 +923,15 @@ impl BlockDiagramEditor {
             widgets.push(zoom.rect);
 
             wrap(ui, 100.0);
-            let status = ui.label(RichText::new(&self.sim_status).size(11.0).color(
-                if self.sim_status.contains("Error") {
-                    theme.error
-                } else {
-                    theme.text_secondary
-                },
-            ));
+            let status = ui
+                .label(RichText::new(&self.sim_status).size(11.0).color(
+                    if self.sim_status.contains("Error") {
+                        theme.error
+                    } else {
+                        theme.text_secondary
+                    },
+                ))
+                .on_hover_text(&self.sim_status);
             widgets.push(status.rect);
         });
     }

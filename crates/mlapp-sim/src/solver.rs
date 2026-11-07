@@ -17,7 +17,7 @@ pub enum SimError {
     #[error("Simulation error: {0}")]
     Execution(String),
 
-    #[error("Algebraic loop detected ({code}): {message}")]
+    #[error("{message}")]
     AlgebraicLoop {
         code: String,
         blocks: Vec<BlockRef>,

@@ -207,6 +207,7 @@ test_b2_variance_non_negative_property: test
 test_b2_zscore: test
 test_b2_zscore_edge_cases: test
 test_basic_arithmetic_evaluation: test
+test_bit_for_bit_regression_against_old_solver_and_fixtures: test
 test_block_diagram_editor_canvas_and_solver: test
 test_block_diagram_json_roundtrip: test
 test_boolean_mask_indexing_and_assignment: test
@@ -459,6 +460,7 @@ test_while_loop_with_break: test
 test_worker_client_async_execution: test
 test_worker_panic_recovery_and_session_reset: test
 test_xml_nesting_depth_limit: test
+test_zero_allocations_during_eval_and_update_discrete: test
 test_zip_bomb_protection: test
 test_zip_slip_protection: test
 tests::axes_data_bounds_empty: test

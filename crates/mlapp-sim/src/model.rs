@@ -62,7 +62,9 @@ impl BlockType {
             "Product" => BlockType::Product,
             "Integrator" => BlockType::Integrator,
             "UnitDelay" | "Delay" => BlockType::UnitDelay,
-            "TransferFunction" | "Transfer Function" | "Transfer Fcn" => BlockType::TransferFunction,
+            "TransferFunction" | "Transfer Function" | "Transfer Fcn" => {
+                BlockType::TransferFunction
+            }
             "DiscreteTransferFunction" | "Discrete Transfer Function" | "Discrete Transfer Fcn" => {
                 BlockType::DiscreteTransferFunction
             }
@@ -143,7 +145,10 @@ impl BlockType {
             }
             BlockType::RelationalOperator | BlockType::Product => 2,
             BlockType::LogicalOperator => {
-                let op = parameters.get("Operator").map(|s| s.as_str()).unwrap_or("AND");
+                let op = parameters
+                    .get("Operator")
+                    .map(|s| s.as_str())
+                    .unwrap_or("AND");
                 if op == "NOT" {
                     1
                 } else {
@@ -156,7 +161,10 @@ impl BlockType {
             }
             BlockType::Switch => 3,
             BlockType::MathFunction => {
-                let func = parameters.get("Function").map(|s| s.as_str()).unwrap_or("sqrt");
+                let func = parameters
+                    .get("Function")
+                    .map(|s| s.as_str())
+                    .unwrap_or("sqrt");
                 if func == "pow" {
                     2
                 } else {

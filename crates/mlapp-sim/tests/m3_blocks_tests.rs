@@ -1,13 +1,16 @@
 //! Tests for Milestone M3: Sources and Control Blocks.
 
-use mlapp_sim::engine::{feedthrough, ExecutionEngine, SimWorkspace};
+use mlapp_sim::engine::feedthrough;
 use mlapp_sim::model::{all_block_specs, block_spec, Block, BlockDiagram, BlockType};
 use mlapp_sim::solver::{simulate_diagram, SimError, SimulationConfig, SolverType};
 
 #[test]
 fn test_m3_spec_table_definitions() {
     let specs = all_block_specs();
-    assert!(specs.len() >= 25, "Spec table should contain all block types");
+    assert!(
+        specs.len() >= 25,
+        "Spec table should contain all block types"
+    );
 
     // Test Sawtooth spec
     let saw = block_spec(&BlockType::Sawtooth).expect("Sawtooth spec");
@@ -60,9 +63,7 @@ fn test_m3_spec_table_definitions() {
 fn test_m3_sources_eval_and_validation() {
     // 1. Validation errors: Frequency <= 0 on Sawtooth, Triangle, SineWave
     let mut bad_saw = BlockDiagram::new("BadSaw");
-    bad_saw.add_block(
-        Block::new("1", "Saw", BlockType::Sawtooth).with_param("Frequency", "0.0"),
-    );
+    bad_saw.add_block(Block::new("1", "Saw", BlockType::Sawtooth).with_param("Frequency", "0.0"));
     bad_saw.add_block(Block::new("2", "Scope", BlockType::Scope));
     bad_saw.add_line("1", 1, "2", 1);
 
@@ -175,28 +176,20 @@ fn test_m3_control_eval_and_feedthrough() {
     let mut diag = BlockDiagram::new("ControlBlocks");
 
     // Constant -4.0 -> Abs -> 4.0
-    diag.add_block(
-        Block::new("1", "ConstNeg", BlockType::Constant).with_param("Value", "-4.0"),
-    );
+    diag.add_block(Block::new("1", "ConstNeg", BlockType::Constant).with_param("Value", "-4.0"));
     diag.add_block(Block::new("2", "AbsBlock", BlockType::Abs));
     // MathFunction sqrt(4.0) -> 2.0
     diag.add_block(
         Block::new("3", "SqrtBlock", BlockType::MathFunction).with_param("Function", "sqrt"),
     );
     // Relational Operator: 2.0 > 1.0 -> 1.0
-    diag.add_block(
-        Block::new("4", "ConstOne", BlockType::Constant).with_param("Value", "1.0"),
-    );
+    diag.add_block(Block::new("4", "ConstOne", BlockType::Constant).with_param("Value", "1.0"));
     diag.add_block(
         Block::new("5", "RelOp", BlockType::RelationalOperator).with_param("Operator", ">"),
     );
     // Switch: if In2 (1.0) >= Threshold (0.5), pass In1 (100.0) else In3 (200.0)
-    diag.add_block(
-        Block::new("6", "ValA", BlockType::Constant).with_param("Value", "100.0"),
-    );
-    diag.add_block(
-        Block::new("7", "ValB", BlockType::Constant).with_param("Value", "200.0"),
-    );
+    diag.add_block(Block::new("6", "ValA", BlockType::Constant).with_param("Value", "100.0"));
+    diag.add_block(Block::new("7", "ValB", BlockType::Constant).with_param("Value", "200.0"));
     diag.add_block(
         Block::new("8", "SwitchBlock", BlockType::Switch)
             .with_param("Criteria", ">=")
@@ -275,7 +268,8 @@ fn test_m3_transfer_function_analytical_step() {
 fn test_m3_discrete_blocks_e_sample_rule() {
     // Discrete Transfer Function without SampleTime under DP triggers E-SAMPLE
     let mut diag_missing = BlockDiagram::new("DiscreteTfMissingTs");
-    diag_missing.add_block(Block::new("1", "Const", BlockType::Constant).with_param("Value", "1.0"));
+    diag_missing
+        .add_block(Block::new("1", "Const", BlockType::Constant).with_param("Value", "1.0"));
     diag_missing.add_block(
         Block::new("2", "DTF", BlockType::DiscreteTransferFunction)
             .with_param("Numerator", "1")

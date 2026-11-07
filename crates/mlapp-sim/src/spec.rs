@@ -42,7 +42,11 @@ pub struct BlockSpec {
 
 /// Parses a comma- or whitespace-separated list of floating-point numbers.
 pub fn parse_float_vector(s: &str) -> Result<Vec<f64>, String> {
-    let trimmed = s.trim().trim_start_matches('[').trim_end_matches(']').trim();
+    let trimmed = s
+        .trim()
+        .trim_start_matches('[')
+        .trim_end_matches(']')
+        .trim();
     if trimmed.is_empty() {
         return Ok(Vec::new());
     }
@@ -888,8 +892,14 @@ pub fn spec_feedthrough(
 ) -> bool {
     match block_type {
         BlockType::TransferFunction | BlockType::DiscreteTransferFunction => {
-            let num_str = parameters.get("Numerator").map(|s| s.as_str()).unwrap_or("1");
-            let den_str = parameters.get("Denominator").map(|s| s.as_str()).unwrap_or("1, 1");
+            let num_str = parameters
+                .get("Numerator")
+                .map(|s| s.as_str())
+                .unwrap_or("1");
+            let den_str = parameters
+                .get("Denominator")
+                .map(|s| s.as_str())
+                .unwrap_or("1, 1");
             let num_len = parse_float_vector(num_str).map(|v| v.len()).unwrap_or(1);
             let den_len = parse_float_vector(den_str).map(|v| v.len()).unwrap_or(2);
             // Strictly proper: deg(num) < deg(den) <=> num_len < den_len -> false

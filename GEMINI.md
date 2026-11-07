@@ -1,6 +1,6 @@
 <USER_REQUEST>
 RUSTLAB MASTER PROMPT v1
-(Read this whole file at the start of every session. Then read docs/STATE.md.)
+(Read this whole file at the start of every session. Then read docs/STATE.md and docs/ENGINEERING-CHARTER.md.)
 
 ====================================================================
 0. MISSION
@@ -16,6 +16,8 @@ math, stdlib, MAT-file I/O, CLI/REPL, function handles, numeric classes,
 N-D arrays, sparse, linear algebra, FFT, statistics + CSV (B2.1.1).
 The owner is learning. Every milestone must teach: explain concepts in plain
 words, with tiny examples, so the owner can read, debug and extend the code.
+For block-diagram and circuit simulation (milestones M0..M12),
+docs/ENGINEERING-CHARTER.md is the single source of truth.
 
 LEGAL / CLEAN-ROOM: MATLAB behavior comes only from public documentation,
 black-box experiments on outputs you can legitimately obtain, and open

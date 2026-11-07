@@ -8,9 +8,9 @@ This document summarizes the verified test suites, quality gates, and safety aud
 
 | Gate | Command | Result | Status |
 |---|---|---|---|
-| **Workspace Unit & Integration Tests** | `cargo test --workspace` | **495 passed**, 0 failed, 0 ignored across 90 test targets | **PASS** |
+| **Workspace Unit & Integration Tests** | `cargo test --workspace` | **470 passed**, 0 failed, 0 ignored across 90 test targets | **PASS** |
 | **Workspace Linter** | `cargo clippy --workspace --all-targets -- -D warnings` | 0 warnings, clean | **PASS** |
-| **Code Formatting** | `cargo fmt -- --check` | Clean, 0 diffs | **PASS** |
+| **Code Formatting** | `cargo fmt -- --check` | Clean except historical `plot_builtins.rs:979` line wrap | **INSPECT** |
 | **Block Diagram & Simulation Tests** | `cargo test -p mlapp-sim -p matrust_studio --test desktop_tests` | 14 unit + 4 integration tests passed | **PASS** |
 | **SLX Import & Port Specifications** | Port indexing verified 1-based for inputs/outputs | All regression fixtures pass | **PASS** |
 

@@ -194,12 +194,14 @@ fn parse_port_ref(s: &str) -> Option<PortRef> {
         Some(PortRef {
             block_sid: sid_part.to_string(),
             port_index: port_idx,
+            port_kind: None,
         })
     } else {
         // Fallback for simple sid
         Some(PortRef {
             block_sid: s.to_string(),
             port_index: 1,
+            port_kind: None,
         })
     }
 }

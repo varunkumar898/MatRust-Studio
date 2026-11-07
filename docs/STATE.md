@@ -1,20 +1,25 @@
 # MatRust Studio / RustLab Project State
 
-**Current branch:** `gui/polish-1` (polish milestone branch; owner instruction: branch of `main` @ `425f54e`)
+**Current branch:** `feat/m4-electrical-model` (Milestone M4: Electrical Data Model & Editor)
 **Repository:** `https://github.com/varunkumar898/MatRust-Studio.git`
-**Current code commit:** `4ae9c687e0ea5e89d81373305a415ff648aa0c31` (PR #20 merged)
-**Date:** 2026-11-03
+**Current base commit:** `64aeba4` (`main`)
+**Date:** 2026-11-08
 **Platform:** Windows 11 ARM64 (`aarch64-pc-windows-gnullvm`)
 **Local stable toolchain:** Rust 1.99.1
 **Declared MSRV:** Rust 1.88.0
 **Verification status:** 
-- Local default, all-features, and no-default-features test runs pass at **503/503/503**.
+- Local default, all-features, and no-default-features test runs pass at **517/517/517** (net +14 tests in M4).
 - Local clippy (all-features, no-default-features, per-crate no-default-features) passes with 0 warnings.
 - `cargo fmt --all -- --check` passes cleanly.
-- `scripts/verify.ps1` runs from cargo clean and exits 0 with all verification steps passing.
-- GitHub Actions CI matrix: 100% green on all 14 jobs on PR #20 (run `41584278404`) and running on `main` (run `41592329702`).
+- `scripts/verify.ps1` runs and exits 0 with all verification steps passing.
 
-## Current work: GUI polish milestone `gui/polish-1`
+## Current work: Milestone M4: Electrical Data Model & Editor
+
+- **Branch `feat/m4-electrical-model`**: Implements multi-domain block model, 9 physical electrical blocks, compile-time netlist disjoint-set union-find with deterministic net ordering, open-square terminals, block rotation, and simulation pre-guard (`E-UNSUPPORTED`).
+- **Data Model**: `PortKind` (`Signal`, `Electrical`), `PortRole` (`Input`, `Output`, `Terminal`), `PortDesc`, and `BlockRotation` (`R0`, `R90`, `R180`, `R270`).
+- **Diagnostics**: Minimal `Diagnostic` structure with typed codes `E-DOMAIN`, `W-OPEN`, `W-WIRE`, `E-GND`, `E-PARAM`, and `E-UNSUPPORTED`.
+- **Zero Heap Allocations**: Netlist compiled once before simulation; per-step simulation remains completely allocation-free.
+- **Documentation**: `docs/electrical-model.md` specifies terminals, nets, ground merging, diagnostics, and no galvanic isolation limitation.
 
 - Branch `gui/polish-1` created from `main` @ `425f54e` (master prompt v2, S-step plan).
 - **S1 GUI inventory + audit COMPLETE** (no code changed): `docs/gui-audit.md` documents

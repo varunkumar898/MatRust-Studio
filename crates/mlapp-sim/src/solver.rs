@@ -50,6 +50,9 @@ pub enum SimError {
     #[error("{message}")]
     Parameter { code: String, message: String },
 
+    #[error("{message}")]
+    Unsupported { code: String, message: String },
+
     #[error("Block not found: {0}")]
     BlockNotFound(String),
 }
@@ -153,6 +156,41 @@ impl SimError {
             message,
         }
     }
+
+    pub fn unsupported(msg: impl Into<String>) -> Self {
+        let detail = msg.into();
+        let message = format!("Unsupported simulation capability (E-UNSUPPORTED): {detail}");
+        SimError::Unsupported {
+            code: "E-UNSUPPORTED".to_string(),
+            message,
+        }
+    }
+
+    pub fn code(&self) -> &str {
+        match self {
+            SimError::Execution(_) => "E-EXEC",
+            SimError::AlgebraicLoop { code, .. } => code.as_str(),
+            SimError::StepSize { code, .. } => code.as_str(),
+            SimError::NonFinite { code, .. } => code.as_str(),
+            SimError::SampleTime { code, .. } => code.as_str(),
+            SimError::Parameter { code, .. } => code.as_str(),
+            SimError::Unsupported { code, .. } => code.as_str(),
+            SimError::BlockNotFound(_) => "E-PARAM",
+        }
+    }
+
+    pub fn message(&self) -> &str {
+        match self {
+            SimError::Execution(msg) => msg.as_str(),
+            SimError::AlgebraicLoop { message, .. } => message.as_str(),
+            SimError::StepSize { message, .. } => message.as_str(),
+            SimError::NonFinite { message, .. } => message.as_str(),
+            SimError::SampleTime { message, .. } => message.as_str(),
+            SimError::Parameter { message, .. } => message.as_str(),
+            SimError::Unsupported { message, .. } => message.as_str(),
+            SimError::BlockNotFound(msg) => msg.as_str(),
+        }
+    }
 }
 
 /// Supported numerical integration solvers.
@@ -213,6 +251,18 @@ impl<'de> Deserialize<'de> for SolverType {
     }
 }
 
+fn default_start_time() -> f64 {
+    0.0
+}
+fn default_stop_time() -> f64 {
+    10.0
+}
+fn default_step_size() -> f64 {
+    0.01
+}
+fn default_solver() -> SolverType {
+    SolverType::FixedStepEuler
+}
 fn default_abs_tol() -> f64 {
     1e-6
 }
@@ -226,9 +276,13 @@ fn default_max_steps() -> usize {
 /// Simulation configuration parameters.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct SimulationConfig {
+    #[serde(default = "default_start_time")]
     pub start_time: f64,
+    #[serde(default = "default_stop_time")]
     pub stop_time: f64,
+    #[serde(default = "default_step_size")]
     pub step_size: f64,
+    #[serde(default = "default_solver")]
     pub solver: SolverType,
     #[serde(default = "default_abs_tol")]
     pub abs_tol: f64,

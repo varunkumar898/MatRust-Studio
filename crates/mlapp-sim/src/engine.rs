@@ -360,6 +360,18 @@ impl ExecutionEngine {
     pub fn compile(diagram: &BlockDiagram) -> Result<Self, SimError> {
         let num_blocks = diagram.blocks.len();
 
+        // 0. Pre-check: electrical simulation arrives in M5
+        let electrical_count = diagram
+            .blocks
+            .iter()
+            .filter(|b| b.block_type.is_electrical())
+            .count();
+        if electrical_count > 0 {
+            return Err(SimError::unsupported(format!(
+                "electrical simulation arrives in M5; this diagram has {electrical_count} electrical block(s)"
+            )));
+        }
+
         // 1. Build SID/name to index lookup
         let mut block_indices: HashMap<String, usize> = HashMap::with_capacity(num_blocks * 2);
         for (i, b) in diagram.blocks.iter().enumerate() {

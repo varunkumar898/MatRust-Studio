@@ -11,10 +11,12 @@ use egui::{
 };
 use mlapp_sim::{
     model::{
-        param_specs_for, parse_float_vector, Block as SimBlock, BlockDiagram, BlockType,
-        Line as SimLine, ParamKind, PortRef,
+        param_specs_for, parse_float_vector, Block as SimBlock, BlockDiagram, BlockRotation,
+        BlockType, Line as SimLine, ParamKind, PortKind, PortRef,
     },
+    netlist::resolve_electrical_nets,
     solver::{simulate_diagram, SimError, SimulationConfig, SimulationOutput, SolverType},
+    spec::pin_geometry,
 };
 use std::collections::HashMap;
 
@@ -35,9 +37,15 @@ pub struct CanvasBlock {
     pub pos: Pos2,
     pub size: Vec2,
     pub parameters: HashMap<String, String>,
+    pub rotation: BlockRotation,
 }
 
 impl CanvasBlock {
+    /// Returns the number of physical electrical terminals.
+    pub fn terminal_count(&self) -> usize {
+        self.block_type.terminal_count()
+    }
+
     /// Returns the number of input ports based on block type and parameters.
     pub fn input_ports(&self) -> usize {
         self.block_type.input_ports(&self.parameters)
@@ -188,6 +196,7 @@ impl BlockDiagramEditor {
             pos: new_pos,
             size: original.size,
             parameters: original.parameters,
+            rotation: original.rotation,
         };
         self.blocks.push(duplicate);
         self.selected_block_sid = Some(new_sid.clone());
@@ -336,6 +345,7 @@ impl BlockDiagramEditor {
                 pos,
                 size,
                 parameters: b.parameters.clone(),
+                rotation: b.rotation,
             });
         }
 
@@ -394,6 +404,7 @@ impl BlockDiagramEditor {
             pos: Pos2::new(80.0, 150.0),
             size: Vec2::new(90.0, 50.0),
             parameters: HashMap::new(),
+            rotation: BlockRotation::R0,
         };
         step.parameters
             .insert("Time".to_string(), "0.5".to_string());
@@ -410,6 +421,7 @@ impl BlockDiagramEditor {
             pos: Pos2::new(230.0, 155.0),
             size: Vec2::new(50.0, 50.0),
             parameters: HashMap::new(),
+            rotation: BlockRotation::R0,
         };
         sum.parameters
             .insert("Inputs".to_string(), "+-".to_string());
@@ -422,6 +434,7 @@ impl BlockDiagramEditor {
             pos: Pos2::new(330.0, 150.0),
             size: Vec2::new(80.0, 50.0),
             parameters: HashMap::new(),
+            rotation: BlockRotation::R0,
         };
         gain.parameters
             .insert("Gain".to_string(), "2.0".to_string());
@@ -434,6 +447,7 @@ impl BlockDiagramEditor {
             pos: Pos2::new(460.0, 150.0),
             size: Vec2::new(90.0, 50.0),
             parameters: HashMap::new(),
+            rotation: BlockRotation::R0,
         };
         intg.parameters
             .insert("InitialCondition".to_string(), "0.0".to_string());
@@ -446,6 +460,7 @@ impl BlockDiagramEditor {
             pos: Pos2::new(600.0, 150.0),
             size: Vec2::new(80.0, 50.0),
             parameters: HashMap::new(),
+            rotation: BlockRotation::R0,
         };
 
         self.blocks.push(step);
@@ -504,10 +519,11 @@ impl BlockDiagramEditor {
     /// Converts canvas model to `mlapp_sim::BlockDiagram`.
     pub fn to_block_diagram(&self) -> BlockDiagram {
         let mut diagram = BlockDiagram::new("Untitled_Diagram");
-        diagram.schema_version = 2;
+        diagram.schema_version = 3;
         diagram.simulation_config = Some(self.config.clone());
         for b in &self.blocks {
             let mut sb = SimBlock::new(&b.sid, &b.name, b.block_type.clone());
+            sb.rotation = b.rotation;
             sb.position = Some([
                 b.pos.x as f64,
                 b.pos.y as f64,
@@ -521,15 +537,44 @@ impl BlockDiagramEditor {
         }
 
         for w in &self.wires {
+            let src_block_opt = self.blocks.iter().find(|b| b.sid == w.src_block);
+            let dst_block_opt = self.blocks.iter().find(|b| b.sid == w.dst_block);
+
+            let src_is_electrical = src_block_opt
+                .map(|b| {
+                    if b.block_type == BlockType::IdealSwitch && w.src_port == 2 {
+                        false
+                    } else {
+                        b.block_type.is_electrical()
+                    }
+                })
+                .unwrap_or(false);
+
+            let dst_is_electrical = dst_block_opt
+                .map(|b| {
+                    if b.block_type == BlockType::IdealSwitch && w.dst_port == 2 {
+                        false
+                    } else {
+                        b.block_type.is_electrical()
+                    }
+                })
+                .unwrap_or(false);
+
+            let src = if src_is_electrical {
+                PortRef::electrical(&w.src_block, w.src_port)
+            } else {
+                PortRef::signal(&w.src_block, w.src_port + 1)
+            };
+
+            let dst = if dst_is_electrical {
+                PortRef::electrical(&w.dst_block, w.dst_port)
+            } else {
+                PortRef::signal(&w.dst_block, w.dst_port + 1)
+            };
+
             diagram.lines.push(SimLine {
-                src: PortRef {
-                    block_sid: w.src_block.clone(),
-                    port_index: w.src_port + 1, // 1-based port index for mlapp-sim
-                },
-                dst: PortRef {
-                    block_sid: w.dst_block.clone(),
-                    port_index: w.dst_port + 1,
-                },
+                src,
+                dst,
                 name: None,
             });
         }
@@ -555,7 +600,7 @@ impl BlockDiagramEditor {
                 self.show_scope_window = true;
             }
             Err(e) => {
-                self.sim_status = format!("Simulation Error: {e}");
+                self.sim_status = format!("Simulation Error: {}", e.message());
             }
         }
     }
@@ -1043,6 +1088,20 @@ impl BlockDiagramEditor {
                     ("Switch", BlockType::Switch),
                 ]),
             ),
+            (
+                "Electrical",
+                items(&[
+                    ("Resistor", BlockType::Resistor),
+                    ("Capacitor", BlockType::Capacitor),
+                    ("Inductor", BlockType::Inductor),
+                    ("DC Voltage Source", BlockType::DcVoltageSource),
+                    ("AC Voltage Source", BlockType::AcVoltageSource),
+                    ("DC Current Source", BlockType::DcCurrentSource),
+                    ("Ground", BlockType::Ground),
+                    ("Diode", BlockType::Diode),
+                    ("Ideal Switch", BlockType::IdealSwitch),
+                ]),
+            ),
             ("Subsystems", items(&[("Subsystem", BlockType::Subsystem)])),
         ]
     }
@@ -1064,6 +1123,7 @@ impl BlockDiagramEditor {
             pos,
             size: Vec2::new(90.0, 50.0),
             parameters: HashMap::new(),
+            rotation: BlockRotation::R0,
         };
 
         // Initialize default parameters
@@ -1121,18 +1181,16 @@ impl BlockDiagramEditor {
                         });
 
                         ui.horizontal(|ui| {
-                            ui.label(
-                                RichText::new(format!("SID: #{}", sid))
-                                    .size(11.0)
-                                    .color(theme.text_secondary),
-                            );
-                            ui.separator();
-                            let in_ports = self.blocks[block_idx].input_ports();
-                            let out_ports = self.blocks[block_idx].output_ports();
-                            ui.label(
-                                RichText::new(format!("In: {in_ports} | Out: {out_ports}"))
-                                    .size(11.0),
-                            );
+                            ui.label(RichText::new("Rotation:").size(11.0).color(theme.text_secondary));
+                            let rot_label = match self.blocks[block_idx].rotation {
+                                BlockRotation::R0 => "0°",
+                                BlockRotation::R90 => "90°",
+                                BlockRotation::R180 => "180°",
+                                BlockRotation::R270 => "270°",
+                            };
+                            if ui.button(format!("{rot_label} (Rotate 90°)")).on_hover_text("Rotate block 90° clockwise (Hotkey: R)").clicked() {
+                                self.blocks[block_idx].rotation = self.blocks[block_idx].rotation.rotated_cw();
+                            }
                         });
 
                         if block_type == BlockType::Scope {
@@ -1467,6 +1525,9 @@ impl BlockDiagramEditor {
         let mut clicked_block = None;
         let mut double_clicked_block = None;
         let mut clicked_wire = None;
+
+        let topology_opt = resolve_electrical_nets(&self.to_block_diagram()).topology;
+
         for (wire_index, wire) in self.wires.iter_mut().enumerate() {
             let Some(source) = self.blocks.iter().find(|block| block.sid == wire.src_block) else {
                 continue;
@@ -1474,21 +1535,14 @@ impl BlockDiagramEditor {
             let Some(target) = self.blocks.iter().find(|block| block.sid == wire.dst_block) else {
                 continue;
             };
-            let num_src_ports = source.output_ports().max(1);
-            let src_frac = (wire.src_port as f32 + 1.0) / (num_src_ports as f32 + 1.0);
-            let start = Self::world_to_screen(
+            let start =
+                Self::get_block_port_pos(rect, self.pan_offset, self.zoom, source, wire.src_port);
+            let end = Self::get_block_input_port_pos(
                 rect,
                 self.pan_offset,
                 self.zoom,
-                source.pos + vec2(source.size.x, source.size.y * src_frac),
-            );
-            let num_dst_ports = target.input_ports().max(1);
-            let dst_frac = (wire.dst_port as f32 + 1.0) / (num_dst_ports as f32 + 1.0);
-            let end = Self::world_to_screen(
-                rect,
-                self.pan_offset,
-                self.zoom,
-                target.pos + vec2(0.0, target.size.y * dst_frac),
+                target,
+                wire.dst_port,
             );
             let bend_x = (start.x + end.x) * 0.5 + wire.bend_offset.x * self.zoom;
             let bend_y = (start.y + end.y) * 0.5 + wire.bend_offset.y * self.zoom;
@@ -1500,10 +1554,14 @@ impl BlockDiagramEditor {
                 end,
             ];
             let selected = self.selected_wire == Some(wire_index);
+            let is_electrical =
+                source.block_type.is_electrical() && target.block_type.is_electrical();
             let stroke = Stroke::new(
                 if selected { 3.0_f32 } else { 2.0_f32 },
                 if selected {
                     Color32::from_rgb(255, 180, 50)
+                } else if is_electrical {
+                    Color32::from_rgb(100, 200, 255)
                 } else {
                     Color32::from_rgb(90, 180, 255)
                 },
@@ -1524,18 +1582,25 @@ impl BlockDiagramEditor {
                     clicked_wire = Some(wire_index);
                 }
             }
-            painter.circle_filled(end, 3.5, Color32::from_rgb(90, 180, 255));
+            painter.circle_filled(
+                end,
+                3.5,
+                if is_electrical {
+                    Color32::from_rgb(100, 200, 255)
+                } else {
+                    Color32::from_rgb(90, 180, 255)
+                },
+            );
         }
 
         if let Some((source_sid, source_port)) = &self.connecting_from {
             if let Some(source) = self.blocks.iter().find(|block| block.sid == *source_sid) {
-                let num_src_ports = source.output_ports().max(1);
-                let src_frac = (*source_port as f32 + 1.0) / (num_src_ports as f32 + 1.0);
-                let start = Self::world_to_screen(
+                let start = Self::get_block_port_pos(
                     rect,
                     self.pan_offset,
                     self.zoom,
-                    source.pos + vec2(source.size.x, source.size.y * src_frac),
+                    source,
+                    *source_port,
                 );
                 if let Some(pointer) = response.hover_pos() {
                     painter.line_segment(
@@ -1548,6 +1613,20 @@ impl BlockDiagramEditor {
 
         let mut wire_to_connect = None;
         let space_pan = ui.input(|input| input.key_down(Key::Space));
+        let block_domains: HashMap<String, (bool, bool)> = self
+            .blocks
+            .iter()
+            .map(|b| {
+                (
+                    b.sid.clone(),
+                    (
+                        b.block_type.is_electrical(),
+                        b.block_type == BlockType::IdealSwitch,
+                    ),
+                )
+            })
+            .collect();
+
         for block in &mut self.blocks {
             let block_rect = Rect::from_min_size(
                 rect.min + self.pan_offset.to_vec2() + block.pos.to_vec2() * self.zoom,
@@ -1560,7 +1639,7 @@ impl BlockDiagramEditor {
                     Sense::click_and_drag(),
                 )
                 .on_hover_text(
-                    "Double-click to edit parameters, or edit in Properties panel on the right.",
+                    "Double-click to edit parameters, or edit in Properties panel on the right. Press 'R' to rotate.",
                 );
             if block_resp.dragged()
                 && !space_pan
@@ -1600,13 +1679,22 @@ impl BlockDiagramEditor {
                 BlockType::Integrator => "1/s",
                 BlockType::UnitDelay => "[z-1]",
                 BlockType::Scope => "[scope]",
+                BlockType::Resistor => "-[R]-",
+                BlockType::Capacitor => "-||-",
+                BlockType::Inductor => "-mmm-",
+                BlockType::DcVoltageSource => "(V)",
+                BlockType::AcVoltageSource => "(~V)",
+                BlockType::DcCurrentSource => "(I)",
+                BlockType::Ground => "[GND]",
+                BlockType::Diode => "->|-",
+                BlockType::IdealSwitch => "-/ -",
                 _ => "[ ]",
             };
             painter.text(
                 pos2(block_rect.center().x, block_rect.top() + 16.0 * self.zoom),
                 egui::Align2::CENTER_CENTER,
                 icon,
-                egui::FontId::proportional(16.0 * self.zoom),
+                egui::FontId::proportional(14.0 * self.zoom),
                 Color32::from_rgb(200, 220, 255),
             );
             painter.text(
@@ -1620,48 +1708,190 @@ impl BlockDiagramEditor {
                 Color32::WHITE,
             );
 
-            // Output ports
-            let num_outputs = block.output_ports();
-            for port_idx in 0..num_outputs {
-                let frac = (port_idx as f32 + 1.0) / (num_outputs as f32 + 1.0);
-                let output = pos2(
-                    block_rect.right(),
-                    block_rect.top() + block_rect.height() * frac,
-                );
-                painter.circle_filled(output, 4.0 * self.zoom, Color32::from_rgb(90, 180, 255));
-                if ui
-                    .interact(
-                        Rect::from_center_size(output, vec2(12.0, 12.0) * self.zoom),
-                        Id::new(format!("out_port_{}_{}", block.sid, port_idx)),
-                        Sense::click(),
-                    )
-                    .clicked()
-                {
-                    self.connecting_from = Some((block.sid.clone(), port_idx));
-                }
-            }
+            if block.block_type.is_electrical() {
+                let term_count = block.terminal_count();
+                for term_idx in 0..term_count {
+                    let port_pos =
+                        Self::get_block_port_pos(rect, self.pan_offset, self.zoom, block, term_idx);
+                    let port_rect = Rect::from_center_size(port_pos, vec2(10.0, 10.0) * self.zoom);
+                    // Open square for physical electrical terminal
+                    painter.rect_stroke(
+                        port_rect,
+                        CornerRadius::ZERO,
+                        Stroke::new(1.5 * self.zoom, Color32::from_rgb(100, 200, 255)),
+                        StrokeKind::Middle,
+                    );
+                    painter.rect_filled(
+                        port_rect,
+                        CornerRadius::ZERO,
+                        Color32::from_rgba_premultiplied(30, 40, 60, 180),
+                    );
 
-            // Input ports
-            let num_inputs = block.input_ports();
-            for port_idx in 0..num_inputs {
-                let frac = (port_idx as f32 + 1.0) / (num_inputs as f32 + 1.0);
-                let input = pos2(
-                    block_rect.left(),
-                    block_rect.top() + block_rect.height() * frac,
-                );
-                painter.circle_filled(input, 4.0 * self.zoom, Color32::from_rgb(180, 220, 120));
-                if ui
-                    .interact(
-                        Rect::from_center_size(input, vec2(12.0, 12.0) * self.zoom),
-                        Id::new(format!("in_port_{}_{}", block.sid, port_idx)),
-                        Sense::click(),
-                    )
-                    .clicked()
-                {
-                    if let Some((source_sid, source_port)) = self.connecting_from.take() {
-                        if source_sid != block.sid {
-                            wire_to_connect =
-                                Some((source_sid, source_port, block.sid.clone(), port_idx));
+                    let label = if term_idx == 0 { "+" } else { "-" };
+                    let hover_text = if let Some(top) = &topology_opt {
+                        if let Some(net_id) =
+                            top.terminal_to_net.get(&(block.sid.clone(), term_idx))
+                        {
+                            format!(
+                                "Electrical Terminal {} ({})\nNet: Node {}",
+                                term_idx, label, net_id
+                            )
+                        } else {
+                            format!("Electrical Terminal {} ({})", term_idx, label)
+                        }
+                    } else {
+                        format!("Electrical Terminal {} ({})", term_idx, label)
+                    };
+
+                    let port_resp = ui
+                        .interact(
+                            Rect::from_center_size(port_pos, vec2(14.0, 14.0) * self.zoom),
+                            Id::new(format!("elec_port_{}_{}", block.sid, term_idx)),
+                            Sense::click(),
+                        )
+                        .on_hover_text(hover_text);
+
+                    if port_resp.clicked() {
+                        if let Some((source_sid, source_port)) = self.connecting_from.take() {
+                            if source_sid != block.sid {
+                                let (source_is_elec, source_is_switch) = block_domains
+                                    .get(&source_sid)
+                                    .copied()
+                                    .unwrap_or((false, false));
+                                let source_is_electrical = if source_is_switch && source_port == 2 {
+                                    false
+                                } else {
+                                    source_is_elec
+                                };
+
+                                if !source_is_electrical {
+                                    self.sim_status = format!(
+                                        "Error [E-DOMAIN]: Direct wire between signal port and electrical terminal on blocks '{}' and '{}' rejected.",
+                                        source_sid, block.sid
+                                    );
+                                } else {
+                                    wire_to_connect = Some((
+                                        source_sid,
+                                        source_port,
+                                        block.sid.clone(),
+                                        term_idx,
+                                    ));
+                                }
+                            }
+                        } else {
+                            self.connecting_from = Some((block.sid.clone(), term_idx));
+                        }
+                    }
+                }
+
+                if block.block_type == BlockType::IdealSwitch {
+                    let ctrl_pos =
+                        Self::get_block_input_port_pos(rect, self.pan_offset, self.zoom, block, 2);
+                    painter.circle_filled(
+                        ctrl_pos,
+                        4.0 * self.zoom,
+                        Color32::from_rgb(180, 220, 120),
+                    );
+                    let port_resp = ui
+                        .interact(
+                            Rect::from_center_size(ctrl_pos, vec2(12.0, 12.0) * self.zoom),
+                            Id::new(format!("in_port_{}_ctrl", block.sid)),
+                            Sense::click(),
+                        )
+                        .on_hover_text("Signal Control Input (ctrl)");
+
+                    if port_resp.clicked() {
+                        if let Some((source_sid, source_port)) = self.connecting_from.take() {
+                            if source_sid != block.sid {
+                                let (source_is_elec, source_is_switch) = block_domains
+                                    .get(&source_sid)
+                                    .copied()
+                                    .unwrap_or((false, false));
+                                let source_is_electrical = if source_is_switch && source_port == 2 {
+                                    false
+                                } else {
+                                    source_is_elec
+                                };
+
+                                if source_is_electrical {
+                                    self.sim_status = format!(
+                                        "Error [E-DOMAIN]: Direct wire between electrical terminal and signal control input on blocks '{}' and '{}' rejected.",
+                                        source_sid, block.sid
+                                    );
+                                } else {
+                                    wire_to_connect =
+                                        Some((source_sid, source_port, block.sid.clone(), 2));
+                                }
+                            }
+                        }
+                    }
+                }
+            } else {
+                // Output ports
+                let num_outputs = block.output_ports();
+                for port_idx in 0..num_outputs {
+                    let output =
+                        Self::get_block_port_pos(rect, self.pan_offset, self.zoom, block, port_idx);
+                    painter.circle_filled(output, 4.0 * self.zoom, Color32::from_rgb(90, 180, 255));
+                    if ui
+                        .interact(
+                            Rect::from_center_size(output, vec2(12.0, 12.0) * self.zoom),
+                            Id::new(format!("out_port_{}_{}", block.sid, port_idx)),
+                            Sense::click(),
+                        )
+                        .on_hover_text(format!("Signal Output {}", port_idx + 1))
+                        .clicked()
+                    {
+                        self.connecting_from = Some((block.sid.clone(), port_idx));
+                    }
+                }
+
+                // Input ports
+                let num_inputs = block.input_ports();
+                for port_idx in 0..num_inputs {
+                    let input = Self::get_block_input_port_pos(
+                        rect,
+                        self.pan_offset,
+                        self.zoom,
+                        block,
+                        port_idx,
+                    );
+                    painter.circle_filled(input, 4.0 * self.zoom, Color32::from_rgb(180, 220, 120));
+                    if ui
+                        .interact(
+                            Rect::from_center_size(input, vec2(12.0, 12.0) * self.zoom),
+                            Id::new(format!("in_port_{}_{}", block.sid, port_idx)),
+                            Sense::click(),
+                        )
+                        .on_hover_text(format!("Signal Input {}", port_idx + 1))
+                        .clicked()
+                    {
+                        if let Some((source_sid, source_port)) = self.connecting_from.take() {
+                            if source_sid != block.sid {
+                                let (source_is_elec, source_is_switch) = block_domains
+                                    .get(&source_sid)
+                                    .copied()
+                                    .unwrap_or((false, false));
+                                let source_is_electrical = if source_is_switch && source_port == 2 {
+                                    false
+                                } else {
+                                    source_is_elec
+                                };
+
+                                if source_is_electrical {
+                                    self.sim_status = format!(
+                                        "Error [E-DOMAIN]: Direct wire between electrical terminal and signal input on blocks '{}' and '{}' rejected.",
+                                        source_sid, block.sid
+                                    );
+                                } else {
+                                    wire_to_connect = Some((
+                                        source_sid,
+                                        source_port,
+                                        block.sid.clone(),
+                                        port_idx,
+                                    ));
+                                }
+                            }
                         }
                     }
                 }
@@ -1669,8 +1899,17 @@ impl BlockDiagramEditor {
         }
 
         if let Some((source_sid, source_port, dst_sid, dst_port)) = wire_to_connect {
-            self.wires
-                .retain(|w| !(w.dst_block == dst_sid && w.dst_port == dst_port));
+            let dst_block = self.blocks.iter().find(|b| b.sid == dst_sid);
+            let dst_is_signal = dst_block
+                .map(|b| {
+                    !b.block_type.is_electrical()
+                        || (b.block_type == BlockType::IdealSwitch && dst_port == 2)
+                })
+                .unwrap_or(true);
+            if dst_is_signal {
+                self.wires
+                    .retain(|w| !(w.dst_block == dst_sid && w.dst_port == dst_port));
+            }
             self.wires.push(CanvasWire {
                 src_block: source_sid,
                 src_port: source_port,
@@ -1719,11 +1958,92 @@ impl BlockDiagramEditor {
             self.duplicate_selected();
         }
 
+        let rotate_r = pointer_inside_canvas
+            && !ui.memory(|mem| mem.focused().is_some())
+            && ui.input(|input| input.key_pressed(Key::R));
+        if rotate_r {
+            if let Some(sid) = &self.selected_block_sid {
+                if let Some(b) = self.blocks.iter_mut().find(|b| b.sid == *sid) {
+                    b.rotation = b.rotation.rotated_cw();
+                }
+            }
+        }
+
         rect
     }
 
     fn world_to_screen(canvas: Rect, pan_offset: Pos2, zoom: f32, point: Pos2) -> Pos2 {
         canvas.min + pan_offset.to_vec2() + point.to_vec2() * zoom
+    }
+
+    fn get_block_port_pos(
+        canvas: Rect,
+        pan_offset: Pos2,
+        zoom: f32,
+        block: &CanvasBlock,
+        port_index: usize,
+    ) -> Pos2 {
+        let (nx, ny) = if block.block_type.is_electrical() {
+            if block.block_type == BlockType::IdealSwitch && port_index == 2 {
+                pin_geometry(&block.block_type, PortKind::Signal, 0, block.rotation)
+            } else {
+                pin_geometry(
+                    &block.block_type,
+                    PortKind::Electrical,
+                    port_index,
+                    block.rotation,
+                )
+            }
+        } else {
+            let num_outputs = block.output_ports().max(1);
+            let frac = (port_index as f32 + 1.0) / (num_outputs as f32 + 1.0);
+            match block.rotation {
+                BlockRotation::R0 => (1.0, frac),
+                BlockRotation::R90 => (1.0 - frac, 1.0),
+                BlockRotation::R180 => (0.0, 1.0 - frac),
+                BlockRotation::R270 => (frac, 0.0),
+            }
+        };
+        let block_topleft = Self::world_to_screen(canvas, pan_offset, zoom, block.pos);
+        pos2(
+            block_topleft.x + block.size.x * zoom * nx,
+            block_topleft.y + block.size.y * zoom * ny,
+        )
+    }
+
+    fn get_block_input_port_pos(
+        canvas: Rect,
+        pan_offset: Pos2,
+        zoom: f32,
+        block: &CanvasBlock,
+        port_index: usize,
+    ) -> Pos2 {
+        let (nx, ny) = if block.block_type.is_electrical() {
+            if block.block_type == BlockType::IdealSwitch && port_index == 2 {
+                pin_geometry(&block.block_type, PortKind::Signal, 0, block.rotation)
+            } else {
+                pin_geometry(
+                    &block.block_type,
+                    PortKind::Electrical,
+                    port_index,
+                    block.rotation,
+                )
+            }
+        } else {
+            let num_inputs = block.input_ports().max(1);
+            let frac = (port_index as f32 + 1.0) / (num_inputs as f32 + 1.0);
+            match block.rotation {
+                BlockRotation::R0 => (0.0, frac),
+                BlockRotation::R90 => (1.0 - frac, 0.0),
+                BlockRotation::R180 => (1.0, 1.0 - frac),
+                BlockRotation::R270 => (frac, 1.0),
+            }
+        };
+        let block_topleft = Self::world_to_screen(canvas, pan_offset, zoom, block.pos);
+        pos2(
+            block_topleft.x + block.size.x * zoom * nx,
+            block_topleft.y + block.size.y * zoom * ny,
+        )
     }
 
     fn fit_canvas(&mut self, canvas: Rect) {
@@ -2281,6 +2601,7 @@ mod tests {
                     "Discrete",
                     "Signal Routing",
                     "Logic",
+                    "Electrical",
                     "Subsystems"
                 ]
             );
@@ -2902,7 +3223,7 @@ mod tests {
         editor.config.rel_tol = 1e-5;
 
         let json = editor.save_to_json().expect("Export JSON");
-        assert!(json.contains("\"schema_version\": 2"));
+        assert!(json.contains("\"schema_version\": 3"));
         assert!(json.contains("VariableStepDormandPrince"));
 
         let mut editor2 = BlockDiagramEditor::default();
@@ -2931,6 +3252,78 @@ mod tests {
             editor_legacy.config.solver,
             SolverType::FixedStepEuler,
             "Legacy diagram must migrate to FixedStepEuler default"
+        );
+    }
+
+    #[test]
+    fn test_m4_electrical_library_and_palette_blocks() {
+        let libraries = BlockDiagramEditor::block_libraries();
+        let elec = libraries.iter().find(|(name, _)| *name == "Electrical");
+        assert!(
+            elec.is_some(),
+            "Electrical category must exist in library browser"
+        );
+        let items = &elec.unwrap().1;
+        assert_eq!(items.len(), 9);
+        assert!(items
+            .iter()
+            .any(|i| i.label == "Resistor" && i.block_type == BlockType::Resistor));
+        assert!(items
+            .iter()
+            .any(|i| i.label == "Capacitor" && i.block_type == BlockType::Capacitor));
+        assert!(items
+            .iter()
+            .any(|i| i.label == "Inductor" && i.block_type == BlockType::Inductor));
+        assert!(items
+            .iter()
+            .any(|i| i.label == "DC Voltage Source" && i.block_type == BlockType::DcVoltageSource));
+        assert!(items
+            .iter()
+            .any(|i| i.label == "AC Voltage Source" && i.block_type == BlockType::AcVoltageSource));
+        assert!(items
+            .iter()
+            .any(|i| i.label == "DC Current Source" && i.block_type == BlockType::DcCurrentSource));
+        assert!(items
+            .iter()
+            .any(|i| i.label == "Ground" && i.block_type == BlockType::Ground));
+        assert!(items
+            .iter()
+            .any(|i| i.label == "Diode" && i.block_type == BlockType::Diode));
+        assert!(items
+            .iter()
+            .any(|i| i.label == "Ideal Switch" && i.block_type == BlockType::IdealSwitch));
+    }
+
+    #[test]
+    fn test_m4_block_rotation_and_simulation_e_unsupported_in_editor() {
+        let mut editor = BlockDiagramEditor::default();
+        editor.add_block(BlockType::Resistor, "R1");
+        assert_eq!(editor.blocks.len(), 1);
+        assert_eq!(editor.blocks[0].rotation, BlockRotation::R0);
+
+        // Rotate block cw
+        editor.blocks[0].rotation = editor.blocks[0].rotation.rotated_cw();
+        assert_eq!(editor.blocks[0].rotation, BlockRotation::R90);
+        editor.blocks[0].rotation = editor.blocks[0].rotation.rotated_cw();
+        assert_eq!(editor.blocks[0].rotation, BlockRotation::R180);
+        editor.blocks[0].rotation = editor.blocks[0].rotation.rotated_cw();
+        assert_eq!(editor.blocks[0].rotation, BlockRotation::R270);
+        editor.blocks[0].rotation = editor.blocks[0].rotation.rotated_cw();
+        assert_eq!(editor.blocks[0].rotation, BlockRotation::R0);
+
+        // Convert to diagram and verify schema_version 3 and rotation
+        let diag = editor.to_block_diagram();
+        assert_eq!(diag.schema_version, 3);
+        assert_eq!(diag.blocks[0].rotation, BlockRotation::R0);
+
+        // Run simulation with electrical block -> should produce full E-UNSUPPORTED error in sim_status
+        editor.run_simulation();
+        assert!(
+            editor.sim_status.contains("E-UNSUPPORTED")
+                && editor.sim_status.contains("electrical simulation")
+                && editor.sim_status.contains("M5"),
+            "Editor sim_status must display full helpful E-UNSUPPORTED message: {}",
+            editor.sim_status
         );
     }
 }

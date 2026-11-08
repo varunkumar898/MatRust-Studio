@@ -15,7 +15,10 @@ pub mod solver;
 pub mod spec;
 
 pub use builder::export_slx;
-pub use diagnostics::{Diagnostic, DiagnosticSeverity, FixAction};
+pub use diagnostics::{
+    apply_fix, check_diagram, lookup_diagnostic, Diagnostic, DiagnosticInfo, DiagnosticSeverity,
+    FixAction, DIAGNOSTIC_REGISTRY,
+};
 pub use electrical::{LinearCircuitSolver, LuDecomposition};
 pub use engine::{
     feedthrough, CompiledBlock, CompiledKind, ExecutionEngine, ModelLayout, SimWorkspace,

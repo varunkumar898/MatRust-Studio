@@ -218,3 +218,89 @@ fn test_cli_slx_inspect_json_command() {
         .stdout(predicate::str::contains("\"total_blocks\": 5"))
         .stdout(predicate::str::contains("\"is_solver_supported\": true"));
 }
+
+#[test]
+fn test_cli_check_command_clean_and_json() {
+    // Create a temporary clean block diagram JSON
+    let temp_dir = std::env::temp_dir();
+    let clean_path = temp_dir.join("clean_model_m9.json");
+    let clean_json = r#"{
+        "name": "clean_model",
+        "schema_version": 3,
+        "blocks": [
+            { "sid": "1", "name": "Constant", "block_type": "Constant", "parameters": { "Value": "10" } }
+        ],
+        "lines": []
+    }"#;
+    std::fs::write(&clean_path, clean_json).expect("write clean_path");
+
+    let mut cmd = Command::cargo_bin("mlapp-cli").expect("binary mlapp-cli exists");
+    cmd.arg("check")
+        .arg(&clean_path)
+        .assert()
+        .code(0)
+        .stdout(predicate::str::contains("clean"));
+
+    // Test with --json
+    let mut cmd_json = Command::cargo_bin("mlapp-cli").expect("binary mlapp-cli exists");
+    cmd_json
+        .arg("check")
+        .arg(&clean_path)
+        .arg("--json")
+        .assert()
+        .code(0)
+        .stdout(predicate::str::contains("[]"));
+
+    let _ = std::fs::remove_file(clean_path);
+}
+
+#[test]
+fn test_cli_check_command_error_and_warning() {
+    let temp_dir = std::env::temp_dir();
+
+    // Diagram with unconnected port in schema 4 -> Error (exit code 2)
+    let err_path = temp_dir.join("error_model_m9.json");
+    let err_json = r#"{
+        "name": "error_model",
+        "schema_version": 4,
+        "blocks": [
+            { "sid": "1", "name": "Gain", "block_type": "Gain", "parameters": { "Gain": "2.0" } }
+        ],
+        "lines": []
+    }"#;
+    std::fs::write(&err_path, err_json).expect("write err_path");
+
+    let mut cmd_err = Command::cargo_bin("mlapp-cli").expect("binary mlapp-cli exists");
+    cmd_err
+        .arg("check")
+        .arg(&err_path)
+        .assert()
+        .code(2)
+        .stdout(predicate::str::contains("E-PORT"))
+        .stdout(predicate::str::contains("Error"));
+
+    let _ = std::fs::remove_file(err_path);
+
+    // Diagram with unconnected port in schema 3 -> Warning (exit code 1)
+    let warn_path = temp_dir.join("warn_model_m9.json");
+    let warn_json = r#"{
+        "name": "warn_model",
+        "schema_version": 3,
+        "blocks": [
+            { "sid": "1", "name": "Gain", "block_type": "Gain", "parameters": { "Gain": "2.0" } }
+        ],
+        "lines": []
+    }"#;
+    std::fs::write(&warn_path, warn_json).expect("write warn_path");
+
+    let mut cmd_warn = Command::cargo_bin("mlapp-cli").expect("binary mlapp-cli exists");
+    cmd_warn
+        .arg("check")
+        .arg(&warn_path)
+        .assert()
+        .code(1)
+        .stdout(predicate::str::contains("W-PORT"))
+        .stdout(predicate::str::contains("Warning"));
+
+    let _ = std::fs::remove_file(warn_path);
+}

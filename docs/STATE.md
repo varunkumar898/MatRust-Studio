@@ -1,19 +1,40 @@
 # MatRust Studio / RustLab Project State
 
-**Current branch:** `feat/m8-measurements` (Milestone M8: Measurements)
+**Current branch:** `feat/m9-error-finding` (Milestone M9: Error Finding & Diagnostics)
 **Repository:** `https://github.com/varunkumar898/MatRust-Studio.git`
-**Current base commit:** `25c3fa4` (`main` after PR #38 merged)
+**Current base commit:** `3b20a5e` (`feat/m8-measurements`)
 **Date:** 2026-11-08
 **Platform:** Windows 11 ARM64 (`aarch64-pc-windows-gnullvm`)
 **Local stable toolchain:** Rust 1.99.1
 **Declared MSRV:** Rust 1.88.0
 **Verification status:** 
-- Local default, all-features, and no-default-features test runs pass at **573/573/573** (net +10 tests in M8).
+- Local default, all-features, and no-default-features test runs pass at **582/582/582** (net +9 tests in M9).
 - Local clippy (all-features, no-default-features, per-crate no-default-features) passes with 0 warnings.
 - `cargo fmt --all -- --check` passes cleanly.
 - `scripts/verify.ps1` runs and exits 0 with all verification steps passing.
 
-## Current work: Milestone M8: Measurements
+## Current work: Milestone M9: Error Finding & Diagnostics
+
+- **Branch `feat/m9-error-finding`**: Implements proactive static compile-time and topological diagnostics, a unified diagnostic catalog of 26 canonical error/warning/info codes, the `apply_fix` automated repair engine with 1-level undo, the `mlapp-cli check` subcommand, and the desktop editor "Problems" panel.
+- **Topological & Static Diagnostic Engine**:
+  - `E-FLOAT`: Detects floating nets and electrical islands lacking a DC conductance path to Ground (Node 0); provides autofix `AddGroundToNet`.
+  - `E-VLOOP`: Topological cycle detection across ideal voltage sources (`DcVoltageSource`, `AcVoltageSource`, `VCVS`, `CurrentSensor`) without series impedance violating KVL; provides autofix `InsertSeriesResistor`.
+  - `E-ICUT`: Topological cut-set analysis detecting isolated current sources or current source series cut-sets violating KCL; provides autofix `InsertParallelResistor`.
+  - `E-PORT` & `W-PORT`: Port connectivity validation. Strict error `E-PORT` in `schema_version >= 4`, warning `W-PORT` with default 0 in `schema_version < 4`; provides autofix `ConnectPortToDefaultZero`.
+  - `E-MULTI` & `W-MULTI`: Multiple lines driving a single input port without a Summer or Mux. Strict error in schema 4, warning in older schemas.
+  - `W-STEP`: Heuristic warning when solver step size $h > 2 \cdot \tau_{min}$ where $\tau_{min} = \min(RC, L/R)$ across connected reactive components.
+  - `E-SINGULAR`: Enhanced runtime LU failure reporting mapping the singular row directly to the offending circuit node or branch equation.
+- **Autofix Engine (`apply_fix`)**:
+  - Atomic diagram repairs: `AddGroundToNet`, `InsertSeriesResistor`, `InsertParallelResistor`, `ConnectPortToDefaultZero`.
+  - Integrated with 1-level undo (`undo_diagram`) for safe revert.
+- **CLI Subcommand (`mlapp-cli check`)**:
+  - `mlapp-cli check <file.json> [--json]`: Outputs formatted diagnostic table or machine-readable JSON. Exit codes: 0 (clean), 1 (warnings only), 2 (errors).
+- **Desktop UI Problems Panel**:
+  - Top toolbar toggle button `Problems (N)`.
+  - Clicking a problem centers and highlights the offending block on the canvas.
+  - Single-click "Fix" button applies autofix, re-checks diagnostics, and enables "Undo Fix".
+
+## Previous work: Milestone M8: Measurements
 
 - **Branch `feat/m8-measurements`**: Implements measurement blocks (`Rms`, `Mean`, `PowerMeasurement`, `Thd`) in signal library category "Measurements", spectrum analysis tools (FFT/DFT), and RFC 4180 CSV export with formula injection escaping.
 - **Windowed Processing & Numerics**:

@@ -14,6 +14,22 @@ pub enum PortKind {
     Electrical,
 }
 
+/// A lightweight reference identifying a block by SID and name.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct BlockRef {
+    pub sid: String,
+    pub name: String,
+}
+
+impl BlockRef {
+    pub fn new(sid: impl Into<String>, name: impl Into<String>) -> Self {
+        Self {
+            sid: sid.into(),
+            name: name.into(),
+        }
+    }
+}
+
 /// Role of a port on a block.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum PortRole {

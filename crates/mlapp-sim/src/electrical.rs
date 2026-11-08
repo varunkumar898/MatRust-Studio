@@ -756,10 +756,28 @@ impl LinearCircuitSolver {
             }
 
             if lu_init_table[0].is_none() {
-                return Err(SimError::singular(
-                    "Initial circuit topology matrix is singular (no DC path to ground or redundant ideal sources)."
-                        .to_string(),
-                ));
+                Self::assemble_mna_matrix_static(
+                    &mut a_scratch,
+                    system_size,
+                    num_nodes,
+                    dt,
+                    0,
+                    0,
+                    &resistors,
+                    &capacitors,
+                    &inductors,
+                    &dc_vsources,
+                    &ac_vsources,
+                    &diodes,
+                    &switches,
+                    &current_sensors,
+                    &vcvs_sources,
+                );
+                let err_msg = match LuDecomposition::decompose(&a_scratch, system_size) {
+                    Err(e) => e.message().to_string(),
+                    Ok(_) => "Initial circuit topology matrix is singular (no DC path to ground or redundant ideal sources).".to_string(),
+                };
+                return Err(SimError::singular(err_msg));
             }
         } else {
             // Informational diagnostic for scratch fallback
@@ -789,11 +807,11 @@ impl LinearCircuitSolver {
                 &current_sensors,
                 &vcvs_sources,
             );
-            if LuDecomposition::decompose(&a_init, system_size).is_err() {
-                return Err(SimError::singular(
-                    "Initial circuit topology matrix is singular (no DC path to ground or redundant ideal sources)."
-                        .to_string(),
-                ));
+            if let Err(e) = LuDecomposition::decompose(&a_init, system_size) {
+                return Err(SimError::singular(format!(
+                    "Initial circuit topology matrix is singular: {}",
+                    e.message()
+                )));
             }
         }
 

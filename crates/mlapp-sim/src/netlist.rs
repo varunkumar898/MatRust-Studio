@@ -397,8 +397,22 @@ pub fn resolve_electrical_nets(diagram: &BlockDiagram) -> NetlistResult {
                         "Electrical island containing blocks {:?} has no Ground reference -> every connected electrical circuit needs a Ground block -> connect at least one terminal in this island to a Ground block",
                         sids
                     ),
-                    sids,
+                    sids.clone(),
                 ));
+                diagnostics.push(
+                    Diagnostic::error(
+                        "E-FLOAT",
+                        format!(
+                            "Electrical island containing blocks {:?} has no DC path to ground -> every connected electrical circuit needs a Ground block -> connect at least one terminal in this island to a Ground block",
+                            sids
+                        ),
+                        sids.clone(),
+                    )
+                    .with_fix(crate::diagnostics::FixAction::AddGroundToNet {
+                        net_id: 1,
+                        position: (100.0, 180.0),
+                    }),
+                );
             }
         }
     }

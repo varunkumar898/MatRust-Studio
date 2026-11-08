@@ -12,11 +12,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use thiserror::Error;
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct BlockRef {
-    pub sid: String,
-    pub name: String,
-}
+pub use crate::model::BlockRef;
 
 #[derive(Debug, Clone, Error, PartialEq)]
 pub enum SimError {

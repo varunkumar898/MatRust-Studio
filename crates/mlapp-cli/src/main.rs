@@ -102,6 +102,15 @@ enum Commands {
         #[arg(long, default_value_t = false)]
         json: bool,
     },
+    /// Statically analyze a block diagram JSON model and print diagnostic errors/warnings
+    Check {
+        /// Path to block diagram .json file
+        file_path: PathBuf,
+
+        /// Output diagnostics as JSON array
+        #[arg(long, default_value_t = false)]
+        json: bool,
+    },
 }
 
 fn main() -> Result<()> {
@@ -305,6 +314,61 @@ fn main() -> Result<()> {
                         println!("  - {blk}");
                     }
                 }
+            }
+        }
+        Commands::Check { file_path, json } => {
+            let content = std::fs::read_to_string(&file_path)
+                .with_context(|| format!("Failed to read diagram file at {:?}", file_path))?;
+            let diagram: mlapp_sim::BlockDiagram =
+                serde_json::from_str(&content).with_context(|| {
+                    format!("Failed to parse JSON BlockDiagram from {:?}", file_path)
+                })?;
+            let diags = mlapp_sim::check_diagram(&diagram, diagram.simulation_config.as_ref());
+
+            if json {
+                println!("{}", serde_json::to_string_pretty(&diags)?);
+            } else if diags.is_empty() {
+                println!("No diagnostics found. Diagram is clean.");
+            } else {
+                println!(
+                    "{:<12} | {:<8} | {:<16} | {:<40} | Suggested Fix",
+                    "Code", "Severity", "Location", "Message"
+                );
+                println!(
+                    "{:-<12}-+-{:-<8}-+-{:-<16}-+-{:-<40}-+---------------------",
+                    "", "", "", ""
+                );
+                for d in &diags {
+                    let loc = if d.block_sids.is_empty() {
+                        "-".to_string()
+                    } else {
+                        d.block_sids.join(", ")
+                    };
+                    let fix = d.typical_fix().unwrap_or("-");
+                    println!(
+                        "{:<12} | {:<8} | {:<16} | {:<40} | {}",
+                        d.code,
+                        d.severity.as_str(),
+                        loc,
+                        d.message,
+                        fix
+                    );
+                }
+            }
+
+            let has_error = diags
+                .iter()
+                .any(|d| d.severity == mlapp_sim::DiagnosticSeverity::Error);
+            let has_warning = diags
+                .iter()
+                .any(|d| d.severity == mlapp_sim::DiagnosticSeverity::Warning);
+
+            if has_error {
+                std::process::exit(2);
+            } else if has_warning {
+                std::process::exit(1);
+            } else {
+                std::process::exit(0);
             }
         }
     }

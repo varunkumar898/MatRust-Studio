@@ -3316,13 +3316,14 @@ mod tests {
         assert_eq!(diag.schema_version, 3);
         assert_eq!(diag.blocks[0].rotation, BlockRotation::R0);
 
-        // Add nonlinear electrical block -> should produce full E-UNSUPPORTED error in sim_status prior to M6
-        editor.add_block(BlockType::Diode, "D1");
+        // Add circuit with > 10 switches -> should produce full E-UNSUPPORTED error in sim_status
+        for k in 0..11 {
+            let name = format!("D{k}");
+            editor.add_block(BlockType::Diode, &name);
+        }
         editor.run_simulation();
         assert!(
-            editor.sim_status.contains("E-UNSUPPORTED")
-                && editor.sim_status.contains("Nonlinear electrical blocks")
-                && editor.sim_status.contains("M6"),
+            editor.sim_status.contains("E-UNSUPPORTED"),
             "Editor sim_status must display full helpful E-UNSUPPORTED message: {}",
             editor.sim_status
         );

@@ -663,20 +663,37 @@ fn test_cross_domain_signal_to_electrical_error() {
 
 #[test]
 fn test_simulate_diagram_with_electrical_blocks_gives_e_unsupported() {
-    let mut d = BlockDiagram::new("PreM6Circuit");
+    let mut d = BlockDiagram::new("Over10SwitchesCircuit");
     d.add_block(Block::new("gnd", "Ground", BlockType::Ground));
-    d.add_block(Block::new("d1", "Diode", BlockType::Diode));
-    d.add_electrical_line("d1", 0, "gnd", 0);
+    d.add_block(Block::new("vs", "Vs", BlockType::DcVoltageSource).with_param("Voltage", "5.0"));
+    d.add_electrical_line("vs", 1, "gnd", 0);
+
+    let mut prev_sid = "vs".to_string();
+    let mut prev_term = 0;
+    for k in 0..11 {
+        let sid = format!("d{k}");
+        d.add_block(Block::new(&sid, format!("D{k}"), BlockType::Diode));
+        d.add_electrical_line(&prev_sid, prev_term, &sid, 0);
+        prev_sid = sid;
+        prev_term = 1;
+    }
+    d.add_block(Block::new("r", "R", BlockType::Resistor).with_param("Resistance", "100.0"));
+    d.add_electrical_line(&prev_sid, prev_term, "r", 0);
+    d.add_electrical_line("r", 1, "gnd", 0);
 
     let config = SimulationConfig::default();
     let result = simulate_diagram(&d, &config);
 
-    assert!(result.is_err(), "Simulation must return error prior to M6");
+    assert!(
+        result.is_err(),
+        "Circuit with > 10 switches must return error"
+    );
     let err = result.err().unwrap();
     assert_eq!(err.code(), "E-UNSUPPORTED");
+    assert!(err.message().contains("11 switches/diodes"));
     assert!(err
         .message()
-        .contains("Nonlinear electrical blocks (Diode, IdealSwitch) arrive in Milestone M6"));
+        .contains("maximum supported topologies: 2^10 = 1024"));
 }
 
 #[test]

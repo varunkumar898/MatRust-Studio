@@ -1,27 +1,29 @@
 # MatRust Studio / RustLab Project State
 
-**Current branch:** `feat/m5-linear-circuits-mna` (Milestone M5: Modified Nodal Analysis & Linear Circuits)
+**Current branch:** `feat/m6-nonlinear-circuits` (Milestone M6: Piecewise-Linear & Switching Circuits)
 **Repository:** `https://github.com/varunkumar898/MatRust-Studio.git`
-**Current base commit:** `c7f8720` (`main` after PR #35 merged)
+**Current base commit:** `115a66c` (`main` after PR #36 merged)
 **Date:** 2026-11-08
 **Platform:** Windows 11 ARM64 (`aarch64-pc-windows-gnullvm`)
 **Local stable toolchain:** Rust 1.99.1
 **Declared MSRV:** Rust 1.88.0
 **Verification status:** 
-- Local default, all-features, and no-default-features test runs pass at **532/532/532** (net +13 tests in M5).
+- Local default, all-features, and no-default-features test runs pass at **540/540/540** (net +8 tests in M6).
 - Local clippy (all-features, no-default-features, per-crate no-default-features) passes with 0 warnings.
 - `cargo fmt --all -- --check` passes cleanly.
 - `scripts/verify.ps1` runs and exits 0 with all verification steps passing.
 
-## Current work: Milestone M5: Modified Nodal Analysis & Linear Circuits
+## Current work: Milestone M6: Piecewise-Linear & Switching Circuits
 
-- **Branch `feat/m5-linear-circuits-mna`**: Implements Modified Nodal Analysis (MNA), companion models, dense self-contained LU decomposition with partial pivoting, constant-matrix fast path, zero-allocation simulation stepping, and analytical oracles.
-- **Data Model & Linear Elements**: Linear circuit solver supports Resistor, Capacitor, Inductor, DC Voltage Source, AC Voltage Source, DC Current Source, and Ground.
-- **Companion Models (Dommel 1969)**: Backward Euler on step 1 to eliminate cold-start trapezoidal ringing; Trapezoidal rule on subsequent steps for $O(dt^2)$ accuracy. Initial condition solve ($A_{init}$) establishes exact DC operating points and component voltages/currents at $t=0$.
-- **Constant Matrix Fast Path**: Matrices $A_{init}$, $A_{BE}$, and $A_{Trap}$ are assembled and factorized once during compilation. Per-step iteration only updates the dynamic RHS vector $z(t)$ and performs forward/backward substitution.
-- **Zero Heap Allocations**: Verified by `test_zero_allocations_during_mna_circuit_simulation_step` over 10,000 steps with a counting allocator (0 allocations).
-- **Diagnostics**: Typed diagnostic `E-SINGULAR` for zero pivots ($< 10^{-12}$) and `E-SOLVER` rejecting variable-step solvers on electrical circuits.
-- **Analytical Oracles**: Closed-form comparisons for RC transient ($< 1\text{ mV}$ error on $10\text{V}$), RL transient ($< 0.1\text{ mA}$ error), second-order underdamped RLC transient ($< 0.02\text{V}$ error on peak overshoot), and AC RC filter at $f_c$ ($< 0.5\%$ error on steady-state amplitude).
+- **Branch `feat/m6-nonlinear-circuits`**: Implements piecewise-linear semiconductor elements (Diode) and controlled switching elements (Ideal Switch) within Modified Nodal Analysis (MNA).
+- **Diode Piecewise-Linear Model**: Two-terminal element with parameters `ForwardVoltage` ($V_f \ge 0$), `OnResistance` ($R_{on} > 0$), and `OffResistance` ($R_{off} > R_{on}$). In ON state, stamps conductance $G_{on} = 1/R_{on}$ and companion current source $I_{eq} = G_{on} V_f$; in OFF state, stamps $G_{off} = 1/R_{off}$ and $I_{eq} = 0$.
+- **Ideal Switch Model**: Three-terminal element (positive terminal $p$, negative terminal $n$, signal control port `ctrl`) with parameters $R_{on}$, $R_{off}$, and `Threshold`. Switched by signal output of driving blocks with threshold comparison ($u_{ctrl} \ge \text{Threshold}$).
+- **Within-Step Fixed-Point Iteration**: Diode and switch conduction states resolved self-consistently (up to 100 iterations) per simulation step.
+- **Switch Chattering & Limit Cycle Detection (`E-CHATTER`)**: Tracks state mask history within each step; aborts with typed diagnostic error `E-CHATTER` upon detecting repeating state sequences or non-convergence.
+- **Fast-Path Matrix Pre-factorization**: All $2^{N_s}$ matrix topologies pre-factored at compile time for circuits with $N_s \le 10$ ($2^{N_s} \le 1024$) across $A_{init}$, $A_{BE}$, and $A_{Trap}$. Zero matrix factorizations during stepping.
+- **Zero Heap Allocations**: Verified by `test_zero_allocations_during_nonlinear_circuit_simulation_step` over 10,000 steps of diode/switch operation (0 allocations).
+- **Component State & Signal Logging**: Logs branch voltages (`{name}.v`), branch currents (`{name}.i`), and component states (`{name}.state` as $1.0$ for ON, $0.0$ for OFF).
+- **Analytical Oracles**: Half-wave rectifier with resistive load (conduction angle and peak $V_{peak} - V_f$), half-wave rectifier with smoothing capacitor ($RC$ ripple), diode voltage clipper ($V_{bias} + V_f$), ideal switch modulated by step control, buck converter freewheeling diode & switch in CCM/DCM, switch chattering limit cycle detection, full-wave diode bridge rectifier.
 
 - Branch `gui/polish-1` created from `main` @ `425f54e` (master prompt v2, S-step plan).
 - **S1 GUI inventory + audit COMPLETE** (no code changed): `docs/gui-audit.md` documents

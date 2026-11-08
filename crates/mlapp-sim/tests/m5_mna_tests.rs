@@ -506,17 +506,26 @@ fn test_variable_step_ode45_on_electrical_circuit_gives_e_solver() {
 
 #[test]
 fn test_nonlinear_electrical_blocks_give_e_unsupported() {
-    // Milestone M5 supports linear circuits. Diode and IdealSwitch arrive in M6.
-    let mut d = BlockDiagram::new("DiodeCircuit");
+    // Circuits with > 10 switches/diodes exceed the 2^10 = 1024 compile-time pre-factorization limit
+    // and produce a clean E-UNSUPPORTED diagnostic.
+    let mut d = BlockDiagram::new("LargeSwitchingCircuit");
     d.add_block(Block::new("gnd", "GND", BlockType::Ground));
     d.add_block(Block::new("vs", "Vs", BlockType::DcVoltageSource).with_param("Voltage", "5.0"));
-    d.add_block(Block::new("d", "D1", BlockType::Diode));
-    d.add_block(Block::new("r", "R", BlockType::Resistor).with_param("Resistance", "100.0"));
-
-    d.add_electrical_line("vs", 0, "d", 0);
-    d.add_electrical_line("d", 1, "r", 0);
-    d.add_electrical_line("r", 1, "gnd", 0);
     d.add_electrical_line("vs", 1, "gnd", 0);
+
+    let mut prev_sid = "vs".to_string();
+    let mut prev_term = 0;
+    // Add 11 diodes in series
+    for k in 0..11 {
+        let sid = format!("d{k}");
+        d.add_block(Block::new(&sid, format!("D{k}"), BlockType::Diode));
+        d.add_electrical_line(&prev_sid, prev_term, &sid, 0);
+        prev_sid = sid;
+        prev_term = 1;
+    }
+    d.add_block(Block::new("r", "R", BlockType::Resistor).with_param("Resistance", "100.0"));
+    d.add_electrical_line(&prev_sid, prev_term, "r", 0);
+    d.add_electrical_line("r", 1, "gnd", 0);
 
     let config = SimulationConfig {
         start_time: 0.0,
@@ -526,9 +535,13 @@ fn test_nonlinear_electrical_blocks_give_e_unsupported() {
         ..Default::default()
     };
 
-    let err = simulate_diagram(&d, &config).expect_err("Diode must produce E-UNSUPPORTED in M5");
+    let err = simulate_diagram(&d, &config)
+        .expect_err("Circuits with > 10 switches must give E-UNSUPPORTED");
     assert_eq!(err.code(), "E-UNSUPPORTED");
-    assert!(err.message().contains("Milestone M6"));
+    assert!(err.message().contains("11 switches/diodes"));
+    assert!(err
+        .message()
+        .contains("maximum supported topologies: 2^10 = 1024"));
 }
 
 #[test]

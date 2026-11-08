@@ -82,6 +82,14 @@ cargo run -p mlapp-cli -- run app.mlapp
 cargo run -p mlapp-cli -- run --gui app.mlapp
 ```
 
+### Running the Desktop IDE (`matrust_studio`)
+```bash
+cargo run --release -p matrust_studio
+```
+
+> [!NOTE]
+> **Windows ARM64 with the gnullvm toolchain**: run via `cargo run --release -p matrust_studio`, or copy `libunwind.dll` from the toolchain bin directory next to the exe. CI release builds (x64 MSVC) are not affected.
+
 ### Inspect Simulink Model (`.slx`)
 ```bash
 cargo run -p mlapp-cli -- slx-inspect model.slx

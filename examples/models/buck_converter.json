@@ -1,0 +1,180 @@
+{
+  "name": "buck_converter",
+  "schema_version": 4,
+  "simulation_config": {
+    "start_time": 0.0,
+    "stop_time": 0.002,
+    "step_size": 2e-7,
+    "solver": "FixedStepEuler",
+    "abs_tol": 1e-6,
+    "rel_tol": 1e-3,
+    "max_step": 1e-5,
+    "initial_step": 2e-7,
+    "enable_fsal": true,
+    "track_chatter": false,
+    "export_format": "Memory"
+  },
+  "blocks": [
+    {
+      "sid": "1",
+      "name": "Vin",
+      "block_type": "DcVoltageSource",
+      "parameters": { "Voltage": "24.0" },
+      "position": [100.0, 100.0, 180.0, 150.0]
+    },
+    {
+      "sid": "2",
+      "name": "SW1",
+      "block_type": "IdealSwitch",
+      "parameters": { "OnResistance": "0.01", "OffResistance": "1e6", "Threshold": "0.5" },
+      "position": [240.0, 100.0, 320.0, 150.0]
+    },
+    {
+      "sid": "3",
+      "name": "D_freewheel",
+      "block_type": "Diode",
+      "parameters": { "ForwardVoltage": "0.7", "OnResistance": "0.01", "OffResistance": "1e6" },
+      "position": [340.0, 220.0, 420.0, 270.0]
+    },
+    {
+      "sid": "4",
+      "name": "L_buck",
+      "block_type": "Inductor",
+      "parameters": { "Inductance": "1e-4" },
+      "position": [460.0, 100.0, 540.0, 150.0]
+    },
+    {
+      "sid": "5",
+      "name": "C_out",
+      "block_type": "Capacitor",
+      "parameters": { "Capacitance": "4.7e-5" },
+      "position": [600.0, 100.0, 680.0, 150.0]
+    },
+    {
+      "sid": "6",
+      "name": "R_load",
+      "block_type": "Resistor",
+      "parameters": { "Resistance": "5.0" },
+      "position": [740.0, 100.0, 820.0, 150.0]
+    },
+    {
+      "sid": "7",
+      "name": "GND",
+      "block_type": "Ground",
+      "parameters": {},
+      "position": [440.0, 340.0, 490.0, 390.0]
+    },
+    {
+      "sid": "8",
+      "name": "V_Sensor",
+      "block_type": "VoltageSensor",
+      "parameters": {},
+      "position": [880.0, 100.0, 960.0, 150.0]
+    },
+    {
+      "sid": "9",
+      "name": "V_ref",
+      "block_type": "Constant",
+      "parameters": { "Value": "5.0" },
+      "position": [100.0, -100.0, 180.0, -50.0]
+    },
+    {
+      "sid": "10",
+      "name": "Sum_err",
+      "block_type": "Sum",
+      "parameters": { "Inputs": "|+-" },
+      "position": [240.0, -100.0, 290.0, -50.0]
+    },
+    {
+      "sid": "11",
+      "name": "PID_ctrl",
+      "block_type": "Pid",
+      "parameters": { "P": "0.1", "I": "500.0", "D": "0.0", "N": "100.0" },
+      "position": [340.0, -100.0, 420.0, -50.0]
+    },
+    {
+      "sid": "12",
+      "name": "Carrier",
+      "block_type": "Sawtooth",
+      "parameters": { "Frequency": "50000.0", "Amplitude": "1.0" },
+      "position": [460.0, -160.0, 540.0, -110.0]
+    },
+    {
+      "sid": "13",
+      "name": "PWM_Comp",
+      "block_type": "RelationalOperator",
+      "parameters": { "Operator": ">=" },
+      "position": [580.0, -100.0, 660.0, -50.0]
+    }
+  ],
+  "lines": [
+    {
+      "src": { "block_sid": "1", "port_index": 0, "port_kind": "Electrical" },
+      "dst": { "block_sid": "2", "port_index": 0, "port_kind": "Electrical" }
+    },
+    {
+      "src": { "block_sid": "2", "port_index": 1, "port_kind": "Electrical" },
+      "dst": { "block_sid": "4", "port_index": 0, "port_kind": "Electrical" }
+    },
+    {
+      "src": { "block_sid": "3", "port_index": 1, "port_kind": "Electrical" },
+      "dst": { "block_sid": "4", "port_index": 0, "port_kind": "Electrical" }
+    },
+    {
+      "src": { "block_sid": "4", "port_index": 1, "port_kind": "Electrical" },
+      "dst": { "block_sid": "5", "port_index": 0, "port_kind": "Electrical" }
+    },
+    {
+      "src": { "block_sid": "5", "port_index": 0, "port_kind": "Electrical" },
+      "dst": { "block_sid": "6", "port_index": 0, "port_kind": "Electrical" }
+    },
+    {
+      "src": { "block_sid": "6", "port_index": 0, "port_kind": "Electrical" },
+      "dst": { "block_sid": "8", "port_index": 0, "port_kind": "Electrical" }
+    },
+    {
+      "src": { "block_sid": "1", "port_index": 1, "port_kind": "Electrical" },
+      "dst": { "block_sid": "7", "port_index": 0, "port_kind": "Electrical" }
+    },
+    {
+      "src": { "block_sid": "3", "port_index": 0, "port_kind": "Electrical" },
+      "dst": { "block_sid": "7", "port_index": 0, "port_kind": "Electrical" }
+    },
+    {
+      "src": { "block_sid": "5", "port_index": 1, "port_kind": "Electrical" },
+      "dst": { "block_sid": "7", "port_index": 0, "port_kind": "Electrical" }
+    },
+    {
+      "src": { "block_sid": "6", "port_index": 1, "port_kind": "Electrical" },
+      "dst": { "block_sid": "7", "port_index": 0, "port_kind": "Electrical" }
+    },
+    {
+      "src": { "block_sid": "8", "port_index": 1, "port_kind": "Electrical" },
+      "dst": { "block_sid": "7", "port_index": 0, "port_kind": "Electrical" }
+    },
+    {
+      "src": { "block_sid": "9", "port_index": 1, "port_kind": "Signal" },
+      "dst": { "block_sid": "10", "port_index": 1, "port_kind": "Signal" }
+    },
+    {
+      "src": { "block_sid": "8", "port_index": 1, "port_kind": "Signal" },
+      "dst": { "block_sid": "10", "port_index": 2, "port_kind": "Signal" }
+    },
+    {
+      "src": { "block_sid": "10", "port_index": 1, "port_kind": "Signal" },
+      "dst": { "block_sid": "11", "port_index": 1, "port_kind": "Signal" }
+    },
+    {
+      "src": { "block_sid": "11", "port_index": 1, "port_kind": "Signal" },
+      "dst": { "block_sid": "13", "port_index": 1, "port_kind": "Signal" }
+    },
+    {
+      "src": { "block_sid": "12", "port_index": 1, "port_kind": "Signal" },
+      "dst": { "block_sid": "13", "port_index": 2, "port_kind": "Signal" }
+    },
+    {
+      "src": { "block_sid": "13", "port_index": 1, "port_kind": "Signal" },
+      "dst": { "block_sid": "2", "port_index": 1, "port_kind": "Signal" }
+    }
+  ]
+}

@@ -65,11 +65,11 @@ BlockDiagram (JSON or .slx)
 ```
 
 ### Diagnostics & Data Model
-- `Diagnostic = { code, severity, message, block_sids, fix: Option<FixAction> }`.
+- `Diagnostic = { code, severity, message, block_sids, fix: Option<Box<FixAction>> }`.
 - `Ports: PortKind { Signal (directed), Electrical (undirected terminal) }`.
 - Electrical wires merge terminals into nets (union-find). Signal and electrical
-  connect ONLY through bridge blocks. Every connected electrical circuit needs a
-  Ground block.
+  connect ONLY through bridge blocks (`VoltageSensor`, `CurrentSensor`, `VCVS`, `VCCS`).
+  Every connected electrical circuit needs a Ground block.
 - Electrical solving: companion-model MNA with the model's fixed step $h$;
   trapezoidal by default, Backward Euler for the first step and after any switching
   event; electrical blocks require a fixed-step solver (variable step + electrical
@@ -78,7 +78,48 @@ BlockDiagram (JSON or .slx)
   in the same step must pass through a state block (`UnitDelay`, `Integrator`, `Zero-Order Hold`,
   strictly proper transfer function); otherwise the engine inserts a
   one-step delay and reports warning `W-DELAY`, never silently.
+- **Nonlinear & Switching**: Diodes and switches use piecewise-linear companion stamps.
+  Finite off-resistance $R_{off}$ ($1\text{ M}\Omega$ default) is required to maintain
+  matrix well-conditioning without topology changes. Within-step switching iteration
+  resolves state convergence; limit cycles trigger warning `W-CHATTER` naming the
+  devices and timestamp; persisting for $>100$ consecutive steps escalates to `E-CHATTER`.
+- **Measurements**: `PowerMeasurement` provides 5 standard output signals:
+  `P` (active power), `Q1` (fundamental reactive power), `S` (apparent power),
+  `PF` (power factor), and `DPF` (displacement power factor $\cos\phi_1$).
+- **Schema Versions**:
+  - `schema_version 1-3`: Legacy lenient port typing; mismatched wires emit `W-PORT` or `W-MULTI`.
+  - `schema_version 4`: Strict validation; mismatched wires or multiple drivers trigger errors `E-PORT` or `E-MULTI`.
 - Sign convention: passive sign convention, documented.
+
+### Diagnostics Catalog (M9 Standard Registry)
+| Code | Severity | Description | Automated Fix |
+|:---|:---|:---|:---|
+| `E-ALG` | Error | Unbroken algebraic loop of direct-feedthrough blocks | Insert UnitDelay |
+| `E-STEP` | Error | Solver step size invalid, non-positive, or below limit | Auto-correct step size |
+| `E-NAN` | Error | NaN or Inf produced during evaluation | None |
+| `E-SAMPLE` | Error | Discrete block missing required SampleTime | Assign model step size |
+| `E-PARAM` | Error | Parameter invalid, out of bounds, or unparseable | Reset to spec default |
+| `E-GND` | Error | Circuit diagram lacks Ground block | Add Ground block to net |
+| `E-FLOAT` | Error | Floating net or isolated island without DC path to Ground | Connect Ground |
+| `E-VLOOP` | Error | Closed loop of ideal voltage sources/switches | Insert series resistor |
+| `E-ICUT` | Error | Cut-set of ideal current sources violating KCL | Insert parallel resistor |
+| `E-SINGULAR`| Error | MNA matrix singular during LU factorization | Add stabilization resistor |
+| `E-PORT` | Error | Cross-domain connection between Signal and Electrical (`schema_version >= 4`) | Remove or replace line |
+| `E-MULTI` | Error | Multiple signal outputs wired to single input port (`schema_version >= 4`) | Insert Sum block |
+| `E-SOLVER` | Error | Electrical circuit simulated with variable-step solver | Switch to fixed-step solver |
+| `E-CHATTER` | Error | Switch chatter/limit cycle persisted for $>100$ consecutive steps | None |
+| `W-DELAY` | Warning| Direct cross-domain algebraic feedback resolved with 1-step latency | None |
+| `W-CHATTER` | Warning| Switching limit cycle detected; prior step states retained | None |
+| `W-STEP` | Warning| Step size $h > 2\tau_{min}$ risking numerical oscillation | Reduce step size |
+| `W-PORT` | Warning| Cross-domain wire in legacy model (`schema_version < 4`) | Remove or replace line |
+| `W-MULTI` | Warning| Multiple signal drivers in legacy model (`schema_version < 4`) | Insert Sum block |
+| `W-WINDOW` | Warning| Measurement window not an exact integer multiple of sample time | None |
+| `W-UNUSED` | Warning| Block output port unconnected | Connect to Terminator |
+| `W-CHG` | Warning| Parameter changed during simulation | None |
+| `I-SLOW` | Info | Solver taking smaller steps due to high stiffness | None |
+| `I-FAST` | Info | Fast-path pre-factored switch table active | None |
+| `I-INFO` | Info | Informational diagnostic | None |
+| `I-AUTOSCALE`| Info | Scope autoscale triggered | None |
 
 ### Allowed References (cite ONLY these):
 - Dommel 1969 (electromagnetic transients)
@@ -92,14 +133,14 @@ BlockDiagram (JSON or .slx)
 - **M0**: Codebase audit and plan (completed)
 - **M1**: Execution engine (topological order, Tarjan SCC E-ALG, pure eval, workspace) (completed, PR #29)
 - **M2**: Solvers (Euler, RK4, Dormand-Prince 5(4), E-STEP/E-NAN/E-SAMPLE/E-PARAM, UnitDelay SampleTime rule, schema_version 2, editor dropdown) (completed, PR #30)
-- **M3**: Sources and control blocks (spec table driven; Sawtooth, Triangle, Pulse Generator, Repeating Sequence, Clock, Sine Wave units; Transfer Function, Discrete Transfer Function, PID with anti-windup, ZOH, Relational/Logical Operator, Switch, Abs, Math Function)
-- **M4**: Electrical data model and editor (PortKind, terminals, nets via union-find, block rotation; Resistor, Capacitor, Inductor, DC/AC Voltage Source, DC Current Source, Ground, Diode, Ideal Switch; Electrical library tab)
-- **M5**: MNA, linear circuits (Modified Nodal Analysis, companion models, dense self-contained LU with partial pivoting, constant-matrix fast path, E-SINGULAR)
-- **M6**: Nonlinear and switching (Piecewise linear Diode, Ideal Switch, Thyristor, chatter detection W-CHATTER, event localization via bisection)
-- **M7**: Bridges and hybrid coupling (Voltage/Current Sensors, Controlled Sources, sampling/hold rules, W-DELAY diagnostic)
-- **M8**: Measurements (RMS, Mean, Power Measurement, FFT radix-2/DFT, THD, spectrum bar plot, CSV export)
-- **M9**: Error finding and developer support (validate() pre-check, Problems panel with one-click fix, mlapp-cli check, canonical diagnostics E-ALG, E-STEP, E-NAN, E-SAMPLE, E-PARAM, E-GND, E-FLOAT, E-VLOOP, E-ICUT, E-SINGULAR, E-PORT, E-MULTI, E-SOLVER, E-CHATTER, W-DELAY, W-CHATTER, W-STEP, I-SLOW)
-- **M10**: Examples and docs (rc_charge, rlc_underdamped, half_wave_rectifier, buck_open_loop, buck_closed_loop_pi, rl_load_power, thd_square_wave, pid_first_order; theory docs)
+- **M3**: Sources and control blocks (spec table driven; Sawtooth, Triangle, Pulse Generator, Repeating Sequence, Clock, Sine Wave units; Transfer Function, Discrete Transfer Function, PID with anti-windup, ZOH, Relational/Logical Operator, Switch, Abs, Math Function) (completed, PR #32)
+- **M4**: Electrical data model and editor (PortKind, terminals, nets via union-find, block rotation; Resistor, Capacitor, Inductor, DC/AC Voltage Source, DC Current Source, Ground, Diode, Ideal Switch; Electrical library tab) (completed, PR #34)
+- **M5**: MNA, linear circuits (Modified Nodal Analysis, companion models, dense self-contained LU with partial pivoting, constant-matrix fast path, E-SINGULAR) (completed, PR #36)
+- **M6**: Nonlinear and switching (Piecewise linear Diode, Ideal Switch, chatter detection W-CHATTER, limit cycle handling, pre-factored switch topologies) (completed, PR #37)
+- **M7**: Bridges and hybrid coupling (Voltage/Current Sensors, Controlled Sources, sampling/hold rules, W-DELAY diagnostic) (completed, PR #38)
+- **M8**: Measurements (RMS, Mean, Power Measurement with DPF, FFT radix-2/DFT, THD, spectrum bar plot, CSV export)
+- **M9**: Error finding and developer support (validate() pre-check, Problems panel with one-click fix, mlapp-cli check, canonical diagnostics catalog)
+- **M10**: Examples and docs (8 worked models: RLC transient, rectifiers, buck converter, boost converter, inverting op-amp, non-inverting op-amp, DC motor, voice coil actuator; simulation design, MNA theory docs, claims mapping)
 - **M11**: C code generation (C99, allocation-free, static MNA assembly, host test harness, gcc/clang parity)
 - **M12**: Workflow polish (Background simulation worker thread with Cancel, undo/redo, parameter sweep, inline validation text, release notes)
 

@@ -304,3 +304,81 @@ fn test_cli_check_command_error_and_warning() {
 
     let _ = std::fs::remove_file(warn_path);
 }
+
+#[test]
+fn test_cli_codegen_command() {
+    let temp_dir = std::env::temp_dir().join("mlapp_cli_codegen_test");
+    let _ = std::fs::create_dir_all(&temp_dir);
+    let model_path = temp_dir.join("clean_model.json");
+    let out_dir = temp_dir.join("out");
+
+    let model_json = r#"{
+        "name": "gain_sys",
+        "schema_version": 4,
+        "blocks": [
+            { "sid": "1", "name": "Constant", "block_type": "Constant", "parameters": { "Value": "3.14" } },
+            { "sid": "2", "name": "Gain", "block_type": "Gain", "parameters": { "Gain": "2.0" } }
+        ],
+        "lines": [
+            { "src": { "block_sid": "1", "port_index": 0 }, "dst": { "block_sid": "2", "port_index": 0 } }
+        ]
+    }"#;
+    std::fs::write(&model_path, model_json).expect("write model_path");
+
+    let mut cmd = Command::cargo_bin("mlapp-cli").expect("binary mlapp-cli exists");
+    cmd.arg("codegen")
+        .arg(&model_path)
+        .arg("--out-dir")
+        .arg(&out_dir)
+        .arg("--name")
+        .arg("gain_sys")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains(
+            "Successfully generated C99 code for model 'gain_sys'",
+        ));
+
+    assert!(out_dir.join("gain_sys.h").exists());
+    assert!(out_dir.join("gain_sys.c").exists());
+    assert!(out_dir.join("gain_sys_main.c").exists());
+
+    let _ = std::fs::remove_dir_all(&temp_dir);
+}
+
+#[test]
+fn test_cli_sweep_command() {
+    let temp_dir = std::env::temp_dir().join("mlapp_cli_sweep_test");
+    let _ = std::fs::create_dir_all(&temp_dir);
+    let model_path = temp_dir.join("sweep_model.json");
+
+    let model_json = r#"{
+        "name": "sweep_model",
+        "schema_version": 4,
+        "blocks": [
+            { "sid": "1", "name": "Constant", "block_type": "Constant", "parameters": { "Value": "1.0" } },
+            { "sid": "2", "name": "Gain", "block_type": "Gain", "parameters": { "Gain": "1.0" } },
+            { "sid": "3", "name": "Scope", "block_type": "Scope" }
+        ],
+        "lines": [
+            { "src": { "block_sid": "1", "port_index": 0 }, "dst": { "block_sid": "2", "port_index": 0 } },
+            { "src": { "block_sid": "2", "port_index": 0 }, "dst": { "block_sid": "3", "port_index": 0 } }
+        ]
+    }"#;
+    std::fs::write(&model_path, model_json).expect("write model_path");
+
+    let mut cmd = Command::cargo_bin("mlapp-cli").expect("binary mlapp-cli exists");
+    cmd.arg("sweep")
+        .arg(&model_path)
+        .arg("--block")
+        .arg("2")
+        .arg("--param")
+        .arg("Gain")
+        .arg("--values")
+        .arg("1.0,2.0,4.0")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Parameter Sweep Results (3 runs)"))
+        .stdout(predicate::str::contains("Scope="));
+
+    let _ = std::fs::remove_dir_all(&temp_dir);
+}

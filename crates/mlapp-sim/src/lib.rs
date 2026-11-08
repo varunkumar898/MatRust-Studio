@@ -3,6 +3,7 @@
 #![deny(clippy::unwrap_used)]
 
 pub mod builder;
+pub mod codegen;
 pub mod diagnostics;
 pub mod electrical;
 pub mod engine;
@@ -13,8 +14,10 @@ pub mod netlist;
 pub mod parser;
 pub mod solver;
 pub mod spec;
+pub mod sweep;
 
 pub use builder::export_slx;
+pub use codegen::{generate_c, CodegenConfig, GeneratedCode};
 pub use diagnostics::{
     apply_fix, check_diagram, lookup_diagnostic, Diagnostic, DiagnosticInfo, DiagnosticSeverity,
     FixAction, DIAGNOSTIC_REGISTRY,
@@ -41,3 +44,4 @@ pub use spec::{
     all_block_specs, block_spec, param_specs_for, parse_float_vector, pin_geometry,
     validate_block_params, BlockSpec, ParamKind, ParamSpec,
 };
+pub use sweep::{run_parameter_sweep, ParameterSweepConfig, SweepRunResult};

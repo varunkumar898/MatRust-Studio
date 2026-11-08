@@ -111,6 +111,52 @@ enum Commands {
         #[arg(long, default_value_t = false)]
         json: bool,
     },
+    /// Generate standalone, allocation-free ISO C99 code for a block diagram model
+    Codegen {
+        /// Path to block diagram .json file
+        file_path: PathBuf,
+
+        /// Output directory destination for generated C source and header files
+        #[arg(short, long, default_value = "codegen_out")]
+        out_dir: PathBuf,
+
+        /// Optional model name identifier for C structs and functions
+        #[arg(long)]
+        name: Option<String>,
+
+        /// Step size in seconds (default: 0.001)
+        #[arg(long)]
+        dt: Option<f64>,
+
+        /// Stop time in seconds (default: 1.0)
+        #[arg(long)]
+        stop_time: Option<f64>,
+    },
+    /// Run a parameter sweep across a range of values for a block parameter
+    Sweep {
+        /// Path to block diagram .json file
+        file_path: PathBuf,
+
+        /// Target block SID or Name
+        #[arg(short, long)]
+        block: String,
+
+        /// Parameter name (e.g. "R", "Gain", "Value", "C", "L")
+        #[arg(short, long)]
+        param: String,
+
+        /// Comma-separated list of float values (e.g. "1.0,2.0,5.0,10.0")
+        #[arg(short, long)]
+        values: String,
+
+        /// Simulation stop time in seconds
+        #[arg(long, default_value_t = 1.0)]
+        stop_time: f64,
+
+        /// Optional output directory to export CSV files
+        #[arg(short, long)]
+        out_dir: Option<PathBuf>,
+    },
 }
 
 fn main() -> Result<()> {
@@ -369,6 +415,149 @@ fn main() -> Result<()> {
                 std::process::exit(1);
             } else {
                 std::process::exit(0);
+            }
+        }
+        Commands::Codegen {
+            file_path,
+            out_dir,
+            name,
+            dt,
+            stop_time,
+        } => {
+            let content = std::fs::read_to_string(&file_path)
+                .with_context(|| format!("Failed to read diagram file at {:?}", file_path))?;
+            let diagram: mlapp_sim::BlockDiagram = serde_json::from_str(&content)
+                .with_context(|| format!("Failed to parse diagram JSON at {:?}", file_path))?;
+
+            let model_name = name.unwrap_or_else(|| {
+                file_path
+                    .file_stem()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or("model")
+                    .to_string()
+            });
+
+            let config = mlapp_sim::CodegenConfig {
+                model_name: model_name.clone(),
+                include_main: true,
+                step_size: dt,
+                stop_time,
+            };
+
+            let generated = mlapp_sim::generate_c(&diagram, &config).map_err(|diags| {
+                for d in &diags {
+                    eprintln!("[{}] {}: {}", d.severity.as_str(), d.code, d.message);
+                }
+                anyhow::anyhow!("Code generation aborted due to model validation errors.")
+            })?;
+
+            std::fs::create_dir_all(&out_dir)
+                .with_context(|| format!("Failed to create output directory at {:?}", out_dir))?;
+
+            let header_path = out_dir.join(format!("{}.h", generated.model_name));
+            let source_path = out_dir.join(format!("{}.c", generated.model_name));
+
+            std::fs::write(&header_path, &generated.header)
+                .with_context(|| format!("Failed to write header at {:?}", header_path))?;
+            std::fs::write(&source_path, &generated.source)
+                .with_context(|| format!("Failed to write source at {:?}", source_path))?;
+
+            println!(
+                "Successfully generated C99 code for model '{}':",
+                generated.model_name
+            );
+            println!("  - Header: {:?}", header_path);
+            println!("  - Source: {:?}", source_path);
+
+            if let Some(main_src) = &generated.main_runner {
+                let main_path = out_dir.join(format!("{}_main.c", generated.model_name));
+                std::fs::write(&main_path, main_src)
+                    .with_context(|| format!("Failed to write main runner at {:?}", main_path))?;
+                println!("  - Runner: {:?}", main_path);
+            }
+        }
+        Commands::Sweep {
+            file_path,
+            block,
+            param,
+            values,
+            stop_time,
+            out_dir,
+        } => {
+            let content = std::fs::read_to_string(&file_path)
+                .with_context(|| format!("Failed to read diagram file at {:?}", file_path))?;
+            let diagram: mlapp_sim::BlockDiagram = serde_json::from_str(&content)
+                .with_context(|| format!("Failed to parse diagram JSON at {:?}", file_path))?;
+
+            let parsed_values: Result<Vec<f64>, _> =
+                values.split(',').map(|s| s.trim().parse::<f64>()).collect();
+            let parsed_values = parsed_values
+                .map_err(|e| anyhow::anyhow!("Invalid float value in --values: {}", e))?;
+
+            if parsed_values.is_empty() {
+                anyhow::bail!("--values must contain at least one float value");
+            }
+
+            let sweep_cfg = mlapp_sim::ParameterSweepConfig {
+                block_id: block,
+                param_name: param,
+                values: parsed_values,
+                sim_config: mlapp_sim::SimulationConfig {
+                    stop_time,
+                    ..Default::default()
+                },
+            };
+
+            let results =
+                mlapp_sim::run_parameter_sweep(&diagram, &sweep_cfg).map_err(|diags| {
+                    for d in &diags {
+                        eprintln!("[{}] {}: {}", d.severity.as_str(), d.code, d.message);
+                    }
+                    anyhow::anyhow!("Parameter sweep aborted due to model validation errors.")
+                })?;
+
+            println!("Parameter Sweep Results ({} runs):", results.len());
+            println!("{:<14} | Final Signal Values", "Param Value");
+            println!("---------------+----------------------------------------");
+            for r in &results {
+                let mut vals: Vec<_> = r.final_values.iter().collect();
+                vals.sort_by_key(|(k, _)| (*k).clone());
+                let summary: Vec<String> = vals
+                    .iter()
+                    .map(|(k, v)| format!("{}={:.4e}", k, v))
+                    .collect();
+                println!("{:<14.6e} | {}", r.param_value, summary.join(", "));
+            }
+
+            if let Some(dir) = out_dir {
+                std::fs::create_dir_all(&dir).with_context(|| {
+                    format!("Failed to create sweep output directory {:?}", dir)
+                })?;
+                for (i, r) in results.iter().enumerate() {
+                    let csv_path = dir.join(format!("run_{:03}_val_{:.4e}.csv", i, r.param_value));
+                    let mut csv = String::new();
+                    let sig_names: Vec<String> = r.output.signals.keys().cloned().collect();
+                    csv.push_str("time");
+                    for name in &sig_names {
+                        csv.push_str(&format!(",{}", name));
+                    }
+                    csv.push('\n');
+                    for (step_idx, &t) in r.output.tout.iter().enumerate() {
+                        csv.push_str(&format!("{:.6}", t));
+                        for name in &sig_names {
+                            let val = r
+                                .output
+                                .signals
+                                .get(name)
+                                .and_then(|v| v.get(step_idx))
+                                .unwrap_or(&0.0);
+                            csv.push_str(&format!(",{:e}", val));
+                        }
+                        csv.push('\n');
+                    }
+                    std::fs::write(&csv_path, csv)?;
+                }
+                println!("Exported trajectory CSV files to {:?}", dir);
             }
         }
     }

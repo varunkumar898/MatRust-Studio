@@ -8,22 +8,23 @@
 **Local stable toolchain:** Rust 1.99.1
 **Declared MSRV:** Rust 1.88.0
 **Verification status:** 
-- Local default, all-features, and no-default-features test runs pass at **540/540/540** (net +8 tests in M6).
+- Local default, all-features, and no-default-features test runs pass at **555/555/555** (net +23 tests in M6; +15 tests added in follow-up hardening).
 - Local clippy (all-features, no-default-features, per-crate no-default-features) passes with 0 warnings.
 - `cargo fmt --all -- --check` passes cleanly.
 - `scripts/verify.ps1` runs and exits 0 with all verification steps passing.
 
 ## Current work: Milestone M6: Piecewise-Linear & Switching Circuits
 
-- **Branch `feat/m6-nonlinear-circuits`**: Implements piecewise-linear semiconductor elements (Diode) and controlled switching elements (Ideal Switch) within Modified Nodal Analysis (MNA).
-- **Diode Piecewise-Linear Model**: Two-terminal element with parameters `ForwardVoltage` ($V_f \ge 0$), `OnResistance` ($R_{on} > 0$), and `OffResistance` ($R_{off} > R_{on}$). In ON state, stamps conductance $G_{on} = 1/R_{on}$ and companion current source $I_{eq} = G_{on} V_f$; in OFF state, stamps $G_{off} = 1/R_{off}$ and $I_{eq} = 0$.
-- **Ideal Switch Model**: Three-terminal element (positive terminal $p$, negative terminal $n$, signal control port `ctrl`) with parameters $R_{on}$, $R_{off}$, and `Threshold`. Switched by signal output of driving blocks with threshold comparison ($u_{ctrl} \ge \text{Threshold}$).
-- **Within-Step Fixed-Point Iteration**: Diode and switch conduction states resolved self-consistently (up to 100 iterations) per simulation step.
-- **Switch Chattering & Limit Cycle Detection (`E-CHATTER`)**: Tracks state mask history within each step; aborts with typed diagnostic error `E-CHATTER` upon detecting repeating state sequences or non-convergence.
-- **Fast-Path Matrix Pre-factorization**: All $2^{N_s}$ matrix topologies pre-factored at compile time for circuits with $N_s \le 10$ ($2^{N_s} \le 1024$) across $A_{init}$, $A_{BE}$, and $A_{Trap}$. Zero matrix factorizations during stepping.
-- **Zero Heap Allocations**: Verified by `test_zero_allocations_during_nonlinear_circuit_simulation_step` over 10,000 steps of diode/switch operation (0 allocations).
+- **Branch `feat/m6-nonlinear-circuits`**: Implements piecewise-linear semiconductor elements (Diode) and controlled switching elements (Ideal Switch) within Modified Nodal Analysis (MNA), fully hardened with follow-ups F1-F7.
+- **Diode Piecewise-Linear Model**: Two-terminal element with parameters `ForwardVoltage` ($V_f \ge 0$), `OnResistance` ($R_{on} > 0$), and `OffResistance` ($R_{off} > R_{on}$). In ON state, stamps conductance $G_{on} = 1/R_{on}$ and companion current source $I_{eq} = G_{on} V_f$; in OFF state, stamps $G_{off} = 1/R_{off}$ and $I_{eq} = 0$. Knife-edge threshold behavior: strict $v_D > V_f$ for OFF->ON and $i_D < 0$ for ON->OFF.
+- **Ideal Switch Model**: Three-terminal element (positive terminal $p$, negative terminal $n$, signal control port `ctrl`) with parameters $R_{on}$, $R_{off}$, and `Threshold`. Switched by signal output of driving blocks with threshold comparison ($u_{ctrl} \ge \text{Threshold}$ is ON; $u_{ctrl} < \text{Threshold}$ is OFF). Control is sampled at the start of each step and held constant (1-step ZOH latency).
+- **Within-Step Fixed-Point Iteration & Chattering Policy**: Diode and switch conduction states resolved self-consistently (up to 100 iterations) per simulation step. $A \to A$ is convergence. Limit cycles of length $\ge 2$ deterministically retain previous step's switch states, emit warning `W-CHATTER` naming cycling device SIDs and time $t$, and continue. Persistent limit cycles exceeding 100 consecutive steps escalate to error `E-CHATTER`.
+- **Fast-Path Matrix Pre-factorization & Scratch Fallback**: All $2^{N_s}$ matrix topologies pre-factored at compile time for circuits with $N_s \le 10$ ($2^{N_s} \le 1024$) and table memory $\le 64$ MB across $A_{init}$, $A_{BE}$, and $A_{Trap}$. For $N_s > 10$ or table memory $> 64$ MB, cleanly falls back to pre-allocated in-place scratch LU decomposition emitting diagnostic `I-SLOW`, maintaining 100% zero per-step heap allocations and bit-exact parity (< 1e-12).
+- **Zero Heap Allocations**: Verified by `alloc_test` (4 tests passing) over 10,000 steps of diode/switch operation (0 allocations).
 - **Component State & Signal Logging**: Logs branch voltages (`{name}.v`), branch currents (`{name}.i`), and component states (`{name}.state` as $1.0$ for ON, $0.0$ for OFF).
-- **Analytical Oracles**: Half-wave rectifier with resistive load (conduction angle and peak $V_{peak} - V_f$), half-wave rectifier with smoothing capacitor ($RC$ ripple), diode voltage clipper ($V_{bias} + V_f$), ideal switch modulated by step control, buck converter freewheeling diode & switch in CCM/DCM, switch chattering limit cycle detection, full-wave diode bridge rectifier.
+- **Analytical Oracles & LU Hardening**: Half-wave rectifier with resistive load (conduction angle and peak $V_{peak} - V_f$), half-wave rectifier with smoothing capacitor ($RC$ ripple), diode voltage clipper ($V_{bias} + V_f$), ideal switch modulated by step control, buck converter freewheeling diode & switch in CCM/DCM, switch chattering limit cycle detection, full-wave diode bridge rectifier; 6 new LU hardening tests (multi-swap 4x4/5x5, 50 random LCG systems, permutation, singular column naming, multiple RHS vectors, 1x1 scalar).
+- **Second-Order Convergence Rate**: Verified Trapezoidal companion models achieve ratio $E(h)/E(h/2) \approx 3.989$ ($O(h^2)$) on linear circuits. Switching events introduce localized $O(h)$ errors resolved to step size.
+- **Known Limitations (Deferred to M6b)**: Switching instants resolved to step size ($O(h)$); thyristor and event localization (bisection + Backward Euler restart) deferred to Milestone M6b.
 
 - Branch `gui/polish-1` created from `main` @ `425f54e` (master prompt v2, S-step plan).
 - **S1 GUI inventory + audit COMPLETE** (no code changed): `docs/gui-audit.md` documents

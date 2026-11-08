@@ -163,3 +163,13 @@ MathWorks identifier verification is made.
 | Warning Identifier | Exact Warning Message | Action Taken | Citation / Source URL | Verification |
 | :--- | :--- | :--- | :--- | :--- |
 | `MATLAB:singularMatrix` | `Warning: Matrix is singular to working precision.` | Warning printed to stderr; returns matrix of `Inf` values without halting execution. Applies to both `inv(A)` and `A \ b`. | [MathWorks: inv](https://www.mathworks.com/help/matlab/ref/inv.html)<br>[MathWorks: mldivide](https://www.mathworks.com/help/matlab/ref/mldivide.html) | verified (exact message text documented in MathWorks MATLAB references; identifier unverified) |
+
+---
+
+## 6. Simulation & Circuit Diagnostics (`mlapp-sim`)
+
+| Diagnostic Code | Severity | Description | Action / Resolution |
+| :--- | :--- | :--- | :--- |
+| `W-CHATTER` | Warning | Switch limit cycle / chattering detected within step iteration. | Resolves deterministically by retaining previous step's switch states and continuing. |
+| `E-CHATTER` | Error | Persistent switch chattering exceeding 100 consecutive simulation steps. | Halts execution; inspect circuit switching topology, add snubber circuit or decrease step size. |
+| `I-SLOW` | Info | Number of switches $N_s > 10$ or table memory $> 64$ MB exceeds compile-time pre-factorization table. | Solver dynamically falls back to in-place scratch LU decomposition per state transition (zero heap allocation). |

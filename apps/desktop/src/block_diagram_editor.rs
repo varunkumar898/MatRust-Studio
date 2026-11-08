@@ -591,11 +591,30 @@ impl BlockDiagramEditor {
         let diagram = self.to_block_diagram();
         match simulate_diagram(&diagram, &self.config) {
             Ok(output) => {
-                self.sim_status = format!(
-                    "Simulation finished: {} time points (0.0s to {:.2}s)",
-                    output.tout.len(),
-                    self.config.stop_time
-                );
+                let warning_count = output
+                    .diagnostics
+                    .iter()
+                    .filter(|d| d.severity == mlapp_sim::DiagnosticSeverity::Warning)
+                    .count();
+                if warning_count > 0 {
+                    let first_warn = output
+                        .diagnostics
+                        .iter()
+                        .find(|d| d.severity == mlapp_sim::DiagnosticSeverity::Warning)
+                        .unwrap();
+                    self.sim_status = format!(
+                        "Simulation finished with {} warning(s): {} ({} time points)",
+                        warning_count,
+                        first_warn.message,
+                        output.tout.len()
+                    );
+                } else {
+                    self.sim_status = format!(
+                        "Simulation finished: {} time points (0.0s to {:.2}s)",
+                        output.tout.len(),
+                        self.config.stop_time
+                    );
+                }
                 self.sim_output = Some(output);
                 self.show_scope_window = true;
             }
@@ -3316,14 +3335,12 @@ mod tests {
         assert_eq!(diag.schema_version, 3);
         assert_eq!(diag.blocks[0].rotation, BlockRotation::R0);
 
-        // Add nonlinear electrical block -> should produce full E-UNSUPPORTED error in sim_status prior to M6
+        // An ungrounded electrical circuit produces a helpful E-SINGULAR error in sim_status
         editor.add_block(BlockType::Diode, "D1");
         editor.run_simulation();
         assert!(
-            editor.sim_status.contains("E-UNSUPPORTED")
-                && editor.sim_status.contains("Nonlinear electrical blocks")
-                && editor.sim_status.contains("M6"),
-            "Editor sim_status must display full helpful E-UNSUPPORTED message: {}",
+            editor.sim_status.contains("E-SINGULAR"),
+            "Editor sim_status must display full helpful error message: {}",
             editor.sim_status
         );
     }

@@ -314,3 +314,91 @@ fn test_zero_allocations_during_mna_circuit_simulation_step() {
         "MNA circuit stepping (LinearCircuitSolver::step) must execute with ZERO heap allocations; observed {total_allocs} allocations"
     );
 }
+
+#[test]
+fn test_zero_allocations_during_nonlinear_circuit_simulation_step() {
+    let _lock = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    let mut diagram = BlockDiagram::new("AllocTestNonlinearCircuit");
+
+    diagram.add_block(Block::new("gnd", "GND", BlockType::Ground));
+    diagram.add_block(
+        Block::new("vac", "Vac", BlockType::AcVoltageSource)
+            .with_param("Amplitude", "12.0")
+            .with_param("Frequency", "100.0"),
+    );
+    diagram.add_block(
+        Block::new("d1", "D1", BlockType::Diode)
+            .with_param("ForwardVoltage", "0.7")
+            .with_param("OnResistance", "0.01")
+            .with_param("OffResistance", "1e6"),
+    );
+    diagram.add_block(
+        Block::new("sw1", "Switch1", BlockType::IdealSwitch)
+            .with_param("Threshold", "0.5")
+            .with_param("OnResistance", "0.02")
+            .with_param("OffResistance", "1e5"),
+    );
+    diagram
+        .add_block(Block::new("r", "Rload", BlockType::Resistor).with_param("Resistance", "50.0"));
+    diagram.add_block(
+        Block::new("c", "Cfilter", BlockType::Capacitor).with_param("Capacitance", "1e-5"),
+    );
+
+    // Vac(p) -> D1(p) -> Net 1
+    diagram.add_electrical_line("vac", 0, "d1", 0);
+    // D1(n) -> Switch1(p) -> Net 2
+    diagram.add_electrical_line("d1", 1, "sw1", 0);
+    // Switch1(n) -> Rload(p) & Cfilter(p) -> Net 3
+    diagram.add_electrical_line("sw1", 1, "r", 0);
+    diagram.add_electrical_line("r", 0, "c", 0);
+    // Grounds
+    diagram.add_electrical_line("vac", 1, "gnd", 0);
+    diagram.add_electrical_line("r", 1, "gnd", 0);
+    diagram.add_electrical_line("c", 1, "gnd", 0);
+
+    let dt = 1e-4;
+    let mut solver = mlapp_sim::electrical::LinearCircuitSolver::compile(&diagram, dt)
+        .expect("compile nonlinear circuit")
+        .expect("circuit solver exists");
+
+    solver.init_solve(0.0).expect("init solve");
+
+    // Warm-up step 1 (Backward Euler)
+    solver.set_switch_control("sw1", 1.0);
+    solver.step(dt, dt, true).expect("first step");
+    // Warm-up step 2 (Trapezoidal)
+    solver.step(2.0 * dt, dt, false).expect("second step");
+    let _ = solver.branch_voltage("d1");
+    let _ = solver.branch_current("d1");
+    let _ = solver.element_state("d1");
+    let _ = solver.branch_voltage("sw1");
+    let _ = solver.branch_current("sw1");
+    let _ = solver.element_state("sw1");
+
+    // Track allocations over 10,000 steps of nonlinear switching fixed-point iterations
+    ALLOC_COUNT.store(0, Ordering::SeqCst);
+    TRACKING_ACTIVE.with(|t| t.set(true));
+
+    for step_idx in 1..=10_000 {
+        let t = (step_idx as f64 + 2.0) * dt;
+        // Alternate switch state every 50 steps
+        let ctrl = if (step_idx / 50) % 2 == 0 { 1.0 } else { 0.0 };
+        solver.set_switch_control("sw1", ctrl);
+        solver.step(t, dt, false).expect("nonlinear step");
+        let _ = solver.branch_voltage("d1");
+        let _ = solver.branch_current("d1");
+        let _ = solver.element_state("d1");
+        let _ = solver.branch_voltage("sw1");
+        let _ = solver.branch_current("sw1");
+        let _ = solver.element_state("sw1");
+        let _ = solver.node_voltage(1);
+    }
+
+    TRACKING_ACTIVE.with(|t| t.set(false));
+    let total_allocs = ALLOC_COUNT.load(Ordering::SeqCst);
+
+    assert_eq!(
+        total_allocs, 0,
+        "Nonlinear switching circuit stepping with fixed-point iterations must execute with ZERO heap allocations; observed {total_allocs} allocations"
+    );
+}

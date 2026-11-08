@@ -6,7 +6,7 @@ use mlapp_sim::model::{
     Block, BlockDiagram, BlockRotation, BlockType, Line, PortDesc, PortKind, PortRef, PortRole,
 };
 use mlapp_sim::netlist::resolve_electrical_nets;
-use mlapp_sim::solver::{simulate_diagram, SimulationConfig};
+use mlapp_sim::solver::{simulate_diagram, SimulationConfig, SolverType};
 use mlapp_sim::spec::{pin_geometry, validate_block_params};
 use std::collections::HashMap;
 
@@ -663,20 +663,50 @@ fn test_cross_domain_signal_to_electrical_error() {
 
 #[test]
 fn test_simulate_diagram_with_electrical_blocks_gives_e_unsupported() {
-    let mut d = BlockDiagram::new("PreM6Circuit");
+    let mut d = BlockDiagram::new("Over10SwitchesCircuit");
     d.add_block(Block::new("gnd", "Ground", BlockType::Ground));
-    d.add_block(Block::new("d1", "Diode", BlockType::Diode));
-    d.add_electrical_line("d1", 0, "gnd", 0);
+    d.add_block(Block::new("vs", "Vs", BlockType::DcVoltageSource).with_param("Voltage", "5.0"));
+    d.add_electrical_line("vs", 1, "gnd", 0);
+
+    let mut prev_sid = "vs".to_string();
+    let mut prev_term = 0;
+    for k in 0..11 {
+        let sid = format!("d{k}");
+        d.add_block(Block::new(&sid, format!("D{k}"), BlockType::Diode));
+        d.add_electrical_line(&prev_sid, prev_term, &sid, 0);
+        prev_sid = sid;
+        prev_term = 1;
+    }
+    d.add_block(Block::new("r", "R", BlockType::Resistor).with_param("Resistance", "100.0"));
+    d.add_electrical_line(&prev_sid, prev_term, "r", 0);
+    d.add_electrical_line("r", 1, "gnd", 0);
 
     let config = SimulationConfig::default();
     let result = simulate_diagram(&d, &config);
 
-    assert!(result.is_err(), "Simulation must return error prior to M6");
-    let err = result.err().unwrap();
-    assert_eq!(err.code(), "E-UNSUPPORTED");
-    assert!(err
-        .message()
-        .contains("Nonlinear electrical blocks (Diode, IdealSwitch) arrive in Milestone M6"));
+    assert!(
+        result.is_ok(),
+        "Circuit with 11 switches must execute cleanly via scratch fallback (M6 F6)"
+    );
+    let out = result.unwrap();
+    let has_islow = out.diagnostics.iter().any(|diag| diag.code == "I-SLOW");
+    assert!(
+        has_islow,
+        "Circuit with > 10 switches must emit I-SLOW diagnostic"
+    );
+
+    // Variable-step solver on electrical diagram returns typed E-SOLVER error
+    let var_config = SimulationConfig {
+        solver: SolverType::VariableStepDormandPrince,
+        ..Default::default()
+    };
+    let var_result = simulate_diagram(&d, &var_config);
+    assert!(
+        var_result.is_err(),
+        "Variable-step solver on electrical diagram must return error"
+    );
+    let err = var_result.err().unwrap();
+    assert_eq!(err.code(), "E-SOLVER");
 }
 
 #[test]

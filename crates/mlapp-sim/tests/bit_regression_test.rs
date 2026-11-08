@@ -252,6 +252,7 @@ fn old_simulate_diagram(
         tout,
         yout,
         signals,
+        diagnostics: Vec::new(),
     })
 }
 

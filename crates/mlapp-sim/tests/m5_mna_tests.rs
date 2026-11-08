@@ -506,17 +506,26 @@ fn test_variable_step_ode45_on_electrical_circuit_gives_e_solver() {
 
 #[test]
 fn test_nonlinear_electrical_blocks_give_e_unsupported() {
-    // Milestone M5 supports linear circuits. Diode and IdealSwitch arrive in M6.
-    let mut d = BlockDiagram::new("DiodeCircuit");
+    // Circuits with > 10 switches/diodes exceed the 2^10 = 1024 compile-time pre-factorization limit
+    // and produce a clean E-UNSUPPORTED diagnostic.
+    let mut d = BlockDiagram::new("LargeSwitchingCircuit");
     d.add_block(Block::new("gnd", "GND", BlockType::Ground));
     d.add_block(Block::new("vs", "Vs", BlockType::DcVoltageSource).with_param("Voltage", "5.0"));
-    d.add_block(Block::new("d", "D1", BlockType::Diode));
-    d.add_block(Block::new("r", "R", BlockType::Resistor).with_param("Resistance", "100.0"));
-
-    d.add_electrical_line("vs", 0, "d", 0);
-    d.add_electrical_line("d", 1, "r", 0);
-    d.add_electrical_line("r", 1, "gnd", 0);
     d.add_electrical_line("vs", 1, "gnd", 0);
+
+    let mut prev_sid = "vs".to_string();
+    let mut prev_term = 0;
+    // Add 11 diodes in series
+    for k in 0..11 {
+        let sid = format!("d{k}");
+        d.add_block(Block::new(&sid, format!("D{k}"), BlockType::Diode));
+        d.add_electrical_line(&prev_sid, prev_term, &sid, 0);
+        prev_sid = sid;
+        prev_term = 1;
+    }
+    d.add_block(Block::new("r", "R", BlockType::Resistor).with_param("Resistance", "100.0"));
+    d.add_electrical_line(&prev_sid, prev_term, "r", 0);
+    d.add_electrical_line("r", 1, "gnd", 0);
 
     let config = SimulationConfig {
         start_time: 0.0,
@@ -526,9 +535,14 @@ fn test_nonlinear_electrical_blocks_give_e_unsupported() {
         ..Default::default()
     };
 
-    let err = simulate_diagram(&d, &config).expect_err("Diode must produce E-UNSUPPORTED in M5");
-    assert_eq!(err.code(), "E-UNSUPPORTED");
-    assert!(err.message().contains("Milestone M6"));
+    // Under M6 Follow-up F6, circuits with > 10 switches fall back to in-place scratch LU stepping
+    // emitting an informative I-SLOW diagnostic rather than hard-failing with E-UNSUPPORTED.
+    let out = simulate_diagram(&d, &config)
+        .expect("Circuits with > 10 switches must succeed using scratch fallback");
+    assert!(
+        out.diagnostics.iter().any(|diag| diag.code == "I-SLOW"),
+        "Must emit I-SLOW diagnostic"
+    );
 }
 
 #[test]
@@ -606,4 +620,187 @@ fn test_rk4_solver_with_electrical_circuit() {
     for &i in &out.signals["R.i"] {
         assert!((i - 0.020).abs() < 1e-10);
     }
+}
+
+#[test]
+fn test_lu_hardening_multiswap_4x4_and_5x5_systems() {
+    // (a) 4x4 system requiring multiple row swaps (step 0, 1, and 2)
+    // Row 0: [0, 2, 1, 1]
+    // Row 1: [0, 0, 3, 1]
+    // Row 2: [5, 1, 0, 2]
+    // Row 3: [0, 4, 2, 0]
+    let a4 = vec![
+        0.0, 2.0, 1.0, 1.0, 0.0, 0.0, 3.0, 1.0, 5.0, 1.0, 0.0, 2.0, 0.0, 4.0, 2.0, 0.0,
+    ];
+    let lu4 = LuDecomposition::decompose(&a4, 4).expect("4x4 LU decomposition must succeed");
+    let b4 = vec![5.0, 13.0, 17.0, 2.0];
+    let mut x4 = vec![0.0; 4];
+    lu4.solve(&b4, &mut x4);
+    assert!(
+        (x4[0] - 2.0).abs() < 1e-12,
+        "x4[0] expected 2.0, got {}",
+        x4[0]
+    );
+    assert!(
+        (x4[1] - (-1.0)).abs() < 1e-12,
+        "x4[1] expected -1.0, got {}",
+        x4[1]
+    );
+    assert!(
+        (x4[2] - 3.0).abs() < 1e-12,
+        "x4[2] expected 3.0, got {}",
+        x4[2]
+    );
+    assert!(
+        (x4[3] - 4.0).abs() < 1e-12,
+        "x4[3] expected 4.0, got {}",
+        x4[3]
+    );
+
+    // 5x5 cyclic shift permutation matrix scaled:
+    // Requires row swaps at every step
+    let a5 = vec![
+        0.0, 0.0, 0.0, 0.0, 2.0, 3.0, 0.0, 0.0, 0.0, 0.0, 0.0, 4.0, 0.0, 0.0, 0.0, 0.0, 0.0, 5.0,
+        0.0, 0.0, 0.0, 0.0, 0.0, 6.0, 0.0,
+    ];
+    let lu5 = LuDecomposition::decompose(&a5, 5).expect("5x5 LU decomposition must succeed");
+    let b5 = vec![10.0, 3.0, 8.0, 15.0, 24.0];
+    let mut x5 = vec![0.0; 5];
+    lu5.solve(&b5, &mut x5);
+    for (k, &val) in x5.iter().enumerate().take(5) {
+        let expected = (k + 1) as f64;
+        assert!(
+            (val - expected).abs() < 1e-12,
+            "x5[{k}] expected {expected}, got {val}"
+        );
+    }
+}
+
+#[test]
+fn test_lu_hardening_50_pseudo_random_lcg_systems() {
+    // (b) 50 deterministic pseudo-random matrices using simple seeded LCG
+    let mut seed: u64 = 123456789;
+    let mut lcg_next = || -> f64 {
+        seed = seed.wrapping_mul(1664525).wrapping_add(1013904223);
+        let val = (seed >> 16) as u32;
+        (val as f64) / (65536.0) - 0.5 // range [-0.5, 0.5]
+    };
+
+    for test_idx in 0..50 {
+        let n = 2 + (test_idx % 11); // sizes 2..12
+        let mut a = vec![0.0; n * n];
+        for i in 0..n {
+            for j in 0..n {
+                a[i * n + j] = lcg_next();
+            }
+            // Add diagonal dominance to guarantee non-singular system
+            a[i * n + i] += if lcg_next() >= 0.0 { 5.0 } else { -5.0 };
+        }
+
+        let mut x_true = vec![0.0; n];
+        for x in &mut x_true {
+            *x = lcg_next();
+        }
+
+        // Compute b = A * x_true
+        let mut b = vec![0.0; n];
+        for i in 0..n {
+            let mut sum = 0.0;
+            for j in 0..n {
+                sum += a[i * n + j] * x_true[j];
+            }
+            b[i] = sum;
+        }
+
+        let lu = LuDecomposition::decompose(&a, n)
+            .expect("Random well-conditioned system must decompose");
+        let mut x_sol = vec![0.0; n];
+        lu.solve(&b, &mut x_sol);
+
+        // Compute residual ||A * x_sol - b||_inf
+        let mut res_inf = 0.0f64;
+        for i in 0..n {
+            let mut ax_i = 0.0;
+            for j in 0..n {
+                ax_i += a[i * n + j] * x_sol[j];
+            }
+            res_inf = res_inf.max((ax_i - b[i]).abs());
+        }
+
+        let mut a_inf = 0.0f64;
+        for i in 0..n {
+            let row_sum: f64 = (0..n).map(|j| a[i * n + j].abs()).sum();
+            a_inf = a_inf.max(row_sum);
+        }
+
+        let x_inf = x_sol.iter().map(|v| v.abs()).fold(0.0f64, f64::max);
+        let bound = 1e-9 * a_inf * x_inf;
+        assert!(
+            res_inf <= bound.max(1e-12),
+            "System {test_idx} (size {n}): residual {res_inf:.3e} exceeds bound {bound:.3e}"
+        );
+    }
+}
+
+#[test]
+fn test_lu_hardening_permutation_matrix() {
+    // (c) 4x4 anti-diagonal permutation matrix
+    // [0 0 0 1]
+    // [0 0 1 0]
+    // [0 1 0 0]
+    // [1 0 0 0]
+    let p4 = vec![
+        0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0,
+    ];
+    let lu = LuDecomposition::decompose(&p4, 4).expect("Permutation matrix must decompose");
+    let b = vec![10.0, 20.0, 30.0, 40.0];
+    let mut x = vec![0.0; 4];
+    lu.solve(&b, &mut x);
+    assert_eq!(x, vec![40.0, 30.0, 20.0, 10.0]);
+}
+
+#[test]
+fn test_lu_hardening_singular_matrix_names_pivot_column() {
+    // (d) Singular matrix naming the pivot index
+    let a_sing = vec![1.0, 2.0, 3.0, 2.0, 4.0, 6.0, 0.0, 1.0, 1.0];
+    let err = LuDecomposition::decompose(&a_sing, 3).expect_err("Must fail on singular");
+    assert_eq!(err.code(), "E-SINGULAR");
+    assert!(err.message().contains("Zero pivot"));
+    assert!(
+        err.message().contains("row/column index 2")
+            || err.message().contains("row/column index 1")
+    );
+    assert!(err.message().contains("Why:"));
+}
+
+#[test]
+fn test_lu_hardening_multiple_rhs_single_factorization() {
+    // (e) One factorization solved 50 times with different right-hand sides
+    let a3 = vec![4.0, 1.0, -1.0, 2.0, 5.0, 2.0, 1.0, 2.0, 6.0];
+    let lu = LuDecomposition::decompose(&a3, 3).expect("Decomposition must succeed");
+    let mut x = vec![0.0; 3];
+
+    for k in 1..=50 {
+        let b = vec![k as f64, (2 * k) as f64, (3 * k) as f64];
+        lu.solve(&b, &mut x);
+
+        // Check A * x == b
+        let r0 = 4.0 * x[0] + 1.0 * x[1] - 1.0 * x[2];
+        let r1 = 2.0 * x[0] + 5.0 * x[1] + 2.0 * x[2];
+        let r2 = 1.0 * x[0] + 2.0 * x[1] + 6.0 * x[2];
+        assert!((r0 - b[0]).abs() < 1e-11);
+        assert!((r1 - b[1]).abs() < 1e-11);
+        assert!((r2 - b[2]).abs() < 1e-11);
+    }
+}
+
+#[test]
+fn test_lu_hardening_1x1_scalar_system() {
+    // (f) 1x1 scalar system
+    let a1 = vec![4.0];
+    let lu = LuDecomposition::decompose(&a1, 1).expect("1x1 must succeed");
+    let b1 = vec![20.0];
+    let mut x1 = vec![0.0; 1];
+    lu.solve(&b1, &mut x1);
+    assert!((x1[0] - 5.0).abs() < 1e-14);
 }

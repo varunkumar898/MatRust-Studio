@@ -59,6 +59,9 @@ pub enum SimError {
     #[error("{message}")]
     Solver { code: String, message: String },
 
+    #[error("{message}")]
+    Chatter { code: String, message: String },
+
     #[error("Block not found: {0}")]
     BlockNotFound(String),
 }
@@ -190,6 +193,15 @@ impl SimError {
         }
     }
 
+    pub fn chatter(msg: impl Into<String>) -> Self {
+        let detail = msg.into();
+        let message = format!("Switch chattering or limit cycle detected (E-CHATTER): {detail}");
+        SimError::Chatter {
+            code: "E-CHATTER".to_string(),
+            message,
+        }
+    }
+
     pub fn code(&self) -> &str {
         match self {
             SimError::Execution(_) => "E-EXEC",
@@ -201,6 +213,7 @@ impl SimError {
             SimError::Unsupported { code, .. } => code.as_str(),
             SimError::Singular { code, .. } => code.as_str(),
             SimError::Solver { code, .. } => code.as_str(),
+            SimError::Chatter { code, .. } => code.as_str(),
             SimError::BlockNotFound(_) => "E-PARAM",
         }
     }
@@ -216,6 +229,7 @@ impl SimError {
             SimError::Unsupported { message, .. } => message.as_str(),
             SimError::Singular { message, .. } => message.as_str(),
             SimError::Solver { message, .. } => message.as_str(),
+            SimError::Chatter { message, .. } => message.as_str(),
             SimError::BlockNotFound(msg) => msg.as_str(),
         }
     }
@@ -427,6 +441,8 @@ pub struct SimulationOutput {
     pub tout: Vec<f64>,
     pub yout: Vec<f64>,
     pub signals: HashMap<String, Vec<f64>>,
+    #[serde(default)]
+    pub diagnostics: Vec<crate::diagnostics::Diagnostic>,
 }
 
 impl SimulationOutput {
@@ -591,6 +607,12 @@ fn simulate_fixed_step_euler(
             signals.insert(b.name.clone(), Vec::with_capacity(num_steps + 1));
             signals.insert(format!("{}.v", b.name), Vec::with_capacity(num_steps + 1));
             signals.insert(format!("{}.i", b.name), Vec::with_capacity(num_steps + 1));
+            if matches!(b.block_type, BlockType::Diode | BlockType::IdealSwitch) {
+                signals.insert(
+                    format!("{}.state", b.name),
+                    Vec::with_capacity(num_steps + 1),
+                );
+            }
         }
         for net in 1..=c.num_nodes {
             signals.insert(format!("Net{net}"), Vec::with_capacity(num_steps + 1));
@@ -598,6 +620,17 @@ fn simulate_fixed_step_euler(
     }
 
     if let Some(ref mut c) = circuit_solver {
+        engine.eval(
+            config.start_time,
+            &continuous_states,
+            &discrete_states,
+            &mut workspace,
+        )?;
+        for (_, b) in &electrical_blocks {
+            if let Some(src_idx) = c.get_switch_driver_idx(&b.sid) {
+                c.set_switch_control(&b.sid, workspace.outputs[src_idx]);
+            }
+        }
         c.init_solve(config.start_time)?;
         for &(idx, b) in &electrical_blocks {
             if let Some(v) = c.branch_voltage(&b.sid) {
@@ -645,6 +678,11 @@ fn simulate_fixed_step_euler(
                 if let Some(vec) = signals.get_mut(&format!("{}.i", b.name)) {
                     vec.push(i);
                 }
+                if let Some(st) = c.element_state(&b.sid) {
+                    if let Some(vec) = signals.get_mut(&format!("{}.state", b.name)) {
+                        vec.push(st);
+                    }
+                }
             }
             for net in 1..=c.num_nodes {
                 let vn = c.node_voltage(net);
@@ -662,6 +700,11 @@ fn simulate_fixed_step_euler(
 
             // Advance circuit solver to t + dt
             if let Some(ref mut c) = circuit_solver {
+                for (_, b) in &electrical_blocks {
+                    if let Some(src_idx) = c.get_switch_driver_idx(&b.sid) {
+                        c.set_switch_control(&b.sid, workspace.outputs[src_idx]);
+                    }
+                }
                 let t_next = config.start_time + ((step + 1) as f64) * dt;
                 c.step(t_next, dt, step == 0)?;
                 for &(idx, b) in &electrical_blocks {
@@ -686,6 +729,7 @@ fn simulate_fixed_step_euler(
         tout,
         yout,
         signals,
+        diagnostics: circuit_solver.map(|c| c.diagnostics).unwrap_or_default(),
     })
 }
 
@@ -737,6 +781,12 @@ fn simulate_fixed_step_rk4(
             signals.insert(b.name.clone(), Vec::with_capacity(num_steps + 1));
             signals.insert(format!("{}.v", b.name), Vec::with_capacity(num_steps + 1));
             signals.insert(format!("{}.i", b.name), Vec::with_capacity(num_steps + 1));
+            if matches!(b.block_type, BlockType::Diode | BlockType::IdealSwitch) {
+                signals.insert(
+                    format!("{}.state", b.name),
+                    Vec::with_capacity(num_steps + 1),
+                );
+            }
         }
         for net in 1..=c.num_nodes {
             signals.insert(format!("Net{net}"), Vec::with_capacity(num_steps + 1));
@@ -744,6 +794,17 @@ fn simulate_fixed_step_rk4(
     }
 
     if let Some(ref mut c) = circuit_solver {
+        engine.eval(
+            config.start_time,
+            &continuous_states,
+            &discrete_states,
+            &mut workspace,
+        )?;
+        for (_, b) in &electrical_blocks {
+            if let Some(src_idx) = c.get_switch_driver_idx(&b.sid) {
+                c.set_switch_control(&b.sid, workspace.outputs[src_idx]);
+            }
+        }
         c.init_solve(config.start_time)?;
         for &(idx, b) in &electrical_blocks {
             if let Some(v) = c.branch_voltage(&b.sid) {
@@ -796,6 +857,11 @@ fn simulate_fixed_step_rk4(
                 if let Some(vec) = signals.get_mut(&format!("{}.i", b.name)) {
                     vec.push(i);
                 }
+                if let Some(st) = c.element_state(&b.sid) {
+                    if let Some(vec) = signals.get_mut(&format!("{}.state", b.name)) {
+                        vec.push(st);
+                    }
+                }
             }
             for net in 1..=c.num_nodes {
                 let vn = c.node_voltage(net);
@@ -839,6 +905,11 @@ fn simulate_fixed_step_rk4(
 
         // Advance circuit solver to t + dt
         if let Some(ref mut c) = circuit_solver {
+            for (_, b) in &electrical_blocks {
+                if let Some(src_idx) = c.get_switch_driver_idx(&b.sid) {
+                    c.set_switch_control(&b.sid, workspace.outputs[src_idx]);
+                }
+            }
             let t_next = config.start_time + ((step + 1) as f64) * dt;
             c.step(t_next, dt, step == 0)?;
             for &(idx, b) in &electrical_blocks {
@@ -911,6 +982,7 @@ fn simulate_fixed_step_rk4(
         tout,
         yout,
         signals,
+        diagnostics: circuit_solver.map(|c| c.diagnostics).unwrap_or_default(),
     })
 }
 
@@ -986,6 +1058,7 @@ fn simulate_dormand_prince(
                 tout,
                 yout,
                 signals,
+                diagnostics: Vec::new(),
             });
         }
 
@@ -1027,6 +1100,7 @@ fn simulate_dormand_prince(
             tout,
             yout,
             signals,
+            diagnostics: Vec::new(),
         });
     }
 
@@ -1271,6 +1345,7 @@ fn simulate_dormand_prince(
         tout,
         yout,
         signals,
+        diagnostics: Vec::new(),
     })
 }
 

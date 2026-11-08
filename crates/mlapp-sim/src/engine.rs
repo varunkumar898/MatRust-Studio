@@ -360,18 +360,6 @@ impl ExecutionEngine {
     pub fn compile(diagram: &BlockDiagram) -> Result<Self, SimError> {
         let num_blocks = diagram.blocks.len();
 
-        // 0. Pre-check: nonlinear electrical blocks arrive in M6
-        let nonlinear_count = diagram
-            .blocks
-            .iter()
-            .filter(|b| matches!(b.block_type, BlockType::Diode | BlockType::IdealSwitch))
-            .count();
-        if nonlinear_count > 0 {
-            return Err(SimError::unsupported(format!(
-                "Nonlinear electrical blocks (Diode, IdealSwitch) arrive in Milestone M6; this diagram has {nonlinear_count} nonlinear block(s). Milestone M5 supports linear circuits (Resistor, Capacitor, Inductor, DC/AC Voltage Source, DC Current Source, Ground)."
-            )));
-        }
-
         // 1. Build SID/name to index lookup
         let mut block_indices: HashMap<String, usize> = HashMap::with_capacity(num_blocks * 2);
         for (i, b) in diagram.blocks.iter().enumerate() {

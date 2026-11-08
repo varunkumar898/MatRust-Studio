@@ -3,11 +3,13 @@ use mlapp_sim::model::{Block, BlockDiagram, BlockType};
 use mlapp_sim::ExecutionEngine;
 use std::alloc::{GlobalAlloc, Layout, System};
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use std::sync::Mutex;
 
 struct CountingAlloc;
 
 static ALLOC_COUNT: AtomicUsize = AtomicUsize::new(0);
 static ALLOC_TRACKING_ACTIVE: AtomicBool = AtomicBool::new(false);
+static TEST_LOCK: Mutex<()> = Mutex::new(());
 
 unsafe impl GlobalAlloc for CountingAlloc {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
@@ -27,6 +29,7 @@ static A: CountingAlloc = CountingAlloc;
 
 #[test]
 fn test_zero_allocations_during_eval_and_update_discrete() {
+    let _lock = TEST_LOCK.lock().unwrap();
     let mut diagram = BlockDiagram::new("AllocTestModel");
 
     let step = Block::new("1", "Step", BlockType::Step)
@@ -103,6 +106,7 @@ fn test_zero_allocations_during_eval_and_update_discrete() {
 
 #[test]
 fn test_zero_allocations_m3_blocks_during_eval_and_update_discrete() {
+    let _lock = TEST_LOCK.lock().unwrap();
     let mut diagram = BlockDiagram::new("AllocTestM3Model");
 
     diagram.add_block(Block::new("1", "Clock", BlockType::Clock));
@@ -232,6 +236,7 @@ fn test_zero_allocations_m3_blocks_during_eval_and_update_discrete() {
 
 #[test]
 fn test_zero_allocations_during_mna_circuit_simulation_step() {
+    let _lock = TEST_LOCK.lock().unwrap();
     let mut diagram = BlockDiagram::new("AllocTestCircuit");
 
     diagram.add_block(Block::new("gnd", "GND", BlockType::Ground));

@@ -140,3 +140,18 @@ The disjoint-set netlist resolution and validation algorithm runs strictly once 
 
 ## 9. Known Limitations
 Switching instants are resolved to the step size (O(h) error); the thyristor and event localization are not implemented. (Deferred to Milestone M6b).
+
+---
+
+## 10. Bridges & Multi-Domain Coupling (Milestone M7)
+
+### 10.1 Bridge Components
+- **Voltage Sensor (`VoltageSensor`)**: Possesses two electrical terminals (terminal 0 = $p$, terminal 1 = $n$) and one signal output (port 0). Has ideal infinite input impedance ($G_{in} = 0$), adding no conductance or matrix row to the MNA equations. Measures instantaneous differential voltage $v = V_p - V_n$ in Volts.
+- **Current Sensor (`CurrentSensor`)**: Possesses two electrical terminals in series and one signal output (port 0). Acts as an ideal ammeter with zero internal resistance ($V_p - V_n = 0$). Stamped identically to an independent 0 V voltage source ($E = 0$), augmenting the MNA system by 1 auxiliary branch current row. The solved branch current $i$ is output to the signal domain in Amperes.
+- **Controlled Voltage Source (`VoltageControlledVoltageSource` / `VCVS`)**: Possesses one signal input (port 0) and two electrical terminals ($p, n$). Dynamic branch equation $V_p - V_n = K \cdot u(t_k)$ stamped into auxiliary voltage source row of MNA RHS.
+- **Controlled Current Source (`VoltageControlledCurrentSource` / `VCCS`)**: Possesses one signal input (port 0) and two electrical terminals ($p, n$). Injected current $I = G_m \cdot u(t_k)$ injected directly into nodal current vector $J$ ($J_p \mathrel{+}= I$, $J_n \mathrel{-}= I$) without augmenting matrix dimension.
+
+### 10.2 Sampling & Hold Policy (Charter Decision D4)
+- Controlled source inputs ($u$) and switch controls are sampled at the start of step $k$ ($t_k$) from signal outputs and held constant across the step (Zero-Order Hold).
+- Sensor outputs ($v, i$) are read at the completion of step $k$ from the MNA solution.
+- Direct algebraic feedthrough loops connecting a sensor to a controlled source or switch without an intervening state block (`UnitDelay`, `Integrator`, `ZeroOrderHold`, strictly proper transfer function) emit warning `W-DELAY` and insert a 1-step unit delay ($z^{-1}$ hold) to break instantaneous algebraic dependency. Continuous signal states in fixed-step solvers observe held sensor values across internal stages (coupling accuracy $O(h)$).

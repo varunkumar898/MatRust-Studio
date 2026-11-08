@@ -172,4 +172,5 @@ MathWorks identifier verification is made.
 | :--- | :--- | :--- | :--- |
 | `W-CHATTER` | Warning | Switch limit cycle / chattering detected within step iteration. | Resolves deterministically by retaining previous step's switch states and continuing. |
 | `E-CHATTER` | Error | Persistent switch chattering exceeding 100 consecutive simulation steps. | Halts execution; inspect circuit switching topology, add snubber circuit or decrease step size. |
+| `W-DELAY` | Warning | Direct algebraic feedthrough loop detected between electrical sensor and controlled block without an intervening state block (`UnitDelay`, `Integrator`, `ZeroOrderHold`). | A 1-step unit delay ($z^{-1}$ hold) was inserted to break instantaneous algebraic dependency. |
 | `I-SLOW` | Info | Number of switches $N_s > 10$ or table memory $> 64$ MB exceeds compile-time pre-factorization table. | Solver dynamically falls back to in-place scratch LU decomposition per state transition (zero heap allocation). |

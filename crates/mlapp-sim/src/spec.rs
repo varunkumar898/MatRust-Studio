@@ -1106,6 +1106,64 @@ static BLOCK_SPECS: &[BlockSpec] = &[
         default_feedthrough: false,
         doc: "Controlled bilateral switch operated by signal control input v.",
     },
+    BlockSpec {
+        block_type: BlockType::VoltageSensor,
+        display_name: "Voltage Sensor",
+        category: "Electrical",
+        params: &[],
+        min_inputs: 0,
+        max_inputs: 0,
+        outputs: 1,
+        default_feedthrough: false,
+        doc: "Ideal voltmeter with infinite input impedance measuring potential difference Vp - Vn.",
+    },
+    BlockSpec {
+        block_type: BlockType::CurrentSensor,
+        display_name: "Current Sensor",
+        category: "Electrical",
+        params: &[],
+        min_inputs: 0,
+        max_inputs: 0,
+        outputs: 1,
+        default_feedthrough: false,
+        doc: "Ideal ammeter with zero internal resistance measuring branch current entering terminal p and leaving terminal n.",
+    },
+    BlockSpec {
+        block_type: BlockType::VoltageControlledVoltageSource,
+        display_name: "Controlled Voltage Source",
+        category: "Electrical",
+        params: &[ParamSpec {
+            key: "Gain",
+            label: "Gain",
+            unit: "V/V",
+            default_val: "1.0",
+            kind: ParamKind::Numeric,
+            doc: "Voltage amplification gain K (finite).",
+        }],
+        min_inputs: 1,
+        max_inputs: 1,
+        outputs: 0,
+        default_feedthrough: false,
+        doc: "Voltage source whose terminal potential difference Vp - Vn = Gain * in(t).",
+    },
+    BlockSpec {
+        block_type: BlockType::VoltageControlledCurrentSource,
+        display_name: "Controlled Current Source",
+        category: "Electrical",
+        params: &[ParamSpec {
+            key: "Transconductance",
+            label: "Transconductance",
+            unit: "A/V",
+            default_val: "1.0",
+            kind: ParamKind::Numeric,
+            doc: "Transconductance Gm (finite).",
+        }],
+        min_inputs: 1,
+        max_inputs: 1,
+        outputs: 0,
+        default_feedthrough: false,
+        doc: "Current source whose injected current from n to p = Transconductance * in(t).",
+    },
 ];
 
 /// Returns the full list of supported block specifications.
@@ -1162,9 +1220,13 @@ pub fn pin_geometry(
 ) -> (f32, f32) {
     let (u, v) = match block_type {
         BlockType::Ground => (0.5, 0.0),
-        BlockType::IdealSwitch => {
+        BlockType::IdealSwitch
+        | BlockType::VoltageSensor
+        | BlockType::CurrentSensor
+        | BlockType::VoltageControlledVoltageSource
+        | BlockType::VoltageControlledCurrentSource => {
             if port_kind == PortKind::Signal {
-                (0.5, 0.0) // Control input v on top
+                (0.5, 0.0) // Signal port on top
             } else if port_index == 0 {
                 (0.0, 0.5) // Terminal p on left
             } else {
@@ -1418,6 +1480,32 @@ pub fn validate_block_params(
                     "E-PARAM",
                     format!(
                         "Invalid parameter Threshold on block '{block_sid}': value must be finite -> parsed value is non-finite -> specify a finite switching threshold"
+                    ),
+                    vec![block_sid.to_string()],
+                )),
+            }
+        }
+        BlockType::VoltageControlledVoltageSource => {
+            let gain = parse_num("Gain", 1.0);
+            match gain {
+                Some(val) if val.is_finite() => {}
+                _ => diags.push(Diagnostic::error(
+                    "E-PARAM",
+                    format!(
+                        "Invalid parameter Gain on block '{block_sid}': value must be finite -> parsed value is non-finite -> specify a finite voltage gain"
+                    ),
+                    vec![block_sid.to_string()],
+                )),
+            }
+        }
+        BlockType::VoltageControlledCurrentSource => {
+            let gm = parse_num("Transconductance", 1.0).or_else(|| parse_num("Gain", 1.0));
+            match gm {
+                Some(val) if val.is_finite() => {}
+                _ => diags.push(Diagnostic::error(
+                    "E-PARAM",
+                    format!(
+                        "Invalid parameter Transconductance on block '{block_sid}': value must be finite -> parsed value is non-finite -> specify a finite transconductance in A/V"
                     ),
                     vec![block_sid.to_string()],
                 )),

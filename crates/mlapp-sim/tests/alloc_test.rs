@@ -402,3 +402,87 @@ fn test_zero_allocations_during_nonlinear_circuit_simulation_step() {
         "Nonlinear switching circuit stepping with fixed-point iterations must execute with ZERO heap allocations; observed {total_allocs} allocations"
     );
 }
+
+#[test]
+fn test_zero_allocations_during_sensors_and_controlled_sources_stepping() {
+    let _lock = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    let mut diagram = BlockDiagram::new("SensorsSourcesAllocModel");
+
+    diagram.add_block(Block::new("gnd", "GND", BlockType::Ground));
+    diagram.add_block(
+        Block::new("vdc", "Vdc", BlockType::DcVoltageSource).with_param("Voltage", "10.0"),
+    );
+    diagram.add_block(Block::new("r1", "R1", BlockType::Resistor).with_param("Resistance", "50.0"));
+    diagram.add_block(Block::new("isens", "ISens", BlockType::CurrentSensor));
+    diagram.add_block(Block::new("vsens", "VSens", BlockType::VoltageSensor));
+    diagram.add_block(
+        Block::new("vcvs", "VCVS", BlockType::VoltageControlledVoltageSource)
+            .with_param("Gain", "2.0"),
+    );
+    diagram.add_block(
+        Block::new("vccs", "VCCS", BlockType::VoltageControlledCurrentSource)
+            .with_param("Transconductance", "0.01"),
+    );
+    diagram.add_block(
+        Block::new("rload", "Rload", BlockType::Resistor).with_param("Resistance", "100.0"),
+    );
+
+    // Connections:
+    // Vdc+ -> R1 -> ISens+ -> ISens- -> GND
+    diagram.add_electrical_line("vdc", 0, "r1", 0);
+    diagram.add_electrical_line("r1", 1, "isens", 0);
+    diagram.add_electrical_line("isens", 1, "gnd", 0);
+    diagram.add_electrical_line("vdc", 1, "gnd", 0);
+
+    // VSens across R1
+    diagram.add_electrical_line("vsens", 0, "r1", 0);
+    diagram.add_electrical_line("vsens", 1, "r1", 1);
+
+    // VCVS powered across Rload
+    diagram.add_electrical_line("vcvs", 0, "rload", 0);
+    diagram.add_electrical_line("rload", 1, "gnd", 0);
+    diagram.add_electrical_line("vcvs", 1, "gnd", 0);
+
+    // VCCS into Rload
+    diagram.add_electrical_line("vccs", 0, "rload", 0);
+    diagram.add_electrical_line("vccs", 1, "gnd", 0);
+
+    let dt = 1e-4;
+    let mut solver = mlapp_sim::electrical::LinearCircuitSolver::compile(&diagram, dt)
+        .expect("compile sensors and sources circuit")
+        .expect("circuit solver exists");
+
+    solver.init_solve(0.0).expect("init solve");
+
+    // Warm-up step
+    solver.set_vcvs_control("vcvs", 1.5);
+    solver.set_vccs_control("vccs", 2.0);
+    solver.step(dt, dt, true).expect("first step");
+    let _ = solver.sensor_voltage("vsens");
+    let _ = solver.sensor_current("isens");
+
+    // Track allocations over 10,000 steps
+    ALLOC_COUNT.store(0, Ordering::SeqCst);
+    TRACKING_ACTIVE.with(|t| t.set(true));
+
+    for step_idx in 1..=10_000 {
+        let t = (step_idx as f64 + 1.0) * dt;
+        solver.set_vcvs_control("vcvs", 1.0 + (step_idx as f64 * 0.001).sin());
+        solver.set_vccs_control("vccs", 2.0 + (step_idx as f64 * 0.001).cos());
+        solver.step(t, dt, false).expect("step");
+        let _ = solver.sensor_voltage("vsens");
+        let _ = solver.sensor_current("isens");
+        let _ = solver.branch_current("isens");
+        let _ = solver.branch_voltage("vsens");
+        let _ = solver.branch_current("vcvs");
+        let _ = solver.branch_current("vccs");
+    }
+
+    TRACKING_ACTIVE.with(|t| t.set(false));
+    let total_allocs = ALLOC_COUNT.load(Ordering::SeqCst);
+
+    assert_eq!(
+        total_allocs, 0,
+        "Sensors and controlled sources stepping must execute with ZERO heap allocations; observed {total_allocs} allocations"
+    );
+}

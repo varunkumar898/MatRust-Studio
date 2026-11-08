@@ -131,6 +131,11 @@ pub struct BlockDiagramEditor {
     pub json_buffer: String,
     pub json_is_export: bool,
     pub json_error: Option<String>,
+
+    // Diagnostics & Problems Panel
+    pub show_problems_panel: bool,
+    pub diagnostics: Vec<mlapp_sim::Diagnostic>,
+    pub undo_diagram: Option<BlockDiagram>,
 }
 
 impl Default for BlockDiagramEditor {
@@ -178,6 +183,10 @@ impl Default for BlockDiagramEditor {
             json_buffer: String::new(),
             json_is_export: true,
             json_error: None,
+
+            show_problems_panel: false,
+            diagnostics: Vec::new(),
+            undo_diagram: None,
         }
     }
 }
@@ -322,7 +331,12 @@ impl BlockDiagramEditor {
     pub fn load_from_json(&mut self, json_str: &str) -> Result<(), String> {
         let diagram: BlockDiagram =
             serde_json::from_str(json_str).map_err(|e| format!("JSON parse error: {e}"))?;
+        self.load_from_block_diagram(&diagram);
+        Ok(())
+    }
 
+    /// Loads the editor state from a BlockDiagram struct.
+    pub fn load_from_block_diagram(&mut self, diagram: &BlockDiagram) {
         self.blocks.clear();
         self.wires.clear();
         self.selected_block_sid = None;
@@ -396,7 +410,13 @@ impl BlockDiagramEditor {
             self.blocks.len(),
             self.wires.len()
         );
-        Ok(())
+        self.refresh_diagnostics();
+    }
+
+    /// Re-evaluates static diagnostics against the current diagram.
+    pub fn refresh_diagnostics(&mut self) {
+        let diagram = self.to_block_diagram();
+        self.diagnostics = mlapp_sim::check_diagram(&diagram, Some(&self.config));
     }
 
     /// Loads a clean-room feedback control loop example:
@@ -693,6 +713,11 @@ impl BlockDiagramEditor {
             self.render_json_modal(ui.ctx(), theme);
         }
 
+        // Problems Window if opened
+        if self.show_problems_panel {
+            self.render_problems_modal(ui.ctx(), theme);
+        }
+
         layout
     }
 
@@ -976,6 +1001,15 @@ impl BlockDiagramEditor {
             wrap(ui, 45.0);
             let zoom = ui.label(format!("{:.0}%", self.zoom * 100.0));
             widgets.push(zoom.rect);
+
+            wrap(ui, 110.0);
+            let prob_label = if self.diagnostics.is_empty() {
+                "Problems (0)".to_string()
+            } else {
+                format!("Problems ({})", self.diagnostics.len())
+            };
+            let prob_btn = ui.toggle_value(&mut self.show_problems_panel, prob_label);
+            widgets.push(prob_btn.rect);
 
             wrap(ui, 100.0);
             let status = ui
@@ -2803,6 +2837,89 @@ impl BlockDiagramEditor {
         if close {
             self.show_json_modal = false;
             self.json_error = None;
+        }
+    }
+
+    fn render_problems_modal(&mut self, ctx: &egui::Context, theme: &Theme) {
+        let mut close_problems = false;
+        egui::Window::new(format!("Problems ({})", self.diagnostics.len()))
+            .id(egui::Id::new("block_diagram_problems_modal"))
+            .default_size([700.0, 260.0])
+            .resizable(true)
+            .show(ctx, |ui| {
+                ui.horizontal(|ui| {
+                    if ui.button("Refresh Diagnostics").clicked() {
+                        self.refresh_diagnostics();
+                    }
+                    if self.undo_diagram.is_some() && ui.button("Undo Fix").clicked() {
+                        if let Some(prev) = self.undo_diagram.take() {
+                            self.load_from_block_diagram(&prev);
+                        }
+                    }
+                    ui.separator();
+                    if ui.button("Close").clicked() {
+                        close_problems = true;
+                    }
+                });
+                ui.separator();
+
+                if self.diagnostics.is_empty() {
+                    ui.label(
+                        RichText::new("No issues detected in current diagram.").color(theme.accent),
+                    );
+                } else {
+                    egui::ScrollArea::vertical().show(ui, |ui| {
+                        let mut fix_to_apply = None;
+                        for diag in &self.diagnostics {
+                            ui.horizontal(|ui| {
+                                let (badge, col) = match diag.severity {
+                                    mlapp_sim::DiagnosticSeverity::Error => {
+                                        ("[ERROR]", egui::Color32::from_rgb(220, 50, 50))
+                                    }
+                                    mlapp_sim::DiagnosticSeverity::Warning => {
+                                        ("[WARN]", egui::Color32::from_rgb(220, 180, 50))
+                                    }
+                                    mlapp_sim::DiagnosticSeverity::Info => {
+                                        ("[INFO]", egui::Color32::from_rgb(50, 150, 220))
+                                    }
+                                };
+                                ui.colored_label(col, badge);
+                                ui.colored_label(col, &diag.code);
+                                if ui
+                                    .button(format!("{}: {}", diag.title(), diag.message))
+                                    .clicked()
+                                {
+                                    if let Some(sid) = diag.block_sids.first() {
+                                        self.selected_block_sid = Some(sid.clone());
+                                        if let Some(b) = self.blocks.iter().find(|b| b.sid == *sid)
+                                        {
+                                            self.pan_offset = Pos2::new(
+                                                300.0 - b.pos.x * self.zoom,
+                                                250.0 - b.pos.y * self.zoom,
+                                            );
+                                        }
+                                    }
+                                }
+                                if let Some(fix) = &diag.fix {
+                                    if ui.button("Fix").clicked() {
+                                        fix_to_apply = Some(fix.as_ref().clone());
+                                    }
+                                }
+                            });
+                        }
+                        if let Some(fix) = fix_to_apply {
+                            self.undo_diagram = Some(self.to_block_diagram());
+                            let mut d = self.to_block_diagram();
+                            if mlapp_sim::apply_fix(&mut d, &fix).is_ok() {
+                                self.load_from_block_diagram(&d);
+                            }
+                        }
+                    });
+                }
+            });
+
+        if close_problems {
+            self.show_problems_panel = false;
         }
     }
 }

@@ -486,3 +486,158 @@ fn test_zero_allocations_during_sensors_and_controlled_sources_stepping() {
         "Sensors and controlled sources stepping must execute with ZERO heap allocations; observed {total_allocs} allocations"
     );
 }
+
+#[test]
+fn test_zero_allocations_during_buck_converter_with_all_measurement_blocks() {
+    let _lock = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    let mut diagram = BlockDiagram::new("BuckWithMeasurementsAllocModel");
+
+    // Electrical Circuit: Buck Converter
+    diagram.add_block(Block::new("gnd", "GND", BlockType::Ground));
+    diagram.add_block(
+        Block::new("vdc", "Vdc", BlockType::DcVoltageSource).with_param("Voltage", "24.0"),
+    );
+    diagram.add_block(
+        Block::new("sw", "Switch", BlockType::IdealSwitch)
+            .with_param("Threshold", "0.5")
+            .with_param("Ron", "0.01")
+            .with_param("Roff", "1e6"),
+    );
+    diagram.add_block(
+        Block::new("d1", "Diode", BlockType::Diode)
+            .with_param("Vf", "0.7")
+            .with_param("Ron", "0.01")
+            .with_param("Roff", "1e6"),
+    );
+    diagram
+        .add_block(Block::new("l1", "L1", BlockType::Inductor).with_param("Inductance", "100e-6"));
+    diagram.add_block(
+        Block::new("c1", "C1", BlockType::Capacitor).with_param("Capacitance", "220e-6"),
+    );
+    diagram.add_block(
+        Block::new("rload", "Rload", BlockType::Resistor).with_param("Resistance", "5.0"),
+    );
+    diagram.add_block(Block::new("vsens", "VSens", BlockType::VoltageSensor));
+    diagram.add_block(Block::new("isens", "ISens", BlockType::CurrentSensor));
+
+    // Wiring of Buck Converter:
+    // Vdc+ -> SW(0)
+    diagram.add_electrical_line("vdc", 0, "sw", 0);
+    // Vdc- -> GND
+    diagram.add_electrical_line("vdc", 1, "gnd", 0);
+    // SW(1) -> D1(1) (cathode) -> L1(0)
+    diagram.add_electrical_line("sw", 1, "d1", 1);
+    diagram.add_electrical_line("sw", 1, "l1", 0);
+    // D1(0) (anode) -> GND
+    diagram.add_electrical_line("d1", 0, "gnd", 0);
+    // L1(1) -> ISens(0)
+    diagram.add_electrical_line("l1", 1, "isens", 0);
+    // ISens(1) -> C1(0) -> Rload(0) -> VSens(0)
+    diagram.add_electrical_line("isens", 1, "c1", 0);
+    diagram.add_electrical_line("isens", 1, "rload", 0);
+    diagram.add_electrical_line("isens", 1, "vsens", 0);
+    // C1(1) -> GND, Rload(1) -> GND, VSens(1) -> GND
+    diagram.add_electrical_line("c1", 1, "gnd", 0);
+    diagram.add_electrical_line("rload", 1, "gnd", 0);
+    diagram.add_electrical_line("vsens", 1, "gnd", 0);
+
+    // Measurement blocks:
+    diagram.add_block(
+        Block::new("rms", "Rms", BlockType::Rms)
+            .with_param("FundamentalFrequency", "50.0")
+            .with_param("SampleTime", "1e-5"),
+    );
+    diagram.add_block(
+        Block::new("mean", "Mean", BlockType::Mean)
+            .with_param("FundamentalFrequency", "50.0")
+            .with_param("SampleTime", "1e-5"),
+    );
+    diagram.add_block(
+        Block::new("pwr", "PowerMeas", BlockType::PowerMeasurement)
+            .with_param("FundamentalFrequency", "50.0")
+            .with_param("SampleTime", "1e-5"),
+    );
+    diagram.add_block(
+        Block::new("thd", "Thd", BlockType::Thd)
+            .with_param("FundamentalFrequency", "50.0")
+            .with_param("SampleTime", "1e-5")
+            .with_param("MaxHarmonic", "10"),
+    );
+
+    // Signal lines connecting sensors to measurements:
+    // VSens(port 2) -> RMS(0)
+    diagram.add_line("vsens", 2, "rms", 0);
+    // VSens(port 2) -> Mean(0)
+    diagram.add_line("vsens", 2, "mean", 0);
+    // VSens(port 2) -> Power(0), ISens(port 2) -> Power(1)
+    diagram.add_line("vsens", 2, "pwr", 0);
+    diagram.add_line("isens", 2, "pwr", 1);
+    // VSens(port 2) -> THD(0)
+    diagram.add_line("vsens", 2, "thd", 0);
+
+    let dt = 1e-5;
+    let config = mlapp_sim::solver::SimulationConfig {
+        start_time: 0.0,
+        stop_time: 0.1,
+        step_size: dt,
+        solver: mlapp_sim::solver::SolverType::FixedStepEuler,
+        ..Default::default()
+    };
+
+    let engine = ExecutionEngine::compile_with_config(&diagram, Some(&config))
+        .expect("compile engine with config");
+    let mut workspace = engine.create_workspace();
+    let continuous_states = engine.initial_continuous_states.clone();
+    let mut discrete_states = engine.initial_discrete_states.clone();
+
+    let mut circuit_solver = mlapp_sim::electrical::LinearCircuitSolver::compile(&diagram, dt)
+        .expect("compile circuit")
+        .expect("circuit solver exists");
+
+    circuit_solver.init_solve(0.0).expect("init solve");
+
+    // Warm-up 1 step
+    circuit_solver.step(dt, dt, true).expect("warm-up step");
+    engine
+        .eval(0.0, &continuous_states, &discrete_states, &mut workspace)
+        .expect("warm-up eval");
+    engine.update_discrete_at(0.0, 0.0, &workspace.outputs, &mut discrete_states, &config);
+    engine.update_measurements_at(0.0, 0.0, &mut workspace, &config);
+
+    // Track allocations over 10,000 steps
+    ALLOC_COUNT.store(0, Ordering::SeqCst);
+    TRACKING_ACTIVE.with(|t| t.set(true));
+
+    for step_idx in 1..=10_000 {
+        let t = (step_idx as f64) * dt;
+        // Duty cycle 50% PWM at 10 kHz
+        let pwm = if (step_idx % 10) < 5 { 1.0 } else { 0.0 };
+        circuit_solver.set_switch_control("sw", pwm);
+
+        circuit_solver.step(t, dt, false).expect("step");
+
+        let v_out = circuit_solver.sensor_voltage("vsens").unwrap_or(0.0);
+        let i_out = circuit_solver.sensor_current("isens").unwrap_or(0.0);
+
+        if let Some(&slot) = engine.block_output_offsets.get(7) {
+            workspace.outputs[slot] = v_out;
+        }
+        if let Some(&slot) = engine.block_output_offsets.get(8) {
+            workspace.outputs[slot] = i_out;
+        }
+
+        engine
+            .eval(t, &continuous_states, &discrete_states, &mut workspace)
+            .expect("eval");
+        engine.update_discrete_at(t, 0.0, &workspace.outputs, &mut discrete_states, &config);
+        engine.update_measurements_at(t, 0.0, &mut workspace, &config);
+    }
+
+    TRACKING_ACTIVE.with(|t| t.set(false));
+    let total_allocs = ALLOC_COUNT.load(Ordering::SeqCst);
+
+    assert_eq!(
+        total_allocs, 0,
+        "Closed-loop buck converter with all 4 measurement blocks must run 10,000 steps with ZERO heap allocations; observed {total_allocs} allocations"
+    );
+}

@@ -1,6 +1,7 @@
 //! Execution engine: direct-feedthrough analysis, Tarjan SCC algebraic loop detection,
 //! deterministic topological scheduling, and pure evaluation for block diagrams.
 
+use crate::measurements::{PowerMeasurementBuffer, ScalarWindowBuffer, ThdBuffer};
 use crate::model::{BlockDiagram, BlockType};
 use crate::solver::{BlockRef, SimError, SimulationConfig, SolverType};
 use crate::spec::parse_float_vector;
@@ -307,6 +308,22 @@ pub enum CompiledKind {
     Outport,
     Inport,
     Sensor,
+    Rms {
+        buffer_idx: usize,
+        sample_time: Option<f64>,
+    },
+    Mean {
+        buffer_idx: usize,
+        sample_time: Option<f64>,
+    },
+    PowerMeasurement {
+        buffer_idx: usize,
+        sample_time: Option<f64>,
+    },
+    Thd {
+        buffer_idx: usize,
+        sample_time: Option<f64>,
+    },
     Other,
 }
 
@@ -333,6 +350,10 @@ pub struct ModelLayout {
 pub struct SimWorkspace {
     pub outputs: Vec<f64>,
     pub derivatives: Vec<f64>,
+    pub rms_buffers: Vec<ScalarWindowBuffer>,
+    pub mean_buffers: Vec<ScalarWindowBuffer>,
+    pub power_buffers: Vec<PowerMeasurementBuffer>,
+    pub thd_buffers: Vec<ThdBuffer>,
 }
 
 impl SimWorkspace {
@@ -340,6 +361,10 @@ impl SimWorkspace {
         Self {
             outputs: vec![0.0; num_blocks],
             derivatives: vec![0.0; num_continuous_states],
+            rms_buffers: Vec::new(),
+            mean_buffers: Vec::new(),
+            power_buffers: Vec::new(),
+            thd_buffers: Vec::new(),
         }
     }
 }
@@ -352,13 +377,38 @@ pub struct ExecutionEngine {
     pub compiled_blocks: Vec<CompiledBlock>,
     pub initial_continuous_states: Vec<f64>,
     pub initial_discrete_states: Vec<f64>,
+    pub block_output_offsets: Vec<usize>,
+    pub total_output_slots: usize,
+    pub initial_rms_buffers: Vec<ScalarWindowBuffer>,
+    pub initial_mean_buffers: Vec<ScalarWindowBuffer>,
+    pub initial_power_buffers: Vec<PowerMeasurementBuffer>,
+    pub initial_thd_buffers: Vec<ThdBuffer>,
+    pub warnings: Vec<crate::diagnostics::Diagnostic>,
 }
 
 impl ExecutionEngine {
+    pub fn create_workspace(&self) -> SimWorkspace {
+        SimWorkspace {
+            outputs: vec![0.0; self.total_output_slots],
+            derivatives: vec![0.0; self.layout.num_continuous_states],
+            rms_buffers: self.initial_rms_buffers.clone(),
+            mean_buffers: self.initial_mean_buffers.clone(),
+            power_buffers: self.initial_power_buffers.clone(),
+            thd_buffers: self.initial_thd_buffers.clone(),
+        }
+    }
+
     /// Compiles a block diagram into an execution engine: analyzes direct feedthrough,
     /// performs Tarjan SCC loop detection for E-ALG errors, validates block parameters,
     /// and schedules blocks topologically.
     pub fn compile(diagram: &BlockDiagram) -> Result<Self, SimError> {
+        Self::compile_with_config(diagram, diagram.simulation_config.as_ref())
+    }
+
+    pub fn compile_with_config(
+        diagram: &BlockDiagram,
+        config: Option<&SimulationConfig>,
+    ) -> Result<Self, SimError> {
         let num_blocks = diagram.blocks.len();
 
         // 1. Build SID/name to index lookup
@@ -505,6 +555,29 @@ impl ExecutionEngine {
         };
 
         // 3. Compile block configurations, parse parameters, and map input wiring
+        let mut block_output_offsets = Vec::with_capacity(num_blocks);
+        let mut total_output_slots = 0;
+        for b in &diagram.blocks {
+            block_output_offsets.push(total_output_slots);
+            let n_out = b.output_ports().max(1);
+            total_output_slots += n_out;
+        }
+
+        let mut slot_to_block = vec![0; total_output_slots];
+        for (i, b) in diagram.blocks.iter().enumerate() {
+            let offset = block_output_offsets[i];
+            let n_out = b.output_ports().max(1);
+            for item in slot_to_block.iter_mut().skip(offset).take(n_out) {
+                *item = i;
+            }
+        }
+
+        let mut initial_rms_buffers = Vec::new();
+        let mut initial_mean_buffers = Vec::new();
+        let mut initial_power_buffers = Vec::new();
+        let mut initial_thd_buffers = Vec::new();
+        let mut warnings = Vec::new();
+
         let mut compiled_blocks = Vec::with_capacity(num_blocks);
 
         for (i, b) in diagram.blocks.iter().enumerate() {
@@ -521,10 +594,17 @@ impl ExecutionEngine {
                         0
                     };
                     if let Some(&src_idx) = block_indices.get(&line.src.block_sid) {
-                        if port_idx < num_inputs {
-                            input_sources[port_idx] = Some(src_idx);
+                        let src_port = if line.src.port_index > 0 {
+                            line.src.port_index - 1
                         } else {
-                            input_sources.push(Some(src_idx));
+                            0
+                        };
+                        let src_outs = diagram.blocks[src_idx].output_ports().max(1);
+                        let src_slot = block_output_offsets[src_idx] + src_port.min(src_outs - 1);
+                        if port_idx < num_inputs {
+                            input_sources[port_idx] = Some(src_slot);
+                        } else {
+                            input_sources.push(Some(src_slot));
                         }
                     }
                 }
@@ -991,6 +1071,314 @@ impl ExecutionEngine {
                 BlockType::Outport => CompiledKind::Outport,
                 BlockType::Inport => CompiledKind::Inport,
                 BlockType::VoltageSensor | BlockType::CurrentSensor => CompiledKind::Sensor,
+                BlockType::Rms => {
+                    let f_base = b
+                        .get_param("FundamentalFrequency")
+                        .and_then(|s| s.parse::<f64>().ok())
+                        .unwrap_or(50.0);
+                    if f_base <= 0.0 {
+                        return Err(SimError::parameter(format!(
+                            "FundamentalFrequency on block '{}' ({f_base}) must be strictly positive.",
+                            b.name
+                        )));
+                    }
+                    let t_period = 1.0 / f_base;
+                    let st_param = b.get_param("SampleTime").and_then(|s| {
+                        let tr = s.trim();
+                        if tr.is_empty() {
+                            None
+                        } else {
+                            tr.parse::<f64>().ok()
+                        }
+                    });
+                    let (ts, sample_time) = match st_param {
+                        Some(ts_val) => {
+                            if ts_val <= 0.0 {
+                                return Err(SimError::parameter(format!(
+                                    "SampleTime on block '{}' ({ts_val}) must be strictly positive.",
+                                    b.name
+                                )));
+                            }
+                            (ts_val, Some(ts_val))
+                        }
+                        None => {
+                            if let Some(cfg) = config {
+                                if cfg.solver.is_variable_step() {
+                                    return Err(SimError::sample_time_missing(
+                                        crate::solver::BlockRef {
+                                            name: b.name.clone(),
+                                            sid: b.sid.clone(),
+                                        },
+                                    ));
+                                }
+                                (cfg.step_size, None)
+                            } else {
+                                (0.001, None)
+                            }
+                        }
+                    };
+                    let nw = (t_period / ts).round() as usize;
+                    if nw < 4 {
+                        return Err(SimError::parameter(format!(
+                            "Window sample count Nw ({nw}) is less than 4 on block '{}': FundamentalFrequency ({f_base} Hz) is too high for SampleTime ({ts} s) (E-PARAM).",
+                            b.name
+                        )));
+                    }
+                    if ((t_period / ts) - (nw as f64)).abs() > 1e-6 * (nw as f64) {
+                        warnings.push(crate::diagnostics::Diagnostic::warning(
+                            "W-WINDOW",
+                            format!(
+                                "Window sample count ({nw}) on block '{}' is not an integer number of samples per period ({:.4}): ripple expected in measurement outputs.",
+                                b.name,
+                                t_period / ts
+                            ),
+                            vec![b.sid.clone()],
+                        ));
+                    }
+                    let init_val = b
+                        .get_param("InitialValue")
+                        .and_then(|s| s.parse::<f64>().ok())
+                        .unwrap_or(0.0);
+                    let buf_idx = initial_rms_buffers.len();
+                    initial_rms_buffers.push(ScalarWindowBuffer::new(nw, init_val, true));
+                    CompiledKind::Rms {
+                        buffer_idx: buf_idx,
+                        sample_time,
+                    }
+                }
+                BlockType::Mean => {
+                    let f_base = b
+                        .get_param("FundamentalFrequency")
+                        .and_then(|s| s.parse::<f64>().ok())
+                        .unwrap_or(50.0);
+                    if f_base <= 0.0 {
+                        return Err(SimError::parameter(format!(
+                            "FundamentalFrequency on block '{}' ({f_base}) must be strictly positive.",
+                            b.name
+                        )));
+                    }
+                    let t_period = 1.0 / f_base;
+                    let st_param = b.get_param("SampleTime").and_then(|s| {
+                        let tr = s.trim();
+                        if tr.is_empty() {
+                            None
+                        } else {
+                            tr.parse::<f64>().ok()
+                        }
+                    });
+                    let (ts, sample_time) = match st_param {
+                        Some(ts_val) => {
+                            if ts_val <= 0.0 {
+                                return Err(SimError::parameter(format!(
+                                    "SampleTime on block '{}' ({ts_val}) must be strictly positive.",
+                                    b.name
+                                )));
+                            }
+                            (ts_val, Some(ts_val))
+                        }
+                        None => {
+                            if let Some(cfg) = config {
+                                if cfg.solver.is_variable_step() {
+                                    return Err(SimError::sample_time_missing(
+                                        crate::solver::BlockRef {
+                                            name: b.name.clone(),
+                                            sid: b.sid.clone(),
+                                        },
+                                    ));
+                                }
+                                (cfg.step_size, None)
+                            } else {
+                                (0.001, None)
+                            }
+                        }
+                    };
+                    let nw = (t_period / ts).round() as usize;
+                    if nw < 4 {
+                        return Err(SimError::parameter(format!(
+                            "Window sample count Nw ({nw}) is less than 4 on block '{}': FundamentalFrequency ({f_base} Hz) is too high for SampleTime ({ts} s) (E-PARAM).",
+                            b.name
+                        )));
+                    }
+                    if ((t_period / ts) - (nw as f64)).abs() > 1e-6 * (nw as f64) {
+                        warnings.push(crate::diagnostics::Diagnostic::warning(
+                            "W-WINDOW",
+                            format!(
+                                "Window sample count ({nw}) on block '{}' is not an integer number of samples per period ({:.4}): ripple expected in measurement outputs.",
+                                b.name,
+                                t_period / ts
+                            ),
+                            vec![b.sid.clone()],
+                        ));
+                    }
+                    let init_val = b
+                        .get_param("InitialValue")
+                        .and_then(|s| s.parse::<f64>().ok())
+                        .unwrap_or(0.0);
+                    let buf_idx = initial_mean_buffers.len();
+                    initial_mean_buffers.push(ScalarWindowBuffer::new(nw, init_val, false));
+                    CompiledKind::Mean {
+                        buffer_idx: buf_idx,
+                        sample_time,
+                    }
+                }
+                BlockType::PowerMeasurement => {
+                    let f_base = b
+                        .get_param("FundamentalFrequency")
+                        .and_then(|s| s.parse::<f64>().ok())
+                        .unwrap_or(50.0);
+                    if f_base <= 0.0 {
+                        return Err(SimError::parameter(format!(
+                            "FundamentalFrequency on block '{}' ({f_base}) must be strictly positive.",
+                            b.name
+                        )));
+                    }
+                    let t_period = 1.0 / f_base;
+                    let st_param = b.get_param("SampleTime").and_then(|s| {
+                        let tr = s.trim();
+                        if tr.is_empty() {
+                            None
+                        } else {
+                            tr.parse::<f64>().ok()
+                        }
+                    });
+                    let (ts, sample_time) = match st_param {
+                        Some(ts_val) => {
+                            if ts_val <= 0.0 {
+                                return Err(SimError::parameter(format!(
+                                    "SampleTime on block '{}' ({ts_val}) must be strictly positive.",
+                                    b.name
+                                )));
+                            }
+                            (ts_val, Some(ts_val))
+                        }
+                        None => {
+                            if let Some(cfg) = config {
+                                if cfg.solver.is_variable_step() {
+                                    return Err(SimError::sample_time_missing(
+                                        crate::solver::BlockRef {
+                                            name: b.name.clone(),
+                                            sid: b.sid.clone(),
+                                        },
+                                    ));
+                                }
+                                (cfg.step_size, None)
+                            } else {
+                                (0.001, None)
+                            }
+                        }
+                    };
+                    let nw = (t_period / ts).round() as usize;
+                    if nw < 4 {
+                        return Err(SimError::parameter(format!(
+                            "Window sample count Nw ({nw}) is less than 4 on block '{}': FundamentalFrequency ({f_base} Hz) is too high for SampleTime ({ts} s) (E-PARAM).",
+                            b.name
+                        )));
+                    }
+                    if ((t_period / ts) - (nw as f64)).abs() > 1e-6 * (nw as f64) {
+                        warnings.push(crate::diagnostics::Diagnostic::warning(
+                            "W-WINDOW",
+                            format!(
+                                "Window sample count ({nw}) on block '{}' is not an integer number of samples per period ({:.4}): ripple expected in measurement outputs.",
+                                b.name,
+                                t_period / ts
+                            ),
+                            vec![b.sid.clone()],
+                        ));
+                    }
+                    let buf_idx = initial_power_buffers.len();
+                    initial_power_buffers.push(PowerMeasurementBuffer::new(nw));
+                    CompiledKind::PowerMeasurement {
+                        buffer_idx: buf_idx,
+                        sample_time,
+                    }
+                }
+                BlockType::Thd => {
+                    let f_base = b
+                        .get_param("FundamentalFrequency")
+                        .and_then(|s| s.parse::<f64>().ok())
+                        .unwrap_or(50.0);
+                    if f_base <= 0.0 {
+                        return Err(SimError::parameter(format!(
+                            "FundamentalFrequency on block '{}' ({f_base}) must be strictly positive.",
+                            b.name
+                        )));
+                    }
+                    let t_period = 1.0 / f_base;
+                    let st_param = b.get_param("SampleTime").and_then(|s| {
+                        let tr = s.trim();
+                        if tr.is_empty() {
+                            None
+                        } else {
+                            tr.parse::<f64>().ok()
+                        }
+                    });
+                    let (ts, sample_time) = match st_param {
+                        Some(ts_val) => {
+                            if ts_val <= 0.0 {
+                                return Err(SimError::parameter(format!(
+                                    "SampleTime on block '{}' ({ts_val}) must be strictly positive.",
+                                    b.name
+                                )));
+                            }
+                            (ts_val, Some(ts_val))
+                        }
+                        None => {
+                            if let Some(cfg) = config {
+                                if cfg.solver.is_variable_step() {
+                                    return Err(SimError::sample_time_missing(
+                                        crate::solver::BlockRef {
+                                            name: b.name.clone(),
+                                            sid: b.sid.clone(),
+                                        },
+                                    ));
+                                }
+                                (cfg.step_size, None)
+                            } else {
+                                (0.001, None)
+                            }
+                        }
+                    };
+                    let nw = (t_period / ts).round() as usize;
+                    if nw < 4 {
+                        return Err(SimError::parameter(format!(
+                            "Window sample count Nw ({nw}) is less than 4 on block '{}': FundamentalFrequency ({f_base} Hz) is too high for SampleTime ({ts} s) (E-PARAM).",
+                            b.name
+                        )));
+                    }
+                    if ((t_period / ts) - (nw as f64)).abs() > 1e-6 * (nw as f64) {
+                        warnings.push(crate::diagnostics::Diagnostic::warning(
+                            "W-WINDOW",
+                            format!(
+                                "Window sample count ({nw}) on block '{}' is not an integer number of samples per period ({:.4}): ripple expected in measurement outputs.",
+                                b.name,
+                                t_period / ts
+                            ),
+                            vec![b.sid.clone()],
+                        ));
+                    }
+                    let h_param = b
+                        .get_param("MaxHarmonic")
+                        .and_then(|s| s.parse::<usize>().ok())
+                        .unwrap_or(40);
+                    let h_clamped = h_param.min((nw - 1) / 2).max(1);
+                    if h_param > (nw - 1) / 2 {
+                        warnings.push(crate::diagnostics::Diagnostic::warning(
+                            "W-THD-LIMIT",
+                            format!(
+                                "MaxHarmonic ({h_param}) on block '{}' exceeds Nyquist limit (Nw - 1) / 2 = {h_clamped}: clamped to {h_clamped}.",
+                                b.name
+                            ),
+                            vec![b.sid.clone()],
+                        ));
+                    }
+                    let as_percent = b.get_param("Output").map(|s| s != "Ratio").unwrap_or(true);
+                    let buf_idx = initial_thd_buffers.len();
+                    initial_thd_buffers.push(ThdBuffer::new(nw, h_clamped, as_percent));
+                    CompiledKind::Thd {
+                        buffer_idx: buf_idx,
+                        sample_time,
+                    }
+                }
                 _ => CompiledKind::Other,
             };
 
@@ -1010,7 +1398,8 @@ impl ExecutionEngine {
 
         for (v, b) in diagram.blocks.iter().enumerate() {
             for (port_idx, &src_opt) in compiled_blocks[v].input_sources.iter().enumerate() {
-                if let Some(u) = src_opt {
+                if let Some(src_slot) = src_opt {
+                    let u = slot_to_block[src_slot];
                     if feedthrough(&b.block_type, &b.parameters, port_idx) {
                         df_adj[u].push(v);
                         if df_predecessors[v].insert(u) {
@@ -1091,6 +1480,13 @@ impl ExecutionEngine {
             compiled_blocks,
             initial_continuous_states,
             initial_discrete_states,
+            block_output_offsets,
+            total_output_slots,
+            initial_rms_buffers,
+            initial_mean_buffers,
+            initial_power_buffers,
+            initial_thd_buffers,
+            warnings,
         })
     }
 
@@ -1109,9 +1505,10 @@ impl ExecutionEngine {
         // Evaluate all blocks in precomputed topological schedule order
         for &idx in &self.schedule {
             let b = &self.compiled_blocks[idx];
+            let slot = self.block_output_offsets[idx];
             match &b.kind {
                 CompiledKind::Constant { value } => {
-                    outputs[idx] = *value;
+                    outputs[slot] = *value;
                 }
                 CompiledKind::SineWave {
                     amp,
@@ -1119,14 +1516,14 @@ impl ExecutionEngine {
                     phase,
                     bias,
                 } => {
-                    outputs[idx] = amp * (freq_rad * t + phase).sin() + bias;
+                    outputs[slot] = amp * (freq_rad * t + phase).sin() + bias;
                 }
                 CompiledKind::Step {
                     step_time,
                     before,
                     after,
                 } => {
-                    outputs[idx] = if t >= *step_time { *after } else { *before };
+                    outputs[slot] = if t >= *step_time { *after } else { *before };
                 }
                 CompiledKind::Sawtooth {
                     amp,
@@ -1139,7 +1536,7 @@ impl ExecutionEngine {
                     let tau = (t_eff.rem_euclid(period)) / period;
                     // Normalized ramp from -1 to +1
                     let saw = 2.0 * tau - 1.0;
-                    outputs[idx] = amp * saw + bias;
+                    outputs[slot] = amp * saw + bias;
                 }
                 CompiledKind::Triangle {
                     amp,
@@ -1155,7 +1552,7 @@ impl ExecutionEngine {
                     } else {
                         3.0 - 4.0 * tau
                     };
-                    outputs[idx] = amp * tri + bias;
+                    outputs[slot] = amp * tri + bias;
                 }
                 CompiledKind::PulseGenerator {
                     amp,
@@ -1164,11 +1561,11 @@ impl ExecutionEngine {
                     delay,
                 } => {
                     if t < *delay {
-                        outputs[idx] = 0.0;
+                        outputs[slot] = 0.0;
                     } else {
                         let t_on = period * (duty / 100.0);
                         let tau = (t - delay).rem_euclid(*period);
-                        outputs[idx] = if tau < t_on { *amp } else { 0.0 };
+                        outputs[slot] = if tau < t_on { *amp } else { 0.0 };
                     }
                 }
                 CompiledKind::RepeatingSequence {
@@ -1193,7 +1590,7 @@ impl ExecutionEngine {
                             break;
                         }
                     }
-                    outputs[idx] = y_val;
+                    outputs[slot] = y_val;
                 }
                 CompiledKind::RepeatingSequenceStair {
                     time_values,
@@ -1218,16 +1615,16 @@ impl ExecutionEngine {
                             y_val = y_last;
                         }
                     }
-                    outputs[idx] = y_val;
+                    outputs[slot] = y_val;
                 }
                 CompiledKind::Clock => {
-                    outputs[idx] = t;
+                    outputs[slot] = t;
                 }
                 CompiledKind::Integrator { state_idx } => {
-                    outputs[idx] = continuous_states[*state_idx];
+                    outputs[slot] = continuous_states[*state_idx];
                 }
                 CompiledKind::UnitDelay { state_idx, .. } => {
-                    outputs[idx] = discrete_states[*state_idx];
+                    outputs[slot] = discrete_states[*state_idx];
                 }
                 CompiledKind::TransferFunction {
                     state_idx,
@@ -1246,7 +1643,7 @@ impl ExecutionEngine {
                     for j in 0..*num_states {
                         y_val += c_coeffs[j] * continuous_states[state_idx + j];
                     }
-                    outputs[idx] = y_val;
+                    outputs[slot] = y_val;
                 }
                 CompiledKind::DiscreteTransferFunction {
                     state_idx,
@@ -1265,7 +1662,7 @@ impl ExecutionEngine {
                     for j in 0..*num_states {
                         y_val += c_coeffs[j] * discrete_states[state_idx + j];
                     }
-                    outputs[idx] = y_val;
+                    outputs[slot] = y_val;
                 }
                 CompiledKind::Pid {
                     is_discrete,
@@ -1305,10 +1702,10 @@ impl ExecutionEngine {
                     if let Some(lower) = lower_limit {
                         v = v.max(*lower);
                     }
-                    outputs[idx] = v;
+                    outputs[slot] = v;
                 }
                 CompiledKind::ZeroOrderHold { state_idx, .. } => {
-                    outputs[idx] = discrete_states[*state_idx];
+                    outputs[slot] = discrete_states[*state_idx];
                 }
                 CompiledKind::Gain { gain } => {
                     let u = b
@@ -1317,7 +1714,7 @@ impl ExecutionEngine {
                         .and_then(|opt| *opt)
                         .map(|src| outputs[src])
                         .unwrap_or(0.0);
-                    outputs[idx] = gain * u;
+                    outputs[slot] = gain * u;
                 }
                 CompiledKind::Sum { signs } => {
                     let mut sum = 0.0;
@@ -1334,7 +1731,7 @@ impl ExecutionEngine {
                             sum -= u;
                         }
                     }
-                    outputs[idx] = sum;
+                    outputs[slot] = sum;
                 }
                 CompiledKind::Product => {
                     let mut prod = 1.0;
@@ -1344,7 +1741,7 @@ impl ExecutionEngine {
                         prod *= u;
                         has_input = true;
                     }
-                    outputs[idx] = if has_input { prod } else { 0.0 };
+                    outputs[slot] = if has_input { prod } else { 0.0 };
                 }
                 CompiledKind::RelationalOperator { op } => {
                     let u1 = b
@@ -1359,7 +1756,7 @@ impl ExecutionEngine {
                         .and_then(|opt| *opt)
                         .map(|src| outputs[src])
                         .unwrap_or(0.0);
-                    outputs[idx] = if op.evaluate(u1, u2) { 1.0 } else { 0.0 };
+                    outputs[slot] = if op.evaluate(u1, u2) { 1.0 } else { 0.0 };
                 }
                 CompiledKind::LogicalOperator { op } => {
                     let res = match op {
@@ -1427,7 +1824,7 @@ impl ExecutionEngine {
                             true_count % 2 == 1
                         }
                     };
-                    outputs[idx] = if res { 1.0 } else { 0.0 };
+                    outputs[slot] = if res { 1.0 } else { 0.0 };
                 }
                 CompiledKind::Switch {
                     criteria,
@@ -1451,7 +1848,7 @@ impl ExecutionEngine {
                         .and_then(|opt| *opt)
                         .map(|src| outputs[src])
                         .unwrap_or(0.0);
-                    outputs[idx] = if criteria.is_pass_first(u2, *threshold) {
+                    outputs[slot] = if criteria.is_pass_first(u2, *threshold) {
                         u1
                     } else {
                         u3
@@ -1464,7 +1861,7 @@ impl ExecutionEngine {
                         .and_then(|opt| *opt)
                         .map(|src| outputs[src])
                         .unwrap_or(0.0);
-                    outputs[idx] = u.abs();
+                    outputs[slot] = u.abs();
                 }
                 CompiledKind::MathFunction { func } => {
                     let u1 = b
@@ -1478,7 +1875,7 @@ impl ExecutionEngine {
                         .get(1)
                         .and_then(|opt| *opt)
                         .map(|src| outputs[src]);
-                    outputs[idx] = func.evaluate(u1, u2);
+                    outputs[slot] = func.evaluate(u1, u2);
                 }
                 CompiledKind::Saturation { lower, upper } => {
                     let u = b
@@ -1487,10 +1884,10 @@ impl ExecutionEngine {
                         .and_then(|opt| *opt)
                         .map(|src| outputs[src])
                         .unwrap_or(0.0);
-                    outputs[idx] = u.clamp(*lower, *upper);
+                    outputs[slot] = u.clamp(*lower, *upper);
                 }
                 CompiledKind::Scope | CompiledKind::ToWorkspace | CompiledKind::Outport => {
-                    outputs[idx] = b
+                    outputs[slot] = b
                         .input_sources
                         .first()
                         .and_then(|opt| *opt)
@@ -1500,21 +1897,41 @@ impl ExecutionEngine {
                 CompiledKind::Sensor => {
                     // Sensor measurement is computed and stored by the electrical circuit solver.
                 }
+                CompiledKind::Rms { buffer_idx, .. } => {
+                    outputs[slot] = workspace.rms_buffers[*buffer_idx].eval_output();
+                }
+                CompiledKind::Mean { buffer_idx, .. } => {
+                    outputs[slot] = workspace.mean_buffers[*buffer_idx].eval_output();
+                }
+                CompiledKind::PowerMeasurement { buffer_idx, .. } => {
+                    for p in 0..5 {
+                        outputs[slot + p] = workspace.power_buffers[*buffer_idx].eval_output(p);
+                    }
+                }
+                CompiledKind::Thd { buffer_idx, .. } => {
+                    outputs[slot] = workspace.thd_buffers[*buffer_idx].eval_output();
+                }
                 _ => {
-                    outputs[idx] = 0.0;
+                    outputs[slot] = 0.0;
                 }
             }
 
-            if !outputs[idx].is_finite() {
-                return Err(SimError::non_finite(
-                    Some(BlockRef {
-                        sid: b.sid.clone(),
-                        name: b.name.clone(),
-                    }),
-                    outputs[idx],
-                    t,
-                    "output",
-                ));
+            let num_outs = match &b.kind {
+                CompiledKind::PowerMeasurement { .. } => 5,
+                _ => 1,
+            };
+            for p in 0..num_outs {
+                if !outputs[slot + p].is_finite() {
+                    return Err(SimError::non_finite(
+                        Some(BlockRef {
+                            sid: b.sid.clone(),
+                            name: b.name.clone(),
+                        }),
+                        outputs[slot + p],
+                        t,
+                        "output",
+                    ));
+                }
             }
         }
 
@@ -1722,6 +2139,10 @@ impl ExecutionEngine {
                     sample_time,
                     ..
                 } => *sample_time,
+                CompiledKind::Rms { sample_time, .. }
+                | CompiledKind::Mean { sample_time, .. }
+                | CompiledKind::PowerMeasurement { sample_time, .. }
+                | CompiledKind::Thd { sample_time, .. } => *sample_time,
                 _ => continue,
             };
 
@@ -1778,6 +2199,22 @@ impl ExecutionEngine {
                 }
                 | CompiledKind::Pid {
                     is_discrete: true,
+                    sample_time: Some(ts),
+                    ..
+                }
+                | CompiledKind::Rms {
+                    sample_time: Some(ts),
+                    ..
+                }
+                | CompiledKind::Mean {
+                    sample_time: Some(ts),
+                    ..
+                }
+                | CompiledKind::PowerMeasurement {
+                    sample_time: Some(ts),
+                    ..
+                }
+                | CompiledKind::Thd {
                     sample_time: Some(ts),
                     ..
                 } => *ts,
@@ -1926,6 +2363,76 @@ impl ExecutionEngine {
 
                     discrete_states[*state_idx_i] = x_i + dt * d_xi;
                     discrete_states[*state_idx_d] = x_d + dt * d_xd;
+                }
+                _ => {}
+            }
+        }
+    }
+
+    /// Streaming update for running measurement blocks (Rms, Mean, PowerMeasurement, Thd).
+    pub fn update_measurements_at(
+        &self,
+        t: f64,
+        t_start: f64,
+        workspace: &mut SimWorkspace,
+        config: &SimulationConfig,
+    ) {
+        let outputs = &workspace.outputs;
+        for b in &self.compiled_blocks {
+            match &b.kind {
+                CompiledKind::Rms {
+                    buffer_idx,
+                    sample_time,
+                } if self.is_sample_hit(t, t_start, *sample_time, config) => {
+                    let u = b
+                        .input_sources
+                        .first()
+                        .and_then(|opt| *opt)
+                        .map(|slot| outputs[slot])
+                        .unwrap_or(0.0);
+                    workspace.rms_buffers[*buffer_idx].update(u);
+                }
+                CompiledKind::Mean {
+                    buffer_idx,
+                    sample_time,
+                } if self.is_sample_hit(t, t_start, *sample_time, config) => {
+                    let u = b
+                        .input_sources
+                        .first()
+                        .and_then(|opt| *opt)
+                        .map(|slot| outputs[slot])
+                        .unwrap_or(0.0);
+                    workspace.mean_buffers[*buffer_idx].update(u);
+                }
+                CompiledKind::PowerMeasurement {
+                    buffer_idx,
+                    sample_time,
+                } if self.is_sample_hit(t, t_start, *sample_time, config) => {
+                    let v = b
+                        .input_sources
+                        .first()
+                        .and_then(|opt| *opt)
+                        .map(|slot| outputs[slot])
+                        .unwrap_or(0.0);
+                    let i = b
+                        .input_sources
+                        .get(1)
+                        .and_then(|opt| *opt)
+                        .map(|slot| outputs[slot])
+                        .unwrap_or(0.0);
+                    workspace.power_buffers[*buffer_idx].update(v, i);
+                }
+                CompiledKind::Thd {
+                    buffer_idx,
+                    sample_time,
+                } if self.is_sample_hit(t, t_start, *sample_time, config) => {
+                    let u = b
+                        .input_sources
+                        .first()
+                        .and_then(|opt| *opt)
+                        .map(|slot| outputs[slot])
+                        .unwrap_or(0.0);
+                    workspace.thd_buffers[*buffer_idx].update(u);
                 }
                 _ => {}
             }

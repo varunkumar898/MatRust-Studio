@@ -63,6 +63,31 @@ At each time step $t$:
 ---
 
 ## 4. Constant-Matrix Fast Path & Zero Heap Allocations
-- For circuits with $N_s \le 5$ switches ($2^{N_s} \le 32$ configurations), pre-factor all $2^{N_s}$ LU matrices for both Backward Euler and Trapezoidal rules at compile time.
-- For $N_s > 5$, maintain pre-allocated matrix and pivot buffers in `LinearCircuitSolver` to perform in-place LU refactoring on state transitions without heap allocation.
+- Pre-factorization table size formula for $N_s$ switches and system size $N$ across 3 integration operators (Initial DC operating point, Backward Euler, Trapezoidal):
+  $$\text{Memory} = 3 \times 2^{N_s} \times (N^2 + N) \times 8 \text{ bytes}$$
+- Table memory footprints for typical dimensions:
+  - $N_s = 1$: $3 \times 2^1 \times (100 + 10) \times 8 = 5,280 \text{ B } (\approx 5.15 \text{ KB for } N = 10)$
+  - $N_s = 4$: $3 \times 2^4 \times (100 + 10) \times 8 = 42,240 \text{ B } (\approx 41.25 \text{ KB for } N = 10)$
+  - $N_s = 8$: $3 \times 2^8 \times (100 + 10) \times 8 = 675,840 \text{ B } (\approx 660 \text{ KB for } N = 10)$
+  - $N_s = 10$: $3 \times 2^{10} \times (100 + 10) \times 8 = 2,703,360 \text{ B } (\approx 2.58 \text{ MB for } N = 10; \approx 62.7 \text{ MB for } N = 50)$
+- **Fallback Rule**: When $N_s > 10$ or table memory exceeds 64 MB ($67,108,864$ bytes), the compiler emits informational diagnostic `I-SLOW` and transitions to an in-place scratch LU decomposition path ($O(N^3)$), allocating zero heap memory during transient stepping.
 - Signal logging exposes `{name}.v`, `{name}.i`, and `{name}.state` (1 for ON, 0 for OFF).
+
+---
+
+## 5. Known Limitations
+Switching instants are resolved to the step size (O(h) error); the thyristor and event localization are not implemented. (Deferred to Milestone M6b).
+
+---
+
+## 6. Analytical Oracle Accuracy & Discretization Convergence Table
+
+Measurements executed in `test_m6_accuracy_convergence_table`:
+
+| Model / System | Solver / Method | $h$ | $h/2$ | $E(h)$ | $E(h/2)$ | Ratio $\frac{E(h)}{E(h/2)}$ | Order |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **Continuous Integrator** ($\dot{x} = -x$) | FixedStepEuler | $1.0\text{ ms}$ | $0.5\text{ ms}$ | $2.379630 \times 10^{-5}$ | $1.189426 \times 10^{-5}$ | **2.001** | $O(h)$ |
+| **MNA Companion Model** (RC Discharge) | Trapezoidal (in Euler) | $1.0\text{ ms}$ | $0.5\text{ ms}$ | $2.764979 \times 10^{-4}$ | $6.931008 \times 10^{-5}$ | **3.989** | $O(h^2)$ |
+| **Diode Commutation Event** (Rectifier) | Switching event | $100\ \mu\text{s}$ | $50\ \mu\text{s}$ | $1.677449 \times 10^{-2}$ | $1.948952 \times 10^{-2}$ | **0.861** | Discontinuous boundary |
+
+*Note on Switching Events*: During smooth intervals, Trapezoidal companion models exhibit exact quadratic convergence ($E(h)/E(h/2) \approx 4.0$). When a switching event occurs within a step, discrete step boundary resolution introduces an $O(h)$ switching latency error, degrading convergence across the event until event localization (M6b) is enabled.

@@ -17,9 +17,25 @@ impl LuDecomposition {
     /// Decomposes row-major square matrix `a` of dimension `size x size`.
     /// Returns `Err(SimError::Singular)` if a zero or near-zero pivot (< 1e-12) is encountered.
     pub fn decompose(a: &[f64], size: usize) -> Result<Self, SimError> {
+        let mut lu = vec![0.0; size * size];
+        let mut pivots = vec![0; size];
+        Self::decompose_into(a, size, &mut lu, &mut pivots)?;
+        Ok(Self { size, lu, pivots })
+    }
+
+    /// Decomposes `a` into pre-allocated `lu` and `pivots` buffers in place.
+    /// Performs ZERO heap allocations.
+    pub fn decompose_into(
+        a: &[f64],
+        size: usize,
+        lu: &mut [f64],
+        pivots: &mut [usize],
+    ) -> Result<(), SimError> {
         let n = size;
-        let mut lu = a.to_vec();
-        let mut pivots = vec![0; n];
+        lu.copy_from_slice(a);
+        for (idx, p) in pivots.iter_mut().enumerate() {
+            *p = idx;
+        }
 
         for i in 0..n {
             // Find pivot in column i at or below row i
@@ -41,12 +57,12 @@ impl LuDecomposition {
             }
 
             // Swap rows in LU if necessary (including sub-diagonal L columns 0..i)
+            pivots[i] = pivot_row;
             if pivot_row != i {
                 for col in 0..n {
                     lu.swap(i * n + col, pivot_row * n + col);
                 }
             }
-            pivots[i] = pivot_row;
 
             let diag = lu[i * n + i];
             for j in (i + 1)..n {
@@ -59,18 +75,23 @@ impl LuDecomposition {
             }
         }
 
-        Ok(Self { size, lu, pivots })
+        Ok(())
     }
 
     /// Solves $A x = b$ into pre-allocated buffer `x` using forward and back substitution.
     /// Performs ZERO heap allocations.
     pub fn solve(&self, b: &[f64], x: &mut [f64]) {
-        let n = self.size;
+        Self::solve_with(self.size, &self.lu, &self.pivots, b, x);
+    }
+
+    /// Solves $A x = b$ using decomposed buffers `lu` and `pivots`.
+    /// Performs ZERO heap allocations.
+    pub fn solve_with(size: usize, lu: &[f64], pivots: &[usize], b: &[f64], x: &mut [f64]) {
+        let n = size;
         x.copy_from_slice(b);
 
         // Apply permutation vector P to b
-        for k in 0..n {
-            let p = self.pivots[k];
+        for (k, &p) in pivots.iter().enumerate().take(n) {
             if p != k {
                 x.swap(k, p);
             }
@@ -80,7 +101,7 @@ impl LuDecomposition {
         for i in 0..n {
             let mut sum = x[i];
             for (j, &xj) in x.iter().enumerate().take(i) {
-                sum -= self.lu[i * n + j] * xj;
+                sum -= lu[i * n + j] * xj;
             }
             x[i] = sum;
         }
@@ -89,9 +110,9 @@ impl LuDecomposition {
         for i in (0..n).rev() {
             let mut sum = x[i];
             for (j, &xj) in x.iter().enumerate().take(n).skip(i + 1) {
-                sum -= self.lu[i * n + j] * xj;
+                sum -= lu[i * n + j] * xj;
             }
-            x[i] = sum / self.lu[i * n + i];
+            x[i] = sum / lu[i * n + i];
         }
     }
 }
@@ -203,6 +224,7 @@ pub struct LinearCircuitSolver {
     pub num_nodes: usize,
     pub num_vsrc: usize,
     pub system_size: usize,
+    dt: f64,
 
     resistors: Vec<ResistorElement>,
     capacitors: Vec<CapacitorElement>,
@@ -215,11 +237,16 @@ pub struct LinearCircuitSolver {
 
     sid_to_terminal_nets: HashMap<String, (usize, usize)>,
 
-    // Pre-factorized LU decomposition tables for all 2^N_s topologies (where N_s <= 5)
-    // Table indices correspond to switch mask m in 0..(1 << (diodes.len() + switches.len()))
+    use_table: bool,
     lu_init_table: Vec<Option<LuDecomposition>>,
     lu_be_table: Vec<Option<LuDecomposition>>,
     lu_trap_table: Vec<Option<LuDecomposition>>,
+
+    // Scratch buffers for in-place fallback when use_table is false
+    scratch_a: Vec<f64>,
+    scratch_lu: Vec<f64>,
+    scratch_pivots: Vec<usize>,
+    scratch_cached_mask: Option<(usize, u8)>,
 
     // Pre-allocated runtime buffers (Zero heap allocation during step())
     rhs: Vec<f64>,
@@ -227,12 +254,25 @@ pub struct LinearCircuitSolver {
     pub node_voltages: Vec<f64>, // index 0 is ground (0.0 V), index 1..num_nodes are non-ground nodes
     vsrc_currents: Vec<f64>,
     visited_masks: [usize; 100],
+
+    pub consecutive_chatter_steps: usize,
+    pub diagnostics: Vec<crate::diagnostics::Diagnostic>,
+    pub test_force_chatter: bool,
 }
 
 impl LinearCircuitSolver {
     /// Compiles circuit blocks from diagram into an MNA system.
     /// Returns `Ok(None)` if no electrical blocks are present.
     pub fn compile(diagram: &BlockDiagram, dt: f64) -> Result<Option<Self>, SimError> {
+        Self::compile_with_options(diagram, dt, false)
+    }
+
+    /// Compiles circuit blocks with options (e.g. `force_scratch` to test scratch fallback).
+    pub fn compile_with_options(
+        diagram: &BlockDiagram,
+        dt: f64,
+        force_scratch: bool,
+    ) -> Result<Option<Self>, SimError> {
         let electrical_blocks: Vec<_> = diagram
             .blocks
             .iter()
@@ -244,6 +284,7 @@ impl LinearCircuitSolver {
         }
 
         // Resolve electrical nets
+        let mut diagnostics = Vec::new();
         let net_result = resolve_electrical_nets(diagram);
         for diag in &net_result.diagnostics {
             if diag.severity == crate::diagnostics::DiagnosticSeverity::Error {
@@ -251,6 +292,8 @@ impl LinearCircuitSolver {
                     "Electrical topology error ({}): {}",
                     diag.code, diag.message
                 )));
+            } else {
+                diagnostics.push(diag.clone());
             }
         }
 
@@ -492,154 +535,134 @@ impl LinearCircuitSolver {
         }
 
         let total_switches = diodes.len() + switches.len();
-        if total_switches > 10 {
-            return Err(SimError::unsupported(format!(
-                "Circuit contains {total_switches} switches/diodes (maximum supported topologies: 2^10 = 1024)."
-            )));
-        }
+        // Memory formula for 3 tables: 3 * 2^Ns * (N^2 + N) * 8 bytes
+        let est_table_bytes = if total_switches <= 20 {
+            3usize
+                .saturating_mul(1usize << total_switches)
+                .saturating_mul(system_size * system_size + system_size)
+                .saturating_mul(std::mem::size_of::<f64>())
+        } else {
+            usize::MAX
+        };
 
-        let total_topologies = 1usize << total_switches;
+        let use_table =
+            !force_scratch && total_switches <= 10 && est_table_bytes <= 64 * 1024 * 1024;
+
+        let total_topologies = if use_table {
+            1usize << total_switches
+        } else {
+            0
+        };
         let mut lu_init_table = Vec::with_capacity(total_topologies);
         let mut lu_be_table = Vec::with_capacity(total_topologies);
         let mut lu_trap_table = Vec::with_capacity(total_topologies);
 
-        // Pre-factorize all 2^N_s topologies at compile time for constant-matrix fast path
-        for mask in 0..total_topologies {
-            // Helper to assemble matrix for given mask and integration rule
-            let mut a_be = vec![0.0; system_size * system_size];
-            let mut a_trap = vec![0.0; system_size * system_size];
-            let mut a_init = vec![0.0; system_size * system_size];
-
-            // 1. Resistors
-            for r in &resistors {
-                let g = 1.0 / r.resistance;
-                stamp_conductance(&mut a_be, system_size, r.p_net, r.n_net, g);
-                stamp_conductance(&mut a_trap, system_size, r.p_net, r.n_net, g);
-                stamp_conductance(&mut a_init, system_size, r.p_net, r.n_net, g);
-            }
-
-            // 2. Capacitors
-            for c in &capacitors {
-                stamp_conductance(&mut a_be, system_size, c.p_net, c.n_net, c.capacitance / dt);
-                stamp_conductance(
-                    &mut a_trap,
-                    system_size,
-                    c.p_net,
-                    c.n_net,
-                    2.0 * c.capacitance / dt,
-                );
-                stamp_conductance(&mut a_init, system_size, c.p_net, c.n_net, 1e9);
-            }
-
-            // 3. Inductors
-            for l in &inductors {
-                stamp_conductance(&mut a_be, system_size, l.p_net, l.n_net, dt / l.inductance);
-                stamp_conductance(
-                    &mut a_trap,
-                    system_size,
-                    l.p_net,
-                    l.n_net,
-                    dt / (2.0 * l.inductance),
-                );
-                stamp_conductance(&mut a_init, system_size, l.p_net, l.n_net, 1e-9);
-            }
-
-            // 4. Voltage sources
-            for vsrc in &dc_vsources {
-                stamp_vsource(
-                    &mut a_be,
+        if use_table {
+            let mut a_scratch = vec![0.0; system_size * system_size];
+            for mask in 0..total_topologies {
+                Self::assemble_mna_matrix_static(
+                    &mut a_scratch,
                     system_size,
                     num_nodes,
-                    vsrc.p_net,
-                    vsrc.n_net,
-                    vsrc.vsrc_idx,
+                    dt,
+                    1, // Backward Euler
+                    mask,
+                    &resistors,
+                    &capacitors,
+                    &inductors,
+                    &dc_vsources,
+                    &ac_vsources,
+                    &diodes,
+                    &switches,
                 );
-                stamp_vsource(
-                    &mut a_trap,
-                    system_size,
-                    num_nodes,
-                    vsrc.p_net,
-                    vsrc.n_net,
-                    vsrc.vsrc_idx,
-                );
-                stamp_vsource(
-                    &mut a_init,
-                    system_size,
-                    num_nodes,
-                    vsrc.p_net,
-                    vsrc.n_net,
-                    vsrc.vsrc_idx,
-                );
-            }
-            for vsrc in &ac_vsources {
-                stamp_vsource(
-                    &mut a_be,
-                    system_size,
-                    num_nodes,
-                    vsrc.p_net,
-                    vsrc.n_net,
-                    vsrc.vsrc_idx,
-                );
-                stamp_vsource(
-                    &mut a_trap,
-                    system_size,
-                    num_nodes,
-                    vsrc.p_net,
-                    vsrc.n_net,
-                    vsrc.vsrc_idx,
-                );
-                stamp_vsource(
-                    &mut a_init,
-                    system_size,
-                    num_nodes,
-                    vsrc.p_net,
-                    vsrc.n_net,
-                    vsrc.vsrc_idx,
-                );
-            }
-
-            // 5. Diode conductances for this topology mask
-            for (i, d) in diodes.iter().enumerate() {
-                let is_on = (mask & (1 << i)) != 0;
-                let g = if is_on { d.gon } else { d.goff };
-                stamp_conductance(&mut a_be, system_size, d.p_net, d.n_net, g);
-                stamp_conductance(&mut a_trap, system_size, d.p_net, d.n_net, g);
-                stamp_conductance(&mut a_init, system_size, d.p_net, d.n_net, g);
-            }
-
-            // 6. Ideal switch conductances for this topology mask
-            let n_diodes = diodes.len();
-            for (j, s) in switches.iter().enumerate() {
-                let is_on = (mask & (1 << (n_diodes + j))) != 0;
-                let g = if is_on { s.gon } else { s.goff };
-                stamp_conductance(&mut a_be, system_size, s.p_net, s.n_net, g);
-                stamp_conductance(&mut a_trap, system_size, s.p_net, s.n_net, g);
-                stamp_conductance(&mut a_init, system_size, s.p_net, s.n_net, g);
-            }
-
-            let be_res = LuDecomposition::decompose(&a_be, system_size);
-            if mask == 0 {
-                if let Err(e) = be_res {
-                    return Err(e);
+                let be_res = LuDecomposition::decompose(&a_scratch, system_size);
+                if mask == 0 {
+                    if let Err(e) = be_res {
+                        return Err(e);
+                    }
                 }
-            }
-            lu_be_table.push(be_res.ok());
-            lu_init_table.push(LuDecomposition::decompose(&a_init, system_size).ok());
-            lu_trap_table.push(LuDecomposition::decompose(&a_trap, system_size).ok());
-        }
+                lu_be_table.push(be_res.ok());
 
-        // If the all-off initial mask (mask 0) cannot be factored in init solve, circuit is singular
-        if lu_init_table[0].is_none() {
-            return Err(SimError::singular(
-                "Initial circuit topology matrix is singular (no DC path to ground or redundant ideal sources)."
-                    .to_string(),
+                Self::assemble_mna_matrix_static(
+                    &mut a_scratch,
+                    system_size,
+                    num_nodes,
+                    dt,
+                    0, // Init solve
+                    mask,
+                    &resistors,
+                    &capacitors,
+                    &inductors,
+                    &dc_vsources,
+                    &ac_vsources,
+                    &diodes,
+                    &switches,
+                );
+                lu_init_table.push(LuDecomposition::decompose(&a_scratch, system_size).ok());
+
+                Self::assemble_mna_matrix_static(
+                    &mut a_scratch,
+                    system_size,
+                    num_nodes,
+                    dt,
+                    2, // Trapezoidal
+                    mask,
+                    &resistors,
+                    &capacitors,
+                    &inductors,
+                    &dc_vsources,
+                    &ac_vsources,
+                    &diodes,
+                    &switches,
+                );
+                lu_trap_table.push(LuDecomposition::decompose(&a_scratch, system_size).ok());
+            }
+
+            if lu_init_table[0].is_none() {
+                return Err(SimError::singular(
+                    "Initial circuit topology matrix is singular (no DC path to ground or redundant ideal sources)."
+                        .to_string(),
+                ));
+            }
+        } else {
+            // Informational diagnostic for scratch fallback
+            diagnostics.push(crate::diagnostics::Diagnostic::info(
+                "I-SLOW",
+                format!(
+                    "Circuit contains {total_switches} switches (system size {system_size}), exceeding fast-path table limit (Ns <= 10, table memory <= 64 MB; estimated {est_table_bytes} B). Using in-place scratch LU decomposition per state transition."
+                ),
+                Vec::new(),
             ));
+
+            let mut a_init = vec![0.0; system_size * system_size];
+            Self::assemble_mna_matrix_static(
+                &mut a_init,
+                system_size,
+                num_nodes,
+                dt,
+                0, // Init solve
+                0, // Mask 0 (all switches OFF)
+                &resistors,
+                &capacitors,
+                &inductors,
+                &dc_vsources,
+                &ac_vsources,
+                &diodes,
+                &switches,
+            );
+            if LuDecomposition::decompose(&a_init, system_size).is_err() {
+                return Err(SimError::singular(
+                    "Initial circuit topology matrix is singular (no DC path to ground or redundant ideal sources)."
+                        .to_string(),
+                ));
+            }
         }
 
         Ok(Some(Self {
             num_nodes,
             num_vsrc,
             system_size,
+            dt,
             resistors,
             capacitors,
             inductors,
@@ -649,15 +672,294 @@ impl LinearCircuitSolver {
             diodes,
             switches,
             sid_to_terminal_nets,
+            use_table,
             lu_init_table,
             lu_be_table,
             lu_trap_table,
+            scratch_a: vec![0.0; system_size * system_size],
+            scratch_lu: vec![0.0; system_size * system_size],
+            scratch_pivots: vec![0; system_size],
+            scratch_cached_mask: None,
             rhs: vec![0.0; system_size],
             sol: vec![0.0; system_size],
             node_voltages: vec![0.0; num_nodes + 1],
             vsrc_currents: vec![0.0; num_vsrc],
             visited_masks: [0; 100],
+            consecutive_chatter_steps: 0,
+            diagnostics,
+            test_force_chatter: false,
         }))
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn assemble_mna_matrix_static(
+        a: &mut [f64],
+        system_size: usize,
+        num_nodes: usize,
+        dt: f64,
+        mode: u8, // 0 = init, 1 = be, 2 = trap
+        mask: usize,
+        resistors: &[ResistorElement],
+        capacitors: &[CapacitorElement],
+        inductors: &[InductorElement],
+        dc_vsources: &[DcVoltageSourceElement],
+        ac_vsources: &[AcVoltageSourceElement],
+        diodes: &[DiodeElement],
+        switches: &[IdealSwitchElement],
+    ) {
+        a.fill(0.0);
+
+        // 1. Resistors
+        for r in resistors {
+            let g = 1.0 / r.resistance;
+            stamp_conductance(a, system_size, r.p_net, r.n_net, g);
+        }
+
+        // 2. Capacitors
+        for c in capacitors {
+            let g = match mode {
+                0 => 1e9,
+                1 => c.capacitance / dt,
+                _ => 2.0 * c.capacitance / dt,
+            };
+            stamp_conductance(a, system_size, c.p_net, c.n_net, g);
+        }
+
+        // 3. Inductors
+        for l in inductors {
+            let g = match mode {
+                0 => 1e-9,
+                1 => dt / l.inductance,
+                _ => dt / (2.0 * l.inductance),
+            };
+            stamp_conductance(a, system_size, l.p_net, l.n_net, g);
+        }
+
+        // 4. Voltage sources
+        for vsrc in dc_vsources {
+            stamp_vsource(
+                a,
+                system_size,
+                num_nodes,
+                vsrc.p_net,
+                vsrc.n_net,
+                vsrc.vsrc_idx,
+            );
+        }
+        for vsrc in ac_vsources {
+            stamp_vsource(
+                a,
+                system_size,
+                num_nodes,
+                vsrc.p_net,
+                vsrc.n_net,
+                vsrc.vsrc_idx,
+            );
+        }
+
+        // 5. Diode conductances for this topology mask
+        for (i, d) in diodes.iter().enumerate() {
+            let is_on = (mask & (1 << i)) != 0;
+            let g = if is_on { d.gon } else { d.goff };
+            stamp_conductance(a, system_size, d.p_net, d.n_net, g);
+        }
+
+        // 6. Ideal switch conductances for this topology mask
+        let n_diodes = diodes.len();
+        for (j, s) in switches.iter().enumerate() {
+            let is_on = (mask & (1 << (n_diodes + j))) != 0;
+            let g = if is_on { s.gon } else { s.goff };
+            stamp_conductance(a, system_size, s.p_net, s.n_net, g);
+        }
+    }
+
+    fn assemble_matrix_for_mask(&mut self, mask: usize, mode: u8) {
+        Self::assemble_mna_matrix_static(
+            &mut self.scratch_a,
+            self.system_size,
+            self.num_nodes,
+            self.dt,
+            mode,
+            mask,
+            &self.resistors,
+            &self.capacitors,
+            &self.inductors,
+            &self.dc_vsources,
+            &self.ac_vsources,
+            &self.diodes,
+            &self.switches,
+        );
+    }
+
+    fn solve_system(&mut self, mask: usize, mode: u8) -> Result<(), SimError> {
+        let n = self.num_nodes;
+        if self.use_table {
+            let decomp_opt = match mode {
+                0 => self.lu_init_table.get(mask).and_then(|opt| opt.as_ref()),
+                1 => self.lu_be_table.get(mask).and_then(|opt| opt.as_ref()),
+                _ => self.lu_trap_table.get(mask).and_then(|opt| opt.as_ref()),
+            };
+            let decomp = decomp_opt.ok_or_else(|| {
+                SimError::singular(format!(
+                    "Singular matrix encountered for switch state configuration {mask:#b}."
+                ))
+            })?;
+            decomp.solve(&self.rhs, &mut self.sol);
+        } else {
+            // Scratch matrix fallback path
+            if self.scratch_cached_mask != Some((mask, mode)) {
+                self.assemble_matrix_for_mask(mask, mode);
+                LuDecomposition::decompose_into(
+                    &self.scratch_a,
+                    self.system_size,
+                    &mut self.scratch_lu,
+                    &mut self.scratch_pivots,
+                )?;
+                self.scratch_cached_mask = Some((mask, mode));
+            }
+            LuDecomposition::solve_with(
+                self.system_size,
+                &self.scratch_lu,
+                &self.scratch_pivots,
+                &self.rhs,
+                &mut self.sol,
+            );
+        }
+
+        self.node_voltages[0] = 0.0;
+        for i in 1..=n {
+            self.node_voltages[i] = self.sol[i - 1];
+        }
+        Ok(())
+    }
+
+    fn assemble_rhs(&mut self, t: f64, dt: f64, is_first_step: bool, mask: usize) {
+        let n = self.num_nodes;
+        self.rhs.fill(0.0);
+
+        for isrc in &self.dc_isources {
+            let i_val = isrc.current;
+            if isrc.p_net > 0 {
+                self.rhs[isrc.p_net - 1] += i_val;
+            }
+            if isrc.n_net > 0 {
+                self.rhs[isrc.n_net - 1] -= i_val;
+            }
+        }
+
+        for c in &self.capacitors {
+            let i_eq = if is_first_step {
+                -(c.capacitance / dt) * c.v0
+            } else {
+                let g = 2.0 * c.capacitance / dt;
+                -g * c.vc - c.ic
+            };
+            if c.p_net > 0 {
+                self.rhs[c.p_net - 1] -= i_eq;
+            }
+            if c.n_net > 0 {
+                self.rhs[c.n_net - 1] += i_eq;
+            }
+        }
+
+        for l in &self.inductors {
+            let i_eq = if is_first_step {
+                l.i0
+            } else {
+                let g = dt / (2.0 * l.inductance);
+                l.il + g * l.vl
+            };
+            if l.p_net > 0 {
+                self.rhs[l.p_net - 1] -= i_eq;
+            }
+            if l.n_net > 0 {
+                self.rhs[l.n_net - 1] += i_eq;
+            }
+        }
+
+        for (i, d) in self.diodes.iter().enumerate() {
+            let is_on = (mask & (1 << i)) != 0;
+            if is_on {
+                let i_eq = d.gon * d.vf;
+                if d.p_net > 0 {
+                    self.rhs[d.p_net - 1] += i_eq;
+                }
+                if d.n_net > 0 {
+                    self.rhs[d.n_net - 1] -= i_eq;
+                }
+            }
+        }
+
+        for vsrc in &self.dc_vsources {
+            self.rhs[n + vsrc.vsrc_idx] = vsrc.voltage;
+        }
+
+        for vsrc in &self.ac_vsources {
+            let v_val = vsrc.amplitude
+                * (2.0 * std::f64::consts::PI * vsrc.frequency * t + vsrc.phase_rad).sin()
+                + vsrc.offset;
+            self.rhs[n + vsrc.vsrc_idx] = v_val;
+        }
+    }
+
+    fn assemble_init_rhs(&mut self, t0: f64, mask: usize) {
+        let n = self.num_nodes;
+        self.rhs.fill(0.0);
+
+        for isrc in &self.dc_isources {
+            let i_val = isrc.current;
+            if isrc.p_net > 0 {
+                self.rhs[isrc.p_net - 1] += i_val;
+            }
+            if isrc.n_net > 0 {
+                self.rhs[isrc.n_net - 1] -= i_val;
+            }
+        }
+
+        for c in &self.capacitors {
+            let g = 1e9;
+            let i_eq = -g * c.v0;
+            if c.p_net > 0 {
+                self.rhs[c.p_net - 1] -= i_eq;
+            }
+            if c.n_net > 0 {
+                self.rhs[c.n_net - 1] += i_eq;
+            }
+        }
+
+        for l in &self.inductors {
+            let i_eq = l.i0;
+            if l.p_net > 0 {
+                self.rhs[l.p_net - 1] -= i_eq;
+            }
+            if l.n_net > 0 {
+                self.rhs[l.n_net - 1] += i_eq;
+            }
+        }
+
+        for (i, d) in self.diodes.iter().enumerate() {
+            let is_on = (mask & (1 << i)) != 0;
+            if is_on {
+                let i_eq = d.gon * d.vf;
+                if d.p_net > 0 {
+                    self.rhs[d.p_net - 1] += i_eq;
+                }
+                if d.n_net > 0 {
+                    self.rhs[d.n_net - 1] -= i_eq;
+                }
+            }
+        }
+
+        for vsrc in &self.dc_vsources {
+            self.rhs[n + vsrc.vsrc_idx] = vsrc.voltage;
+        }
+
+        for vsrc in &self.ac_vsources {
+            let v_val = vsrc.amplitude
+                * (2.0 * std::f64::consts::PI * vsrc.frequency * t0 + vsrc.phase_rad).sin()
+                + vsrc.offset;
+            self.rhs[n + vsrc.vsrc_idx] = v_val;
+        }
     }
 
     /// Computes the integer bitmask corresponding to current diode and switch states.
@@ -710,7 +1012,7 @@ impl LinearCircuitSolver {
     pub fn init_solve(&mut self, t0: f64) -> Result<(), SimError> {
         let n = self.num_nodes;
 
-        // 1. Update IdealSwitch states from control values
+        // 1. Update IdealSwitch states from control values (F4: ctrl >= threshold)
         for s in &mut self.switches {
             s.is_on = s.ctrl_val >= s.threshold;
         }
@@ -722,11 +1024,19 @@ impl LinearCircuitSolver {
         for _iter in 0..100 {
             let mask = self.current_mask();
 
-            for &prev_mask in &self.visited_masks[..visited_count] {
-                if prev_mask == mask {
-                    return Err(SimError::chatter(format!(
-                        "Switch limit cycle / chattering detected during DC operating point solve at t = {t0:.6} s; state mask {mask:#b} repeated in sequence."
-                    )));
+            // Check for immediate convergence (A -> A)
+            if visited_count > 0 && mask == self.visited_masks[visited_count - 1] {
+                break;
+            }
+
+            // Check for limit cycle in DC solve
+            if visited_count > 0 {
+                for &prev_mask in &self.visited_masks[..visited_count - 1] {
+                    if prev_mask == mask {
+                        return Err(SimError::chatter(format!(
+                            "Switch limit cycle / chattering detected during DC operating point solve at t = {t0:.6} s; state mask {mask:#b} repeated in sequence."
+                        )));
+                    }
                 }
             }
 
@@ -735,80 +1045,8 @@ impl LinearCircuitSolver {
                 visited_count += 1;
             }
 
-            self.rhs.fill(0.0);
-
-            for isrc in &self.dc_isources {
-                let i_val = isrc.current;
-                if isrc.p_net > 0 {
-                    self.rhs[isrc.p_net - 1] += i_val;
-                }
-                if isrc.n_net > 0 {
-                    self.rhs[isrc.n_net - 1] -= i_val;
-                }
-            }
-
-            for c in &self.capacitors {
-                let g = 1e9;
-                let i_eq = -g * c.v0;
-                if c.p_net > 0 {
-                    self.rhs[c.p_net - 1] -= i_eq;
-                }
-                if c.n_net > 0 {
-                    self.rhs[c.n_net - 1] += i_eq;
-                }
-            }
-
-            for l in &self.inductors {
-                let i_eq = l.i0;
-                if l.p_net > 0 {
-                    self.rhs[l.p_net - 1] -= i_eq;
-                }
-                if l.n_net > 0 {
-                    self.rhs[l.n_net - 1] += i_eq;
-                }
-            }
-
-            // Diode companion current source: when ON, I_eq = G_on * Vf from p to n
-            for (i, d) in self.diodes.iter().enumerate() {
-                let is_on = (mask & (1 << i)) != 0;
-                if is_on {
-                    let i_eq = d.gon * d.vf;
-                    if d.p_net > 0 {
-                        self.rhs[d.p_net - 1] += i_eq;
-                    }
-                    if d.n_net > 0 {
-                        self.rhs[d.n_net - 1] -= i_eq;
-                    }
-                }
-            }
-
-            for vsrc in &self.dc_vsources {
-                self.rhs[n + vsrc.vsrc_idx] = vsrc.voltage;
-            }
-
-            for vsrc in &self.ac_vsources {
-                let v_val = vsrc.amplitude
-                    * (2.0 * std::f64::consts::PI * vsrc.frequency * t0 + vsrc.phase_rad).sin()
-                    + vsrc.offset;
-                self.rhs[n + vsrc.vsrc_idx] = v_val;
-            }
-
-            let lu = self
-                .lu_init_table
-                .get(mask)
-                .and_then(|opt| opt.as_ref())
-                .ok_or_else(|| {
-                    SimError::singular(format!(
-                        "Singular matrix encountered for switch state configuration {mask:#b} during DC operating point solve at t = {t0:.6} s."
-                    ))
-                })?;
-
-            lu.solve(&self.rhs, &mut self.sol);
-
-            self.node_voltages[0] = 0.0;
-            for i in 1..=n {
-                self.node_voltages[i] = self.sol[i - 1];
-            }
+            self.assemble_init_rhs(t0, mask);
+            self.solve_system(mask, 0)?;
 
             if n_diodes == 0 {
                 break;
@@ -829,7 +1067,10 @@ impl LinearCircuitSolver {
                 d.vd = vd;
                 d.id = id;
 
-                let next_on = if currently_on { id > 0.0 } else { vd >= d.vf };
+                // F4: strict boundary comparison
+                // OFF -> ON when vd > vf (strict)
+                // ON -> OFF when id < 0 (strict)
+                let next_on = if currently_on { id >= 0.0 } else { vd > d.vf };
 
                 if next_on != currently_on {
                     converged = false;
@@ -894,26 +1135,49 @@ impl LinearCircuitSolver {
     /// Performs ZERO heap allocations.
     pub fn step(&mut self, t: f64, dt: f64, is_first_step: bool) -> Result<(), SimError> {
         let n = self.num_nodes;
+        let mode: u8 = if is_first_step { 1 } else { 2 };
 
-        // 1. Update IdealSwitch states from their control values
+        // 1. Update IdealSwitch states from sampled control values (F4: ctrl >= threshold)
         for s in &mut self.switches {
             s.is_on = s.ctrl_val >= s.threshold;
         }
 
+        // Save previous step's diode states as bitmask for deterministic chatter resolution (P5 zero heap allocation)
+        let prev_diode_mask = self.current_mask();
+
         let mut visited_count = 0usize;
+        let mut chatter_detected = false;
+        let mut cycle_start_idx = 0usize;
         let n_diodes = self.diodes.len();
 
         // 2. Fixed-point iteration loop
         for _iter in 0..100 {
             let mask = self.current_mask();
 
-            // Check for limit cycle (chattering)
-            for &prev_mask in &self.visited_masks[..visited_count] {
-                if prev_mask == mask {
-                    return Err(SimError::chatter(format!(
-                        "Switch limit cycle / chattering detected at t = {t:.6} s; state mask {mask:#b} repeated in sequence."
-                    )));
+            if self.test_force_chatter {
+                chatter_detected = true;
+                cycle_start_idx = 0;
+                break;
+            }
+
+            // Check if mask repeats a previously visited mask
+            if visited_count > 0 {
+                // Consecutive repeat A -> A is convergence (not chatter)
+                if mask == self.visited_masks[visited_count - 1] {
+                    break;
                 }
+                // Check if mask appeared earlier at index j < visited_count - 1 (cycle of length >= 2)
+                for (j, &prev_mask) in self.visited_masks[..visited_count - 1].iter().enumerate() {
+                    if prev_mask == mask {
+                        chatter_detected = true;
+                        cycle_start_idx = j;
+                        break;
+                    }
+                }
+            }
+
+            if chatter_detected {
+                break;
             }
 
             if visited_count < self.visited_masks.len() {
@@ -921,98 +1185,8 @@ impl LinearCircuitSolver {
                 visited_count += 1;
             }
 
-            self.rhs.fill(0.0);
-
-            // Independent DC current sources
-            for isrc in &self.dc_isources {
-                let i_val = isrc.current;
-                if isrc.p_net > 0 {
-                    self.rhs[isrc.p_net - 1] += i_val;
-                }
-                if isrc.n_net > 0 {
-                    self.rhs[isrc.n_net - 1] -= i_val;
-                }
-            }
-
-            // Companion model Norton equivalent history currents
-            for c in &self.capacitors {
-                let i_eq = if is_first_step {
-                    -(c.capacitance / dt) * c.v0
-                } else {
-                    let g = 2.0 * c.capacitance / dt;
-                    -g * c.vc - c.ic
-                };
-
-                if c.p_net > 0 {
-                    self.rhs[c.p_net - 1] -= i_eq;
-                }
-                if c.n_net > 0 {
-                    self.rhs[c.n_net - 1] += i_eq;
-                }
-            }
-
-            for l in &self.inductors {
-                let i_eq = if is_first_step {
-                    l.i0
-                } else {
-                    let g = dt / (2.0 * l.inductance);
-                    l.il + g * l.vl
-                };
-
-                if l.p_net > 0 {
-                    self.rhs[l.p_net - 1] -= i_eq;
-                }
-                if l.n_net > 0 {
-                    self.rhs[l.n_net - 1] += i_eq;
-                }
-            }
-
-            // Diode companion current sources: when ON, I_eq = G_on * Vf from p to n
-            for (i, d) in self.diodes.iter().enumerate() {
-                let is_on = (mask & (1 << i)) != 0;
-                if is_on {
-                    let i_eq = d.gon * d.vf;
-                    if d.p_net > 0 {
-                        self.rhs[d.p_net - 1] += i_eq;
-                    }
-                    if d.n_net > 0 {
-                        self.rhs[d.n_net - 1] -= i_eq;
-                    }
-                }
-            }
-
-            // Independent voltage sources
-            for vsrc in &self.dc_vsources {
-                self.rhs[n + vsrc.vsrc_idx] = vsrc.voltage;
-            }
-
-            for vsrc in &self.ac_vsources {
-                let v_val = vsrc.amplitude
-                    * (2.0 * std::f64::consts::PI * vsrc.frequency * t + vsrc.phase_rad).sin()
-                    + vsrc.offset;
-                self.rhs[n + vsrc.vsrc_idx] = v_val;
-            }
-
-            // Solve Ax = b via pre-factorized LU table
-            let lu = if is_first_step {
-                self.lu_be_table.get(mask).and_then(|opt| opt.as_ref())
-            } else {
-                self.lu_trap_table.get(mask).and_then(|opt| opt.as_ref())
-            };
-
-            match lu {
-                Some(decomp) => decomp.solve(&self.rhs, &mut self.sol),
-                None => {
-                    return Err(SimError::singular(format!(
-                        "Singular matrix encountered for switch state configuration {mask:#b} at t = {t:.6} s."
-                    )));
-                }
-            }
-
-            self.node_voltages[0] = 0.0;
-            for i in 1..=n {
-                self.node_voltages[i] = self.sol[i - 1];
-            }
+            self.assemble_rhs(t, dt, is_first_step, mask);
+            self.solve_system(mask, mode)?;
 
             if n_diodes == 0 {
                 break;
@@ -1034,7 +1208,10 @@ impl LinearCircuitSolver {
                 d.vd = vd;
                 d.id = id;
 
-                let next_on = if currently_on { id > 0.0 } else { vd >= d.vf };
+                // F4: strict boundary comparison
+                // OFF -> ON when vd > vf (strict)
+                // ON -> OFF when id < 0 (strict)
+                let next_on = if currently_on { id >= 0.0 } else { vd > d.vf };
 
                 if next_on != currently_on {
                     converged = false;
@@ -1047,13 +1224,56 @@ impl LinearCircuitSolver {
             }
         }
 
-        if visited_count >= 100 {
-            return Err(SimError::chatter(format!(
-                "Exceeded maximum 100 fixed-point switch iterations at t = {t:.6} s without convergence."
-            )));
+        // 3. Handle chatter or limit cycle (F3)
+        if chatter_detected || visited_count >= 100 {
+            // Retain previous step's switch states (P5 zero heap allocation)
+            for (i, d) in self.diodes.iter_mut().enumerate() {
+                d.is_on = (prev_diode_mask & (1 << i)) != 0;
+            }
+            let retained_mask = self.current_mask();
+            self.assemble_rhs(t, dt, is_first_step, retained_mask);
+            self.solve_system(retained_mask, mode)?;
+
+            let mut cycling_sids = Vec::new();
+            if chatter_detected {
+                let prev_mask = self.visited_masks[cycle_start_idx];
+                for (d_idx, d) in self.diodes.iter().enumerate() {
+                    let bit = 1usize << d_idx;
+                    let initial_bit = prev_mask & bit;
+                    let differs = self.visited_masks[cycle_start_idx..visited_count]
+                        .iter()
+                        .any(|&m| (m & bit) != initial_bit);
+                    if differs {
+                        cycling_sids.push(d.sid.clone());
+                    }
+                }
+            }
+            if cycling_sids.is_empty() {
+                cycling_sids = self.diodes.iter().map(|d| d.sid.clone()).collect();
+            }
+            let warn = crate::diagnostics::Diagnostic::warning(
+                "W-CHATTER",
+                format!(
+                    "Switch chattering limit cycle detected at t = {:.6} s involving devices {:?}. Retaining previous step switch states.",
+                    t, cycling_sids
+                ),
+                cycling_sids.clone(),
+            );
+            self.diagnostics.push(warn);
+
+            self.consecutive_chatter_steps += 1;
+            if self.consecutive_chatter_steps > 100 {
+                return Err(SimError::chatter(format!(
+                    "Chattering error (E-CHATTER): W-CHATTER persisted for more than 100 consecutive steps at t = {:.6} s involving devices {:?}.",
+                    t, cycling_sids
+                )));
+            }
+        } else {
+            // Normal convergence resets consecutive chatter counter
+            self.consecutive_chatter_steps = 0;
         }
 
-        // Converged! Update source currents, element states, and reactive history
+        // 4. Update source currents, element states, and reactive history
         for (k, v) in self.vsrc_currents.iter_mut().enumerate() {
             *v = self.sol[n + k];
         }

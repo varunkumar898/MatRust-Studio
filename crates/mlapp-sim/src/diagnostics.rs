@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 pub enum DiagnosticSeverity {
     Error,
     Warning,
+    Info,
 }
 
 /// Suggested action to resolve a diagnostic.
@@ -49,6 +50,20 @@ impl Diagnostic {
         Self {
             code: code.into(),
             severity: DiagnosticSeverity::Warning,
+            message: message.into(),
+            block_sids,
+            fix: None,
+        }
+    }
+
+    pub fn info(
+        code: impl Into<String>,
+        message: impl Into<String>,
+        block_sids: Vec<String>,
+    ) -> Self {
+        Self {
+            code: code.into(),
+            severity: DiagnosticSeverity::Info,
             message: message.into(),
             block_sids,
             fix: None,

@@ -6,7 +6,7 @@ use mlapp_sim::model::{
     Block, BlockDiagram, BlockRotation, BlockType, Line, PortDesc, PortKind, PortRef, PortRole,
 };
 use mlapp_sim::netlist::resolve_electrical_nets;
-use mlapp_sim::solver::{simulate_diagram, SimulationConfig};
+use mlapp_sim::solver::{simulate_diagram, SimulationConfig, SolverType};
 use mlapp_sim::spec::{pin_geometry, validate_block_params};
 use std::collections::HashMap;
 
@@ -685,15 +685,28 @@ fn test_simulate_diagram_with_electrical_blocks_gives_e_unsupported() {
     let result = simulate_diagram(&d, &config);
 
     assert!(
-        result.is_err(),
-        "Circuit with > 10 switches must return error"
+        result.is_ok(),
+        "Circuit with 11 switches must execute cleanly via scratch fallback (M6 F6)"
     );
-    let err = result.err().unwrap();
-    assert_eq!(err.code(), "E-UNSUPPORTED");
-    assert!(err.message().contains("11 switches/diodes"));
-    assert!(err
-        .message()
-        .contains("maximum supported topologies: 2^10 = 1024"));
+    let out = result.unwrap();
+    let has_islow = out.diagnostics.iter().any(|diag| diag.code == "I-SLOW");
+    assert!(
+        has_islow,
+        "Circuit with > 10 switches must emit I-SLOW diagnostic"
+    );
+
+    // Variable-step solver on electrical diagram returns typed E-SOLVER error
+    let var_config = SimulationConfig {
+        solver: SolverType::VariableStepDormandPrince,
+        ..Default::default()
+    };
+    let var_result = simulate_diagram(&d, &var_config);
+    assert!(
+        var_result.is_err(),
+        "Variable-step solver on electrical diagram must return error"
+    );
+    let err = var_result.err().unwrap();
+    assert_eq!(err.code(), "E-SOLVER");
 }
 
 #[test]

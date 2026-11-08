@@ -135,3 +135,8 @@ All Ground blocks in a diagram are merged into a single reference node (Net 0). 
 ## 8. Zero-Allocation Guarantee
 
 The disjoint-set netlist resolution and validation algorithm runs strictly once prior to simulation. The per-step simulation path (`eval` and `update_discrete`) performs zero heap allocations.
+
+---
+
+## 9. Known Limitations
+Switching instants are resolved to the step size (O(h) error); the thyristor and event localization are not implemented. (Deferred to Milestone M6b).

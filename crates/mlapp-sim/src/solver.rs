@@ -441,6 +441,8 @@ pub struct SimulationOutput {
     pub tout: Vec<f64>,
     pub yout: Vec<f64>,
     pub signals: HashMap<String, Vec<f64>>,
+    #[serde(default)]
+    pub diagnostics: Vec<crate::diagnostics::Diagnostic>,
 }
 
 impl SimulationOutput {
@@ -727,6 +729,7 @@ fn simulate_fixed_step_euler(
         tout,
         yout,
         signals,
+        diagnostics: circuit_solver.map(|c| c.diagnostics).unwrap_or_default(),
     })
 }
 
@@ -979,6 +982,7 @@ fn simulate_fixed_step_rk4(
         tout,
         yout,
         signals,
+        diagnostics: circuit_solver.map(|c| c.diagnostics).unwrap_or_default(),
     })
 }
 
@@ -1054,6 +1058,7 @@ fn simulate_dormand_prince(
                 tout,
                 yout,
                 signals,
+                diagnostics: Vec::new(),
             });
         }
 
@@ -1095,6 +1100,7 @@ fn simulate_dormand_prince(
             tout,
             yout,
             signals,
+            diagnostics: Vec::new(),
         });
     }
 
@@ -1339,6 +1345,7 @@ fn simulate_dormand_prince(
         tout,
         yout,
         signals,
+        diagnostics: Vec::new(),
     })
 }
 

@@ -516,3 +516,533 @@ fn test_full_wave_bridge_rectifier_oracle() {
         v_load[idx_neg]
     );
 }
+
+#[test]
+fn test_chatter_policy_a_to_a_is_convergence_not_chatter() {
+    // Charter F3: In the within-step iteration, state A repeating as A->A is convergence (not chatter)
+    let mut d = BlockDiagram::new("ConvergenceAtoA");
+    d.add_block(Block::new("gnd", "GND", BlockType::Ground));
+    d.add_block(Block::new("vs", "Vs", BlockType::DcVoltageSource).with_param("Voltage", "10.0"));
+    d.add_block(Block::new("d", "D1", BlockType::Diode).with_param("ForwardVoltage", "0.7"));
+    d.add_block(Block::new("r", "Rload", BlockType::Resistor).with_param("Resistance", "100.0"));
+
+    d.add_electrical_line("vs", 0, "d", 0);
+    d.add_electrical_line("d", 1, "r", 0);
+    d.add_electrical_line("r", 1, "gnd", 0);
+    d.add_electrical_line("vs", 1, "gnd", 0);
+
+    let config = SimulationConfig {
+        start_time: 0.0,
+        stop_time: 0.01,
+        step_size: 0.001,
+        solver: SolverType::FixedStepEuler,
+        ..Default::default()
+    };
+
+    let out = simulate_diagram(&d, &config).expect("simulate steady conduction");
+    // Verify that NO W-CHATTER warning is emitted because A -> A is clean convergence
+    assert!(
+        out.diagnostics.iter().all(|diag| diag.code != "W-CHATTER"),
+        "A -> A state repetition must be treated as convergence, not chatter"
+    );
+}
+
+#[test]
+fn test_chatter_policy_limit_cycle_emits_w_chatter_and_continues() {
+    // F3: Limit cycle resolves deterministically by retaining previous step's switch states,
+    // emits warning W-CHATTER naming devices and time, and continues cleanly.
+    let mut d = BlockDiagram::new("LimitCycleTest");
+    d.add_block(Block::new("gnd", "GND", BlockType::Ground));
+    d.add_block(Block::new("vs", "Vs", BlockType::DcVoltageSource).with_param("Voltage", "5.0"));
+    d.add_block(Block::new("d1", "DiodeA", BlockType::Diode).with_param("ForwardVoltage", "0.7"));
+    d.add_block(Block::new("r", "Rload", BlockType::Resistor).with_param("Resistance", "100.0"));
+
+    d.add_electrical_line("vs", 0, "d1", 0);
+    d.add_electrical_line("d1", 1, "r", 0);
+    d.add_electrical_line("r", 1, "gnd", 0);
+    d.add_electrical_line("vs", 1, "gnd", 0);
+
+    let dt = 0.001;
+    let mut solver = mlapp_sim::electrical::LinearCircuitSolver::compile(&d, dt)
+        .expect("compile")
+        .expect("has electrical");
+    solver.init_solve(0.0).expect("init solve");
+
+    // Force limit cycle detection during step
+    solver.test_force_chatter = true;
+
+    // Run for 5 steps (<= 100 consecutive steps). Must emit W-CHATTER and continue cleanly.
+    for step in 1..=5 {
+        let t = (step as f64) * dt;
+        solver
+            .step(t, dt, step == 1)
+            .expect("step must continue despite chatter warning");
+    }
+
+    assert_eq!(
+        solver.consecutive_chatter_steps, 5,
+        "Consecutive chatter steps should be tracked"
+    );
+
+    let chatter_warnings: Vec<_> = solver
+        .diagnostics
+        .iter()
+        .filter(|diag| diag.code == "W-CHATTER")
+        .collect();
+    assert_eq!(
+        chatter_warnings.len(),
+        5,
+        "W-CHATTER warning must be emitted for each step encountering limit cycle"
+    );
+    assert!(
+        chatter_warnings[0]
+            .message
+            .contains("Switch chattering limit cycle detected"),
+        "Warning message must describe the limit cycle"
+    );
+    assert_eq!(
+        chatter_warnings[0].block_sids,
+        vec!["d1".to_string()],
+        "Warning must name the cycling device SID"
+    );
+
+    // Now disable chatter condition: normal convergence resets consecutive chatter counter
+    solver.test_force_chatter = false;
+    solver
+        .step(0.006, dt, false)
+        .expect("normal step must succeed");
+    assert_eq!(
+        solver.consecutive_chatter_steps, 0,
+        "Normal convergence must reset consecutive chatter counter to 0"
+    );
+}
+
+#[test]
+fn test_chatter_policy_persistent_chatter_escalates_to_e_chatter() {
+    // F3: Escalate to error E-CHATTER (run stops) only if W-CHATTER occurs in more than 100 consecutive steps.
+    let mut d = BlockDiagram::new("PersistentChatterTest");
+    d.add_block(Block::new("gnd", "GND", BlockType::Ground));
+    d.add_block(Block::new("vs", "Vs", BlockType::DcVoltageSource).with_param("Voltage", "5.0"));
+    d.add_block(Block::new("d1", "DiodeA", BlockType::Diode).with_param("ForwardVoltage", "0.7"));
+    d.add_block(Block::new("r", "Rload", BlockType::Resistor).with_param("Resistance", "100.0"));
+
+    d.add_electrical_line("vs", 0, "d1", 0);
+    d.add_electrical_line("d1", 1, "r", 0);
+    d.add_electrical_line("r", 1, "gnd", 0);
+    d.add_electrical_line("vs", 1, "gnd", 0);
+
+    let dt = 0.001;
+    let mut solver = mlapp_sim::electrical::LinearCircuitSolver::compile(&d, dt)
+        .expect("compile")
+        .expect("has electrical");
+    solver.init_solve(0.0).expect("init solve");
+
+    solver.test_force_chatter = true;
+
+    // Steps 1..100: must emit W-CHATTER and continue cleanly
+    for step in 1..=100 {
+        let t = (step as f64) * dt;
+        solver
+            .step(t, dt, step == 1)
+            .expect("steps 1..100 must continue with warning");
+    }
+    assert_eq!(solver.consecutive_chatter_steps, 100);
+
+    // Step 101 (> 100 consecutive steps): must escalate to E-CHATTER error!
+    let res = solver.step(0.101, dt, false);
+    assert!(res.is_err(), "Step 101 must fail and halt execution");
+    let err = res.err().unwrap();
+    assert_eq!(err.code(), "E-CHATTER");
+    assert!(
+        err.message().contains("more than 100 consecutive steps"),
+        "Error message must cite > 100 consecutive steps threshold: {}",
+        err.message()
+    );
+}
+
+#[test]
+fn test_knife_edge_diode_exact_vf_boundary_stable() {
+    // F4: Diode OFF->ON when vD > Vf (strict).
+    // Source is set to EXACTLY Vf = 0.7000000000000000 V.
+    // Diode must remain stably OFF and produce zero chattering warnings.
+    let mut d = BlockDiagram::new("KnifeEdgeDiode");
+    d.add_block(Block::new("gnd", "GND", BlockType::Ground));
+    d.add_block(Block::new("vs", "Vs", BlockType::DcVoltageSource).with_param("Voltage", "0.7"));
+    d.add_block(
+        Block::new("d", "D1", BlockType::Diode)
+            .with_param("ForwardVoltage", "0.7")
+            .with_param("OnResistance", "0.01")
+            .with_param("OffResistance", "1e6"),
+    );
+    d.add_block(Block::new("r", "Rload", BlockType::Resistor).with_param("Resistance", "100.0"));
+
+    d.add_electrical_line("vs", 0, "d", 0);
+    d.add_electrical_line("d", 1, "r", 0);
+    d.add_electrical_line("r", 1, "gnd", 0);
+    d.add_electrical_line("vs", 1, "gnd", 0);
+
+    let config = SimulationConfig {
+        start_time: 0.0,
+        stop_time: 0.005,
+        step_size: 0.001,
+        solver: SolverType::FixedStepEuler,
+        ..Default::default()
+    };
+
+    let out = simulate_diagram(&d, &config).expect("simulate knife edge diode");
+    let d_state = out.signals.get("D1.state").expect("D1.state");
+    for &st in d_state {
+        assert_eq!(
+            st, 0.0,
+            "Diode must remain strictly OFF at exact knife-edge boundary vD == Vf"
+        );
+    }
+    assert!(
+        out.diagnostics.iter().all(|diag| diag.code != "W-CHATTER"),
+        "Knife-edge boundary condition must produce zero chatter warnings"
+    );
+}
+
+#[test]
+fn test_m6_accuracy_convergence_table() {
+    // F7: Accuracy table for analytical oracles at h and h/2:
+    // 1. Continuous block diagram states with FixedStepEuler: Order 1 (O(h)), Ratio E(h)/E(h/2) ~= 2.0.
+    // 2. Electrical companion models with Trapezoidal rule: Order 2 (O(h^2)), Ratio E(h)/E(h/2) ~= 4.0.
+
+    let dt1 = 1e-3; // h = 1 ms
+    let dt2 = 5e-4; // h/2 = 0.5 ms
+    let t_eval = 0.05;
+
+    // 1. Continuous state under FixedStepEuler: dx/dt = -x, x(0) = 1.0 -> x(t) = exp(-t)
+    let mut err_euler_h = 0.0;
+    let mut err_euler_h2 = 0.0;
+    for (h, err_slot) in [(dt1, &mut err_euler_h), (dt2, &mut err_euler_h2)] {
+        let mut d = BlockDiagram::new("EulerFirstOrder");
+        d.add_block(Block::new("c", "Const", BlockType::Constant).with_param("Value", "0.0"));
+        d.add_block(
+            Block::new("int", "Integrator", BlockType::Integrator)
+                .with_param("InitialCondition", "1.0"),
+        );
+        d.add_block(Block::new("gain", "Gain", BlockType::Gain).with_param("Gain", "-1.0"));
+        d.add_block(Block::new("out", "Out1", BlockType::Outport));
+        // Feedback: int -> gain -> int, and int -> out
+        d.add_line("int", 0, "gain", 0);
+        d.add_line("gain", 0, "int", 0);
+        d.add_line("int", 0, "out", 0);
+
+        let config = SimulationConfig {
+            start_time: 0.0,
+            stop_time: t_eval,
+            step_size: h,
+            solver: SolverType::FixedStepEuler,
+            ..Default::default()
+        };
+        let out = simulate_diagram(&d, &config).expect("sim euler");
+        let y = out.signals.get("Out1").unwrap();
+        let exact = (-t_eval).exp();
+        *err_slot = (y.last().unwrap() - exact).abs();
+    }
+    let ratio_euler = err_euler_h / err_euler_h2;
+
+    // 2. Electrical companion model (Trapezoidal integration): RC capacitor discharge
+    // C dv/dt + v/R = 0, tau = 0.1 s.
+    let mut err_trap_h = 0.0;
+    let mut err_trap_h2 = 0.0;
+    for (h, err_slot) in [(dt1, &mut err_trap_h), (dt2, &mut err_trap_h2)] {
+        let mut d = BlockDiagram::new("CapDischargeTrap");
+        d.add_block(Block::new("gnd", "GND", BlockType::Ground));
+        d.add_block(
+            Block::new("c", "C1", BlockType::Capacitor)
+                .with_param("Capacitance", "100e-6")
+                .with_param("InitialVoltage", "10.0"),
+        );
+        d.add_block(
+            Block::new("r", "Rload", BlockType::Resistor).with_param("Resistance", "1000.0"),
+        );
+        d.add_electrical_line("c", 0, "r", 0);
+        d.add_electrical_line("c", 1, "gnd", 0);
+        d.add_electrical_line("r", 1, "gnd", 0);
+
+        let config = SimulationConfig {
+            start_time: 0.0,
+            stop_time: t_eval,
+            step_size: h,
+            solver: SolverType::FixedStepEuler,
+            ..Default::default()
+        };
+        let out = simulate_diagram(&d, &config).expect("sim trap");
+        let v = out.signals.get("C1.v").unwrap();
+        let exact = 10.0 * (-t_eval / 0.1).exp();
+        *err_slot = (v.last().unwrap() - exact).abs();
+    }
+    let ratio_trap = err_trap_h / err_trap_h2;
+
+    println!("[ACCURACY TABLE EVIDENCE]");
+    println!("Continuous Signal Integration (Euler, O(h)):        E(h) = {:.6e}, E(h/2) = {:.6e}, Ratio = {:.3}", err_euler_h, err_euler_h2, ratio_euler);
+    println!("MNA Electrical Companion Model (Trapezoidal, O(h^2)): E(h) = {:.6e}, E(h/2) = {:.6e}, Ratio = {:.3}", err_trap_h, err_trap_h2, ratio_trap);
+
+    assert!(
+        ratio_euler > 1.95 && ratio_euler < 2.05,
+        "Euler ratio must be ~2.0, got {ratio_euler:.3}"
+    );
+    assert!(
+        ratio_trap > 3.95 && ratio_trap < 4.05,
+        "Trapezoidal ratio must be ~4.0, got {ratio_trap:.3}"
+    );
+}
+
+#[test]
+fn test_switch_threshold_exact_boundary_comparison() {
+    // F4: Ideal switch threshold comparison: ON when ctrl >= Threshold, OFF when ctrl < Threshold
+    let mut d_on = BlockDiagram::new("SwitchExactThresholdOn");
+    d_on.add_block(Block::new("gnd", "GND", BlockType::Ground));
+    d_on.add_block(
+        Block::new("vs", "Vs", BlockType::DcVoltageSource).with_param("Voltage", "10.0"),
+    );
+    d_on.add_block(Block::new("ctrl", "Ctrl", BlockType::Constant).with_param("Value", "2.5"));
+    d_on.add_block(
+        Block::new("sw", "Switch", BlockType::IdealSwitch)
+            .with_param("Threshold", "2.5")
+            .with_param("OnResistance", "0.01")
+            .with_param("OffResistance", "1e6"),
+    );
+    d_on.add_block(Block::new("r", "Rload", BlockType::Resistor).with_param("Resistance", "100.0"));
+
+    d_on.add_electrical_line("vs", 0, "sw", 0);
+    d_on.add_electrical_line("sw", 1, "r", 0);
+    d_on.add_electrical_line("r", 1, "gnd", 0);
+    d_on.add_electrical_line("vs", 1, "gnd", 0);
+    d_on.add_line("ctrl", 0, "sw", 0);
+
+    let config = SimulationConfig {
+        start_time: 0.0,
+        stop_time: 0.002,
+        step_size: 0.001,
+        solver: SolverType::FixedStepEuler,
+        ..Default::default()
+    };
+
+    let out_on = simulate_diagram(&d_on, &config).expect("simulate switch exact threshold ON");
+    let sw_state_on = out_on.signals.get("Switch.state").expect("Switch.state");
+    assert_eq!(
+        sw_state_on.last().copied(),
+        Some(1.0),
+        "Switch must be ON when control == Threshold (2.5 == 2.5)"
+    );
+
+    // Now test with control just below threshold: 2.499999
+    let mut d_off = BlockDiagram::new("SwitchExactThresholdOff");
+    d_off.add_block(Block::new("gnd", "GND", BlockType::Ground));
+    d_off.add_block(
+        Block::new("vs", "Vs", BlockType::DcVoltageSource).with_param("Voltage", "10.0"),
+    );
+    d_off
+        .add_block(Block::new("ctrl", "Ctrl", BlockType::Constant).with_param("Value", "2.499999"));
+    d_off.add_block(
+        Block::new("sw", "Switch", BlockType::IdealSwitch)
+            .with_param("Threshold", "2.5")
+            .with_param("OnResistance", "0.01")
+            .with_param("OffResistance", "1e6"),
+    );
+    d_off
+        .add_block(Block::new("r", "Rload", BlockType::Resistor).with_param("Resistance", "100.0"));
+
+    d_off.add_electrical_line("vs", 0, "sw", 0);
+    d_off.add_electrical_line("sw", 1, "r", 0);
+    d_off.add_electrical_line("r", 1, "gnd", 0);
+    d_off.add_electrical_line("vs", 1, "gnd", 0);
+    d_off.add_line("ctrl", 0, "sw", 0);
+
+    let out_off = simulate_diagram(&d_off, &config).expect("simulate switch exact threshold OFF");
+    let sw_state_off = out_off.signals.get("Switch.state").expect("Switch.state");
+    assert_eq!(
+        sw_state_off.last().copied(),
+        Some(0.0),
+        "Switch must be OFF when control < Threshold (2.499999 < 2.5)"
+    );
+}
+
+#[test]
+fn test_switch_sampling_zoh_one_step_latency() {
+    // F5: Switch controls are sampled at the START of the step and held for the step.
+    // A control signal that crosses threshold at time t takes effect at the next step boundary (one-step latency).
+    let mut d = BlockDiagram::new("SwitchLatency");
+    d.add_block(Block::new("gnd", "GND", BlockType::Ground));
+    d.add_block(Block::new("vs", "Vs", BlockType::DcVoltageSource).with_param("Voltage", "10.0"));
+    // Step jumps from 0 to 5 at t = 0.002 s
+    d.add_block(
+        Block::new("step", "Step", BlockType::Step)
+            .with_param("Time", "0.002")
+            .with_param("Before", "0.0")
+            .with_param("After", "5.0"),
+    );
+    d.add_block(
+        Block::new("sw", "Switch", BlockType::IdealSwitch)
+            .with_param("Threshold", "2.5")
+            .with_param("OnResistance", "0.01")
+            .with_param("OffResistance", "1e6"),
+    );
+    d.add_block(Block::new("r", "Rload", BlockType::Resistor).with_param("Resistance", "100.0"));
+
+    d.add_electrical_line("vs", 0, "sw", 0);
+    d.add_electrical_line("sw", 1, "r", 0);
+    d.add_electrical_line("r", 1, "gnd", 0);
+    d.add_electrical_line("vs", 1, "gnd", 0);
+    d.add_line("step", 0, "sw", 0);
+
+    let dt = 0.001;
+    let config = SimulationConfig {
+        start_time: 0.0,
+        stop_time: 0.004,
+        step_size: dt,
+        solver: SolverType::FixedStepEuler,
+        ..Default::default()
+    };
+
+    let out = simulate_diagram(&d, &config).expect("simulate switch latency");
+    let sw_state = out
+        .signals
+        .get("Switch.state")
+        .expect("Switch.state logged");
+    let tout = &out.tout;
+
+    // t = 0.000: step = 0.0 -> switch = 0.0
+    // t = 0.001: step = 0.0 -> switch = 0.0
+    // t = 0.002: step jumps to 5.0 at t=0.002. But the step [0.001 -> 0.002] was computed with control sampled at 0.001 (0.0).
+    //            So switch state logged at t = 0.002 is still 0.0!
+    // t = 0.003: the step [0.002 -> 0.003] was computed with control sampled at 0.002 (5.0 >= 2.5).
+    //            So switch state becomes 1.0 at t = 0.003!
+    assert_eq!(tout[2], 0.002);
+    assert_eq!(
+        sw_state[2], 0.0,
+        "Switch must still be OFF at t = 0.002 s due to 1-step sampling latency"
+    );
+    assert_eq!(tout[3], 0.003);
+    assert_eq!(
+        sw_state[3], 1.0,
+        "Switch must turn ON at t = 0.003 s (the next step boundary)"
+    );
+}
+
+#[test]
+fn test_scratch_fallback_12_diodes_runs_cleanly() {
+    // F6: Ns = 12 diodes (> 10 limit) triggers I-SLOW diagnostic and uses in-place scratch LU factorization
+    let mut d = BlockDiagram::new("TwelveDiodes");
+    d.add_block(Block::new("gnd", "GND", BlockType::Ground));
+    d.add_block(Block::new("vs", "Vs", BlockType::DcVoltageSource).with_param("Voltage", "15.0"));
+
+    for i in 1..=12 {
+        d.add_block(
+            Block::new(format!("d{i}"), format!("D{i}"), BlockType::Diode)
+                .with_param("ForwardVoltage", "0.7")
+                .with_param("OnResistance", "0.01")
+                .with_param("OffResistance", "1e6"),
+        );
+    }
+    d.add_block(Block::new("r", "Rload", BlockType::Resistor).with_param("Resistance", "100.0"));
+
+    // Connect in series: Vs -> D1 -> D2 -> ... -> D12 -> Rload -> Gnd
+    d.add_electrical_line("vs", 0, "d1", 0);
+    for i in 1..12 {
+        d.add_electrical_line(&format!("d{i}"), 1, &format!("d{}", i + 1), 0);
+    }
+    d.add_electrical_line("d12", 1, "r", 0);
+    d.add_electrical_line("r", 1, "gnd", 0);
+    d.add_electrical_line("vs", 1, "gnd", 0);
+
+    let config = SimulationConfig {
+        start_time: 0.0,
+        stop_time: 0.002,
+        step_size: 0.001,
+        solver: SolverType::FixedStepEuler,
+        ..Default::default()
+    };
+
+    let out = simulate_diagram(&d, &config).expect("simulate 12-diode scratch path");
+    // Verify I-SLOW diagnostic is present
+    let i_slow = out.diagnostics.iter().find(|diag| diag.code == "I-SLOW");
+    assert!(
+        i_slow.is_some(),
+        "Circuit with 12 diodes must emit informational diagnostic I-SLOW"
+    );
+    assert!(
+        i_slow.unwrap().message.contains("12 switches"),
+        "I-SLOW message must cite the 12 switches"
+    );
+
+    // Total forward drop of 12 diodes is 12 * 0.7 = 8.4 V
+    // Load voltage: Vs - 12 * Vf = 15.0 - 8.4 = 6.6 V (approx, with load divider)
+    let v_load = out.signals.get("Rload.v").expect("Rload.v");
+    let final_v = v_load.last().copied().unwrap();
+    assert!(
+        (final_v - 6.59).abs() < 0.05,
+        "Load voltage should be ~6.6 V across 12 forward-conducting diodes, got {final_v:.4} V"
+    );
+}
+
+#[test]
+fn test_scratch_path_vs_table_path_exact_parity_to_1e12() {
+    // F6: Bridge rectifier simulated with table fast-path vs scratch matrix path matches to < 1e-12
+    let mut d = BlockDiagram::new("BridgeParity");
+    d.add_block(Block::new("gnd", "GND", BlockType::Ground));
+    d.add_block(
+        Block::new("vac", "Vac", BlockType::AcVoltageSource)
+            .with_param("Amplitude", "12.0")
+            .with_param("Frequency", "50.0"),
+    );
+    d.add_block(Block::new("d1", "D1", BlockType::Diode).with_param("ForwardVoltage", "0.7"));
+    d.add_block(Block::new("d2", "D2", BlockType::Diode).with_param("ForwardVoltage", "0.7"));
+    d.add_block(Block::new("d3", "D3", BlockType::Diode).with_param("ForwardVoltage", "0.7"));
+    d.add_block(Block::new("d4", "D4", BlockType::Diode).with_param("ForwardVoltage", "0.7"));
+    d.add_block(Block::new("r", "Rload", BlockType::Resistor).with_param("Resistance", "100.0"));
+
+    d.add_electrical_line("vac", 0, "d1", 0);
+    d.add_electrical_line("d1", 0, "d3", 1);
+    d.add_electrical_line("vac", 1, "d2", 0);
+    d.add_electrical_line("d2", 0, "d4", 1);
+    d.add_electrical_line("d1", 1, "d2", 1);
+    d.add_electrical_line("d1", 1, "r", 0);
+    d.add_electrical_line("d3", 0, "d4", 0);
+    d.add_electrical_line("d3", 0, "r", 1);
+    d.add_electrical_line("r", 1, "gnd", 0);
+
+    let dt = 1e-4;
+    let mut solver_table =
+        mlapp_sim::electrical::LinearCircuitSolver::compile_with_options(&d, dt, false)
+            .expect("compile table")
+            .expect("has electrical");
+    let mut solver_scratch =
+        mlapp_sim::electrical::LinearCircuitSolver::compile_with_options(&d, dt, true)
+            .expect("compile scratch")
+            .expect("has electrical");
+
+    solver_table.init_solve(0.0).expect("init table");
+    solver_scratch.init_solve(0.0).expect("init scratch");
+
+    // Compare at initial operating point
+    for net in 0..=solver_table.num_nodes {
+        let v_tab = solver_table.node_voltage(net);
+        let v_scr = solver_scratch.node_voltage(net);
+        assert!(
+            (v_tab - v_scr).abs() < 1e-12,
+            "Initial node voltage Net{net} difference ({v_tab} vs {v_scr}) must be < 1e-12"
+        );
+    }
+
+    // Step for 100 steps and verify bit-level parity < 1e-12 at every single step
+    for step in 1..=100 {
+        let t = (step as f64) * dt;
+        solver_table.step(t, dt, step == 1).expect("step table");
+        solver_scratch.step(t, dt, step == 1).expect("step scratch");
+
+        for net in 0..=solver_table.num_nodes {
+            let v_tab = solver_table.node_voltage(net);
+            let v_scr = solver_scratch.node_voltage(net);
+            let diff = (v_tab - v_scr).abs();
+            assert!(
+                diff < 1e-12,
+                "Step {step} (t={t:.4}s) Net{net} parity mismatch: table={v_tab}, scratch={v_scr}, diff={diff}"
+            );
+        }
+    }
+}

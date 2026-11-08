@@ -53,6 +53,12 @@ pub enum SimError {
     #[error("{message}")]
     Unsupported { code: String, message: String },
 
+    #[error("{message}")]
+    Singular { code: String, message: String },
+
+    #[error("{message}")]
+    Solver { code: String, message: String },
+
     #[error("Block not found: {0}")]
     BlockNotFound(String),
 }
@@ -166,6 +172,24 @@ impl SimError {
         }
     }
 
+    pub fn singular(msg: impl Into<String>) -> Self {
+        let detail = msg.into();
+        let message = format!("Singular electrical circuit matrix (E-SINGULAR): {detail}");
+        SimError::Singular {
+            code: "E-SINGULAR".to_string(),
+            message,
+        }
+    }
+
+    pub fn solver(msg: impl Into<String>) -> Self {
+        let detail = msg.into();
+        let message = format!("Unsupported solver for electrical simulation (E-SOLVER): {detail}");
+        SimError::Solver {
+            code: "E-SOLVER".to_string(),
+            message,
+        }
+    }
+
     pub fn code(&self) -> &str {
         match self {
             SimError::Execution(_) => "E-EXEC",
@@ -175,6 +199,8 @@ impl SimError {
             SimError::SampleTime { code, .. } => code.as_str(),
             SimError::Parameter { code, .. } => code.as_str(),
             SimError::Unsupported { code, .. } => code.as_str(),
+            SimError::Singular { code, .. } => code.as_str(),
+            SimError::Solver { code, .. } => code.as_str(),
             SimError::BlockNotFound(_) => "E-PARAM",
         }
     }
@@ -188,6 +214,8 @@ impl SimError {
             SimError::SampleTime { message, .. } => message.as_str(),
             SimError::Parameter { message, .. } => message.as_str(),
             SimError::Unsupported { message, .. } => message.as_str(),
+            SimError::Singular { message, .. } => message.as_str(),
+            SimError::Solver { message, .. } => message.as_str(),
             SimError::BlockNotFound(msg) => msg.as_str(),
         }
     }
@@ -498,6 +526,13 @@ pub fn simulate_diagram(
 ) -> Result<SimulationOutput, SimError> {
     config.validate()?;
 
+    let has_electrical = diagram.blocks.iter().any(|b| b.block_type.is_electrical());
+    if has_electrical && config.solver == SolverType::VariableStepDormandPrince {
+        return Err(SimError::solver(
+            "Variable-step Dormand-Prince (ode45) is not supported for electrical circuits in Milestone M5. Why: Companion-model MNA requires a fixed step size h to maintain constant-matrix factorization and avoid companion conductance restructuring. How to fix: Select a fixed-step solver such as FixedStepEuler (ode1) or FixedStepRk4 (ode4) in Simulation Parameters."
+        ));
+    }
+
     let engine = ExecutionEngine::compile(diagram)?;
     engine.validate_sample_times(config)?;
 
@@ -516,6 +551,14 @@ fn simulate_fixed_step_euler(
 ) -> Result<SimulationOutput, SimError> {
     let dt = config.step_size;
     let num_steps = ((config.stop_time - config.start_time) / dt).round() as usize;
+
+    let mut circuit_solver = crate::electrical::LinearCircuitSolver::compile(diagram, dt)?;
+    let electrical_blocks: Vec<(usize, &Block)> = diagram
+        .blocks
+        .iter()
+        .enumerate()
+        .filter(|(_, b)| b.block_type.is_electrical())
+        .collect();
 
     let mut continuous_states = engine.initial_continuous_states.clone();
     let mut discrete_states = engine.initial_discrete_states.clone();
@@ -543,6 +586,26 @@ fn simulate_fixed_step_euler(
         signals.insert(b.name.clone(), Vec::with_capacity(num_steps + 1));
     }
 
+    if let Some(ref c) = circuit_solver {
+        for (_, b) in &electrical_blocks {
+            signals.insert(b.name.clone(), Vec::with_capacity(num_steps + 1));
+            signals.insert(format!("{}.v", b.name), Vec::with_capacity(num_steps + 1));
+            signals.insert(format!("{}.i", b.name), Vec::with_capacity(num_steps + 1));
+        }
+        for net in 1..=c.num_nodes {
+            signals.insert(format!("Net{net}"), Vec::with_capacity(num_steps + 1));
+        }
+    }
+
+    if let Some(ref mut c) = circuit_solver {
+        c.init_solve(config.start_time)?;
+        for &(idx, b) in &electrical_blocks {
+            if let Some(v) = c.branch_voltage(&b.sid) {
+                workspace.outputs[idx] = v;
+            }
+        }
+    }
+
     for step in 0..=num_steps {
         // Exact time arithmetic retained for bit-identical fixture parity
         let t = config.start_time + (step as f64) * dt;
@@ -554,7 +617,13 @@ fn simulate_fixed_step_euler(
         let primary_val = log_blocks
             .first()
             .map(|(idx, _)| workspace.outputs[*idx])
-            .unwrap_or_else(|| workspace.outputs.last().copied().unwrap_or(0.0));
+            .unwrap_or_else(|| {
+                if let Some(&(idx, _)) = electrical_blocks.last() {
+                    workspace.outputs[idx]
+                } else {
+                    workspace.outputs.last().copied().unwrap_or(0.0)
+                }
+            });
         yout.push(primary_val);
 
         for (idx, b) in &log_blocks {
@@ -563,19 +632,54 @@ fn simulate_fixed_step_euler(
             }
         }
 
-        // Advance continuous states using Euler integration
-        for (state, &deriv) in continuous_states.iter_mut().zip(&workspace.derivatives) {
-            *state += dt * deriv;
+        if let Some(ref c) = circuit_solver {
+            for (_, b) in &electrical_blocks {
+                let v = c.branch_voltage(&b.sid).unwrap_or(0.0);
+                let i = c.branch_current(&b.sid).unwrap_or(0.0);
+                if let Some(vec) = signals.get_mut(&b.name) {
+                    vec.push(v);
+                }
+                if let Some(vec) = signals.get_mut(&format!("{}.v", b.name)) {
+                    vec.push(v);
+                }
+                if let Some(vec) = signals.get_mut(&format!("{}.i", b.name)) {
+                    vec.push(i);
+                }
+            }
+            for net in 1..=c.num_nodes {
+                let vn = c.node_voltage(net);
+                if let Some(vec) = signals.get_mut(&format!("Net{net}")) {
+                    vec.push(vn);
+                }
+            }
         }
 
-        // Discrete state update with sample time check
-        engine.update_discrete_at(
-            t,
-            config.start_time,
-            &workspace.outputs,
-            &mut discrete_states,
-            config,
-        );
+        if step < num_steps {
+            // Advance continuous states using Euler integration
+            for (state, &deriv) in continuous_states.iter_mut().zip(&workspace.derivatives) {
+                *state += dt * deriv;
+            }
+
+            // Advance circuit solver to t + dt
+            if let Some(ref mut c) = circuit_solver {
+                let t_next = config.start_time + ((step + 1) as f64) * dt;
+                c.step(t_next, dt, step == 0)?;
+                for &(idx, b) in &electrical_blocks {
+                    if let Some(v) = c.branch_voltage(&b.sid) {
+                        workspace.outputs[idx] = v;
+                    }
+                }
+            }
+
+            // Discrete state update with sample time check
+            engine.update_discrete_at(
+                t,
+                config.start_time,
+                &workspace.outputs,
+                &mut discrete_states,
+                config,
+            );
+        }
     }
 
     Ok(SimulationOutput {
@@ -594,6 +698,14 @@ fn simulate_fixed_step_rk4(
     let dt = config.step_size;
     let num_steps = ((config.stop_time - config.start_time) / dt).round() as usize;
     let num_states = engine.layout.num_continuous_states;
+
+    let mut circuit_solver = crate::electrical::LinearCircuitSolver::compile(diagram, dt)?;
+    let electrical_blocks: Vec<(usize, &Block)> = diagram
+        .blocks
+        .iter()
+        .enumerate()
+        .filter(|(_, b)| b.block_type.is_electrical())
+        .collect();
 
     let mut continuous_states = engine.initial_continuous_states.clone();
     let mut discrete_states = engine.initial_discrete_states.clone();
@@ -620,6 +732,26 @@ fn simulate_fixed_step_rk4(
         signals.insert(b.name.clone(), Vec::with_capacity(num_steps + 1));
     }
 
+    if let Some(ref c) = circuit_solver {
+        for (_, b) in &electrical_blocks {
+            signals.insert(b.name.clone(), Vec::with_capacity(num_steps + 1));
+            signals.insert(format!("{}.v", b.name), Vec::with_capacity(num_steps + 1));
+            signals.insert(format!("{}.i", b.name), Vec::with_capacity(num_steps + 1));
+        }
+        for net in 1..=c.num_nodes {
+            signals.insert(format!("Net{net}"), Vec::with_capacity(num_steps + 1));
+        }
+    }
+
+    if let Some(ref mut c) = circuit_solver {
+        c.init_solve(config.start_time)?;
+        for &(idx, b) in &electrical_blocks {
+            if let Some(v) = c.branch_voltage(&b.sid) {
+                workspace.outputs[idx] = v;
+            }
+        }
+    }
+
     let mut k1 = vec![0.0; num_states];
     let mut k2 = vec![0.0; num_states];
     let mut k3 = vec![0.0; num_states];
@@ -637,11 +769,39 @@ fn simulate_fixed_step_rk4(
         let primary_val = log_blocks
             .first()
             .map(|(idx, _)| workspace.outputs[*idx])
-            .unwrap_or_else(|| workspace.outputs.last().copied().unwrap_or(0.0));
+            .unwrap_or_else(|| {
+                if let Some(&(idx, _)) = electrical_blocks.last() {
+                    workspace.outputs[idx]
+                } else {
+                    workspace.outputs.last().copied().unwrap_or(0.0)
+                }
+            });
         yout.push(primary_val);
         for (idx, b) in &log_blocks {
             if let Some(vec) = signals.get_mut(&b.name) {
                 vec.push(workspace.outputs[*idx]);
+            }
+        }
+
+        if let Some(ref c) = circuit_solver {
+            for (_, b) in &electrical_blocks {
+                let v = c.branch_voltage(&b.sid).unwrap_or(0.0);
+                let i = c.branch_current(&b.sid).unwrap_or(0.0);
+                if let Some(vec) = signals.get_mut(&b.name) {
+                    vec.push(v);
+                }
+                if let Some(vec) = signals.get_mut(&format!("{}.v", b.name)) {
+                    vec.push(v);
+                }
+                if let Some(vec) = signals.get_mut(&format!("{}.i", b.name)) {
+                    vec.push(i);
+                }
+            }
+            for net in 1..=c.num_nodes {
+                let vn = c.node_voltage(net);
+                if let Some(vec) = signals.get_mut(&format!("Net{net}")) {
+                    vec.push(vn);
+                }
             }
         }
 
@@ -677,6 +837,17 @@ fn simulate_fixed_step_rk4(
             }
         }
 
+        // Advance circuit solver to t + dt
+        if let Some(ref mut c) = circuit_solver {
+            let t_next = config.start_time + ((step + 1) as f64) * dt;
+            c.step(t_next, dt, step == 0)?;
+            for &(idx, b) in &electrical_blocks {
+                if let Some(v) = c.branch_voltage(&b.sid) {
+                    workspace.outputs[idx] = v;
+                }
+            }
+        }
+
         // Advance discrete states at t
         engine.update_discrete_at(
             t,
@@ -694,11 +865,38 @@ fn simulate_fixed_step_rk4(
     let primary_val = log_blocks
         .first()
         .map(|(idx, _)| workspace.outputs[*idx])
-        .unwrap_or_else(|| workspace.outputs.last().copied().unwrap_or(0.0));
+        .unwrap_or_else(|| {
+            if let Some(&(idx, _)) = electrical_blocks.last() {
+                workspace.outputs[idx]
+            } else {
+                workspace.outputs.last().copied().unwrap_or(0.0)
+            }
+        });
     yout.push(primary_val);
     for (idx, b) in &log_blocks {
         if let Some(vec) = signals.get_mut(&b.name) {
             vec.push(workspace.outputs[*idx]);
+        }
+    }
+    if let Some(ref c) = circuit_solver {
+        for (_, b) in &electrical_blocks {
+            let v = c.branch_voltage(&b.sid).unwrap_or(0.0);
+            let i = c.branch_current(&b.sid).unwrap_or(0.0);
+            if let Some(vec) = signals.get_mut(&b.name) {
+                vec.push(v);
+            }
+            if let Some(vec) = signals.get_mut(&format!("{}.v", b.name)) {
+                vec.push(v);
+            }
+            if let Some(vec) = signals.get_mut(&format!("{}.i", b.name)) {
+                vec.push(i);
+            }
+        }
+        for net in 1..=c.num_nodes {
+            let vn = c.node_voltage(net);
+            if let Some(vec) = signals.get_mut(&format!("Net{net}")) {
+                vec.push(vn);
+            }
         }
     }
     engine.update_discrete_at(

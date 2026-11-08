@@ -360,15 +360,15 @@ impl ExecutionEngine {
     pub fn compile(diagram: &BlockDiagram) -> Result<Self, SimError> {
         let num_blocks = diagram.blocks.len();
 
-        // 0. Pre-check: electrical simulation arrives in M5
-        let electrical_count = diagram
+        // 0. Pre-check: nonlinear electrical blocks arrive in M6
+        let nonlinear_count = diagram
             .blocks
             .iter()
-            .filter(|b| b.block_type.is_electrical())
+            .filter(|b| matches!(b.block_type, BlockType::Diode | BlockType::IdealSwitch))
             .count();
-        if electrical_count > 0 {
+        if nonlinear_count > 0 {
             return Err(SimError::unsupported(format!(
-                "electrical simulation arrives in M5; this diagram has {electrical_count} electrical block(s)"
+                "Nonlinear electrical blocks (Diode, IdealSwitch) arrive in Milestone M6; this diagram has {nonlinear_count} nonlinear block(s). Milestone M5 supports linear circuits (Resistor, Capacitor, Inductor, DC/AC Voltage Source, DC Current Source, Ground)."
             )));
         }
 

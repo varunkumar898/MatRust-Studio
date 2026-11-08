@@ -229,3 +229,74 @@ fn test_zero_allocations_m3_blocks_during_eval_and_update_discrete() {
         "M3 blocks eval and update_discrete_at must execute with ZERO heap allocations; observed {total_allocs} allocations"
     );
 }
+
+#[test]
+fn test_zero_allocations_during_mna_circuit_simulation_step() {
+    let mut diagram = BlockDiagram::new("AllocTestCircuit");
+
+    diagram.add_block(Block::new("gnd", "GND", BlockType::Ground));
+    diagram.add_block(
+        Block::new("vs", "Vs", BlockType::DcVoltageSource).with_param("Voltage", "10.0"),
+    );
+    diagram.add_block(
+        Block::new("vac", "Vac", BlockType::AcVoltageSource)
+            .with_param("Amplitude", "5.0")
+            .with_param("Frequency", "60.0"),
+    );
+    diagram
+        .add_block(Block::new("is", "Is", BlockType::DcCurrentSource).with_param("Current", "1.0"));
+    diagram
+        .add_block(Block::new("r1", "R1", BlockType::Resistor).with_param("Resistance", "100.0"));
+    diagram
+        .add_block(Block::new("r2", "R2", BlockType::Resistor).with_param("Resistance", "200.0"));
+    diagram.add_block(Block::new("c", "C", BlockType::Capacitor).with_param("Capacitance", "1e-5"));
+    diagram.add_block(Block::new("l", "L", BlockType::Inductor).with_param("Inductance", "1e-2"));
+
+    // Vs(p) -> Net 1
+    diagram.add_electrical_line("vs", 0, "r1", 0);
+    // R1(n) -> Net 2
+    diagram.add_electrical_line("r1", 1, "c", 0);
+    // C(n) -> Net 3
+    diagram.add_electrical_line("c", 1, "l", 0);
+    // L(n) -> Net 0
+    diagram.add_electrical_line("l", 1, "gnd", 0);
+    // Vs(n) -> Net 0
+    diagram.add_electrical_line("vs", 1, "gnd", 0);
+    // Vac parallel with R2 to Ground
+    diagram.add_electrical_line("vac", 0, "r2", 0);
+    diagram.add_electrical_line("r2", 1, "gnd", 0);
+    diagram.add_electrical_line("vac", 1, "gnd", 0);
+    // Is into Net 2
+    diagram.add_electrical_line("is", 0, "r1", 1);
+    diagram.add_electrical_line("is", 1, "gnd", 0);
+
+    let dt = 1e-4;
+    let mut solver = mlapp_sim::electrical::LinearCircuitSolver::compile(&diagram, dt)
+        .expect("compile circuit")
+        .expect("circuit solver exists");
+
+    solver.init_solve(0.0).expect("init solve");
+
+    // Warm-up step 1 (Backward Euler)
+    solver.step(dt, dt, true).expect("first step");
+
+    // Track allocations over 10,000 steps of Trapezoidal MNA stepping
+    ALLOC_COUNT.store(0, Ordering::SeqCst);
+    ALLOC_TRACKING_ACTIVE.store(true, Ordering::SeqCst);
+
+    for step_idx in 1..=10_000 {
+        let t = (step_idx as f64 + 1.0) * dt;
+        solver.step(t, dt, false).expect("mna step");
+        let _ = solver.branch_voltage("r1");
+        let _ = solver.branch_current("r1");
+        let _ = solver.node_voltage(1);
+    }
+
+    ALLOC_TRACKING_ACTIVE.store(false, Ordering::SeqCst);
+    let total_allocs = ALLOC_COUNT.load(Ordering::SeqCst);
+
+    assert_eq!(
+        total_allocs, 0,
+        "MNA circuit stepping (LinearCircuitSolver::step) must execute with ZERO heap allocations; observed {total_allocs} allocations"
+    );
+}

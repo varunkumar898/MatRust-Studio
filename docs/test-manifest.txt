@@ -220,9 +220,10 @@ test_unsupported_function_diagnostics: test
 8 tests, 0 benchmarks
 0 tests, 0 benchmarks
 test_zero_allocations_during_eval_and_update_discrete: test
+test_zero_allocations_during_mna_circuit_simulation_step: test
 test_zero_allocations_m3_blocks_during_eval_and_update_discrete: test
 
-2 tests, 0 benchmarks
+3 tests, 0 benchmarks
 test_bit_for_bit_regression_against_old_solver_and_fixtures: test
 
 1 test, 0 benchmarks
@@ -251,6 +252,20 @@ test_terminal_count_and_port_kinds_per_block_type: test
 test_unknown_sid_or_terminal_error_not_panic: test
 
 14 tests, 0 benchmarks
+test_ac_voltage_source_frequency_response: test
+test_dc_current_source_parallel_resistor: test
+test_dual_ground_and_partitioned_subcircuits: test
+test_lu_decomposition_pivoting_and_singular_rejection: test
+test_nonlinear_electrical_blocks_give_e_unsupported: test
+test_rc_circuit_step_response_analytical_oracle: test
+test_resistive_voltage_divider_dc_mna: test
+test_rk4_solver_with_electrical_circuit: test
+test_rl_circuit_step_response_analytical_oracle: test
+test_rlc_second_order_underdamped_transient_oracle: test
+test_singular_circuit_ideal_voltage_source_loop_gives_e_singular: test
+test_variable_step_ode45_on_electrical_circuit_gives_e_solver: test
+
+12 tests, 0 benchmarks
 test_algebraic_loop_saturation_gives_e_alg: test
 test_algebraic_loop_self_loop_gives_e_alg: test
 test_algebraic_loop_two_independent_loops_reported: test

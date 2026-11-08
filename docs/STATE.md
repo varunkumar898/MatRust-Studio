@@ -1,25 +1,27 @@
 # MatRust Studio / RustLab Project State
 
-**Current branch:** `feat/m4-electrical-model` (Milestone M4: Electrical Data Model & Editor)
+**Current branch:** `feat/m5-linear-circuits-mna` (Milestone M5: Modified Nodal Analysis & Linear Circuits)
 **Repository:** `https://github.com/varunkumar898/MatRust-Studio.git`
-**Current base commit:** `64aeba4` (`main`)
+**Current base commit:** `c7f8720` (`main` after PR #35 merged)
 **Date:** 2026-11-08
 **Platform:** Windows 11 ARM64 (`aarch64-pc-windows-gnullvm`)
 **Local stable toolchain:** Rust 1.99.1
 **Declared MSRV:** Rust 1.88.0
 **Verification status:** 
-- Local default, all-features, and no-default-features test runs pass at **517/517/517** (net +14 tests in M4).
+- Local default, all-features, and no-default-features test runs pass at **532/532/532** (net +13 tests in M5).
 - Local clippy (all-features, no-default-features, per-crate no-default-features) passes with 0 warnings.
 - `cargo fmt --all -- --check` passes cleanly.
 - `scripts/verify.ps1` runs and exits 0 with all verification steps passing.
 
-## Current work: Milestone M4: Electrical Data Model & Editor
+## Current work: Milestone M5: Modified Nodal Analysis & Linear Circuits
 
-- **Branch `feat/m4-electrical-model`**: Implements multi-domain block model, 9 physical electrical blocks, compile-time netlist disjoint-set union-find with deterministic net ordering, open-square terminals, block rotation, and simulation pre-guard (`E-UNSUPPORTED`).
-- **Data Model**: `PortKind` (`Signal`, `Electrical`), `PortRole` (`Input`, `Output`, `Terminal`), `PortDesc`, and `BlockRotation` (`R0`, `R90`, `R180`, `R270`).
-- **Diagnostics**: Minimal `Diagnostic` structure with typed codes `E-DOMAIN`, `W-OPEN`, `W-WIRE`, `E-GND`, `E-PARAM`, and `E-UNSUPPORTED`.
-- **Zero Heap Allocations**: Netlist compiled once before simulation; per-step simulation remains completely allocation-free.
-- **Documentation**: `docs/electrical-model.md` specifies terminals, nets, ground merging, diagnostics, and no galvanic isolation limitation.
+- **Branch `feat/m5-linear-circuits-mna`**: Implements Modified Nodal Analysis (MNA), companion models, dense self-contained LU decomposition with partial pivoting, constant-matrix fast path, zero-allocation simulation stepping, and analytical oracles.
+- **Data Model & Linear Elements**: Linear circuit solver supports Resistor, Capacitor, Inductor, DC Voltage Source, AC Voltage Source, DC Current Source, and Ground.
+- **Companion Models (Dommel 1969)**: Backward Euler on step 1 to eliminate cold-start trapezoidal ringing; Trapezoidal rule on subsequent steps for $O(dt^2)$ accuracy. Initial condition solve ($A_{init}$) establishes exact DC operating points and component voltages/currents at $t=0$.
+- **Constant Matrix Fast Path**: Matrices $A_{init}$, $A_{BE}$, and $A_{Trap}$ are assembled and factorized once during compilation. Per-step iteration only updates the dynamic RHS vector $z(t)$ and performs forward/backward substitution.
+- **Zero Heap Allocations**: Verified by `test_zero_allocations_during_mna_circuit_simulation_step` over 10,000 steps with a counting allocator (0 allocations).
+- **Diagnostics**: Typed diagnostic `E-SINGULAR` for zero pivots ($< 10^{-12}$) and `E-SOLVER` rejecting variable-step solvers on electrical circuits.
+- **Analytical Oracles**: Closed-form comparisons for RC transient ($< 1\text{ mV}$ error on $10\text{V}$), RL transient ($< 0.1\text{ mA}$ error), second-order underdamped RLC transient ($< 0.02\text{V}$ error on peak overshoot), and AC RC filter at $f_c$ ($< 0.5\%$ error on steady-state amplitude).
 
 - Branch `gui/polish-1` created from `main` @ `425f54e` (master prompt v2, S-step plan).
 - **S1 GUI inventory + audit COMPLETE** (no code changed): `docs/gui-audit.md` documents

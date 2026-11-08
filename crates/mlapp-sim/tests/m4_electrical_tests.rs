@@ -663,20 +663,20 @@ fn test_cross_domain_signal_to_electrical_error() {
 
 #[test]
 fn test_simulate_diagram_with_electrical_blocks_gives_e_unsupported() {
-    let mut d = BlockDiagram::new("PreM5Circuit");
+    let mut d = BlockDiagram::new("PreM6Circuit");
     d.add_block(Block::new("gnd", "Ground", BlockType::Ground));
-    d.add_block(Block::new("r1", "Resistor", BlockType::Resistor));
-    d.add_electrical_line("r1", 0, "gnd", 0);
+    d.add_block(Block::new("d1", "Diode", BlockType::Diode));
+    d.add_electrical_line("d1", 0, "gnd", 0);
 
     let config = SimulationConfig::default();
     let result = simulate_diagram(&d, &config);
 
-    assert!(result.is_err(), "Simulation must return error prior to M5");
+    assert!(result.is_err(), "Simulation must return error prior to M6");
     let err = result.err().unwrap();
     assert_eq!(err.code(), "E-UNSUPPORTED");
     assert!(err
         .message()
-        .contains("electrical simulation arrives in M5; this diagram has 2 electrical block(s)"));
+        .contains("Nonlinear electrical blocks (Diode, IdealSwitch) arrive in Milestone M6"));
 }
 
 #[test]

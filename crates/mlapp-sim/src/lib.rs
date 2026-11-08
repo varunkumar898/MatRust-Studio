@@ -4,6 +4,7 @@
 
 pub mod builder;
 pub mod diagnostics;
+pub mod electrical;
 pub mod engine;
 pub mod inspect;
 pub mod model;
@@ -14,6 +15,7 @@ pub mod spec;
 
 pub use builder::export_slx;
 pub use diagnostics::{Diagnostic, DiagnosticSeverity, FixAction};
+pub use electrical::{LinearCircuitSolver, LuDecomposition};
 pub use engine::{
     feedthrough, CompiledBlock, CompiledKind, ExecutionEngine, ModelLayout, SimWorkspace,
 };

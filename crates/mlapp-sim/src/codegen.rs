@@ -1,0 +1,1033 @@
+//! Standalone ISO C99 Code Generation for Block Diagrams and Electrical Circuits.
+//!
+//! Emits allocation-free, statically bounded C99 code matching the simulation
+//! engine's discrete and continuous dynamics with zero heap allocations.
+
+use crate::diagnostics::{check_diagram, Diagnostic, DiagnosticSeverity};
+use crate::electrical::LinearCircuitSolver;
+use crate::engine::{CompiledBlock, CompiledKind, ExecutionEngine};
+use crate::model::BlockDiagram;
+use crate::solver::{SimError, SimulationConfig};
+use serde::{Deserialize, Serialize};
+use std::fmt::Write as FmtWrite;
+
+/// Configuration options for C code generation.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CodegenConfig {
+    /// Identifier name used for generated C structs, typedefs, and functions.
+    pub model_name: String,
+    /// Whether to generate a standalone `<model_name>_main.c` harness.
+    pub include_main: bool,
+    /// Default fixed simulation step size (dt in seconds).
+    pub step_size: Option<f64>,
+    /// Simulation stop time in seconds.
+    pub stop_time: Option<f64>,
+}
+
+impl Default for CodegenConfig {
+    fn default() -> Self {
+        Self {
+            model_name: "model".to_string(),
+            include_main: true,
+            step_size: Some(0.001),
+            stop_time: Some(1.0),
+        }
+    }
+}
+
+/// Generated C code bundle consisting of header, source, and optional main runner.
+#[derive(Debug, Clone)]
+pub struct GeneratedCode {
+    pub model_name: String,
+    pub header: String,
+    pub source: String,
+    pub main_runner: Option<String>,
+}
+
+/// Generates allocation-free ISO C99 code for a block diagram.
+///
+/// Returns `Err(Vec<Diagnostic>)` if the diagram contains static validation errors.
+pub fn generate_c(
+    diagram: &BlockDiagram,
+    config: &CodegenConfig,
+) -> Result<GeneratedCode, Vec<Diagnostic>> {
+    let dt = config.step_size.unwrap_or(0.001);
+    let stop_time = config.stop_time.unwrap_or(1.0);
+
+    // 1. Static validation check
+    let sim_config = SimulationConfig {
+        stop_time,
+        step_size: dt,
+        ..Default::default()
+    };
+
+    let diags = check_diagram(diagram, Some(&sim_config));
+    let errors: Vec<Diagnostic> = diags
+        .into_iter()
+        .filter(|d| d.severity == DiagnosticSeverity::Error)
+        .collect();
+    if !errors.is_empty() {
+        return Err(errors);
+    }
+
+    // 2. Compile execution engine (topological ordering and state layout)
+    let engine =
+        ExecutionEngine::compile_with_config(diagram, Some(&sim_config)).map_err(|e| match e {
+            SimError::AlgebraicLoop {
+                code,
+                blocks,
+                message,
+            } => {
+                let sids = blocks.into_iter().map(|b| b.sid).collect();
+                vec![Diagnostic::error(code, message, sids)]
+            }
+            other => vec![Diagnostic::error("E-COMPILE", other.to_string(), vec![])],
+        })?;
+
+    // 3. Compile electrical network if electrical blocks are present
+    let circuit = LinearCircuitSolver::compile(diagram, dt)
+        .map_err(|e| vec![Diagnostic::error("E-CIRCUIT", e.to_string(), vec![])])?;
+
+    let sanitized_name = sanitize_c_ident(&config.model_name);
+
+    let header = generate_header(&sanitized_name, &engine, circuit.as_ref());
+    let source = generate_source(&sanitized_name, &engine, circuit.as_ref(), dt);
+    let main_runner = if config.include_main {
+        Some(generate_main_runner(
+            &sanitized_name,
+            &engine,
+            dt,
+            stop_time,
+        ))
+    } else {
+        None
+    };
+
+    Ok(GeneratedCode {
+        model_name: sanitized_name,
+        header,
+        source,
+        main_runner,
+    })
+}
+
+fn sanitize_c_ident(name: &str) -> String {
+    let mut out = String::new();
+    for (i, c) in name.chars().enumerate() {
+        if c.is_ascii_alphanumeric() || c == '_' {
+            if i == 0 && c.is_ascii_digit() {
+                out.push('_');
+            }
+            out.push(c);
+        } else {
+            out.push('_');
+        }
+    }
+    if out.is_empty() {
+        "model".to_string()
+    } else {
+        out
+    }
+}
+
+fn generate_header(
+    name: &str,
+    engine: &ExecutionEngine,
+    circuit: Option<&LinearCircuitSolver>,
+) -> String {
+    let upper_name = name.to_uppercase();
+    let num_blocks = engine.compiled_blocks.len().max(1);
+    let num_cont = engine.layout.num_continuous_states.max(1);
+    let num_disc = engine.layout.num_discrete_states.max(1);
+
+    let (has_circuit, mna_dim, num_nodes, num_vsrc) = if let Some(c) = circuit {
+        (
+            true,
+            c.system_size.max(1),
+            c.num_nodes.max(1),
+            c.num_vsrc.max(1),
+        )
+    } else {
+        (false, 1, 1, 1)
+    };
+
+    let mut h = String::new();
+    let _ = writeln!(
+        h,
+        "/* Auto-generated by MatRust Studio Simulation Codegen */"
+    );
+    let _ = writeln!(h, "/* ISO C99 compliant, strictly allocation-free */");
+    let _ = writeln!(h, "#ifndef {upper_name}_H");
+    let _ = writeln!(h, "#define {upper_name}_H");
+    let _ = writeln!(h);
+    let _ = writeln!(h, "#include <stddef.h>");
+    let _ = writeln!(h, "#include <stdbool.h>");
+    let _ = writeln!(h, "#include <math.h>");
+    let _ = writeln!(h);
+    let _ = writeln!(h, "#ifdef __cplusplus");
+    let _ = writeln!(h, "extern \"C\" {{");
+    let _ = writeln!(h, "#endif");
+    let _ = writeln!(h);
+    let _ = writeln!(h, "#define {upper_name}_NUM_BLOCKS {num_blocks}U");
+    let _ = writeln!(h, "#define {upper_name}_NUM_CONTINUOUS_STATES {num_cont}U");
+    let _ = writeln!(h, "#define {upper_name}_NUM_DISCRETE_STATES {num_disc}U");
+    if has_circuit {
+        let _ = writeln!(h, "#define {upper_name}_HAS_CIRCUIT 1");
+        let _ = writeln!(h, "#define {upper_name}_MNA_DIM {mna_dim}U");
+        let _ = writeln!(h, "#define {upper_name}_NUM_NODES {num_nodes}U");
+        let _ = writeln!(h, "#define {upper_name}_NUM_VSRC {num_vsrc}U");
+    } else {
+        let _ = writeln!(h, "#define {upper_name}_HAS_CIRCUIT 0");
+    }
+    let _ = writeln!(h);
+    let _ = writeln!(h, "typedef struct {name}_state {{");
+    let _ = writeln!(h, "    double time;");
+    let _ = writeln!(h, "    double step_size;");
+    let _ = writeln!(h, "    double continuous_states[{num_cont}];");
+    let _ = writeln!(h, "    double derivatives[{num_cont}];");
+    let _ = writeln!(h, "    double discrete_states[{num_disc}];");
+    let _ = writeln!(h, "    double outputs[{num_blocks}];");
+    if has_circuit {
+        let _ = writeln!(h, "    double node_voltages[{num_nodes} + 1];");
+        let _ = writeln!(h, "    double vsrc_currents[{num_vsrc}];");
+        let _ = writeln!(h, "    double mna_history[{mna_dim}];");
+    }
+    let _ = writeln!(h, "}} {name}_state_t;");
+    let _ = writeln!(h);
+    let _ = writeln!(h, "void {name}_init({name}_state_t* state);");
+    let _ = writeln!(h, "void {name}_step({name}_state_t* state, double dt);");
+    let _ = writeln!(
+        h,
+        "double {name}_get_output(const {name}_state_t* state, size_t block_index);"
+    );
+    let _ = writeln!(h, "const char* {name}_get_block_name(size_t block_index);");
+    let _ = writeln!(h);
+    let _ = writeln!(h, "#ifdef __cplusplus");
+    let _ = writeln!(h, "}}");
+    let _ = writeln!(h, "#endif");
+    let _ = writeln!(h);
+    let _ = writeln!(h, "#endif /* {upper_name}_H */");
+
+    h
+}
+
+fn generate_source(
+    name: &str,
+    engine: &ExecutionEngine,
+    circuit: Option<&LinearCircuitSolver>,
+    default_dt: f64,
+) -> String {
+    let upper_name = name.to_uppercase();
+    let num_blocks = engine.compiled_blocks.len().max(1);
+    let mut s = String::new();
+
+    let _ = writeln!(
+        s,
+        "/* Auto-generated by MatRust Studio Simulation Codegen */"
+    );
+    let _ = writeln!(s, "/* ISO C99 compliant, strictly allocation-free */");
+    let _ = writeln!(s, "#include \"{name}.h\"");
+    let _ = writeln!(s, "#include <string.h>");
+    let _ = writeln!(s);
+
+    // Block names table
+    let _ = writeln!(s, "static const char* const BLOCK_NAMES[{num_blocks}] = {{");
+    for (i, b) in engine.compiled_blocks.iter().enumerate() {
+        let comma = if i + 1 < engine.compiled_blocks.len() {
+            ","
+        } else {
+            ""
+        };
+        let _ = writeln!(s, "    \"{}\"{comma}", b.name.replace('\"', "\\\""));
+    }
+    if engine.compiled_blocks.is_empty() {
+        let _ = writeln!(s, "    \"none\"");
+    }
+    let _ = writeln!(s, "}};");
+    let _ = writeln!(s);
+
+    // Mathematical helper functions for waveform generation
+    let _ = writeln!(
+        s,
+        "static inline double clamp_val(double v, double lo, double hi) {{"
+    );
+    let _ = writeln!(s, "    if (v < lo) return lo;");
+    let _ = writeln!(s, "    if (v > hi) return hi;");
+    let _ = writeln!(s, "    return v;");
+    let _ = writeln!(s, "}}");
+    let _ = writeln!(s);
+
+    let _ = writeln!(s, "static inline double sawtooth_wave(double t, double amp, double freq, double phase, double bias) {{");
+    let _ = writeln!(
+        s,
+        "    double period = (freq > 1e-12) ? (1.0 / freq) : 1e6;"
+    );
+    let _ = writeln!(
+        s,
+        "    double t_shifted = t + (phase / (2.0 * 3.14159265358979323846 * freq));"
+    );
+    let _ = writeln!(s, "    double frac = fmod(t_shifted, period);");
+    let _ = writeln!(s, "    if (frac < 0.0) frac += period;");
+    let _ = writeln!(s, "    return bias - amp + 2.0 * amp * (frac / period);");
+    let _ = writeln!(s, "}}");
+    let _ = writeln!(s);
+
+    // MNA linear solver if circuit is present
+    if let Some(c) = circuit {
+        let dim = c.system_size.max(1);
+        let _ = writeln!(
+            s,
+            "/* In-place dense LU solver with partial pivoting for MNA system (dim = {dim}) */"
+        );
+        let _ = writeln!(s, "static bool solve_mna_system(double a[{dim}][{dim}], const double b[{dim}], double x[{dim}]) {{");
+        let _ = writeln!(s, "    int pivots[{dim}];");
+        let _ = writeln!(s, "    for (int i = 0; i < {dim}; i++) pivots[i] = i;");
+        let _ = writeln!(s);
+        let _ = writeln!(s, "    for (int i = 0; i < {dim}; i++) {{");
+        let _ = writeln!(s, "        double max_val = fabs(a[i][i]);");
+        let _ = writeln!(s, "        int pivot_row = i;");
+        let _ = writeln!(s, "        for (int k = i + 1; k < {dim}; k++) {{");
+        let _ = writeln!(s, "            double val = fabs(a[k][i]);");
+        let _ = writeln!(
+            s,
+            "            if (val > max_val) {{ max_val = val; pivot_row = k; }}"
+        );
+        let _ = writeln!(s, "        }}");
+        let _ = writeln!(s, "        if (max_val < 1e-12) return false;");
+        let _ = writeln!(s, "        pivots[i] = pivot_row;");
+        let _ = writeln!(s, "        if (pivot_row != i) {{");
+        let _ = writeln!(s, "            for (int col = 0; col < {dim}; col++) {{");
+        let _ = writeln!(s, "                double tmp = a[i][col]; a[i][col] = a[pivot_row][col]; a[pivot_row][col] = tmp;");
+        let _ = writeln!(s, "            }}");
+        let _ = writeln!(s, "        }}");
+        let _ = writeln!(s, "        double diag = a[i][i];");
+        let _ = writeln!(s, "        for (int j = i + 1; j < {dim}; j++) {{");
+        let _ = writeln!(s, "            a[j][i] /= diag;");
+        let _ = writeln!(s, "            double mult = a[j][i];");
+        let _ = writeln!(s, "            for (int k = i + 1; k < {dim}; k++) {{");
+        let _ = writeln!(s, "                a[j][k] -= mult * a[i][k];");
+        let _ = writeln!(s, "            }}");
+        let _ = writeln!(s, "        }}");
+        let _ = writeln!(s, "    }}");
+        let _ = writeln!(s);
+        let _ = writeln!(s, "    /* Forward substitution */");
+        let _ = writeln!(s, "    double y[{dim}];");
+        let _ = writeln!(s, "    for (int i = 0; i < {dim}; i++) {{");
+        let _ = writeln!(s, "        int p = pivots[i];");
+        let _ = writeln!(s, "        double sum = (p == i) ? b[i] : b[p];");
+        let _ = writeln!(s, "        for (int j = 0; j < i; j++) {{");
+        let _ = writeln!(s, "            sum -= a[i][j] * y[j];");
+        let _ = writeln!(s, "        }}");
+        let _ = writeln!(s, "        y[i] = sum;");
+        let _ = writeln!(s, "    }}");
+        let _ = writeln!(s);
+        let _ = writeln!(s, "    /* Back substitution */");
+        let _ = writeln!(s, "    for (int i = {dim} - 1; i >= 0; i--) {{");
+        let _ = writeln!(s, "        double sum = y[i];");
+        let _ = writeln!(s, "        for (int j = i + 1; j < {dim}; j++) {{");
+        let _ = writeln!(s, "            sum -= a[i][j] * x[j];");
+        let _ = writeln!(s, "        }}");
+        let _ = writeln!(s, "        x[i] = sum / a[i][i];");
+        let _ = writeln!(s, "    }}");
+        let _ = writeln!(s, "    return true;");
+        let _ = writeln!(s, "}}");
+        let _ = writeln!(s);
+    }
+
+    // Init function
+    let _ = writeln!(s, "void {name}_init({name}_state_t* state) {{");
+    let _ = writeln!(s, "    if (!state) return;");
+    let _ = writeln!(s, "    memset(state, 0, sizeof(*state));");
+    let _ = writeln!(s, "    state->step_size = {default_dt:e};");
+    let _ = writeln!(s, "    state->time = 0.0;");
+
+    // Initialize initial continuous and discrete states from engine layout
+    for (st, &val) in engine.initial_continuous_states.iter().enumerate() {
+        let _ = writeln!(s, "    state->continuous_states[{st}] = {val:e};");
+    }
+    for (st, &val) in engine.initial_discrete_states.iter().enumerate() {
+        let _ = writeln!(s, "    state->discrete_states[{st}] = {val:e};");
+    }
+
+    // Constant outputs
+    for (blk_idx, blk) in engine.compiled_blocks.iter().enumerate() {
+        if let CompiledKind::Constant { value } = &blk.kind {
+            let _ = writeln!(s, "    state->outputs[{blk_idx}] = {value:e};");
+        }
+    }
+
+    let _ = writeln!(s, "}}");
+    let _ = writeln!(s);
+
+    // Step function
+    let _ = writeln!(s, "void {name}_step({name}_state_t* state, double dt) {{");
+    let _ = writeln!(s, "    if (!state) return;");
+    let _ = writeln!(s, "    if (dt <= 0.0) dt = state->step_size;");
+    let _ = writeln!(s, "    double t = state->time;");
+    let _ = writeln!(s);
+
+    // 1. Output evaluations in topological schedule order
+    let _ = writeln!(
+        s,
+        "    /* 1. Evaluate block outputs in topological schedule order */"
+    );
+    for &blk_idx in &engine.schedule {
+        let blk = &engine.compiled_blocks[blk_idx];
+        emit_block_output_c(&mut s, blk_idx, blk);
+    }
+    let _ = writeln!(s);
+
+    // 2. MNA electrical subnetwork step if present
+    if let Some(c) = circuit {
+        let dim = c.system_size.max(1);
+        let _ = writeln!(s, "    /* 2. Solve MNA electrical subnetwork */");
+        let _ = writeln!(s, "    double mna_a[{dim}][{dim}];");
+        let _ = writeln!(s, "    double mna_b[{dim}];");
+        let _ = writeln!(s, "    double mna_x[{dim}];");
+        let _ = writeln!(s, "    memset(mna_a, 0, sizeof(mna_a));");
+        let _ = writeln!(s, "    memset(mna_b, 0, sizeof(mna_b));");
+        let _ = writeln!(s);
+
+        // Stamp linear elements from circuit
+        emit_mna_stamps_c(&mut s, c);
+
+        let _ = writeln!(s, "    solve_mna_system(mna_a, mna_b, mna_x);");
+        let _ = writeln!(s, "    state->node_voltages[0] = 0.0;");
+        for n in 1..=c.num_nodes {
+            let row = n - 1;
+            let _ = writeln!(s, "    state->node_voltages[{n}] = mna_x[{row}];");
+        }
+        for v in 0..c.num_vsrc {
+            let row = c.num_nodes + v;
+            let _ = writeln!(s, "    state->vsrc_currents[{v}] = mna_x[{row}];");
+        }
+
+        // Update sensor block outputs
+        for (blk_idx, blk) in engine.compiled_blocks.iter().enumerate() {
+            if let CompiledKind::Sensor = &blk.kind {
+                for vs in &c.voltage_sensors {
+                    if vs.sid == blk.sid {
+                        let p = vs.p_net;
+                        let n = vs.n_net;
+                        let _ = writeln!(
+                            s,
+                            "    state->outputs[{blk_idx}] = state->node_voltages[{p}] - state->node_voltages[{n}];"
+                        );
+                    }
+                }
+                for is in &c.current_sensors {
+                    if is.sid == blk.sid {
+                        let vsrc = is.vsrc_idx;
+                        let _ = writeln!(
+                            s,
+                            "    state->outputs[{blk_idx}] = state->vsrc_currents[{vsrc}];"
+                        );
+                    }
+                }
+            }
+        }
+        let _ = writeln!(s);
+    }
+
+    // 3. Continuous state derivatives
+    let _ = writeln!(s, "    /* 3. Evaluate continuous derivatives */");
+    for &blk_idx in &engine.schedule {
+        let blk = &engine.compiled_blocks[blk_idx];
+        emit_block_derivatives_c(&mut s, blk);
+    }
+    let _ = writeln!(s);
+
+    // 4. State integration (Euler step)
+    let _ = writeln!(s, "    /* 4. Integrate continuous states (Euler) */");
+    let num_cont = engine.layout.num_continuous_states;
+    if num_cont > 0 {
+        let _ = writeln!(
+            s,
+            "    for (size_t s_idx = 0; s_idx < {num_cont}; s_idx++) {{"
+        );
+        let _ = writeln!(
+            s,
+            "        state->continuous_states[s_idx] += dt * state->derivatives[s_idx];"
+        );
+        let _ = writeln!(s, "    }}");
+    }
+    let _ = writeln!(s);
+
+    // 5. Discrete state updates
+    let _ = writeln!(s, "    /* 5. Update discrete states */");
+    for &blk_idx in &engine.schedule {
+        let blk = &engine.compiled_blocks[blk_idx];
+        emit_block_discrete_update_c(&mut s, blk);
+    }
+    let _ = writeln!(s);
+
+    // Advance time
+    let _ = writeln!(s, "    state->time += dt;");
+    let _ = writeln!(s, "}}");
+    let _ = writeln!(s);
+
+    // Output query helper
+    let _ = writeln!(
+        s,
+        "double {name}_get_output(const {name}_state_t* state, size_t block_index) {{"
+    );
+    let _ = writeln!(
+        s,
+        "    if (!state || block_index >= {upper_name}_NUM_BLOCKS) return 0.0;"
+    );
+    let _ = writeln!(s, "    return state->outputs[block_index];");
+    let _ = writeln!(s, "}}");
+    let _ = writeln!(s);
+
+    // Block name query helper
+    let _ = writeln!(
+        s,
+        "const char* {name}_get_block_name(size_t block_index) {{"
+    );
+    let _ = writeln!(
+        s,
+        "    if (block_index >= {upper_name}_NUM_BLOCKS) return \"\";"
+    );
+    let _ = writeln!(s, "    return BLOCK_NAMES[block_index];");
+    let _ = writeln!(s, "}}");
+
+    s
+}
+
+fn emit_block_output_c(s: &mut String, blk_idx: usize, blk: &CompiledBlock) {
+    let in0 = blk.input_sources.first().and_then(|&opt| opt);
+    let in1 = blk.input_sources.get(1).and_then(|&opt| opt);
+    let in2 = blk.input_sources.get(2).and_then(|&opt| opt);
+
+    let in0_expr = in0
+        .map(|i| format!("state->outputs[{i}]"))
+        .unwrap_or_else(|| "0.0".to_string());
+    let in1_expr = in1
+        .map(|i| format!("state->outputs[{i}]"))
+        .unwrap_or_else(|| "0.0".to_string());
+    let in2_expr = in2
+        .map(|i| format!("state->outputs[{i}]"))
+        .unwrap_or_else(|| "0.0".to_string());
+
+    match &blk.kind {
+        CompiledKind::Constant { value } => {
+            let _ = writeln!(s, "    state->outputs[{blk_idx}] = {value:e};");
+        }
+        CompiledKind::Clock => {
+            let _ = writeln!(s, "    state->outputs[{blk_idx}] = t;");
+        }
+        CompiledKind::Step {
+            step_time,
+            before,
+            after,
+        } => {
+            let _ = writeln!(
+                s,
+                "    state->outputs[{blk_idx}] = (t >= {step_time:e}) ? {after:e} : {before:e};"
+            );
+        }
+        CompiledKind::SineWave {
+            amp,
+            freq_rad,
+            phase,
+            bias,
+        } => {
+            let _ = writeln!(
+                s,
+                "    state->outputs[{blk_idx}] = {bias:e} + {amp:e} * sin({freq_rad:e} * t + {phase:e});"
+            );
+        }
+        CompiledKind::Sawtooth {
+            amp,
+            freq_hz,
+            phase,
+            bias,
+        } => {
+            let _ = writeln!(
+                s,
+                "    state->outputs[{blk_idx}] = sawtooth_wave(t, {amp:e}, {freq_hz:e}, {phase:e}, {bias:e});"
+            );
+        }
+        CompiledKind::PulseGenerator {
+            amp,
+            period,
+            duty,
+            delay,
+        } => {
+            let _ = writeln!(s, "    {{");
+            let _ = writeln!(s, "        double p_time = t - {delay:e};");
+            let _ = writeln!(s, "        if (p_time < 0.0) {{");
+            let _ = writeln!(s, "            state->outputs[{blk_idx}] = 0.0;");
+            let _ = writeln!(s, "        }} else {{");
+            let _ = writeln!(s, "            double p_mod = fmod(p_time, {period:e});");
+            let _ = writeln!(
+                s,
+                "            double p_on = {period:e} * ({duty:e} / 100.0);"
+            );
+            let _ = writeln!(
+                s,
+                "            state->outputs[{blk_idx}] = (p_mod < p_on) ? {amp:e} : 0.0;"
+            );
+            let _ = writeln!(s, "        }}");
+            let _ = writeln!(s, "    }}");
+        }
+        CompiledKind::Gain { gain } => {
+            let _ = writeln!(
+                s,
+                "    state->outputs[{blk_idx}] = {gain:e} * ({in0_expr});"
+            );
+        }
+        CompiledKind::Sum { signs } => {
+            let mut sum_terms = String::new();
+            for (idx, &sign) in signs.iter().enumerate() {
+                let sign_str = if sign { "+" } else { "-" };
+                let term = blk
+                    .input_sources
+                    .get(idx)
+                    .and_then(|&opt| opt)
+                    .map(|i| format!("state->outputs[{i}]"))
+                    .unwrap_or_else(|| "0.0".to_string());
+                let _ = write!(sum_terms, " {sign_str} ({term})");
+            }
+            if sum_terms.is_empty() {
+                sum_terms = " 0.0".to_string();
+            }
+            let _ = writeln!(s, "    state->outputs[{blk_idx}] ={sum_terms};");
+        }
+        CompiledKind::Product => {
+            let _ = writeln!(
+                s,
+                "    state->outputs[{blk_idx}] = ({in0_expr}) * ({in1_expr});"
+            );
+        }
+        CompiledKind::Integrator { state_idx, .. } => {
+            let _ = writeln!(
+                s,
+                "    state->outputs[{blk_idx}] = state->continuous_states[{state_idx}];"
+            );
+        }
+        CompiledKind::UnitDelay { state_idx, .. } => {
+            let _ = writeln!(
+                s,
+                "    state->outputs[{blk_idx}] = state->discrete_states[{state_idx}];"
+            );
+        }
+        CompiledKind::ZeroOrderHold { state_idx, .. } => {
+            let _ = writeln!(
+                s,
+                "    state->outputs[{blk_idx}] = state->discrete_states[{state_idx}];"
+            );
+        }
+        CompiledKind::Abs => {
+            let _ = writeln!(s, "    state->outputs[{blk_idx}] = fabs({in0_expr});");
+        }
+        CompiledKind::Saturation { lower, upper } => {
+            let _ = writeln!(
+                s,
+                "    state->outputs[{blk_idx}] = clamp_val({in0_expr}, {lower:e}, {upper:e});"
+            );
+        }
+        CompiledKind::Switch {
+            criteria,
+            threshold,
+        } => {
+            let cond = match criteria {
+                crate::engine::SwitchCriteria::GreaterEqual => {
+                    format!("({in1_expr}) >= {threshold:e}")
+                }
+                crate::engine::SwitchCriteria::GreaterThan => {
+                    format!("({in1_expr}) > {threshold:e}")
+                }
+                crate::engine::SwitchCriteria::NotZero => format!("fabs({in1_expr}) >= 1e-12"),
+            };
+            let _ = writeln!(
+                s,
+                "    state->outputs[{blk_idx}] = ({cond}) ? ({in0_expr}) : ({in2_expr});"
+            );
+        }
+        CompiledKind::RelationalOperator { op } => {
+            let op_str = match op {
+                crate::engine::RelOp::Equal => "==",
+                crate::engine::RelOp::NotEqual => "!=",
+                crate::engine::RelOp::LessThan => "<",
+                crate::engine::RelOp::LessEqual => "<=",
+                crate::engine::RelOp::GreaterThan => ">",
+                crate::engine::RelOp::GreaterEqual => ">=",
+            };
+            let _ = writeln!(
+                s,
+                "    state->outputs[{blk_idx}] = (({in0_expr}) {op_str} ({in1_expr})) ? 1.0 : 0.0;"
+            );
+        }
+        CompiledKind::LogicalOperator { op } => {
+            let op_c = match op {
+                crate::engine::LogOp::And => "&&",
+                crate::engine::LogOp::Or => "||",
+                crate::engine::LogOp::Nand => "",
+                crate::engine::LogOp::Nor => "",
+                crate::engine::LogOp::Xor => "^",
+                crate::engine::LogOp::Not => "!",
+            };
+            if *op == crate::engine::LogOp::Not {
+                let _ = writeln!(
+                    s,
+                    "    state->outputs[{blk_idx}] = (!((int)({in0_expr}))) ? 1.0 : 0.0;"
+                );
+            } else if *op == crate::engine::LogOp::Nand {
+                let _ = writeln!(
+                    s,
+                    "    state->outputs[{blk_idx}] = (!(((int)({in0_expr})) && ((int)({in1_expr})))) ? 1.0 : 0.0;"
+                );
+            } else if *op == crate::engine::LogOp::Nor {
+                let _ = writeln!(
+                    s,
+                    "    state->outputs[{blk_idx}] = (!(((int)({in0_expr})) || ((int)({in1_expr})))) ? 1.0 : 0.0;"
+                );
+            } else if *op == crate::engine::LogOp::Xor {
+                let _ = writeln!(
+                    s,
+                    "    state->outputs[{blk_idx}] = (((int)({in0_expr})) ^ ((int)({in1_expr}))) ? 1.0 : 0.0;"
+                );
+            } else {
+                let _ = writeln!(
+                    s,
+                    "    state->outputs[{blk_idx}] = (((int)({in0_expr})) {op_c} ((int)({in1_expr}))) ? 1.0 : 0.0;"
+                );
+            }
+        }
+        CompiledKind::MathFunction { func } => {
+            let call = match func {
+                crate::engine::MathFunc::Sqrt => format!("sqrt({in0_expr})"),
+                crate::engine::MathFunc::Exp => format!("exp({in0_expr})"),
+                crate::engine::MathFunc::Log => format!("log({in0_expr})"),
+                crate::engine::MathFunc::Log10 => format!("log10({in0_expr})"),
+                crate::engine::MathFunc::Square => format!("(({in0_expr}) * ({in0_expr}))"),
+                crate::engine::MathFunc::Pow => format!("pow({in0_expr}, {in1_expr})"),
+                crate::engine::MathFunc::Reciprocal => format!("(1.0 / ({in0_expr}))"),
+                crate::engine::MathFunc::Sin => format!("sin({in0_expr})"),
+                crate::engine::MathFunc::Cos => format!("cos({in0_expr})"),
+                crate::engine::MathFunc::Tan => format!("tan({in0_expr})"),
+                crate::engine::MathFunc::Asin => format!("asin({in0_expr})"),
+                crate::engine::MathFunc::Acos => format!("acos({in0_expr})"),
+                crate::engine::MathFunc::Atan => format!("atan({in0_expr})"),
+                crate::engine::MathFunc::Sinh => format!("sinh({in0_expr})"),
+                crate::engine::MathFunc::Cosh => format!("cosh({in0_expr})"),
+                crate::engine::MathFunc::Tanh => format!("tanh({in0_expr})"),
+            };
+            let _ = writeln!(s, "    state->outputs[{blk_idx}] = {call};");
+        }
+        CompiledKind::Pid {
+            state_idx_i,
+            state_idx_d,
+            kp,
+            kd,
+            n,
+            upper_limit,
+            lower_limit,
+            ..
+        } => {
+            let _ = writeln!(s, "    {{");
+            let _ = writeln!(s, "        double p_term = {kp:e} * ({in0_expr});");
+            let _ = writeln!(
+                s,
+                "        double i_term = state->continuous_states[{state_idx_i}];"
+            );
+            let _ = writeln!(
+                s,
+                "        double d_term = {n:e} * ({kd:e} * ({in0_expr}) - state->continuous_states[{state_idx_d}]);"
+            );
+            let _ = writeln!(s, "        double u = p_term + i_term + d_term;");
+            if let (Some(lo), Some(hi)) = (lower_limit, upper_limit) {
+                let _ = writeln!(s, "        u = clamp_val(u, {lo:e}, {hi:e});");
+            }
+            let _ = writeln!(s, "        state->outputs[{blk_idx}] = u;");
+            let _ = writeln!(s, "    }}");
+        }
+        CompiledKind::TransferFunction {
+            state_idx,
+            num_states,
+            c_coeffs,
+            d_coeff,
+            ..
+        } => {
+            let _ = writeln!(s, "    {{");
+            let _ = writeln!(s, "        double tf_y = {d_coeff:e} * ({in0_expr});");
+            for (st, &c_val) in c_coeffs.iter().enumerate().take(*num_states) {
+                let _ = writeln!(
+                    s,
+                    "        tf_y += {c_val:e} * state->continuous_states[{state_idx} + {st}];"
+                );
+            }
+            let _ = writeln!(s, "        state->outputs[{blk_idx}] = tf_y;");
+            let _ = writeln!(s, "    }}");
+        }
+        _ => {
+            if in0.is_some() {
+                let _ = writeln!(s, "    state->outputs[{blk_idx}] = {in0_expr};");
+            }
+        }
+    }
+}
+
+fn emit_block_derivatives_c(s: &mut String, blk: &CompiledBlock) {
+    let in0 = blk.input_sources.first().and_then(|&opt| opt);
+    let in0_expr = in0
+        .map(|i| format!("state->outputs[{i}]"))
+        .unwrap_or_else(|| "0.0".to_string());
+
+    match &blk.kind {
+        CompiledKind::Integrator { state_idx, .. } => {
+            let _ = writeln!(s, "    state->derivatives[{state_idx}] = {in0_expr};");
+        }
+        CompiledKind::Pid {
+            state_idx_i,
+            state_idx_d,
+            ki,
+            kd,
+            n,
+            ..
+        } => {
+            let _ = writeln!(
+                s,
+                "    state->derivatives[{state_idx_i}] = {ki:e} * ({in0_expr});"
+            );
+            let _ = writeln!(
+                s,
+                "    state->derivatives[{state_idx_d}] = {n:e} * ({kd:e} * ({in0_expr}) - state->continuous_states[{state_idx_d}]);"
+            );
+        }
+        CompiledKind::TransferFunction {
+            state_idx,
+            num_states,
+            a_coeffs,
+            ..
+        } => {
+            let n_st = *num_states;
+            if n_st > 0 {
+                let _ = writeln!(s, "    {{");
+                for st in 0..(n_st - 1) {
+                    let _ = writeln!(
+                        s,
+                        "        state->derivatives[{state_idx} + {st}] = state->continuous_states[{state_idx} + {st} + 1];"
+                    );
+                }
+                let last = n_st - 1;
+                let mut last_deriv = format!("({in0_expr})");
+                for (st, &a_val) in a_coeffs.iter().enumerate().take(n_st) {
+                    let _ = write!(
+                        last_deriv,
+                        " - {a_val:e} * state->continuous_states[{state_idx} + {st}]"
+                    );
+                }
+                let _ = writeln!(
+                    s,
+                    "        state->derivatives[{state_idx} + {last}] = {last_deriv};"
+                );
+                let _ = writeln!(s, "    }}");
+            }
+        }
+        _ => {}
+    }
+}
+
+fn emit_block_discrete_update_c(s: &mut String, blk: &CompiledBlock) {
+    let in0 = blk.input_sources.first().and_then(|&opt| opt);
+    let in0_expr = in0
+        .map(|i| format!("state->outputs[{i}]"))
+        .unwrap_or_else(|| "0.0".to_string());
+
+    match &blk.kind {
+        CompiledKind::UnitDelay { state_idx, .. } => {
+            let _ = writeln!(s, "    state->discrete_states[{state_idx}] = {in0_expr};");
+        }
+        CompiledKind::ZeroOrderHold { state_idx, .. } => {
+            let _ = writeln!(s, "    state->discrete_states[{state_idx}] = {in0_expr};");
+        }
+        _ => {}
+    }
+}
+
+fn emit_mna_stamps_c(s: &mut String, c: &LinearCircuitSolver) {
+    let num_nodes = c.num_nodes;
+
+    // Resistors
+    for r in &c.resistors {
+        let p = r.p_net;
+        let n = r.n_net;
+        let g = 1.0 / r.resistance;
+        emit_conductance_stamp(s, p, n, g);
+    }
+
+    // Capacitors (Trapezoidal companion conductance: G = 2C/dt)
+    for cap in &c.capacitors {
+        let p = cap.p_net;
+        let n = cap.n_net;
+        let g = 2.0 * cap.capacitance / c.dt;
+        emit_conductance_stamp(s, p, n, g);
+        let i_hist = g * cap.vc + cap.ic;
+        if p > 0 {
+            let _ = writeln!(s, "    mna_b[{}] += {:e};", p - 1, i_hist);
+        }
+        if n > 0 {
+            let _ = writeln!(s, "    mna_b[{}] -= {:e};", n - 1, i_hist);
+        }
+    }
+
+    // Inductors (Trapezoidal companion conductance: G = dt/(2L))
+    for ind in &c.inductors {
+        let p = ind.p_net;
+        let n = ind.n_net;
+        let g = c.dt / (2.0 * ind.inductance);
+        emit_conductance_stamp(s, p, n, g);
+        let i_hist = ind.il + g * ind.vl;
+        if p > 0 {
+            let _ = writeln!(s, "    mna_b[{}] -= {:e};", p - 1, i_hist);
+        }
+        if n > 0 {
+            let _ = writeln!(s, "    mna_b[{}] += {:e};", n - 1, i_hist);
+        }
+    }
+
+    // DC Voltage Sources
+    for vs in &c.dc_vsources {
+        let p = vs.p_net;
+        let n = vs.n_net;
+        let vsrc_row = num_nodes + vs.vsrc_idx;
+        emit_vsrc_stamp(s, p, n, vsrc_row, vs.voltage);
+    }
+
+    // AC Voltage Sources
+    for ac in &c.ac_vsources {
+        let p = ac.p_net;
+        let n = ac.n_net;
+        let vsrc_row = num_nodes + ac.vsrc_idx;
+        let _ = writeln!(s, "    {{");
+        let _ = writeln!(
+            s,
+            "        double vac = {:e} + {:e} * sin(2.0 * 3.14159265358979323846 * {:e} * t + {:e});",
+            ac.offset, ac.amplitude, ac.frequency, ac.phase_rad
+        );
+        emit_vsrc_stamp_dynamic(s, p, n, vsrc_row, "vac");
+        let _ = writeln!(s, "    }}");
+    }
+
+    // DC Current Sources
+    for isrc in &c.dc_isources {
+        let p = isrc.p_net;
+        let n = isrc.n_net;
+        if p > 0 {
+            let _ = writeln!(s, "    mna_b[{}] -= {:e};", p - 1, isrc.current);
+        }
+        if n > 0 {
+            let _ = writeln!(s, "    mna_b[{}] += {:e};", n - 1, isrc.current);
+        }
+    }
+
+    // Current Sensors (0V voltage source)
+    for is in &c.current_sensors {
+        let p = is.p_net;
+        let n = is.n_net;
+        let vsrc_row = num_nodes + is.vsrc_idx;
+        emit_vsrc_stamp(s, p, n, vsrc_row, 0.0);
+    }
+
+    // VCVS
+    for vcvs in &c.vcvs_sources {
+        let p = vcvs.p_net;
+        let n = vcvs.n_net;
+        let vsrc_row = num_nodes + vcvs.vsrc_idx;
+        emit_vsrc_stamp(s, p, n, vsrc_row, 0.0);
+    }
+
+    // Diodes (piecewise linear conductance)
+    for d in &c.diodes {
+        let p = d.p_net;
+        let n = d.n_net;
+        let g = if d.is_on { d.gon } else { d.goff };
+        emit_conductance_stamp(s, p, n, g);
+    }
+
+    // Ideal Switches
+    for sw in &c.switches {
+        let p = sw.p_net;
+        let n = sw.n_net;
+        let g = if sw.is_on { sw.gon } else { sw.goff };
+        emit_conductance_stamp(s, p, n, g);
+    }
+}
+
+fn emit_conductance_stamp(s: &mut String, p: usize, n: usize, g: f64) {
+    if p > 0 {
+        let _ = writeln!(s, "    mna_a[{}][{}] += {:e};", p - 1, p - 1, g);
+    }
+    if n > 0 {
+        let _ = writeln!(s, "    mna_a[{}][{}] += {:e};", n - 1, n - 1, g);
+    }
+    if p > 0 && n > 0 {
+        let _ = writeln!(s, "    mna_a[{}][{}] -= {:e};", p - 1, n - 1, g);
+        let _ = writeln!(s, "    mna_a[{}][{}] -= {:e};", n - 1, p - 1, g);
+    }
+}
+
+fn emit_vsrc_stamp(s: &mut String, p: usize, n: usize, row: usize, val: f64) {
+    if p > 0 {
+        let _ = writeln!(s, "    mna_a[{}][{}] += 1.0;", row, p - 1);
+        let _ = writeln!(s, "    mna_a[{}][{}] += 1.0;", p - 1, row);
+    }
+    if n > 0 {
+        let _ = writeln!(s, "    mna_a[{}][{}] -= 1.0;", row, n - 1);
+        let _ = writeln!(s, "    mna_a[{}][{}] -= 1.0;", n - 1, row);
+    }
+    let _ = writeln!(s, "    mna_b[{}] += {:e};", row, val);
+}
+
+fn emit_vsrc_stamp_dynamic(s: &mut String, p: usize, n: usize, row: usize, val_var: &str) {
+    if p > 0 {
+        let _ = writeln!(s, "        mna_a[{}][{}] += 1.0;", row, p - 1);
+        let _ = writeln!(s, "        mna_a[{}][{}] += 1.0;", p - 1, row);
+    }
+    if n > 0 {
+        let _ = writeln!(s, "        mna_a[{}][{}] -= 1.0;", row, n - 1);
+        let _ = writeln!(s, "        mna_a[{}][{}] -= 1.0;", n - 1, row);
+    }
+    let _ = writeln!(s, "        mna_b[{}] += {val_var};", row);
+}
+
+fn generate_main_runner(name: &str, engine: &ExecutionEngine, dt: f64, stop_time: f64) -> String {
+    let mut m = String::new();
+    let _ = writeln!(
+        m,
+        "/* Standalone CLI runner for {name} generated by MatRust Studio */"
+    );
+    let _ = writeln!(m, "#include \"{name}.h\"");
+    let _ = writeln!(m, "#include <stdio.h>");
+    let _ = writeln!(m);
+    let _ = writeln!(m, "int main(int argc, char** argv) {{");
+    let _ = writeln!(m, "    (void)argc; (void)argv;");
+    let _ = writeln!(m, "    {name}_state_t state;");
+    let _ = writeln!(m, "    {name}_init(&state);");
+    let _ = writeln!(m);
+
+    // CSV header
+    let mut header_cols = "time".to_string();
+    for b in &engine.compiled_blocks {
+        let _ = write!(header_cols, ",{}", b.name);
+    }
+    let _ = writeln!(m, "    printf(\"{header_cols}\\n\");");
+    let _ = writeln!(m);
+    let _ = writeln!(m, "    double t_stop = {stop_time:e};");
+    let _ = writeln!(m, "    double dt = {dt:e};");
+    let _ = writeln!(m, "    while (state.time <= t_stop + 1e-12) {{");
+    let _ = writeln!(m, "        printf(\"%.6f\", state.time);");
+    for i in 0..engine.compiled_blocks.len() {
+        let _ = writeln!(m, "        printf(\",%.9e\", state.outputs[{i}]);");
+    }
+    let _ = writeln!(m, "        printf(\"\\n\");");
+    let _ = writeln!(m, "        {name}_step(&state, dt);");
+    let _ = writeln!(m, "    }}");
+    let _ = writeln!(m);
+    let _ = writeln!(m, "    return 0;");
+    let _ = writeln!(m, "}}");
+
+    m
+}

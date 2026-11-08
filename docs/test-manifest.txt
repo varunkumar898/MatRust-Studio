@@ -242,6 +242,7 @@ test_cli_check_command_clean_and_json: test
 test_cli_check_command_error_and_warning: test
 test_cli_check_compat_command: test
 test_cli_check_compat_hazardous_and_unanalyzable: test
+test_cli_codegen_command: test
 test_cli_extract_command: test
 test_cli_inspect_command: test
 test_cli_invalid_path_fails: test
@@ -252,7 +253,12 @@ test_cli_run_command: test
 test_cli_run_gui_flag: test
 test_cli_slx_inspect_command: test
 test_cli_slx_inspect_json_command: test
+test_cli_sweep_command: test
 test_code_folding_block_detection: test
+test_codegen_circuit_mna_solver: test
+test_codegen_gcc_compilation_if_available: test
+test_codegen_signal_model_allocation_free: test
+test_codegen_validation_failure_on_error_diagram: test
 test_colon_range: test
 test_colon_range_expressions: test
 test_command_window_input_stays_inside_a_short_panel: test
@@ -447,6 +453,9 @@ test_op_amp_inverting_amplifier_closed_loop_gain: test
 test_operator_precedence: test
 test_opt_in_real_apps_validation: test
 test_panel_action_controls_are_registered_and_reachable: test
+test_parameter_sweep_gain_variation: test
+test_parameter_sweep_invalid_target_error: test
+test_parameter_sweep_resistor_divider: test
 test_parameter_validation_e_param: test
 test_parse_app_classdef_structure: test
 test_parse_app_xml_component_tree: test

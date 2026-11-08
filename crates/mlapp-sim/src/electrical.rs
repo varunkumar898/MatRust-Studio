@@ -119,7 +119,7 @@ impl LuDecomposition {
 
 /// Linear resistor element.
 #[derive(Debug, Clone)]
-struct ResistorElement {
+pub struct ResistorElement {
     pub sid: String,
     pub p_net: usize,
     pub n_net: usize,
@@ -128,7 +128,7 @@ struct ResistorElement {
 
 /// Linear capacitor element with companion model states.
 #[derive(Debug, Clone)]
-struct CapacitorElement {
+pub struct CapacitorElement {
     pub sid: String,
     pub p_net: usize,
     pub n_net: usize,
@@ -140,7 +140,7 @@ struct CapacitorElement {
 
 /// Linear inductor element with companion model states.
 #[derive(Debug, Clone)]
-struct InductorElement {
+pub struct InductorElement {
     pub sid: String,
     pub p_net: usize,
     pub n_net: usize,
@@ -152,7 +152,7 @@ struct InductorElement {
 
 /// DC voltage source.
 #[derive(Debug, Clone)]
-struct DcVoltageSourceElement {
+pub struct DcVoltageSourceElement {
     pub sid: String,
     pub p_net: usize,
     pub n_net: usize,
@@ -162,7 +162,7 @@ struct DcVoltageSourceElement {
 
 /// AC sinusoidal voltage source: v(t) = Amp * sin(2*pi*freq*t + phase_rad) + offset.
 #[derive(Debug, Clone)]
-struct AcVoltageSourceElement {
+pub struct AcVoltageSourceElement {
     pub sid: String,
     pub p_net: usize,
     pub n_net: usize,
@@ -175,7 +175,7 @@ struct AcVoltageSourceElement {
 
 /// DC current source (injects current into positive terminal, out of negative).
 #[derive(Debug, Clone)]
-struct DcCurrentSourceElement {
+pub struct DcCurrentSourceElement {
     pub sid: String,
     pub p_net: usize,
     pub n_net: usize,
@@ -270,14 +270,14 @@ pub struct LinearCircuitSolver {
     pub num_nodes: usize,
     pub num_vsrc: usize,
     pub system_size: usize,
-    dt: f64,
+    pub dt: f64,
 
-    resistors: Vec<ResistorElement>,
-    capacitors: Vec<CapacitorElement>,
-    inductors: Vec<InductorElement>,
-    dc_vsources: Vec<DcVoltageSourceElement>,
-    ac_vsources: Vec<AcVoltageSourceElement>,
-    dc_isources: Vec<DcCurrentSourceElement>,
+    pub resistors: Vec<ResistorElement>,
+    pub capacitors: Vec<CapacitorElement>,
+    pub inductors: Vec<InductorElement>,
+    pub dc_vsources: Vec<DcVoltageSourceElement>,
+    pub ac_vsources: Vec<AcVoltageSourceElement>,
+    pub dc_isources: Vec<DcCurrentSourceElement>,
     pub diodes: Vec<DiodeElement>,
     pub switches: Vec<IdealSwitchElement>,
     pub voltage_sensors: Vec<VoltageSensorElement>,

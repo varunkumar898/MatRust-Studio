@@ -1,19 +1,35 @@
 # MatRust Studio / RustLab Project State
 
-**Current branch:** `feat/m10-examples-docs` (Milestone M10: Worked Examples & Documentation)
+**Current branch:** `feat/m11-m12-codegen-workflow` (Milestones M11: C Code Generation & M12: Workflow Polish)
 **Repository:** `https://github.com/varunkumar898/MatRust-Studio.git`
-**Current base commit:** `f1121f1` (`feat/m9-error-finding`)
+**Current base commit:** `ffe6ef1` (`feat/m10-examples-docs`)
 **Date:** 2026-11-08
 **Platform:** Windows 11 ARM64 (`aarch64-pc-windows-gnullvm`)
 **Local stable toolchain:** Rust 1.99.1
 **Declared MSRV:** Rust 1.88.0
 **Verification status:** 
-- Local default, all-features, and no-default-features test runs pass at **590/590/590** (net +8 tests in M10).
+- Local default, all-features, and no-default-features test runs pass at **599/599/599** (net +9 tests in M11 & M12).
 - Local clippy (all-features, no-default-features, per-crate no-default-features) passes with 0 warnings.
 - `cargo fmt --all -- --check` passes cleanly.
 - `scripts/verify.ps1` runs and exits 0 with all verification steps passing.
 
-## Current work: Milestone M10: Worked Examples & Documentation
+## Current work: Milestones M11 & M12: C Code Generation & Workflow Polish
+
+- **Branch `feat/m11-m12-codegen-workflow`**: Implements ISO C99 allocation-free code generation, MNA linear solver in C, parameter sweep engine, multi-level undo/redo, simulation cancellation, and release notes.
+- **Milestone M11 (ISO C99 Code Generation)**:
+  - `crates/mlapp-sim/src/codegen.rs`: Generates ANSI/ISO C99 header, implementation, and standalone runner.
+  - Allocation-free guarantee: Exactly 0 calls to dynamic heap allocators (`malloc`, `free`, `calloc`, `realloc`).
+  - MNA circuit solver: Static companion conductance matrix stamping and in-place dense LU solver with row partial pivoting.
+  - CLI subcommand: `mlapp-cli codegen <model.json> [--out-dir <dir>] [--name <model_name>]`.
+  - Tests: `test_codegen_signal_model_allocation_free`, `test_codegen_circuit_mna_solver`, `test_codegen_validation_failure_on_error_diagram`, `test_codegen_gcc_compilation_if_available`.
+- **Milestone M12 (Workflow Polish & Final Release)**:
+  - `crates/mlapp-sim/src/sweep.rs`: Parameter sensitivity and sweep engine running batch simulations across component variations.
+  - CLI subcommand: `mlapp-cli sweep <model.json> --block <sid> --param <name> --values <v1,v2,v3> [--out-dir <dir>]`.
+  - Desktop Editor Polish: Multi-level undo/redo (`undo_stack`, `redo_stack`, `push_undo_state`, `undo`, `redo`) and thread-safe cancellation flag (`sim_cancel_flag`, `cancel_simulation`) in `apps/desktop/src/block_diagram_editor.rs` strictly preserving UI/UX layout.
+  - Release Notes: `docs/RELEASE-NOTES-M12.md` documenting completion of Milestones M0 through M12.
+  - Tests: `test_parameter_sweep_gain_variation`, `test_parameter_sweep_resistor_divider`, `test_parameter_sweep_invalid_target_error`, `test_cli_codegen_command`, `test_cli_sweep_command`.
+
+## Previous work: Milestone M10: Worked Examples & Documentation
 
 - **Branch `feat/m10-examples-docs`**: Implements 8 canonical worked example simulation models with physical and analytical verification, comprehensive simulation architecture and MNA theory documentation, claims matrix, and updates to the engineering charter.
 - **8 Reference Example Models (`examples/models/*.json`)**:

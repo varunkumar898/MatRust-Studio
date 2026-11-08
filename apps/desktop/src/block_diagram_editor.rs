@@ -136,6 +136,10 @@ pub struct BlockDiagramEditor {
     pub show_problems_panel: bool,
     pub diagnostics: Vec<mlapp_sim::Diagnostic>,
     pub undo_diagram: Option<BlockDiagram>,
+    pub undo_stack: Vec<BlockDiagram>,
+    pub redo_stack: Vec<BlockDiagram>,
+    pub is_simulating: bool,
+    pub sim_cancel_flag: Option<std::sync::Arc<std::sync::atomic::AtomicBool>>,
 }
 
 impl Default for BlockDiagramEditor {
@@ -187,6 +191,10 @@ impl Default for BlockDiagramEditor {
             show_problems_panel: false,
             diagnostics: Vec::new(),
             undo_diagram: None,
+            undo_stack: Vec::new(),
+            redo_stack: Vec::new(),
+            is_simulating: false,
+            sim_cancel_flag: None,
         }
     }
 }
@@ -670,6 +678,51 @@ impl BlockDiagramEditor {
                 self.sim_status = format!("Simulation Error: {}", e.message());
             }
         }
+    }
+
+    /// Pushes the current diagram state to the undo history stack.
+    pub fn push_undo_state(&mut self) {
+        let current = self.to_block_diagram();
+        self.undo_stack.push(current);
+        if self.undo_stack.len() > 50 {
+            self.undo_stack.remove(0);
+        }
+        self.redo_stack.clear();
+    }
+
+    /// Reverts the diagram to the previous state on the undo stack.
+    pub fn undo(&mut self) -> bool {
+        if let Some(prev) = self.undo_stack.pop() {
+            let current = self.to_block_diagram();
+            self.redo_stack.push(current);
+            self.load_from_block_diagram(&prev);
+            self.refresh_diagnostics();
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Re-applies the previously undone state from the redo stack.
+    pub fn redo(&mut self) -> bool {
+        if let Some(next) = self.redo_stack.pop() {
+            let current = self.to_block_diagram();
+            self.undo_stack.push(current);
+            self.load_from_block_diagram(&next);
+            self.refresh_diagnostics();
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Cancels a currently running background simulation.
+    pub fn cancel_simulation(&mut self) {
+        if let Some(flag) = &self.sim_cancel_flag {
+            flag.store(true, std::sync::atomic::Ordering::Relaxed);
+        }
+        self.is_simulating = false;
+        self.sim_status = "Simulation cancelled by user".to_string();
     }
 }
 

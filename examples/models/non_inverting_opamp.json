@@ -1,0 +1,128 @@
+{
+  "name": "non_inverting_opamp",
+  "schema_version": 4,
+  "simulation_config": {
+    "start_time": 0.0,
+    "stop_time": 0.02,
+    "step_size": 1e-4,
+    "solver": "FixedStepEuler",
+    "abs_tol": 1e-6,
+    "rel_tol": 1e-3,
+    "max_step": 0.001,
+    "initial_step": 1e-4,
+    "enable_fsal": true,
+    "track_chatter": false,
+    "export_format": "Memory"
+  },
+  "blocks": [
+    {
+      "sid": "1",
+      "name": "Vin",
+      "block_type": "DcVoltageSource",
+      "parameters": { "Voltage": "1.0" },
+      "position": [60.0, 100.0, 140.0, 150.0]
+    },
+    {
+      "sid": "2",
+      "name": "VSens_Diff",
+      "block_type": "VoltageSensor",
+      "parameters": {},
+      "position": [200.0, 100.0, 280.0, 150.0]
+    },
+    {
+      "sid": "3",
+      "name": "OpAmp_Gain",
+      "block_type": "Gain",
+      "parameters": { "Gain": "20000.0" },
+      "position": [340.0, 100.0, 400.0, 140.0]
+    },
+    {
+      "sid": "4",
+      "name": "OpAmp_Int",
+      "block_type": "Integrator",
+      "parameters": { "InitialCondition": "0.0" },
+      "position": [440.0, 100.0, 500.0, 140.0]
+    },
+    {
+      "sid": "5",
+      "name": "OpAmp_VCVS",
+      "block_type": "VoltageControlledVoltageSource",
+      "parameters": { "Gain": "1.0" },
+      "position": [560.0, 100.0, 640.0, 150.0]
+    },
+    {
+      "sid": "6",
+      "name": "Rf",
+      "block_type": "Resistor",
+      "parameters": { "Resistance": "100000.0" },
+      "position": [440.0, 240.0, 520.0, 290.0]
+    },
+    {
+      "sid": "7",
+      "name": "R1",
+      "block_type": "Resistor",
+      "parameters": { "Resistance": "10000.0" },
+      "position": [280.0, 240.0, 360.0, 290.0]
+    },
+    {
+      "sid": "8",
+      "name": "GND",
+      "block_type": "Ground",
+      "parameters": {},
+      "position": [200.0, 320.0, 240.0, 360.0]
+    },
+    {
+      "sid": "9",
+      "name": "Vout",
+      "block_type": "Outport",
+      "parameters": {},
+      "position": [700.0, 100.0, 740.0, 140.0]
+    }
+  ],
+  "lines": [
+    {
+      "src": { "block_sid": "1", "port_index": 0, "port_kind": "Electrical" },
+      "dst": { "block_sid": "2", "port_index": 0, "port_kind": "Electrical" }
+    },
+    {
+      "src": { "block_sid": "1", "port_index": 1, "port_kind": "Electrical" },
+      "dst": { "block_sid": "8", "port_index": 0, "port_kind": "Electrical" }
+    },
+    {
+      "src": { "block_sid": "2", "port_index": 1, "port_kind": "Electrical" },
+      "dst": { "block_sid": "7", "port_index": 0, "port_kind": "Electrical" }
+    },
+    {
+      "src": { "block_sid": "7", "port_index": 0, "port_kind": "Electrical" },
+      "dst": { "block_sid": "6", "port_index": 0, "port_kind": "Electrical" }
+    },
+    {
+      "src": { "block_sid": "7", "port_index": 1, "port_kind": "Electrical" },
+      "dst": { "block_sid": "8", "port_index": 0, "port_kind": "Electrical" }
+    },
+    {
+      "src": { "block_sid": "6", "port_index": 1, "port_kind": "Electrical" },
+      "dst": { "block_sid": "5", "port_index": 0, "port_kind": "Electrical" }
+    },
+    {
+      "src": { "block_sid": "5", "port_index": 1, "port_kind": "Electrical" },
+      "dst": { "block_sid": "8", "port_index": 0, "port_kind": "Electrical" }
+    },
+    {
+      "src": { "block_sid": "2", "port_index": 1, "port_kind": "Signal" },
+      "dst": { "block_sid": "3", "port_index": 1, "port_kind": "Signal" }
+    },
+    {
+      "src": { "block_sid": "3", "port_index": 1, "port_kind": "Signal" },
+      "dst": { "block_sid": "4", "port_index": 1, "port_kind": "Signal" }
+    },
+    {
+      "src": { "block_sid": "4", "port_index": 1, "port_kind": "Signal" },
+      "dst": { "block_sid": "5", "port_index": 1, "port_kind": "Signal" }
+    },
+    {
+      "src": { "block_sid": "4", "port_index": 1, "port_kind": "Signal" },
+      "dst": { "block_sid": "9", "port_index": 1, "port_kind": "Signal" }
+    }
+  ]
+}

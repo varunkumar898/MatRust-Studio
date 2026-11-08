@@ -1,0 +1,203 @@
+{
+  "name": "dc_motor",
+  "schema_version": 4,
+  "simulation_config": {
+    "start_time": 0.0,
+    "stop_time": 1.0,
+    "step_size": 1e-4,
+    "solver": "FixedStepEuler",
+    "abs_tol": 1e-6,
+    "rel_tol": 1e-3,
+    "max_step": 0.001,
+    "initial_step": 1e-4,
+    "enable_fsal": true,
+    "track_chatter": false,
+    "export_format": "Memory"
+  },
+  "blocks": [
+    {
+      "sid": "1",
+      "name": "Omega_ref",
+      "block_type": "Constant",
+      "parameters": { "Value": "50.0" },
+      "position": [60.0, 60.0, 120.0, 100.0]
+    },
+    {
+      "sid": "2",
+      "name": "ErrSum",
+      "block_type": "Sum",
+      "parameters": { "Inputs": "+-" },
+      "position": [160.0, 60.0, 200.0, 100.0]
+    },
+    {
+      "sid": "3",
+      "name": "PI_Controller",
+      "block_type": "Pid",
+      "parameters": {
+        "P": "1.0",
+        "I": "10.0",
+        "D": "0.0",
+        "AntiWindupMode": "None"
+      },
+      "position": [240.0, 60.0, 320.0, 100.0]
+    },
+    {
+      "sid": "4",
+      "name": "V_arm",
+      "block_type": "VoltageControlledVoltageSource",
+      "parameters": { "Gain": "1.0" },
+      "position": [360.0, 60.0, 420.0, 110.0]
+    },
+    {
+      "sid": "5",
+      "name": "R_arm",
+      "block_type": "Resistor",
+      "parameters": { "Resistance": "2.0" },
+      "position": [460.0, 60.0, 520.0, 100.0]
+    },
+    {
+      "sid": "6",
+      "name": "L_arm",
+      "block_type": "Inductor",
+      "parameters": { "Inductance": "0.001" },
+      "position": [560.0, 60.0, 620.0, 100.0]
+    },
+    {
+      "sid": "7",
+      "name": "I_sens",
+      "block_type": "CurrentSensor",
+      "parameters": {},
+      "position": [660.0, 60.0, 720.0, 100.0]
+    },
+    {
+      "sid": "8",
+      "name": "V_bemf",
+      "block_type": "VoltageControlledVoltageSource",
+      "parameters": { "Gain": "0.05" },
+      "position": [760.0, 60.0, 820.0, 110.0]
+    },
+    {
+      "sid": "9",
+      "name": "GND",
+      "block_type": "Ground",
+      "parameters": {},
+      "position": [560.0, 200.0, 600.0, 240.0]
+    },
+    {
+      "sid": "10",
+      "name": "Gain_Kt",
+      "block_type": "Gain",
+      "parameters": { "Gain": "0.05" },
+      "position": [660.0, 260.0, 720.0, 300.0]
+    },
+    {
+      "sid": "11",
+      "name": "TorqueSum",
+      "block_type": "Sum",
+      "parameters": { "Inputs": "+-" },
+      "position": [560.0, 260.0, 600.0, 300.0]
+    },
+    {
+      "sid": "12",
+      "name": "Gain_InvJ",
+      "block_type": "Gain",
+      "parameters": { "Gain": "1000.0" },
+      "position": [460.0, 260.0, 520.0, 300.0]
+    },
+    {
+      "sid": "13",
+      "name": "Integ_Omega",
+      "block_type": "Integrator",
+      "parameters": { "InitialCondition": "0.0" },
+      "position": [360.0, 260.0, 420.0, 300.0]
+    },
+    {
+      "sid": "14",
+      "name": "Gain_B",
+      "block_type": "Gain",
+      "parameters": { "Gain": "0.005" },
+      "position": [460.0, 340.0, 520.0, 380.0]
+    },
+    {
+      "sid": "15",
+      "name": "Omega_out",
+      "block_type": "Outport",
+      "parameters": {},
+      "position": [240.0, 260.0, 280.0, 300.0]
+    }
+  ],
+  "lines": [
+    {
+      "src": { "block_sid": "1", "port_index": 1, "port_kind": "Signal" },
+      "dst": { "block_sid": "2", "port_index": 1, "port_kind": "Signal" }
+    },
+    {
+      "src": { "block_sid": "2", "port_index": 1, "port_kind": "Signal" },
+      "dst": { "block_sid": "3", "port_index": 1, "port_kind": "Signal" }
+    },
+    {
+      "src": { "block_sid": "3", "port_index": 1, "port_kind": "Signal" },
+      "dst": { "block_sid": "4", "port_index": 1, "port_kind": "Signal" }
+    },
+    {
+      "src": { "block_sid": "4", "port_index": 0, "port_kind": "Electrical" },
+      "dst": { "block_sid": "5", "port_index": 0, "port_kind": "Electrical" }
+    },
+    {
+      "src": { "block_sid": "5", "port_index": 1, "port_kind": "Electrical" },
+      "dst": { "block_sid": "6", "port_index": 0, "port_kind": "Electrical" }
+    },
+    {
+      "src": { "block_sid": "6", "port_index": 1, "port_kind": "Electrical" },
+      "dst": { "block_sid": "7", "port_index": 0, "port_kind": "Electrical" }
+    },
+    {
+      "src": { "block_sid": "7", "port_index": 1, "port_kind": "Electrical" },
+      "dst": { "block_sid": "8", "port_index": 0, "port_kind": "Electrical" }
+    },
+    {
+      "src": { "block_sid": "8", "port_index": 1, "port_kind": "Electrical" },
+      "dst": { "block_sid": "9", "port_index": 0, "port_kind": "Electrical" }
+    },
+    {
+      "src": { "block_sid": "4", "port_index": 1, "port_kind": "Electrical" },
+      "dst": { "block_sid": "9", "port_index": 0, "port_kind": "Electrical" }
+    },
+    {
+      "src": { "block_sid": "7", "port_index": 1, "port_kind": "Signal" },
+      "dst": { "block_sid": "10", "port_index": 1, "port_kind": "Signal" }
+    },
+    {
+      "src": { "block_sid": "10", "port_index": 1, "port_kind": "Signal" },
+      "dst": { "block_sid": "11", "port_index": 1, "port_kind": "Signal" }
+    },
+    {
+      "src": { "block_sid": "11", "port_index": 1, "port_kind": "Signal" },
+      "dst": { "block_sid": "12", "port_index": 1, "port_kind": "Signal" }
+    },
+    {
+      "src": { "block_sid": "12", "port_index": 1, "port_kind": "Signal" },
+      "dst": { "block_sid": "13", "port_index": 1, "port_kind": "Signal" }
+    },
+    {
+      "src": { "block_sid": "13", "port_index": 1, "port_kind": "Signal" },
+      "dst": { "block_sid": "14", "port_index": 1, "port_kind": "Signal" }
+    },
+    {
+      "src": { "block_sid": "14", "port_index": 1, "port_kind": "Signal" },
+      "dst": { "block_sid": "11", "port_index": 2, "port_kind": "Signal" }
+    },
+    {
+      "src": { "block_sid": "13", "port_index": 1, "port_kind": "Signal" },
+      "dst": { "block_sid": "8", "port_index": 1, "port_kind": "Signal" }
+    },
+    {
+      "src": { "block_sid": "13", "port_index": 1, "port_kind": "Signal" },
+      "dst": { "block_sid": "2", "port_index": 2, "port_kind": "Signal" }
+    },
+    {
+      "src": { "block_sid": "13", "port_index": 1, "port_kind": "Signal" },
+      "dst": { "block_sid": "15", "port_index": 1, "port_kind": "Signal" }
+    }
+  ]
+}

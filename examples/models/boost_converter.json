@@ -1,0 +1,132 @@
+{
+  "name": "boost_converter",
+  "schema_version": 4,
+  "simulation_config": {
+    "start_time": 0.0,
+    "stop_time": 0.005,
+    "step_size": 2e-7,
+    "solver": "FixedStepEuler",
+    "abs_tol": 1e-6,
+    "rel_tol": 1e-3,
+    "max_step": 1e-5,
+    "initial_step": 2e-7,
+    "enable_fsal": true,
+    "track_chatter": false,
+    "export_format": "Memory"
+  },
+  "blocks": [
+    {
+      "sid": "1",
+      "name": "Vin",
+      "block_type": "DcVoltageSource",
+      "parameters": { "Voltage": "12.0" },
+      "position": [100.0, 100.0, 180.0, 150.0]
+    },
+    {
+      "sid": "2",
+      "name": "L_boost",
+      "block_type": "Inductor",
+      "parameters": { "Inductance": "2e-4" },
+      "position": [240.0, 100.0, 320.0, 150.0]
+    },
+    {
+      "sid": "3",
+      "name": "SW_boost",
+      "block_type": "IdealSwitch",
+      "parameters": { "OnResistance": "0.01", "OffResistance": "1e6", "Threshold": "0.5" },
+      "position": [380.0, 220.0, 460.0, 270.0]
+    },
+    {
+      "sid": "4",
+      "name": "D_boost",
+      "block_type": "Diode",
+      "parameters": { "ForwardVoltage": "0.7", "OnResistance": "0.01", "OffResistance": "1e6" },
+      "position": [480.0, 100.0, 560.0, 150.0]
+    },
+    {
+      "sid": "5",
+      "name": "C_out",
+      "block_type": "Capacitor",
+      "parameters": { "Capacitance": "1e-4" },
+      "position": [620.0, 100.0, 700.0, 150.0]
+    },
+    {
+      "sid": "6",
+      "name": "R_load",
+      "block_type": "Resistor",
+      "parameters": { "Resistance": "24.0" },
+      "position": [760.0, 100.0, 840.0, 150.0]
+    },
+    {
+      "sid": "7",
+      "name": "GND",
+      "block_type": "Ground",
+      "parameters": {},
+      "position": [440.0, 340.0, 490.0, 390.0]
+    },
+    {
+      "sid": "8",
+      "name": "V_Sensor",
+      "block_type": "VoltageSensor",
+      "parameters": {},
+      "position": [900.0, 100.0, 980.0, 150.0]
+    },
+    {
+      "sid": "9",
+      "name": "Gate_Drive",
+      "block_type": "PulseGenerator",
+      "parameters": { "Period": "2e-5", "PulseWidth": "52.0", "Amplitude": "1.0" },
+      "position": [240.0, -100.0, 320.0, -50.0]
+    }
+  ],
+  "lines": [
+    {
+      "src": { "block_sid": "1", "port_index": 0, "port_kind": "Electrical" },
+      "dst": { "block_sid": "2", "port_index": 0, "port_kind": "Electrical" }
+    },
+    {
+      "src": { "block_sid": "2", "port_index": 1, "port_kind": "Electrical" },
+      "dst": { "block_sid": "3", "port_index": 0, "port_kind": "Electrical" }
+    },
+    {
+      "src": { "block_sid": "2", "port_index": 1, "port_kind": "Electrical" },
+      "dst": { "block_sid": "4", "port_index": 0, "port_kind": "Electrical" }
+    },
+    {
+      "src": { "block_sid": "4", "port_index": 1, "port_kind": "Electrical" },
+      "dst": { "block_sid": "5", "port_index": 0, "port_kind": "Electrical" }
+    },
+    {
+      "src": { "block_sid": "5", "port_index": 0, "port_kind": "Electrical" },
+      "dst": { "block_sid": "6", "port_index": 0, "port_kind": "Electrical" }
+    },
+    {
+      "src": { "block_sid": "6", "port_index": 0, "port_kind": "Electrical" },
+      "dst": { "block_sid": "8", "port_index": 0, "port_kind": "Electrical" }
+    },
+    {
+      "src": { "block_sid": "1", "port_index": 1, "port_kind": "Electrical" },
+      "dst": { "block_sid": "7", "port_index": 0, "port_kind": "Electrical" }
+    },
+    {
+      "src": { "block_sid": "3", "port_index": 1, "port_kind": "Electrical" },
+      "dst": { "block_sid": "7", "port_index": 0, "port_kind": "Electrical" }
+    },
+    {
+      "src": { "block_sid": "5", "port_index": 1, "port_kind": "Electrical" },
+      "dst": { "block_sid": "7", "port_index": 0, "port_kind": "Electrical" }
+    },
+    {
+      "src": { "block_sid": "6", "port_index": 1, "port_kind": "Electrical" },
+      "dst": { "block_sid": "7", "port_index": 0, "port_kind": "Electrical" }
+    },
+    {
+      "src": { "block_sid": "8", "port_index": 1, "port_kind": "Electrical" },
+      "dst": { "block_sid": "7", "port_index": 0, "port_kind": "Electrical" }
+    },
+    {
+      "src": { "block_sid": "9", "port_index": 1, "port_kind": "Signal" },
+      "dst": { "block_sid": "3", "port_index": 1, "port_kind": "Signal" }
+    }
+  ]
+}

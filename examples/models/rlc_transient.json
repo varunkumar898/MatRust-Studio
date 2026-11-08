@@ -1,0 +1,91 @@
+{
+  "name": "rlc_transient",
+  "schema_version": 4,
+  "simulation_config": {
+    "start_time": 0.0,
+    "stop_time": 0.02,
+    "step_size": 1e-5,
+    "solver": "FixedStepRk4",
+    "abs_tol": 1e-6,
+    "rel_tol": 1e-3,
+    "max_step": 0.001,
+    "initial_step": 1e-5,
+    "enable_fsal": true,
+    "track_chatter": false,
+    "export_format": "Memory"
+  },
+  "blocks": [
+    {
+      "sid": "1",
+      "name": "V_step",
+      "block_type": "DcVoltageSource",
+      "parameters": { "Voltage": "10.0" },
+      "position": [100.0, 100.0, 180.0, 150.0]
+    },
+    {
+      "sid": "2",
+      "name": "R1",
+      "block_type": "Resistor",
+      "parameters": { "Resistance": "4.0" },
+      "position": [240.0, 100.0, 320.0, 150.0]
+    },
+    {
+      "sid": "3",
+      "name": "L1",
+      "block_type": "Inductor",
+      "parameters": { "Inductance": "0.01" },
+      "position": [380.0, 100.0, 460.0, 150.0]
+    },
+    {
+      "sid": "4",
+      "name": "C1",
+      "block_type": "Capacitor",
+      "parameters": { "Capacitance": "1e-4" },
+      "position": [520.0, 100.0, 600.0, 150.0]
+    },
+    {
+      "sid": "5",
+      "name": "GND",
+      "block_type": "Ground",
+      "parameters": {},
+      "position": [310.0, 260.0, 360.0, 310.0]
+    },
+    {
+      "sid": "6",
+      "name": "V_Sensor",
+      "block_type": "VoltageSensor",
+      "parameters": {},
+      "position": [660.0, 100.0, 740.0, 150.0]
+    }
+  ],
+  "lines": [
+    {
+      "src": { "block_sid": "1", "port_index": 0, "port_kind": "Electrical" },
+      "dst": { "block_sid": "2", "port_index": 0, "port_kind": "Electrical" }
+    },
+    {
+      "src": { "block_sid": "2", "port_index": 1, "port_kind": "Electrical" },
+      "dst": { "block_sid": "3", "port_index": 0, "port_kind": "Electrical" }
+    },
+    {
+      "src": { "block_sid": "3", "port_index": 1, "port_kind": "Electrical" },
+      "dst": { "block_sid": "4", "port_index": 0, "port_kind": "Electrical" }
+    },
+    {
+      "src": { "block_sid": "4", "port_index": 0, "port_kind": "Electrical" },
+      "dst": { "block_sid": "6", "port_index": 0, "port_kind": "Electrical" }
+    },
+    {
+      "src": { "block_sid": "4", "port_index": 1, "port_kind": "Electrical" },
+      "dst": { "block_sid": "5", "port_index": 0, "port_kind": "Electrical" }
+    },
+    {
+      "src": { "block_sid": "6", "port_index": 1, "port_kind": "Electrical" },
+      "dst": { "block_sid": "5", "port_index": 0, "port_kind": "Electrical" }
+    },
+    {
+      "src": { "block_sid": "1", "port_index": 1, "port_kind": "Electrical" },
+      "dst": { "block_sid": "5", "port_index": 0, "port_kind": "Electrical" }
+    }
+  ]
+}

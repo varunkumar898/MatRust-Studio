@@ -1,19 +1,47 @@
 # MatRust Studio / RustLab Project State
 
-**Current branch:** `feat/m9-error-finding` (Milestone M9: Error Finding & Diagnostics)
+**Current branch:** `feat/m10-examples-docs` (Milestone M10: Worked Examples & Documentation)
 **Repository:** `https://github.com/varunkumar898/MatRust-Studio.git`
-**Current base commit:** `3b20a5e` (`feat/m8-measurements`)
+**Current base commit:** `f1121f1` (`feat/m9-error-finding`)
 **Date:** 2026-11-08
 **Platform:** Windows 11 ARM64 (`aarch64-pc-windows-gnullvm`)
 **Local stable toolchain:** Rust 1.99.1
 **Declared MSRV:** Rust 1.88.0
 **Verification status:** 
-- Local default, all-features, and no-default-features test runs pass at **582/582/582** (net +9 tests in M9).
+- Local default, all-features, and no-default-features test runs pass at **590/590/590** (net +8 tests in M10).
 - Local clippy (all-features, no-default-features, per-crate no-default-features) passes with 0 warnings.
 - `cargo fmt --all -- --check` passes cleanly.
 - `scripts/verify.ps1` runs and exits 0 with all verification steps passing.
 
-## Current work: Milestone M9: Error Finding & Diagnostics
+## Current work: Milestone M10: Worked Examples & Documentation
+
+- **Branch `feat/m10-examples-docs`**: Implements 8 canonical worked example simulation models with physical and analytical verification, comprehensive simulation architecture and MNA theory documentation, claims matrix, and updates to the engineering charter.
+- **8 Reference Example Models (`examples/models/*.json`)**:
+  1. `rlc_transient.json`: 2nd-order underdamped series RLC transient step response.
+  2. `rectifiers.json`: Half-wave diode rectifier with capacitive smoothing filter.
+  3. `buck_converter.json`: Closed-loop step-down switched-mode DC-DC power supply with PWM and PID control.
+  4. `boost_converter.json`: Step-up switched-mode DC-DC converter operating in continuous conduction mode.
+  5. `inverting_opamp.json`: Closed-loop inverting operational amplifier macro-model with dominant-pole compensation.
+  6. `non_inverting_opamp.json`: Closed-loop non-inverting operational amplifier configuration.
+  7. `dc_motor.json`: Electromechanical PMDC servomotor with closed-loop PI velocity control.
+  8. `voice_coil_actuator.json`: Resonant linear electromagnetic transducer with back-EMF damping.
+- **Analytical & Physical Oracle Test Suite (`crates/mlapp-sim/tests/examples_tests.rs`)**:
+  - `test_example_rlc_transient`: Matches closed-form analytical solution and peak overshoot $V_{peak} \approx 15.266\text{ V}$ to $< 0.1\text{ V}$.
+  - `test_example_rectifiers`: Verifies diode forward voltage drop $V_p - V_f = 9.3\text{ V}$ and ripple formula $\Delta V \approx 1.86\text{ V}$.
+  - `test_example_buck_converter`: Verifies closed-loop output regulation to $5.0\text{ V} \pm 5\%$ and continuous conduction.
+  - `test_example_boost_converter`: Verifies voltage boost from $12\text{ V}$ to steady-state mean $> 22\text{ V}$.
+  - `test_example_inverting_opamp`: Verifies theoretical gain $A_v = -R_f / R_1 = -10.0\text{ V}$ within $1\text{ mV}$.
+  - `test_example_non_inverting_opamp`: Verifies theoretical gain $A_v = 1 + R_f / R_1 = 11.0\text{ V}$ within $1\text{ mV}$.
+  - `test_example_dc_motor`: Verifies closed-loop velocity setpoint tracking $\omega \to 50.0\text{ rad/s}$ with $< 0.1\%$ error.
+  - `test_example_voice_coil_actuator`: Verifies bounded physical oscillations and electromagnetic back-EMF damping.
+- **Documentation Suite**:
+  - `docs/examples/*.md`: Dedicated documentation for each of the 8 models with schematics, derivations, and test mapping.
+  - `docs/simulation-design.md`: Full architectural description of signal flow, MNA solver, hybrid bridges, switching iteration, and zero-allocation pre-factorization.
+  - `docs/theory/mna.md`: Mathematical formulation, companion stamps for linear and nonlinear elements, LU pivoting, and degeneracy diagnostics.
+  - `docs/ENGINEERING-CHARTER.md`: Updated with `W-CHATTER`/`E-CHATTER` limits, $R_{off}$ finite conductance requirement, `PowerMeasurement` 5-output spec with $DPF$, `schema_version 4` strict rules, and full 26-code diagnostics catalog.
+  - `docs/CLAIMS.md`: Exhaustive matrix mapping every charter capability to exact test cases.
+
+## Previous work: Milestone M9: Error Finding & Diagnostics
 
 - **Branch `feat/m9-error-finding`**: Implements proactive static compile-time and topological diagnostics, a unified diagnostic catalog of 26 canonical error/warning/info codes, the `apply_fix` automated repair engine with 1-level undo, the `mlapp-cli check` subcommand, and the desktop editor "Problems" panel.
 - **Topological & Static Diagnostic Engine**:

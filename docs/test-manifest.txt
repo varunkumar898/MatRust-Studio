@@ -1,4 +1,4 @@
-﻿actions::tests::clear_actions_have_one_unique_label_per_panel: test
+actions::tests::clear_actions_have_one_unique_label_per_panel: test
 actions::tests::every_clear_scope_maps_to_a_distinct_action: test
 array::tests::test_dense_array_creation_and_indexing: test
 array::tests::test_dynamic_array_growth: test
@@ -314,6 +314,14 @@ test_editor_toolbar_has_exactly_one_run_control_set: test
 test_elementwise_elementary_math: test
 test_end_to_end_callback_with_advanced_matlab_features: test
 test_euler_rk4_convergence_rates: test
+test_example_boost_converter: test
+test_example_buck_converter: test
+test_example_dc_motor: test
+test_example_inverting_opamp: test
+test_example_non_inverting_opamp: test
+test_example_rectifiers: test
+test_example_rlc_transient: test
+test_example_voice_coil_actuator: test
 test_extract_aggregate_decompressed_bytes_limit: test
 test_extract_code_from_xml: test
 test_extract_security_backslash_traversal: test

@@ -7,6 +7,7 @@ pub mod diagnostics;
 pub mod electrical;
 pub mod engine;
 pub mod inspect;
+pub mod measurements;
 pub mod model;
 pub mod netlist;
 pub mod parser;
@@ -20,6 +21,10 @@ pub use engine::{
     feedthrough, CompiledBlock, CompiledKind, ExecutionEngine, ModelLayout, SimWorkspace,
 };
 pub use inspect::{inspect_slx, InspectError, SlxInspectReport};
+pub use measurements::{
+    dft_direct, fft_radix2, spectrum, spectrum_with_window, NeumaierSum, PowerMeasurementBuffer,
+    ScalarWindowBuffer, SpectrumResult, ThdBuffer, WindowFunction,
+};
 pub use model::{
     Block, BlockDiagram, BlockRotation, BlockType, Line, PortDesc, PortKind, PortRef, PortRole,
 };

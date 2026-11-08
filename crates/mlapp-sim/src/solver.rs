@@ -243,6 +243,12 @@ pub enum SolverType {
     VariableStepDormandPrince,
 }
 
+impl SolverType {
+    pub fn is_variable_step(&self) -> bool {
+        matches!(self, SolverType::VariableStepDormandPrince)
+    }
+}
+
 impl Serialize for SolverType {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -466,6 +472,67 @@ impl SimulationOutput {
 
         Value::Struct(StructArray::scalar(fields))
     }
+
+    /// Exports simulation trajectories to CSV adhering to RFC 4180, with '.' decimals,
+    /// shortest round-trip float representations, and formula injection mitigation.
+    pub fn write_csv<W: std::io::Write>(&self, writer: &mut W) -> std::io::Result<()> {
+        let mut names: Vec<&String> = self.signals.keys().collect();
+        names.sort();
+
+        // Write header
+        writer.write_all(b"time")?;
+        for name in &names {
+            writer.write_all(b",")?;
+            Self::write_csv_cell(writer, name)?;
+        }
+        writer.write_all(b"\n")?;
+
+        // Write data rows
+        let n_rows = self.tout.len();
+        for i in 0..n_rows {
+            let t = self.tout[i];
+            write!(writer, "{}", Self::format_float(t))?;
+            for name in &names {
+                writer.write_all(b",")?;
+                let val = self
+                    .signals
+                    .get(*name)
+                    .and_then(|v| v.get(i))
+                    .copied()
+                    .unwrap_or(f64::NAN);
+                write!(writer, "{}", Self::format_float(val))?;
+            }
+            writer.write_all(b"\n")?;
+        }
+        Ok(())
+    }
+
+    fn format_float(val: f64) -> String {
+        if val.is_nan() {
+            "NaN".to_string()
+        } else if val.is_infinite() {
+            if val > 0.0 {
+                "inf".to_string()
+            } else {
+                "-inf".to_string()
+            }
+        } else {
+            format!("{val}")
+        }
+    }
+
+    fn write_csv_cell<W: std::io::Write>(writer: &mut W, text: &str) -> std::io::Result<()> {
+        let mut s = text.to_string();
+        if s.starts_with('=') || s.starts_with('+') || s.starts_with('-') || s.starts_with('@') {
+            s = format!("'{s}");
+        }
+        if s.contains(',') || s.contains('"') || s.contains('\n') || s.contains('\r') {
+            let escaped = s.replace('"', "\"\"");
+            write!(writer, "\"{escaped}\"")
+        } else {
+            writer.write_all(s.as_bytes())
+        }
+    }
 }
 
 /// Butcher tableau coefficients for Dormand-Prince 5(4) (DOPRI5 / MATLAB ode45).
@@ -579,8 +646,7 @@ fn simulate_fixed_step_euler(
     let mut continuous_states = engine.initial_continuous_states.clone();
     let mut discrete_states = engine.initial_discrete_states.clone();
 
-    let mut workspace =
-        SimWorkspace::new(diagram.blocks.len(), engine.layout.num_continuous_states);
+    let mut workspace = engine.create_workspace();
 
     let mut tout = Vec::with_capacity(num_steps + 1);
     let mut yout = Vec::with_capacity(num_steps + 1);
@@ -593,13 +659,26 @@ fn simulate_fixed_step_euler(
         .filter(|(_, b)| {
             matches!(
                 b.block_type,
-                BlockType::Scope | BlockType::ToWorkspace | BlockType::Outport
+                BlockType::Scope
+                    | BlockType::ToWorkspace
+                    | BlockType::Outport
+                    | BlockType::Rms
+                    | BlockType::Mean
+                    | BlockType::PowerMeasurement
+                    | BlockType::Thd
             )
         })
         .collect();
 
     for (_, b) in &log_blocks {
         signals.insert(b.name.clone(), Vec::with_capacity(num_steps + 1));
+        if b.block_type == BlockType::PowerMeasurement {
+            signals.insert(format!("{}.P", b.name), Vec::with_capacity(num_steps + 1));
+            signals.insert(format!("{}.Q1", b.name), Vec::with_capacity(num_steps + 1));
+            signals.insert(format!("{}.S", b.name), Vec::with_capacity(num_steps + 1));
+            signals.insert(format!("{}.PF", b.name), Vec::with_capacity(num_steps + 1));
+            signals.insert(format!("{}.DPF", b.name), Vec::with_capacity(num_steps + 1));
+        }
     }
 
     if let Some(ref c) = circuit_solver {
@@ -628,27 +707,31 @@ fn simulate_fixed_step_euler(
         )?;
         for (_, b) in &electrical_blocks {
             if let Some(src_idx) = c.get_switch_driver_idx(&b.sid) {
-                c.set_switch_control(&b.sid, workspace.outputs[src_idx]);
+                let slot = engine.block_output_offsets[src_idx];
+                c.set_switch_control(&b.sid, workspace.outputs[slot]);
             }
             if let Some(src_idx) = c.get_vcvs_driver_idx(&b.sid) {
-                c.set_vcvs_control(&b.sid, workspace.outputs[src_idx]);
+                let slot = engine.block_output_offsets[src_idx];
+                c.set_vcvs_control(&b.sid, workspace.outputs[slot]);
             }
             if let Some(src_idx) = c.get_vccs_driver_idx(&b.sid) {
-                c.set_vccs_control(&b.sid, workspace.outputs[src_idx]);
+                let slot = engine.block_output_offsets[src_idx];
+                c.set_vccs_control(&b.sid, workspace.outputs[slot]);
             }
         }
         c.init_solve(config.start_time)?;
         for &(idx, b) in &electrical_blocks {
+            let slot = engine.block_output_offsets[idx];
             match b.block_type {
                 BlockType::VoltageSensor => {
-                    workspace.outputs[idx] = c.sensor_voltage(&b.sid).unwrap_or(0.0);
+                    workspace.outputs[slot] = c.sensor_voltage(&b.sid).unwrap_or(0.0);
                 }
                 BlockType::CurrentSensor => {
-                    workspace.outputs[idx] = c.sensor_current(&b.sid).unwrap_or(0.0);
+                    workspace.outputs[slot] = c.sensor_current(&b.sid).unwrap_or(0.0);
                 }
                 _ => {
                     if let Some(v) = c.branch_voltage(&b.sid) {
-                        workspace.outputs[idx] = v;
+                        workspace.outputs[slot] = v;
                     }
                 }
             }
@@ -671,10 +754,10 @@ fn simulate_fixed_step_euler(
 
         let primary_val = log_blocks
             .first()
-            .map(|(idx, _)| workspace.outputs[*idx])
+            .map(|(idx, _)| workspace.outputs[engine.block_output_offsets[*idx]])
             .unwrap_or_else(|| {
                 if let Some(&(idx, _)) = electrical_blocks.last() {
-                    workspace.outputs[idx]
+                    workspace.outputs[engine.block_output_offsets[idx]]
                 } else {
                     workspace.outputs.last().copied().unwrap_or(0.0)
                 }
@@ -682,8 +765,26 @@ fn simulate_fixed_step_euler(
         yout.push(primary_val);
 
         for (idx, b) in &log_blocks {
+            let slot = engine.block_output_offsets[*idx];
             if let Some(vec) = signals.get_mut(&b.name) {
-                vec.push(workspace.outputs[*idx]);
+                vec.push(workspace.outputs[slot]);
+            }
+            if b.block_type == BlockType::PowerMeasurement {
+                if let Some(vec) = signals.get_mut(&format!("{}.P", b.name)) {
+                    vec.push(workspace.outputs[slot]);
+                }
+                if let Some(vec) = signals.get_mut(&format!("{}.Q1", b.name)) {
+                    vec.push(workspace.outputs[slot + 1]);
+                }
+                if let Some(vec) = signals.get_mut(&format!("{}.S", b.name)) {
+                    vec.push(workspace.outputs[slot + 2]);
+                }
+                if let Some(vec) = signals.get_mut(&format!("{}.PF", b.name)) {
+                    vec.push(workspace.outputs[slot + 3]);
+                }
+                if let Some(vec) = signals.get_mut(&format!("{}.DPF", b.name)) {
+                    vec.push(workspace.outputs[slot + 4]);
+                }
             }
         }
 
@@ -724,28 +825,32 @@ fn simulate_fixed_step_euler(
             if let Some(ref mut c) = circuit_solver {
                 for (_, b) in &electrical_blocks {
                     if let Some(src_idx) = c.get_switch_driver_idx(&b.sid) {
-                        c.set_switch_control(&b.sid, workspace.outputs[src_idx]);
+                        let slot = engine.block_output_offsets[src_idx];
+                        c.set_switch_control(&b.sid, workspace.outputs[slot]);
                     }
                     if let Some(src_idx) = c.get_vcvs_driver_idx(&b.sid) {
-                        c.set_vcvs_control(&b.sid, workspace.outputs[src_idx]);
+                        let slot = engine.block_output_offsets[src_idx];
+                        c.set_vcvs_control(&b.sid, workspace.outputs[slot]);
                     }
                     if let Some(src_idx) = c.get_vccs_driver_idx(&b.sid) {
-                        c.set_vccs_control(&b.sid, workspace.outputs[src_idx]);
+                        let slot = engine.block_output_offsets[src_idx];
+                        c.set_vccs_control(&b.sid, workspace.outputs[slot]);
                     }
                 }
                 let t_next = config.start_time + ((step + 1) as f64) * dt;
                 c.step(t_next, dt, step == 0)?;
                 for &(idx, b) in &electrical_blocks {
+                    let slot = engine.block_output_offsets[idx];
                     match b.block_type {
                         BlockType::VoltageSensor => {
-                            workspace.outputs[idx] = c.sensor_voltage(&b.sid).unwrap_or(0.0);
+                            workspace.outputs[slot] = c.sensor_voltage(&b.sid).unwrap_or(0.0);
                         }
                         BlockType::CurrentSensor => {
-                            workspace.outputs[idx] = c.sensor_current(&b.sid).unwrap_or(0.0);
+                            workspace.outputs[slot] = c.sensor_current(&b.sid).unwrap_or(0.0);
                         }
                         _ => {
                             if let Some(v) = c.branch_voltage(&b.sid) {
-                                workspace.outputs[idx] = v;
+                                workspace.outputs[slot] = v;
                             }
                         }
                     }
@@ -760,14 +865,20 @@ fn simulate_fixed_step_euler(
                 &mut discrete_states,
                 config,
             );
+            engine.update_measurements_at(t, config.start_time, &mut workspace, config);
         }
+    }
+
+    let mut all_diags = engine.warnings.clone();
+    if let Some(c) = circuit_solver {
+        all_diags.extend(c.diagnostics);
     }
 
     Ok(SimulationOutput {
         tout,
         yout,
         signals,
-        diagnostics: circuit_solver.map(|c| c.diagnostics).unwrap_or_default(),
+        diagnostics: all_diags,
     })
 }
 
@@ -792,7 +903,7 @@ fn simulate_fixed_step_rk4(
     let mut continuous_states = engine.initial_continuous_states.clone();
     let mut discrete_states = engine.initial_discrete_states.clone();
 
-    let mut workspace = SimWorkspace::new(diagram.blocks.len(), num_states);
+    let mut workspace = engine.create_workspace();
 
     let mut tout = Vec::with_capacity(num_steps + 1);
     let mut yout = Vec::with_capacity(num_steps + 1);
@@ -805,13 +916,26 @@ fn simulate_fixed_step_rk4(
         .filter(|(_, b)| {
             matches!(
                 b.block_type,
-                BlockType::Scope | BlockType::ToWorkspace | BlockType::Outport
+                BlockType::Scope
+                    | BlockType::ToWorkspace
+                    | BlockType::Outport
+                    | BlockType::Rms
+                    | BlockType::Mean
+                    | BlockType::PowerMeasurement
+                    | BlockType::Thd
             )
         })
         .collect();
 
     for (_, b) in &log_blocks {
         signals.insert(b.name.clone(), Vec::with_capacity(num_steps + 1));
+        if b.block_type == BlockType::PowerMeasurement {
+            signals.insert(format!("{}.P", b.name), Vec::with_capacity(num_steps + 1));
+            signals.insert(format!("{}.Q1", b.name), Vec::with_capacity(num_steps + 1));
+            signals.insert(format!("{}.S", b.name), Vec::with_capacity(num_steps + 1));
+            signals.insert(format!("{}.PF", b.name), Vec::with_capacity(num_steps + 1));
+            signals.insert(format!("{}.DPF", b.name), Vec::with_capacity(num_steps + 1));
+        }
     }
 
     if let Some(ref c) = circuit_solver {
@@ -840,27 +964,31 @@ fn simulate_fixed_step_rk4(
         )?;
         for (_, b) in &electrical_blocks {
             if let Some(src_idx) = c.get_switch_driver_idx(&b.sid) {
-                c.set_switch_control(&b.sid, workspace.outputs[src_idx]);
+                let slot = engine.block_output_offsets[src_idx];
+                c.set_switch_control(&b.sid, workspace.outputs[slot]);
             }
             if let Some(src_idx) = c.get_vcvs_driver_idx(&b.sid) {
-                c.set_vcvs_control(&b.sid, workspace.outputs[src_idx]);
+                let slot = engine.block_output_offsets[src_idx];
+                c.set_vcvs_control(&b.sid, workspace.outputs[slot]);
             }
             if let Some(src_idx) = c.get_vccs_driver_idx(&b.sid) {
-                c.set_vccs_control(&b.sid, workspace.outputs[src_idx]);
+                let slot = engine.block_output_offsets[src_idx];
+                c.set_vccs_control(&b.sid, workspace.outputs[slot]);
             }
         }
         c.init_solve(config.start_time)?;
         for &(idx, b) in &electrical_blocks {
+            let slot = engine.block_output_offsets[idx];
             match b.block_type {
                 BlockType::VoltageSensor => {
-                    workspace.outputs[idx] = c.sensor_voltage(&b.sid).unwrap_or(0.0);
+                    workspace.outputs[slot] = c.sensor_voltage(&b.sid).unwrap_or(0.0);
                 }
                 BlockType::CurrentSensor => {
-                    workspace.outputs[idx] = c.sensor_current(&b.sid).unwrap_or(0.0);
+                    workspace.outputs[slot] = c.sensor_current(&b.sid).unwrap_or(0.0);
                 }
                 _ => {
                     if let Some(v) = c.branch_voltage(&b.sid) {
-                        workspace.outputs[idx] = v;
+                        workspace.outputs[slot] = v;
                     }
                 }
             }
@@ -889,18 +1017,36 @@ fn simulate_fixed_step_rk4(
         tout.push(t);
         let primary_val = log_blocks
             .first()
-            .map(|(idx, _)| workspace.outputs[*idx])
+            .map(|(idx, _)| workspace.outputs[engine.block_output_offsets[*idx]])
             .unwrap_or_else(|| {
                 if let Some(&(idx, _)) = electrical_blocks.last() {
-                    workspace.outputs[idx]
+                    workspace.outputs[engine.block_output_offsets[idx]]
                 } else {
                     workspace.outputs.last().copied().unwrap_or(0.0)
                 }
             });
         yout.push(primary_val);
         for (idx, b) in &log_blocks {
+            let slot = engine.block_output_offsets[*idx];
             if let Some(vec) = signals.get_mut(&b.name) {
-                vec.push(workspace.outputs[*idx]);
+                vec.push(workspace.outputs[slot]);
+            }
+            if b.block_type == BlockType::PowerMeasurement {
+                if let Some(vec) = signals.get_mut(&format!("{}.P", b.name)) {
+                    vec.push(workspace.outputs[slot]);
+                }
+                if let Some(vec) = signals.get_mut(&format!("{}.Q1", b.name)) {
+                    vec.push(workspace.outputs[slot + 1]);
+                }
+                if let Some(vec) = signals.get_mut(&format!("{}.S", b.name)) {
+                    vec.push(workspace.outputs[slot + 2]);
+                }
+                if let Some(vec) = signals.get_mut(&format!("{}.PF", b.name)) {
+                    vec.push(workspace.outputs[slot + 3]);
+                }
+                if let Some(vec) = signals.get_mut(&format!("{}.DPF", b.name)) {
+                    vec.push(workspace.outputs[slot + 4]);
+                }
             }
         }
 
@@ -967,28 +1113,32 @@ fn simulate_fixed_step_rk4(
         if let Some(ref mut c) = circuit_solver {
             for (_, b) in &electrical_blocks {
                 if let Some(src_idx) = c.get_switch_driver_idx(&b.sid) {
-                    c.set_switch_control(&b.sid, workspace.outputs[src_idx]);
+                    let slot = engine.block_output_offsets[src_idx];
+                    c.set_switch_control(&b.sid, workspace.outputs[slot]);
                 }
                 if let Some(src_idx) = c.get_vcvs_driver_idx(&b.sid) {
-                    c.set_vcvs_control(&b.sid, workspace.outputs[src_idx]);
+                    let slot = engine.block_output_offsets[src_idx];
+                    c.set_vcvs_control(&b.sid, workspace.outputs[slot]);
                 }
                 if let Some(src_idx) = c.get_vccs_driver_idx(&b.sid) {
-                    c.set_vccs_control(&b.sid, workspace.outputs[src_idx]);
+                    let slot = engine.block_output_offsets[src_idx];
+                    c.set_vccs_control(&b.sid, workspace.outputs[slot]);
                 }
             }
             let t_next = config.start_time + ((step + 1) as f64) * dt;
             c.step(t_next, dt, step == 0)?;
             for &(idx, b) in &electrical_blocks {
+                let slot = engine.block_output_offsets[idx];
                 match b.block_type {
                     BlockType::VoltageSensor => {
-                        workspace.outputs[idx] = c.sensor_voltage(&b.sid).unwrap_or(0.0);
+                        workspace.outputs[slot] = c.sensor_voltage(&b.sid).unwrap_or(0.0);
                     }
                     BlockType::CurrentSensor => {
-                        workspace.outputs[idx] = c.sensor_current(&b.sid).unwrap_or(0.0);
+                        workspace.outputs[slot] = c.sensor_current(&b.sid).unwrap_or(0.0);
                     }
                     _ => {
                         if let Some(v) = c.branch_voltage(&b.sid) {
-                            workspace.outputs[idx] = v;
+                            workspace.outputs[slot] = v;
                         }
                     }
                 }
@@ -1003,6 +1153,7 @@ fn simulate_fixed_step_rk4(
             &mut discrete_states,
             config,
         );
+        engine.update_measurements_at(t, config.start_time, &mut workspace, config);
     }
 
     // Final point at stop_time
@@ -1011,18 +1162,36 @@ fn simulate_fixed_step_rk4(
     tout.push(t_stop);
     let primary_val = log_blocks
         .first()
-        .map(|(idx, _)| workspace.outputs[*idx])
+        .map(|(idx, _)| workspace.outputs[engine.block_output_offsets[*idx]])
         .unwrap_or_else(|| {
             if let Some(&(idx, _)) = electrical_blocks.last() {
-                workspace.outputs[idx]
+                workspace.outputs[engine.block_output_offsets[idx]]
             } else {
                 workspace.outputs.last().copied().unwrap_or(0.0)
             }
         });
     yout.push(primary_val);
     for (idx, b) in &log_blocks {
+        let slot = engine.block_output_offsets[*idx];
         if let Some(vec) = signals.get_mut(&b.name) {
-            vec.push(workspace.outputs[*idx]);
+            vec.push(workspace.outputs[slot]);
+        }
+        if b.block_type == BlockType::PowerMeasurement {
+            if let Some(vec) = signals.get_mut(&format!("{}.P", b.name)) {
+                vec.push(workspace.outputs[slot]);
+            }
+            if let Some(vec) = signals.get_mut(&format!("{}.Q1", b.name)) {
+                vec.push(workspace.outputs[slot + 1]);
+            }
+            if let Some(vec) = signals.get_mut(&format!("{}.S", b.name)) {
+                vec.push(workspace.outputs[slot + 2]);
+            }
+            if let Some(vec) = signals.get_mut(&format!("{}.PF", b.name)) {
+                vec.push(workspace.outputs[slot + 3]);
+            }
+            if let Some(vec) = signals.get_mut(&format!("{}.DPF", b.name)) {
+                vec.push(workspace.outputs[slot + 4]);
+            }
         }
     }
     if let Some(ref c) = circuit_solver {
@@ -1053,12 +1222,18 @@ fn simulate_fixed_step_rk4(
         &mut discrete_states,
         config,
     );
+    engine.update_measurements_at(t_stop, config.start_time, &mut workspace, config);
+
+    let mut all_diags = engine.warnings.clone();
+    if let Some(c) = circuit_solver {
+        all_diags.extend(c.diagnostics);
+    }
 
     Ok(SimulationOutput {
         tout,
         yout,
         signals,
-        diagnostics: circuit_solver.map(|c| c.diagnostics).unwrap_or_default(),
+        diagnostics: all_diags,
     })
 }
 
@@ -1075,7 +1250,7 @@ fn simulate_dormand_prince(
     let mut continuous_states = engine.initial_continuous_states.clone();
     let mut discrete_states = engine.initial_discrete_states.clone();
 
-    let mut workspace = SimWorkspace::new(diagram.blocks.len(), num_states);
+    let mut workspace = engine.create_workspace();
 
     let log_blocks: Vec<(usize, &Block)> = diagram
         .blocks
@@ -1084,7 +1259,13 @@ fn simulate_dormand_prince(
         .filter(|(_, b)| {
             matches!(
                 b.block_type,
-                BlockType::Scope | BlockType::ToWorkspace | BlockType::Outport
+                BlockType::Scope
+                    | BlockType::ToWorkspace
+                    | BlockType::Outport
+                    | BlockType::Rms
+                    | BlockType::Mean
+                    | BlockType::PowerMeasurement
+                    | BlockType::Thd
             )
         })
         .collect();
@@ -1094,47 +1275,71 @@ fn simulate_dormand_prince(
     let mut signals: HashMap<String, Vec<f64>> = HashMap::new();
     for (_, b) in &log_blocks {
         signals.insert(b.name.clone(), Vec::new());
+        if b.block_type == BlockType::PowerMeasurement {
+            signals.insert(format!("{}.P", b.name), Vec::new());
+            signals.insert(format!("{}.Q1", b.name), Vec::new());
+            signals.insert(format!("{}.S", b.name), Vec::new());
+            signals.insert(format!("{}.PF", b.name), Vec::new());
+            signals.insert(format!("{}.DPF", b.name), Vec::new());
+        }
     }
 
     let default_max_step = (t_stop - t_start) / 50.0;
     let max_step = config.max_step.unwrap_or(default_max_step);
 
+    let record_step = |workspace: &SimWorkspace,
+                       tout: &mut Vec<f64>,
+                       yout: &mut Vec<f64>,
+                       signals: &mut HashMap<String, Vec<f64>>,
+                       t: f64| {
+        tout.push(t);
+        let primary_val = log_blocks
+            .first()
+            .map(|(idx, _)| workspace.outputs[engine.block_output_offsets[*idx]])
+            .unwrap_or_else(|| workspace.outputs.last().copied().unwrap_or(0.0));
+        yout.push(primary_val);
+        for (idx, b) in &log_blocks {
+            let slot = engine.block_output_offsets[*idx];
+            if let Some(vec) = signals.get_mut(&b.name) {
+                vec.push(workspace.outputs[slot]);
+            }
+            if b.block_type == BlockType::PowerMeasurement {
+                if let Some(vec) = signals.get_mut(&format!("{}.P", b.name)) {
+                    vec.push(workspace.outputs[slot]);
+                }
+                if let Some(vec) = signals.get_mut(&format!("{}.Q1", b.name)) {
+                    vec.push(workspace.outputs[slot + 1]);
+                }
+                if let Some(vec) = signals.get_mut(&format!("{}.S", b.name)) {
+                    vec.push(workspace.outputs[slot + 2]);
+                }
+                if let Some(vec) = signals.get_mut(&format!("{}.PF", b.name)) {
+                    vec.push(workspace.outputs[slot + 3]);
+                }
+                if let Some(vec) = signals.get_mut(&format!("{}.DPF", b.name)) {
+                    vec.push(workspace.outputs[slot + 4]);
+                }
+            }
+        }
+    };
+
     // Case 1: Zero continuous states
     if num_states == 0 {
         let mut t = t_start;
         engine.eval(t, &continuous_states, &discrete_states, &mut workspace)?;
-        tout.push(t);
-        let primary_val = log_blocks
-            .first()
-            .map(|(idx, _)| workspace.outputs[*idx])
-            .unwrap_or_else(|| workspace.outputs.last().copied().unwrap_or(0.0));
-        yout.push(primary_val);
-        for (idx, b) in &log_blocks {
-            if let Some(vec) = signals.get_mut(&b.name) {
-                vec.push(workspace.outputs[*idx]);
-            }
-        }
+        record_step(&workspace, &mut tout, &mut yout, &mut signals, t);
         engine.update_discrete_at(t, t_start, &workspace.outputs, &mut discrete_states, config);
+        engine.update_measurements_at(t, t_start, &mut workspace, config);
 
         // With no continuous AND no discrete states and no breakpoints, just land on t_stop
         if engine.layout.num_discrete_states == 0 && engine.next_breakpoint(t_start).is_none() {
             engine.eval(t_stop, &continuous_states, &discrete_states, &mut workspace)?;
-            tout.push(t_stop);
-            let primary_val = log_blocks
-                .first()
-                .map(|(idx, _)| workspace.outputs[*idx])
-                .unwrap_or_else(|| workspace.outputs.last().copied().unwrap_or(0.0));
-            yout.push(primary_val);
-            for (idx, b) in &log_blocks {
-                if let Some(vec) = signals.get_mut(&b.name) {
-                    vec.push(workspace.outputs[*idx]);
-                }
-            }
+            record_step(&workspace, &mut tout, &mut yout, &mut signals, t_stop);
             return Ok(SimulationOutput {
                 tout,
                 yout,
                 signals,
-                diagnostics: Vec::new(),
+                diagnostics: engine.warnings.clone(),
             });
         }
 
@@ -1158,25 +1363,16 @@ fn simulate_dormand_prince(
 
             t = next_t;
             engine.eval(t, &continuous_states, &discrete_states, &mut workspace)?;
-            tout.push(t);
-            let primary_val = log_blocks
-                .first()
-                .map(|(idx, _)| workspace.outputs[*idx])
-                .unwrap_or_else(|| workspace.outputs.last().copied().unwrap_or(0.0));
-            yout.push(primary_val);
-            for (idx, b) in &log_blocks {
-                if let Some(vec) = signals.get_mut(&b.name) {
-                    vec.push(workspace.outputs[*idx]);
-                }
-            }
+            record_step(&workspace, &mut tout, &mut yout, &mut signals, t);
             engine.update_discrete_at(t, t_start, &workspace.outputs, &mut discrete_states, config);
+            engine.update_measurements_at(t, t_start, &mut workspace, config);
         }
 
         return Ok(SimulationOutput {
             tout,
             yout,
             signals,
-            diagnostics: Vec::new(),
+            diagnostics: engine.warnings.clone(),
         });
     }
 
@@ -1187,19 +1383,9 @@ fn simulate_dormand_prince(
     // Initial evaluation at t_start
     let mut t = t_start;
     engine.eval(t, &continuous_states, &discrete_states, &mut workspace)?;
-
-    tout.push(t);
-    let primary_val = log_blocks
-        .first()
-        .map(|(idx, _)| workspace.outputs[*idx])
-        .unwrap_or_else(|| workspace.outputs.last().copied().unwrap_or(0.0));
-    yout.push(primary_val);
-    for (idx, b) in &log_blocks {
-        if let Some(vec) = signals.get_mut(&b.name) {
-            vec.push(workspace.outputs[*idx]);
-        }
-    }
+    record_step(&workspace, &mut tout, &mut yout, &mut signals, t);
     engine.update_discrete_at(t, t_start, &workspace.outputs, &mut discrete_states, config);
+    engine.update_measurements_at(t, t_start, &mut workspace, config);
 
     let mut k_stages = vec![vec![0.0; num_states]; 7];
     k_stages[0].copy_from_slice(&workspace.derivatives);
@@ -1365,20 +1551,11 @@ fn simulate_dormand_prince(
             continuous_states.copy_from_slice(&y_new);
 
             // Record logged signals at the accepted time step
-            tout.push(t);
-            let primary_val = log_blocks
-                .first()
-                .map(|(idx, _)| workspace.outputs[*idx])
-                .unwrap_or_else(|| workspace.outputs.last().copied().unwrap_or(0.0));
-            yout.push(primary_val);
-            for (idx, b) in &log_blocks {
-                if let Some(vec) = signals.get_mut(&b.name) {
-                    vec.push(workspace.outputs[*idx]);
-                }
-            }
+            record_step(&workspace, &mut tout, &mut yout, &mut signals, t);
 
             // Update discrete states only at sample hits
             engine.update_discrete_at(t, t_start, &workspace.outputs, &mut discrete_states, config);
+            engine.update_measurements_at(t, t_start, &mut workspace, config);
 
             // Check if step landed on a breakpoint or sample hit: if so, invalidate FSAL
             let hit_breakpoint = next_bp.is_some_and(|bp| (t - bp).abs() < 1e-11);
@@ -1421,7 +1598,7 @@ fn simulate_dormand_prince(
         tout,
         yout,
         signals,
-        diagnostics: Vec::new(),
+        diagnostics: engine.warnings.clone(),
     })
 }
 

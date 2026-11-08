@@ -161,6 +161,7 @@ test_ac_voltage_source_frequency_response: test
 test_acceptance_t_entropy: test
 test_algebraic_loop_saturation_gives_e_alg: test
 test_algebraic_loop_self_loop_gives_e_alg: test
+test_algebraic_loop_through_measurement_blocks: test
 test_algebraic_loop_two_independent_loops_reported: test
 test_all_aspect_ratio_targets_have_a_status_name_and_theme: test
 test_ammeter_insertion_parity: test
@@ -279,6 +280,7 @@ test_diagnostics_error_and_assert: test
 test_diode_voltage_clipper_circuit: test
 test_direct_algebraic_loop_triggers_w_delay: test
 test_disconnected_subgraphs_run: test
+test_distorted_current_power_measurement: test
 test_dock_tree_help_addons_block_diagram_panels: test
 test_dock_tree_move_panel_and_tab_operations: test
 test_dock_tree_presets_and_json_persistence: test
@@ -405,6 +407,7 @@ test_nan_comparison_semantics_regression: test
 test_nd_array_trailing_end_expansion: test
 test_nested_anonymous_functions_and_closure_handles: test
 test_nested_end_contexts: test
+test_neumaier_drift_and_underflow_long_run: test
 test_no_ai_crates_or_symbols: test
 test_non_uniform_tout_and_signals: test
 test_nonlinear_electrical_blocks_give_e_unsupported: test
@@ -439,6 +442,7 @@ test_polyval_scalar_and_vector: test
 test_power_right_associativity: test
 test_protocol_error_response_handling: test
 test_protocol_serialization_roundtrip: test
+test_pure_sine_wave_rms_mean_dc: test
 test_r2018b_release_format: test
 test_r2023b_release_format: test
 test_rc_circuit_step_response_analytical_oracle: test
@@ -460,6 +464,7 @@ test_ribbon_controls_stay_inside_panel_at_all_target_sizes: test
 test_ribbon_registry_inventory_is_complete: test
 test_rk4_solver_with_electrical_circuit: test
 test_rl_circuit_step_response_analytical_oracle: test
+test_rl_load_power_measurement_oracles_and_trapezoidal_ratio: test
 test_rlc_second_order_underdamped_transient_oracle: test
 test_robotics_rotations_and_kinematics: test
 test_roots_linear_and_quadratic: test
@@ -471,6 +476,7 @@ test_s4_scenario1_plot_twice_without_hold_one_tab_two_series: test
 test_s4_scenario2_subplot_two_axes_one_tab: test
 test_s4_scenario3_two_figures_two_tabs: test
 test_s4_scenario4_plot_ten_times_no_tab_growth: test
+test_sampled_square_wave_discrete_vs_continuous_thd: test
 test_schema_v1_v2_v3_backward_compatibility_and_rotation_serde: test
 test_scientific_notation_threshold_rule_cited_unverified: test
 test_scipy_generated_files_interop: test
@@ -491,6 +497,7 @@ test_signal_filters_windows_and_xcorr: test
 test_simulate_diagram_with_electrical_blocks_gives_e_unsupported: test
 test_simulation_first_order_step_response: test
 test_simulation_gain_parameter_change: test
+test_simulation_output_write_csv: test
 test_simulation_saturation_and_gain: test
 test_simulation_sine_wave_parameters: test
 test_simulation_tf_and_step: test
@@ -501,6 +508,7 @@ test_slx_inspect_and_parser: test
 test_slx_safety_foreign_resistor_stays_unknown: test
 test_solver_config_serde_backward_compat: test
 test_spec_parameter_validation_rules: test
+test_spectrum_fft_and_dft_and_window_functions: test
 test_sprintf_format_recycling_golden: test
 test_sprintf_fprintf_edge_cases: test
 test_static_compatibility_scanner: test
@@ -515,6 +523,7 @@ test_switch_chattering_limit_cycle_detection_triggers_e_chatter: test
 test_switch_sampling_zoh_one_step_latency: test
 test_switch_threshold_exact_boundary_comparison: test
 test_terminal_count_and_port_kinds_per_block_type: test
+test_thd_pure_sine_and_distorted: test
 test_top_level_figure_geometry_exact_values: test
 test_topological_order_is_stable_across_runs: test
 test_transpose_vs_char_vector: test
@@ -537,6 +546,7 @@ test_while_loop_with_break: test
 test_worker_client_async_execution: test
 test_worker_panic_recovery_and_session_reset: test
 test_xml_nesting_depth_limit: test
+test_zero_allocations_during_buck_converter_with_all_measurement_blocks: test
 test_zero_allocations_during_eval_and_update_discrete: test
 test_zero_allocations_during_mna_circuit_simulation_step: test
 test_zero_allocations_during_nonlinear_circuit_simulation_step: test

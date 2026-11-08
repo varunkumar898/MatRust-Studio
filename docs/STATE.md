@@ -1,19 +1,42 @@
 # MatRust Studio / RustLab Project State
 
-**Current branch:** `feat/m7-sensors-sources` (Milestone M7: Bridges and Hybrid Coupling)
+**Current branch:** `feat/m8-measurements` (Milestone M8: Measurements)
 **Repository:** `https://github.com/varunkumar898/MatRust-Studio.git`
-**Current base commit:** `2dd7b5e` (`main` after PR #37 merged)
+**Current base commit:** `25c3fa4` (`main` after PR #38 merged)
 **Date:** 2026-11-08
 **Platform:** Windows 11 ARM64 (`aarch64-pc-windows-gnullvm`)
 **Local stable toolchain:** Rust 1.99.1
 **Declared MSRV:** Rust 1.88.0
 **Verification status:** 
-- Local default, all-features, and no-default-features test runs pass at **563/563/563** (net +8 tests in M7).
+- Local default, all-features, and no-default-features test runs pass at **573/573/573** (net +10 tests in M8).
 - Local clippy (all-features, no-default-features, per-crate no-default-features) passes with 0 warnings.
 - `cargo fmt --all -- --check` passes cleanly.
 - `scripts/verify.ps1` runs and exits 0 with all verification steps passing.
 
-## Current work: Milestone M7: Bridges and Hybrid Coupling
+## Current work: Milestone M8: Measurements
+
+- **Branch `feat/m8-measurements`**: Implements measurement blocks (`Rms`, `Mean`, `PowerMeasurement`, `Thd`) in signal library category "Measurements", spectrum analysis tools (FFT/DFT), and RFC 4180 CSV export with formula injection escaping.
+- **Windowed Processing & Numerics**:
+  - Sliding-window buffers parameterized by `FundamentalFrequency` ($f > 0$) and `SampleTime` ($T_s > 0$), computing $N_w = \text{round}(1 / (f \cdot T_s))$. Enforces $N_w \ge 4$ (`E-PARAM`) and checks integer period alignment $|T/T_s - N_w| \le 10^{-6} N_w$ (emits `W-WINDOW` if fractional).
+  - High-precision Neumaier summation eliminates numerical drift across $10^6+$ steps without floating-point cancellation, with periodic exact recomputation every $N_w$ steps.
+  - Zero direct feedthrough: 1-sample latency across all measurement blocks, breaking algebraic loops and counting as state blocks (`E-ALG`, `W-DELAY`).
+- **Power & Harmonics**:
+  - `PowerMeasurement`: 2 inputs ($V, I$), 5 outputs: Active Power ($P$), Fundamental Reactive Power ($Q_1$), Apparent Power ($S$), Power Factor ($PF$), Displacement Power Factor ($DPF$). Uses passive sign convention ($Q_1 > 0$ for inductive lag).
+  - `Thd`: Discrete Fourier series extraction up to $H \le \lfloor(N_w-1)/2\rfloor$ harmonics (clamped with `W-THD-LIMIT` if $H > \lfloor(N_w-1)/2\rfloor$). Computes $\text{THD} = \sqrt{\sum_{h=2}^H V_h^2} / V_1$. Emits info diagnostic `I-THD-NOFUND` when fundamental component is zero.
+- **Spectrum Analysis & Windows**:
+  - Radix-2 Cooley-Tukey FFT for power-of-2 window sizes with direct DFT fallback for arbitrary $N$.
+  - Window functions: `Rectangular`, `Hann`, `FlatTop`.
+  - Output format: frequency, amplitude, phase, and power spectrum.
+- **CSV Export**:
+  - RFC 4180 standard compliant, shortest unambiguous float representation, formula injection escaping (prepends `'` to leading `=`, `+`, `-`, `@`).
+- **Zero Allocations**:
+  - Pre-allocated internal buffers; verified 0 heap allocations during 10,000 steps of simulation with all measurement blocks active.
+- **Desktop UI**:
+  - Palette updated with "Measurements" category: `[RMS]`, `[AVG]`, `[P-Q]`, `[THD]`.
+  - Scope tab includes "Spectrum" analysis sub-view with window functions, dB scale, peak/fundamental/THD readout.
+  - Export CSV button added with file dialog.
+
+## Previous work: Milestone M7: Bridges and Hybrid Coupling
 
 - **Branch `feat/m7-sensors-sources`**: Implements bridge components connecting continuous signal-flow and physical electrical domains (`VoltageSensor`, `CurrentSensor`, `VoltageControlledVoltageSource`, `VoltageControlledCurrentSource`).
 - **Voltage Sensor (`VoltageSensor`)**: Possesses two electrical terminals ($p, n$) and one signal output (port 0). Has ideal infinite input impedance ($G_{in} = 0$), adding no conductance or matrix row to MNA equations. Measures differential voltage $v = V_p - V_n$ in Volts.

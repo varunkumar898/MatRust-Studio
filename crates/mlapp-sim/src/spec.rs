@@ -1164,6 +1164,151 @@ static BLOCK_SPECS: &[BlockSpec] = &[
         default_feedthrough: false,
         doc: "Current source whose injected current from n to p = Transconductance * in(t).",
     },
+    // --- Measurements (Milestone M8) ---
+    BlockSpec {
+        block_type: BlockType::Rms,
+        display_name: "RMS",
+        category: "Measurements",
+        params: &[
+            ParamSpec {
+                key: "FundamentalFrequency",
+                label: "Fundamental Frequency",
+                unit: "Hz",
+                default_val: "50.0",
+                kind: ParamKind::Numeric,
+                doc: "Base fundamental frequency f_base (> 0) defining averaging window T = 1/f.",
+            },
+            ParamSpec {
+                key: "SampleTime",
+                label: "Sample Time",
+                unit: "s",
+                default_val: "",
+                kind: ParamKind::Numeric,
+                doc: "Discrete sample period Ts. If empty, inherits model fixed step size.",
+            },
+            ParamSpec {
+                key: "InitialValue",
+                label: "Initial Value",
+                unit: "",
+                default_val: "0.0",
+                kind: ParamKind::Numeric,
+                doc: "Output value held until first complete window of samples is acquired.",
+            },
+        ],
+        min_inputs: 1,
+        max_inputs: 1,
+        outputs: 1,
+        default_feedthrough: false,
+        doc: "Computes true running Root-Mean-Square (RMS) over a sliding one-period window.",
+    },
+    BlockSpec {
+        block_type: BlockType::Mean,
+        display_name: "Mean",
+        category: "Measurements",
+        params: &[
+            ParamSpec {
+                key: "FundamentalFrequency",
+                label: "Fundamental Frequency",
+                unit: "Hz",
+                default_val: "50.0",
+                kind: ParamKind::Numeric,
+                doc: "Base fundamental frequency f_base (> 0) defining averaging window T = 1/f.",
+            },
+            ParamSpec {
+                key: "SampleTime",
+                label: "Sample Time",
+                unit: "s",
+                default_val: "",
+                kind: ParamKind::Numeric,
+                doc: "Discrete sample period Ts. If empty, inherits model fixed step size.",
+            },
+            ParamSpec {
+                key: "InitialValue",
+                label: "Initial Value",
+                unit: "",
+                default_val: "0.0",
+                kind: ParamKind::Numeric,
+                doc: "Output value held until first complete window of samples is acquired.",
+            },
+        ],
+        min_inputs: 1,
+        max_inputs: 1,
+        outputs: 1,
+        default_feedthrough: false,
+        doc: "Computes running average (DC component) over a sliding one-period window.",
+    },
+    BlockSpec {
+        block_type: BlockType::PowerMeasurement,
+        display_name: "Power Measurement",
+        category: "Measurements",
+        params: &[
+            ParamSpec {
+                key: "FundamentalFrequency",
+                label: "Fundamental Frequency",
+                unit: "Hz",
+                default_val: "50.0",
+                kind: ParamKind::Numeric,
+                doc: "Base fundamental frequency f_base (> 0) defining averaging window T = 1/f.",
+            },
+            ParamSpec {
+                key: "SampleTime",
+                label: "Sample Time",
+                unit: "s",
+                default_val: "",
+                kind: ParamKind::Numeric,
+                doc: "Discrete sample period Ts. If empty, inherits model fixed step size.",
+            },
+        ],
+        min_inputs: 2,
+        max_inputs: 2,
+        outputs: 5,
+        default_feedthrough: false,
+        doc: "Measures active power P, fundamental reactive power Q1, apparent power S, power factor PF, and displacement power factor DPF.",
+    },
+    BlockSpec {
+        block_type: BlockType::Thd,
+        display_name: "Total Harmonic Distortion",
+        category: "Measurements",
+        params: &[
+            ParamSpec {
+                key: "FundamentalFrequency",
+                label: "Fundamental Frequency",
+                unit: "Hz",
+                default_val: "50.0",
+                kind: ParamKind::Numeric,
+                doc: "Base fundamental frequency f_base (> 0) defining window T = 1/f.",
+            },
+            ParamSpec {
+                key: "SampleTime",
+                label: "Sample Time",
+                unit: "s",
+                default_val: "",
+                kind: ParamKind::Numeric,
+                doc: "Discrete sample period Ts. If empty, inherits model fixed step size.",
+            },
+            ParamSpec {
+                key: "MaxHarmonic",
+                label: "Max Harmonic",
+                unit: "",
+                default_val: "40",
+                kind: ParamKind::Numeric,
+                doc: "Maximum harmonic order H included in distortion calculation.",
+            },
+            ParamSpec {
+                key: "Output",
+                label: "Output Format",
+                unit: "",
+                default_val: "Percent",
+                kind: ParamKind::Choice(&["Percent", "Ratio"]),
+                doc: "Output units: Percent (%) or decimal ratio.",
+            },
+        ],
+        min_inputs: 1,
+        max_inputs: 1,
+        outputs: 1,
+        default_feedthrough: false,
+        doc: "Calculates Total Harmonic Distortion (THD) of input signal up to harmonic H relative to fundamental.",
+    },
 ];
 
 /// Returns the full list of supported block specifications.
@@ -1509,6 +1654,64 @@ pub fn validate_block_params(
                     ),
                     vec![block_sid.to_string()],
                 )),
+            }
+        }
+        BlockType::Rms | BlockType::Mean | BlockType::PowerMeasurement | BlockType::Thd => {
+            let f = parse_num("FundamentalFrequency", 50.0);
+            match f {
+                Some(val) if val.is_finite() && val > 0.0 => {}
+                _ => diags.push(Diagnostic::error(
+                    "E-PARAM",
+                    format!(
+                        "Invalid parameter FundamentalFrequency on block '{block_sid}': value must be a positive finite number (> 0) -> parsed value <= 0 or invalid -> specify a positive fundamental frequency in Hz (e.g. 50.0)"
+                    ),
+                    vec![block_sid.to_string()],
+                )),
+            }
+            if let Some(st_str) = params.get("SampleTime") {
+                let st_trimmed = st_str.trim();
+                if !st_trimmed.is_empty() {
+                    match st_trimmed.parse::<f64>() {
+                        Ok(st_val) if st_val.is_finite() && st_val > 0.0 => {}
+                        _ => diags.push(Diagnostic::error(
+                            "E-PARAM",
+                            format!(
+                                "Invalid parameter SampleTime on block '{block_sid}': value must be a positive finite number (> 0) -> specify a positive sample time in seconds"
+                            ),
+                            vec![block_sid.to_string()],
+                        )),
+                    }
+                }
+            }
+            if *block_type == BlockType::Thd {
+                if let Some(h_str) = params.get("MaxHarmonic") {
+                    let h_trimmed = h_str.trim();
+                    if !h_trimmed.is_empty() {
+                        match h_trimmed.parse::<usize>() {
+                            Ok(h_val) if h_val >= 1 => {}
+                            _ => diags.push(Diagnostic::error(
+                                "E-PARAM",
+                                format!(
+                                    "Invalid parameter MaxHarmonic on block '{block_sid}': value must be an integer >= 1 -> specify a valid harmonic order (e.g. 40)"
+                                ),
+                                vec![block_sid.to_string()],
+                            )),
+                        }
+                    }
+                }
+                if let Some(out_str) = params.get("Output") {
+                    let out_trimmed = out_str.trim();
+                    if !out_trimmed.is_empty() && out_trimmed != "Percent" && out_trimmed != "Ratio"
+                    {
+                        diags.push(Diagnostic::error(
+                            "E-PARAM",
+                            format!(
+                                "Invalid parameter Output on block '{block_sid}': must be 'Percent' or 'Ratio' -> got '{out_trimmed}'"
+                            ),
+                            vec![block_sid.to_string()],
+                        ));
+                    }
+                }
             }
         }
         _ => {}

@@ -109,6 +109,11 @@ pub enum BlockType {
     CurrentSensor,
     VoltageControlledVoltageSource,
     VoltageControlledCurrentSource,
+    // Measurement blocks (Milestone M8)
+    Rms,
+    Mean,
+    PowerMeasurement,
+    Thd,
     Unknown(String),
 }
 
@@ -152,6 +157,10 @@ impl BlockType {
             "Inport" => BlockType::Inport,
             "Outport" => BlockType::Outport,
             "SubSystem" | "Subsystem" => BlockType::Subsystem,
+            "Rms" | "RMS" => BlockType::Rms,
+            "Mean" | "RunningMean" | "Average" => BlockType::Mean,
+            "PowerMeasurement" | "Power Measurement" | "Power" => BlockType::PowerMeasurement,
+            "Thd" | "THD" => BlockType::Thd,
             other => BlockType::Unknown(other.to_string()),
         }
     }
@@ -187,6 +196,10 @@ impl BlockType {
                 | BlockType::ToWorkspace
                 | BlockType::Inport
                 | BlockType::Outport
+                | BlockType::Rms
+                | BlockType::Mean
+                | BlockType::PowerMeasurement
+                | BlockType::Thd
         )
     }
 
@@ -264,7 +277,7 @@ impl BlockType {
                     count
                 }
             }
-            BlockType::RelationalOperator | BlockType::Product => 2,
+            BlockType::RelationalOperator | BlockType::Product | BlockType::PowerMeasurement => 2,
             BlockType::LogicalOperator => {
                 let op = parameters
                     .get("Operator")
@@ -303,7 +316,10 @@ impl BlockType {
             | BlockType::Saturation
             | BlockType::Scope
             | BlockType::ToWorkspace
-            | BlockType::Outport => 1,
+            | BlockType::Outport
+            | BlockType::Rms
+            | BlockType::Mean
+            | BlockType::Thd => 1,
             BlockType::Subsystem | BlockType::Unknown(_) => 1,
         }
     }
@@ -326,6 +342,7 @@ impl BlockType {
             | BlockType::VoltageControlledVoltageSource
             | BlockType::VoltageControlledCurrentSource => 0,
             BlockType::VoltageSensor | BlockType::CurrentSensor => 1,
+            BlockType::PowerMeasurement => 5,
             _ => 1,
         }
     }
@@ -442,6 +459,29 @@ impl BlockType {
                     label: "n".to_string(),
                     index: 1,
                 });
+            }
+            BlockType::PowerMeasurement => {
+                list.push(PortDesc {
+                    kind: PortKind::Signal,
+                    role: PortRole::Input,
+                    label: "v".to_string(),
+                    index: 0,
+                });
+                list.push(PortDesc {
+                    kind: PortKind::Signal,
+                    role: PortRole::Input,
+                    label: "i".to_string(),
+                    index: 1,
+                });
+                let labels = ["P", "Q1", "S", "PF", "DPF"];
+                for (j, lbl) in labels.iter().enumerate() {
+                    list.push(PortDesc {
+                        kind: PortKind::Signal,
+                        role: PortRole::Output,
+                        label: lbl.to_string(),
+                        index: j,
+                    });
+                }
             }
             _ => {
                 let in_count = self.input_ports(parameters);

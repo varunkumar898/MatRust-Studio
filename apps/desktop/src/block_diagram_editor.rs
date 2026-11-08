@@ -119,6 +119,12 @@ pub struct BlockDiagramEditor {
     pub sim_status: String,
     pub show_scope_window: bool,
     pub scope_signal_name: String,
+    pub scope_tab: usize,
+    pub spectrum_signal_name: String,
+    pub spectrum_window_size: usize,
+    pub spectrum_window_fn: mlapp_sim::WindowFunction,
+    pub spectrum_f0: f64,
+    pub spectrum_db_scale: bool,
 
     // JSON Model Import/Export
     pub show_json_modal: bool,
@@ -161,6 +167,12 @@ impl Default for BlockDiagramEditor {
             sim_status: "Ready".to_string(),
             show_scope_window: false,
             scope_signal_name: "All Signals".to_string(),
+            scope_tab: 0,
+            spectrum_signal_name: "yout".to_string(),
+            spectrum_window_size: 1024,
+            spectrum_window_fn: mlapp_sim::WindowFunction::Hann,
+            spectrum_f0: 50.0,
+            spectrum_db_scale: false,
 
             show_json_modal: false,
             json_buffer: String::new(),
@@ -1147,6 +1159,15 @@ impl BlockDiagramEditor {
                     ),
                 ]),
             ),
+            (
+                "Measurements",
+                items(&[
+                    ("RMS", BlockType::Rms),
+                    ("Mean", BlockType::Mean),
+                    ("Power Measurement", BlockType::PowerMeasurement),
+                    ("THD", BlockType::Thd),
+                ]),
+            ),
             ("Subsystems", items(&[("Subsystem", BlockType::Subsystem)])),
         ]
     }
@@ -1744,6 +1765,10 @@ impl BlockDiagramEditor {
                 BlockType::CurrentSensor => "(A)",
                 BlockType::VoltageControlledVoltageSource => "(K*u)",
                 BlockType::VoltageControlledCurrentSource => "(Gm*u)",
+                BlockType::Rms => "[RMS]",
+                BlockType::Mean => "[AVG]",
+                BlockType::PowerMeasurement => "[P-Q]",
+                BlockType::Thd => "[THD]",
                 _ => "[ ]",
             };
             painter.text(
@@ -2366,43 +2391,119 @@ impl BlockDiagramEditor {
             .show(ctx, |ui| {
                 if let Some(output) = &self.sim_output {
                     ui.horizontal(|ui| {
-                        ui.label(
-                            RichText::new(format!("Time points: {}", output.tout.len())).size(11.0),
-                        );
-                        ui.separator();
-                        ui.label(
-                            RichText::new(format!(
-                                "Duration: 0.0s to {:.2}s",
-                                output.tout.last().copied().unwrap_or(0.0)
-                            ))
-                            .size(11.0),
-                        );
+                        ui.selectable_value(&mut self.scope_tab, 0, "Time Domain");
+                        ui.selectable_value(&mut self.scope_tab, 1, "Spectrum");
                         ui.separator();
 
-                        let mut signal_options = vec!["All Signals".to_string()];
-                        if !output.signals.is_empty() {
-                            let mut names: Vec<_> = output.signals.keys().cloned().collect();
-                            names.sort();
-                            signal_options.extend(names);
+                        if self.scope_tab == 0 {
+                            ui.label(
+                                RichText::new(format!("Points: {}", output.tout.len())).size(11.0),
+                            );
+                            ui.separator();
+                            let mut signal_options = vec!["All Signals".to_string()];
+                            if !output.signals.is_empty() {
+                                let mut names: Vec<_> = output.signals.keys().cloned().collect();
+                                names.sort();
+                                signal_options.extend(names);
+                            } else {
+                                signal_options.push("yout".to_string());
+                            }
+
+                            egui::ComboBox::from_id_salt("scope_signal_selector")
+                                .selected_text(&self.scope_signal_name)
+                                .show_ui(ui, |ui| {
+                                    for opt in &signal_options {
+                                        ui.selectable_value(
+                                            &mut self.scope_signal_name,
+                                            opt.clone(),
+                                            opt,
+                                        );
+                                    }
+                                });
                         } else {
-                            signal_options.push("yout".to_string());
-                        }
-
-                        egui::ComboBox::from_id_salt("scope_signal_selector")
-                            .selected_text(&self.scope_signal_name)
-                            .show_ui(ui, |ui| {
-                                for opt in &signal_options {
-                                    ui.selectable_value(
-                                        &mut self.scope_signal_name,
-                                        opt.clone(),
-                                        opt,
-                                    );
+                            let mut signal_options = Vec::new();
+                            if !output.signals.is_empty() {
+                                let mut names: Vec<_> = output.signals.keys().cloned().collect();
+                                names.sort();
+                                signal_options.extend(names);
+                            } else {
+                                signal_options.push("yout".to_string());
+                            }
+                            if !signal_options.contains(&self.spectrum_signal_name) {
+                                if let Some(first) = signal_options.first() {
+                                    self.spectrum_signal_name = first.clone();
                                 }
-                            });
+                            }
+
+                            egui::ComboBox::from_id_salt("spectrum_sig_sel")
+                                .selected_text(&self.spectrum_signal_name)
+                                .show_ui(ui, |ui| {
+                                    for opt in &signal_options {
+                                        ui.selectable_value(
+                                            &mut self.spectrum_signal_name,
+                                            opt.clone(),
+                                            opt,
+                                        );
+                                    }
+                                });
+
+                            ui.separator();
+                            egui::ComboBox::from_id_salt("spectrum_win_size")
+                                .selected_text(format!("N = {}", self.spectrum_window_size))
+                                .show_ui(ui, |ui| {
+                                    for &sz in &[128, 256, 512, 1024, 2048, 4096] {
+                                        ui.selectable_value(
+                                            &mut self.spectrum_window_size,
+                                            sz,
+                                            format!("{sz}"),
+                                        );
+                                    }
+                                });
+
+                            ui.separator();
+                            let win_name = match self.spectrum_window_fn {
+                                mlapp_sim::WindowFunction::Rectangular => "Rectangular",
+                                mlapp_sim::WindowFunction::Hann => "Hann",
+                                mlapp_sim::WindowFunction::FlatTop => "FlatTop",
+                            };
+                            egui::ComboBox::from_id_salt("spectrum_win_fn")
+                                .selected_text(win_name)
+                                .show_ui(ui, |ui| {
+                                    ui.selectable_value(
+                                        &mut self.spectrum_window_fn,
+                                        mlapp_sim::WindowFunction::Rectangular,
+                                        "Rectangular",
+                                    );
+                                    ui.selectable_value(
+                                        &mut self.spectrum_window_fn,
+                                        mlapp_sim::WindowFunction::Hann,
+                                        "Hann",
+                                    );
+                                    ui.selectable_value(
+                                        &mut self.spectrum_window_fn,
+                                        mlapp_sim::WindowFunction::FlatTop,
+                                        "FlatTop",
+                                    );
+                                });
+
+                            ui.separator();
+                            ui.checkbox(&mut self.spectrum_db_scale, "dB");
+                        }
 
                         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                             if ui.button("Close").clicked() {
                                 close_scope = true;
+                            }
+                            if ui.button("Export CSV").clicked() {
+                                if let Some(path) = rfd::FileDialog::new()
+                                    .add_filter("CSV files", &["csv"])
+                                    .set_file_name("simulation_results.csv")
+                                    .save_file()
+                                {
+                                    if let Ok(mut f) = std::fs::File::create(path) {
+                                        let _ = output.write_csv(&mut f);
+                                    }
+                                }
                             }
                         });
                     });
@@ -2417,107 +2518,207 @@ impl BlockDiagramEditor {
                     let painter = ui.painter_at(rect);
                     painter.rect_filled(rect, CornerRadius::ZERO, Color32::from_rgb(15, 18, 22));
 
-                    let mut traces: Vec<(&str, &Vec<f64>)> = Vec::new();
-                    if self.scope_signal_name == "All Signals" {
-                        if !output.signals.is_empty() {
-                            let mut sorted_keys: Vec<_> = output.signals.keys().collect();
-                            sorted_keys.sort();
-                            for k in sorted_keys {
-                                if let Some(v) = output.signals.get(k) {
-                                    traces.push((k.as_str(), v));
+                    if self.scope_tab == 0 {
+                        let mut traces: Vec<(&str, &Vec<f64>)> = Vec::new();
+                        if self.scope_signal_name == "All Signals" {
+                            if !output.signals.is_empty() {
+                                let mut sorted_keys: Vec<_> = output.signals.keys().collect();
+                                sorted_keys.sort();
+                                for k in sorted_keys {
+                                    if let Some(v) = output.signals.get(k) {
+                                        traces.push((k.as_str(), v));
+                                    }
                                 }
+                            } else if !output.yout.is_empty() {
+                                traces.push(("yout", &output.yout));
                             }
-                        } else if !output.yout.is_empty() {
+                        } else if let Some(sig) = output.signals.get(&self.scope_signal_name) {
+                            traces.push((&self.scope_signal_name, sig));
+                        } else if self.scope_signal_name == "yout" && !output.yout.is_empty() {
                             traces.push(("yout", &output.yout));
                         }
-                    } else if let Some(sig) = output.signals.get(&self.scope_signal_name) {
-                        traces.push((&self.scope_signal_name, sig));
-                    } else if self.scope_signal_name == "yout" && !output.yout.is_empty() {
-                        traces.push(("yout", &output.yout));
-                    }
 
-                    if output.tout.len() >= 2 && !traces.is_empty() {
-                        let t_max = output.tout.last().copied().unwrap_or(1.0).max(0.001);
+                        if output.tout.len() >= 2 && !traces.is_empty() {
+                            let t_max = output.tout.last().copied().unwrap_or(1.0).max(0.001);
 
-                        let mut y_min = f64::INFINITY;
-                        let mut y_max = f64::NEG_INFINITY;
-                        for (_, trace) in &traces {
-                            for &y in *trace {
-                                if y.is_finite() {
-                                    if y < y_min {
-                                        y_min = y;
-                                    }
-                                    if y > y_max {
-                                        y_max = y;
+                            let mut y_min = f64::INFINITY;
+                            let mut y_max = f64::NEG_INFINITY;
+                            for (_, trace) in &traces {
+                                for &y in *trace {
+                                    if y.is_finite() {
+                                        if y < y_min {
+                                            y_min = y;
+                                        }
+                                        if y > y_max {
+                                            y_max = y;
+                                        }
                                     }
                                 }
                             }
-                        }
-                        if !y_min.is_finite() || !y_max.is_finite() || y_max <= y_min {
-                            y_min = -0.5;
-                            y_max = 1.5;
-                        } else {
-                            let pad = ((y_max - y_min) * 0.1).max(0.05);
-                            y_min -= pad;
-                            y_max += pad;
-                        }
-                        let y_span = (y_max - y_min).max(0.001);
+                            if !y_min.is_finite() || !y_max.is_finite() || y_max <= y_min {
+                                y_min = -0.5;
+                                y_max = 1.5;
+                            } else {
+                                let pad = ((y_max - y_min) * 0.1).max(0.05);
+                                y_min -= pad;
+                                y_max += pad;
+                            }
+                            let y_span = (y_max - y_min).max(0.001);
 
-                        let map_pt = |t: f64, y: f64| -> Pos2 {
-                            let norm_x = (t / t_max) as f32;
-                            let norm_y = ((y - y_min) / y_span) as f32;
-                            pos2(
-                                rect.left() + norm_x * (rect.width() - 30.0) + 15.0,
-                                rect.bottom() - norm_y * (rect.height() - 30.0) - 15.0,
-                            )
+                            let map_pt = |t: f64, y: f64| -> Pos2 {
+                                let norm_x = (t / t_max) as f32;
+                                let norm_y = ((y - y_min) / y_span) as f32;
+                                pos2(
+                                    rect.left() + norm_x * (rect.width() - 30.0) + 15.0,
+                                    rect.bottom() - norm_y * (rect.height() - 30.0) - 15.0,
+                                )
+                            };
+
+                            if y_min <= 0.0 && y_max >= 0.0 {
+                                let zero_y = map_pt(0.0, 0.0).y;
+                                painter.line_segment(
+                                    [pos2(rect.left(), zero_y), pos2(rect.right(), zero_y)],
+                                    Stroke::new(1.0_f32, Color32::from_rgb(60, 70, 85)),
+                                );
+                            }
+
+                            const SIGNAL_COLORS: [Color32; 6] = [
+                                Color32::from_rgb(255, 215, 0),   // Gold
+                                Color32::from_rgb(90, 180, 255),  // Sky Blue
+                                Color32::from_rgb(255, 100, 100), // Coral Red
+                                Color32::from_rgb(120, 220, 120), // Mint Green
+                                Color32::from_rgb(220, 120, 220), // Orchid
+                                Color32::from_rgb(255, 160, 60),  // Orange
+                            ];
+
+                            let mut legend_items: Vec<(String, Color32, f64)> = Vec::new();
+
+                            for (idx, (sig_name, sig_data)) in traces.iter().enumerate() {
+                                let color = SIGNAL_COLORS[idx % SIGNAL_COLORS.len()];
+                                let n_points = sig_data.len().min(output.tout.len());
+                                for i in 0..(n_points - 1) {
+                                    let p1 = map_pt(output.tout[i], sig_data[i]);
+                                    let p2 = map_pt(output.tout[i + 1], sig_data[i + 1]);
+                                    painter.line_segment([p1, p2], Stroke::new(2.0_f32, color));
+                                }
+                                let final_val = sig_data.last().copied().unwrap_or(0.0);
+                                legend_items.push((sig_name.to_string(), color, final_val));
+                            }
+
+                            let mut legend_y = rect.top() + 10.0;
+                            for (sig_name, color, final_val) in legend_items {
+                                painter.circle_filled(
+                                    pos2(rect.left() + 20.0, legend_y + 6.0),
+                                    4.0,
+                                    color,
+                                );
+                                painter.text(
+                                    pos2(rect.left() + 30.0, legend_y),
+                                    egui::Align2::LEFT_TOP,
+                                    format!("{sig_name}: {final_val:.4}"),
+                                    egui::FontId::proportional(12.0),
+                                    color,
+                                );
+                                legend_y += 18.0;
+                            }
+                        }
+                    } else {
+                        // Spectrum Tab
+                        let signal_data: &[f64] = if let Some(sig) = output.signals.get(&self.spectrum_signal_name) {
+                            sig.as_slice()
+                        } else if !output.yout.is_empty() {
+                            output.yout.as_slice()
+                        } else {
+                            &[]
                         };
 
-                        if y_min <= 0.0 && y_max >= 0.0 {
-                            let zero_y = map_pt(0.0, 0.0).y;
-                            painter.line_segment(
-                                [pos2(rect.left(), zero_y), pos2(rect.right(), zero_y)],
-                                Stroke::new(1.0_f32, Color32::from_rgb(60, 70, 85)),
-                            );
-                        }
+                        if !signal_data.is_empty() && output.tout.len() == signal_data.len() {
+                            match mlapp_sim::spectrum_with_window(
+                                signal_data,
+                                &output.tout,
+                                Some(self.spectrum_window_size),
+                                self.spectrum_f0,
+                                self.spectrum_window_fn,
+                            ) {
+                                Ok(res) => {
+                                    let num_bins = res.frequencies.len();
+                                    let f_max = res.frequencies.last().copied().unwrap_or(1.0).max(1.0);
 
-                        const SIGNAL_COLORS: [Color32; 6] = [
-                            Color32::from_rgb(255, 215, 0),   // Gold
-                            Color32::from_rgb(90, 180, 255),  // Sky Blue
-                            Color32::from_rgb(255, 100, 100), // Coral Red
-                            Color32::from_rgb(120, 220, 120), // Mint Green
-                            Color32::from_rgb(220, 120, 220), // Orchid
-                            Color32::from_rgb(255, 160, 60),  // Orange
-                        ];
+                                    let mut peak_freq = 0.0;
+                                    let mut peak_mag = 0.0;
+                                    for (&f, &m) in res.frequencies.iter().zip(&res.magnitudes).skip(1) {
+                                        if m > peak_mag {
+                                            peak_mag = m;
+                                            peak_freq = f;
+                                        }
+                                    }
 
-                        let mut legend_items: Vec<(String, Color32, f64)> = Vec::new();
+                                    let plotted_mags: Vec<f64> = if self.spectrum_db_scale {
+                                        let ref_val = peak_mag.max(1e-12);
+                                        res.magnitudes
+                                            .iter()
+                                            .map(|&m| (20.0 * (m / ref_val).max(1e-6).log10()).clamp(-100.0, 10.0))
+                                            .collect()
+                                    } else {
+                                        res.magnitudes.clone()
+                                    };
 
-                        for (idx, (sig_name, sig_data)) in traces.iter().enumerate() {
-                            let color = SIGNAL_COLORS[idx % SIGNAL_COLORS.len()];
-                            let n_points = sig_data.len().min(output.tout.len());
-                            for i in 0..(n_points - 1) {
-                                let p1 = map_pt(output.tout[i], sig_data[i]);
-                                let p2 = map_pt(output.tout[i + 1], sig_data[i + 1]);
-                                painter.line_segment([p1, p2], Stroke::new(2.0_f32, color));
+                                    let y_min = if self.spectrum_db_scale { -100.0 } else { 0.0 };
+                                    let y_max = if self.spectrum_db_scale {
+                                        10.0
+                                    } else {
+                                        peak_mag.max(1.0) * 1.1
+                                    };
+                                    let y_span = (y_max - y_min).max(0.001);
+
+                                    let map_pt = |f: f64, y: f64| -> Pos2 {
+                                        let norm_x = (f / f_max) as f32;
+                                        let norm_y = ((y - y_min) / y_span) as f32;
+                                        pos2(
+                                            rect.left() + norm_x * (rect.width() - 30.0) + 15.0,
+                                            rect.bottom() - norm_y * (rect.height() - 40.0) - 20.0,
+                                        )
+                                    };
+
+                                    // Draw spectrum curve
+                                    let color = Color32::from_rgb(90, 180, 255);
+                                    for i in 0..(num_bins.saturating_sub(1)) {
+                                        let p1 = map_pt(res.frequencies[i], plotted_mags[i]);
+                                        let p2 = map_pt(res.frequencies[i + 1], plotted_mags[i + 1]);
+                                        painter.line_segment([p1, p2], Stroke::new(1.5_f32, color));
+                                    }
+
+                                    // Display metrics
+                                    let db_unit = if self.spectrum_db_scale { "dB" } else { "V/A" };
+                                    painter.text(
+                                        pos2(rect.left() + 20.0, rect.top() + 10.0),
+                                        egui::Align2::LEFT_TOP,
+                                        format!(
+                                            "Fundamental: {:.2} Hz | Peak: {:.2} Hz ({:.3} {}) | THD: {:.3}%",
+                                            res.fundamental_freq, peak_freq, peak_mag, db_unit, res.thd
+                                        ),
+                                        egui::FontId::proportional(13.0),
+                                        Color32::from_rgb(255, 215, 0),
+                                    );
+                                }
+                                Err(err) => {
+                                    painter.text(
+                                        rect.center(),
+                                        egui::Align2::CENTER_CENTER,
+                                        format!("Spectrum error ({}): {}", err.code, err.message),
+                                        egui::FontId::proportional(12.0),
+                                        Color32::from_rgb(255, 100, 100),
+                                    );
+                                }
                             }
-                            let final_val = sig_data.last().copied().unwrap_or(0.0);
-                            legend_items.push((sig_name.to_string(), color, final_val));
-                        }
-
-                        let mut legend_y = rect.top() + 10.0;
-                        for (sig_name, color, final_val) in legend_items {
-                            painter.circle_filled(
-                                pos2(rect.left() + 20.0, legend_y + 6.0),
-                                4.0,
-                                color,
-                            );
+                        } else {
                             painter.text(
-                                pos2(rect.left() + 30.0, legend_y),
-                                egui::Align2::LEFT_TOP,
-                                format!("{sig_name}: {final_val:.4}"),
+                                rect.center(),
+                                egui::Align2::CENTER_CENTER,
+                                "No signal data available for spectral analysis.",
                                 egui::FontId::proportional(12.0),
-                                color,
+                                Color32::GRAY,
                             );
-                            legend_y += 18.0;
                         }
                     }
                 } else {
@@ -2729,6 +2930,7 @@ mod tests {
                     "Signal Routing",
                     "Logic",
                     "Electrical",
+                    "Measurements",
                     "Subsystems"
                 ]
             );

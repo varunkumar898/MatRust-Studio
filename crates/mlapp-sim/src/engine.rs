@@ -306,6 +306,7 @@ pub enum CompiledKind {
     ToWorkspace,
     Outport,
     Inport,
+    Sensor,
     Other,
 }
 
@@ -989,6 +990,7 @@ impl ExecutionEngine {
                 BlockType::ToWorkspace => CompiledKind::ToWorkspace,
                 BlockType::Outport => CompiledKind::Outport,
                 BlockType::Inport => CompiledKind::Inport,
+                BlockType::VoltageSensor | BlockType::CurrentSensor => CompiledKind::Sensor,
                 _ => CompiledKind::Other,
             };
 
@@ -1494,6 +1496,9 @@ impl ExecutionEngine {
                         .and_then(|opt| *opt)
                         .map(|src| outputs[src])
                         .unwrap_or(0.0);
+                }
+                CompiledKind::Sensor => {
+                    // Sensor measurement is computed and stored by the electrical circuit solver.
                 }
                 _ => {
                     outputs[idx] = 0.0;

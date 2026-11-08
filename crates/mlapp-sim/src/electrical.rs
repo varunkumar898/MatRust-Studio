@@ -1,7 +1,7 @@
 use crate::model::{BlockDiagram, BlockType};
 use crate::netlist::resolve_electrical_nets;
 use crate::solver::SimError;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 /// Dense LU decomposition with partial pivoting ($PA = LU$).
 /// Inverts and solves linear systems $A x = b$ in $O(N^3)$ decomposition
@@ -218,6 +218,52 @@ pub struct IdealSwitchElement {
     pub is: f64,
 }
 
+/// Ideal voltage sensor with infinite input impedance.
+#[derive(Debug, Clone)]
+pub struct VoltageSensorElement {
+    pub sid: String,
+    pub name: String,
+    pub p_net: usize,
+    pub n_net: usize,
+    pub voltage: f64,
+}
+
+/// Ideal current sensor with zero internal resistance.
+#[derive(Debug, Clone)]
+pub struct CurrentSensorElement {
+    pub sid: String,
+    pub name: String,
+    pub p_net: usize,
+    pub n_net: usize,
+    pub vsrc_idx: usize,
+    pub current: f64,
+}
+
+/// Voltage-controlled voltage source (VCVS).
+#[derive(Debug, Clone)]
+pub struct VcvsElement {
+    pub sid: String,
+    pub name: String,
+    pub p_net: usize,
+    pub n_net: usize,
+    pub gain: f64,
+    pub vsrc_idx: usize,
+    pub ctrl_val: f64,
+    pub ctrl_driver_idx: Option<usize>,
+}
+
+/// Voltage-controlled current source (VCCS).
+#[derive(Debug, Clone)]
+pub struct VccsElement {
+    pub sid: String,
+    pub name: String,
+    pub p_net: usize,
+    pub n_net: usize,
+    pub transconductance: f64,
+    pub ctrl_val: f64,
+    pub ctrl_driver_idx: Option<usize>,
+}
+
 /// Linear and switching circuit MNA solver with constant-matrix fast path.
 #[derive(Debug, Clone)]
 pub struct LinearCircuitSolver {
@@ -234,6 +280,10 @@ pub struct LinearCircuitSolver {
     dc_isources: Vec<DcCurrentSourceElement>,
     pub diodes: Vec<DiodeElement>,
     pub switches: Vec<IdealSwitchElement>,
+    pub voltage_sensors: Vec<VoltageSensorElement>,
+    pub current_sensors: Vec<CurrentSensorElement>,
+    pub vcvs_sources: Vec<VcvsElement>,
+    pub vccs_sources: Vec<VccsElement>,
 
     sid_to_terminal_nets: HashMap<String, (usize, usize)>,
 
@@ -322,6 +372,10 @@ impl LinearCircuitSolver {
         let mut dc_isources = Vec::new();
         let mut diodes = Vec::new();
         let mut switches = Vec::new();
+        let mut voltage_sensors = Vec::new();
+        let mut current_sensors = Vec::new();
+        let mut vcvs_sources = Vec::new();
+        let mut vccs_sources = Vec::new();
         let mut sid_to_terminal_nets = HashMap::new();
 
         let mut vsrc_idx = 0;
@@ -518,6 +572,83 @@ impl LinearCircuitSolver {
                         is: 0.0,
                     });
                 }
+                BlockType::VoltageSensor => {
+                    voltage_sensors.push(VoltageSensorElement {
+                        sid: b.sid.clone(),
+                        name: b.name.clone(),
+                        p_net,
+                        n_net,
+                        voltage: 0.0,
+                    });
+                }
+                BlockType::CurrentSensor => {
+                    current_sensors.push(CurrentSensorElement {
+                        sid: b.sid.clone(),
+                        name: b.name.clone(),
+                        p_net,
+                        n_net,
+                        vsrc_idx,
+                        current: 0.0,
+                    });
+                    vsrc_idx += 1;
+                }
+                BlockType::VoltageControlledVoltageSource => {
+                    let gain = b
+                        .get_param("Gain")
+                        .and_then(|s| s.parse::<f64>().ok())
+                        .unwrap_or(1.0);
+                    let ctrl_driver_idx = diagram
+                        .lines
+                        .iter()
+                        .find(|l| {
+                            (l.dst.block_sid == b.sid || l.dst.block_sid == b.name)
+                                && l.dst.port_kind != Some(crate::model::PortKind::Electrical)
+                        })
+                        .and_then(|l| {
+                            diagram.blocks.iter().position(|blk| {
+                                blk.sid == l.src.block_sid || blk.name == l.src.block_sid
+                            })
+                        });
+                    vcvs_sources.push(VcvsElement {
+                        sid: b.sid.clone(),
+                        name: b.name.clone(),
+                        p_net,
+                        n_net,
+                        gain,
+                        vsrc_idx,
+                        ctrl_val: 0.0,
+                        ctrl_driver_idx,
+                    });
+                    vsrc_idx += 1;
+                }
+                BlockType::VoltageControlledCurrentSource => {
+                    let transconductance = b
+                        .get_param("Transconductance")
+                        .or_else(|| b.get_param("Gain"))
+                        .and_then(|s| s.parse::<f64>().ok())
+                        .unwrap_or(1.0);
+                    let ctrl_driver_idx = diagram
+                        .lines
+                        .iter()
+                        .find(|l| {
+                            (l.dst.block_sid == b.sid || l.dst.block_sid == b.name)
+                                && l.dst.port_kind != Some(crate::model::PortKind::Electrical)
+                        })
+                        .and_then(|l| {
+                            diagram.blocks.iter().position(|blk| {
+                                blk.sid == l.src.block_sid || blk.name == l.src.block_sid
+                            })
+                        });
+                    vccs_sources.push(VccsElement {
+                        sid: b.sid.clone(),
+                        name: b.name.clone(),
+                        p_net,
+                        n_net,
+                        transconductance,
+                        ctrl_val: 0.0,
+                        ctrl_driver_idx,
+                    });
+                }
                 BlockType::Ground => {
                     // Datum node 0 already handled in netlist resolution
                 }
@@ -574,6 +705,8 @@ impl LinearCircuitSolver {
                     &ac_vsources,
                     &diodes,
                     &switches,
+                    &current_sensors,
+                    &vcvs_sources,
                 );
                 let be_res = LuDecomposition::decompose(&a_scratch, system_size);
                 if mask == 0 {
@@ -597,6 +730,8 @@ impl LinearCircuitSolver {
                     &ac_vsources,
                     &diodes,
                     &switches,
+                    &current_sensors,
+                    &vcvs_sources,
                 );
                 lu_init_table.push(LuDecomposition::decompose(&a_scratch, system_size).ok());
 
@@ -614,6 +749,8 @@ impl LinearCircuitSolver {
                     &ac_vsources,
                     &diodes,
                     &switches,
+                    &current_sensors,
+                    &vcvs_sources,
                 );
                 lu_trap_table.push(LuDecomposition::decompose(&a_scratch, system_size).ok());
             }
@@ -649,12 +786,45 @@ impl LinearCircuitSolver {
                 &ac_vsources,
                 &diodes,
                 &switches,
+                &current_sensors,
+                &vcvs_sources,
             );
             if LuDecomposition::decompose(&a_init, system_size).is_err() {
                 return Err(SimError::singular(
                     "Initial circuit topology matrix is singular (no DC path to ground or redundant ideal sources)."
                         .to_string(),
                 ));
+            }
+        }
+
+        // M7: Detect direct cross-domain algebraic feedthrough loops (Sensor -> Controlled Source/Switch) without a state block
+        let mut checked_targets = HashSet::new();
+        for target_sid in switches
+            .iter()
+            .map(|s| &s.sid)
+            .chain(vcvs_sources.iter().map(|s| &s.sid))
+            .chain(vccs_sources.iter().map(|s| &s.sid))
+        {
+            if !checked_targets.insert(target_sid.clone()) {
+                continue;
+            }
+            for line in &diagram.lines {
+                if line.dst.block_sid == *target_sid
+                    && line.dst.port_kind != Some(crate::model::PortKind::Electrical)
+                {
+                    let mut visited = HashSet::new();
+                    if let Some(sensor_sid) =
+                        detect_direct_sensor_feedthrough(&line.src.block_sid, diagram, &mut visited)
+                    {
+                        diagnostics.push(crate::diagnostics::Diagnostic::warning(
+                            "W-DELAY",
+                            format!(
+                                "Direct algebraic feedthrough loop detected between sensor '{sensor_sid}' and controlled block '{target_sid}' without a state block (UnitDelay, Integrator, ZeroOrderHold). A 1-step unit delay hold was inserted."
+                            ),
+                            vec![sensor_sid, target_sid.clone()],
+                        ));
+                    }
+                }
             }
         }
 
@@ -671,6 +841,10 @@ impl LinearCircuitSolver {
             dc_isources,
             diodes,
             switches,
+            voltage_sensors,
+            current_sensors,
+            vcvs_sources,
+            vccs_sources,
             sid_to_terminal_nets,
             use_table,
             lu_init_table,
@@ -706,6 +880,8 @@ impl LinearCircuitSolver {
         ac_vsources: &[AcVoltageSourceElement],
         diodes: &[DiodeElement],
         switches: &[IdealSwitchElement],
+        current_sensors: &[CurrentSensorElement],
+        vcvs_sources: &[VcvsElement],
     ) {
         a.fill(0.0);
 
@@ -757,6 +933,30 @@ impl LinearCircuitSolver {
             );
         }
 
+        // 4b. Current sensors (0V voltage source branches)
+        for isens in current_sensors {
+            stamp_vsource(
+                a,
+                system_size,
+                num_nodes,
+                isens.p_net,
+                isens.n_net,
+                isens.vsrc_idx,
+            );
+        }
+
+        // 4c. VCVS sources (voltage source branches)
+        for vcvs in vcvs_sources {
+            stamp_vsource(
+                a,
+                system_size,
+                num_nodes,
+                vcvs.p_net,
+                vcvs.n_net,
+                vcvs.vsrc_idx,
+            );
+        }
+
         // 5. Diode conductances for this topology mask
         for (i, d) in diodes.iter().enumerate() {
             let is_on = (mask & (1 << i)) != 0;
@@ -788,6 +988,8 @@ impl LinearCircuitSolver {
             &self.ac_vsources,
             &self.diodes,
             &self.switches,
+            &self.current_sensors,
+            &self.vcvs_sources,
         );
     }
 
@@ -847,6 +1049,16 @@ impl LinearCircuitSolver {
             }
         }
 
+        for vccs in &self.vccs_sources {
+            let i_val = vccs.transconductance * vccs.ctrl_val;
+            if vccs.p_net > 0 {
+                self.rhs[vccs.p_net - 1] += i_val;
+            }
+            if vccs.n_net > 0 {
+                self.rhs[vccs.n_net - 1] -= i_val;
+            }
+        }
+
         for c in &self.capacitors {
             let i_eq = if is_first_step {
                 -(c.capacitance / dt) * c.v0
@@ -900,6 +1112,14 @@ impl LinearCircuitSolver {
                 + vsrc.offset;
             self.rhs[n + vsrc.vsrc_idx] = v_val;
         }
+
+        for isens in &self.current_sensors {
+            self.rhs[n + isens.vsrc_idx] = 0.0;
+        }
+
+        for vcvs in &self.vcvs_sources {
+            self.rhs[n + vcvs.vsrc_idx] = vcvs.gain * vcvs.ctrl_val;
+        }
     }
 
     fn assemble_init_rhs(&mut self, t0: f64, mask: usize) {
@@ -913,6 +1133,16 @@ impl LinearCircuitSolver {
             }
             if isrc.n_net > 0 {
                 self.rhs[isrc.n_net - 1] -= i_val;
+            }
+        }
+
+        for vccs in &self.vccs_sources {
+            let i_val = vccs.transconductance * vccs.ctrl_val;
+            if vccs.p_net > 0 {
+                self.rhs[vccs.p_net - 1] += i_val;
+            }
+            if vccs.n_net > 0 {
+                self.rhs[vccs.n_net - 1] -= i_val;
             }
         }
 
@@ -960,6 +1190,14 @@ impl LinearCircuitSolver {
                 + vsrc.offset;
             self.rhs[n + vsrc.vsrc_idx] = v_val;
         }
+
+        for isens in &self.current_sensors {
+            self.rhs[n + isens.vsrc_idx] = 0.0;
+        }
+
+        for vcvs in &self.vcvs_sources {
+            self.rhs[n + vcvs.vsrc_idx] = vcvs.gain * vcvs.ctrl_val;
+        }
     }
 
     /// Computes the integer bitmask corresponding to current diode and switch states.
@@ -982,7 +1220,11 @@ impl LinearCircuitSolver {
 
     /// Sets the control input signal value for an IdealSwitch block.
     pub fn set_switch_control(&mut self, block_sid: &str, ctrl_value: f64) {
-        if let Some(s) = self.switches.iter_mut().find(|s| s.sid == block_sid) {
+        if let Some(s) = self
+            .switches
+            .iter_mut()
+            .find(|s| s.sid == block_sid || s.name == block_sid)
+        {
             s.ctrl_val = ctrl_value;
         }
     }
@@ -991,8 +1233,62 @@ impl LinearCircuitSolver {
     pub fn get_switch_driver_idx(&self, block_sid: &str) -> Option<usize> {
         self.switches
             .iter()
-            .find(|s| s.sid == block_sid)
+            .find(|s| s.sid == block_sid || s.name == block_sid)
             .and_then(|s| s.ctrl_driver_idx)
+    }
+
+    /// Sets the control input signal value for a VoltageControlledVoltageSource (VCVS) block.
+    pub fn set_vcvs_control(&mut self, block_sid: &str, ctrl_value: f64) {
+        if let Some(v) = self
+            .vcvs_sources
+            .iter_mut()
+            .find(|v| v.sid == block_sid || v.name == block_sid)
+        {
+            v.ctrl_val = ctrl_value;
+        }
+    }
+
+    /// Sets the control input signal value for a VoltageControlledCurrentSource (VCCS) block.
+    pub fn set_vccs_control(&mut self, block_sid: &str, ctrl_value: f64) {
+        if let Some(v) = self
+            .vccs_sources
+            .iter_mut()
+            .find(|v| v.sid == block_sid || v.name == block_sid)
+        {
+            v.ctrl_val = ctrl_value;
+        }
+    }
+
+    /// Returns the driver block index in `diagram.blocks` for a VCVS block, if wired.
+    pub fn get_vcvs_driver_idx(&self, block_sid: &str) -> Option<usize> {
+        self.vcvs_sources
+            .iter()
+            .find(|v| v.sid == block_sid || v.name == block_sid)
+            .and_then(|v| v.ctrl_driver_idx)
+    }
+
+    /// Returns the driver block index in `diagram.blocks` for a VCCS block, if wired.
+    pub fn get_vccs_driver_idx(&self, block_sid: &str) -> Option<usize> {
+        self.vccs_sources
+            .iter()
+            .find(|v| v.sid == block_sid || v.name == block_sid)
+            .and_then(|v| v.ctrl_driver_idx)
+    }
+
+    /// Returns the voltage measured by a VoltageSensor block in Volts.
+    pub fn sensor_voltage(&self, block_sid: &str) -> Option<f64> {
+        self.voltage_sensors
+            .iter()
+            .find(|s| s.sid == block_sid || s.name == block_sid)
+            .map(|s| s.voltage)
+    }
+
+    /// Returns the branch current measured by a CurrentSensor block in Amperes.
+    pub fn sensor_current(&self, block_sid: &str) -> Option<f64> {
+        self.current_sensors
+            .iter()
+            .find(|s| s.sid == block_sid || s.name == block_sid)
+            .map(|s| s.current)
     }
 
     /// Returns the state of a switching element (1.0 for ON, 0.0 for OFF).
@@ -1123,6 +1419,16 @@ impl LinearCircuitSolver {
             let vn = self.node_voltages[l.n_net];
             l.vl = vp - vn;
             l.il = l.i0 + 1e-9 * l.vl;
+        }
+
+        for isens in &mut self.current_sensors {
+            isens.current = self.vsrc_currents[isens.vsrc_idx];
+        }
+
+        for vsens in &mut self.voltage_sensors {
+            let vp = self.node_voltages[vsens.p_net];
+            let vn = self.node_voltages[vsens.n_net];
+            vsens.voltage = vp - vn;
         }
 
         Ok(())
@@ -1330,6 +1636,16 @@ impl LinearCircuitSolver {
             l.il = i_new;
         }
 
+        for isens in &mut self.current_sensors {
+            isens.current = self.vsrc_currents[isens.vsrc_idx];
+        }
+
+        for vsens in &mut self.voltage_sensors {
+            let vp = self.node_voltages[vsens.p_net];
+            let vn = self.node_voltages[vsens.n_net];
+            vsens.voltage = vp - vn;
+        }
+
         Ok(())
     }
 
@@ -1387,8 +1703,48 @@ impl LinearCircuitSolver {
         }
 
         // Ideal Switch
-        if let Some(s) = self.switches.iter().find(|s| s.sid == block_sid) {
+        if let Some(s) = self
+            .switches
+            .iter()
+            .find(|s| s.sid == block_sid || s.name == block_sid)
+        {
             return Some(s.is);
+        }
+
+        // Current Sensor
+        if let Some(isens) = self
+            .current_sensors
+            .iter()
+            .find(|s| s.sid == block_sid || s.name == block_sid)
+        {
+            return Some(self.vsrc_currents[isens.vsrc_idx]);
+        }
+
+        // Voltage Sensor (infinite input impedance)
+        if self
+            .voltage_sensors
+            .iter()
+            .any(|s| s.sid == block_sid || s.name == block_sid)
+        {
+            return Some(0.0);
+        }
+
+        // VCVS
+        if let Some(vcvs) = self
+            .vcvs_sources
+            .iter()
+            .find(|v| v.sid == block_sid || v.name == block_sid)
+        {
+            return Some(self.vsrc_currents[vcvs.vsrc_idx]);
+        }
+
+        // VCCS
+        if let Some(vccs) = self
+            .vccs_sources
+            .iter()
+            .find(|v| v.sid == block_sid || v.name == block_sid)
+        {
+            return Some(vccs.transconductance * vccs.ctrl_val);
         }
 
         None
@@ -1426,5 +1782,41 @@ fn stamp_vsource(
     if n > 0 {
         a[(n - 1) * size + col] -= 1.0;
         a[col * size + (n - 1)] -= 1.0;
+    }
+}
+
+/// Helper: Traverses upstream signal connections from `curr_sid` to detect whether
+/// there is an algebraic direct feedthrough path from an electrical sensor (VoltageSensor or CurrentSensor)
+/// without an intervening state block (UnitDelay, Integrator, ZeroOrderHold).
+fn detect_direct_sensor_feedthrough(
+    curr_sid: &str,
+    diagram: &crate::model::BlockDiagram,
+    visited: &mut HashSet<String>,
+) -> Option<String> {
+    if !visited.insert(curr_sid.to_string()) {
+        return None;
+    }
+    let block = diagram
+        .blocks
+        .iter()
+        .find(|b| b.sid == curr_sid || b.name == curr_sid)?;
+
+    match block.block_type {
+        BlockType::VoltageSensor | BlockType::CurrentSensor => Some(block.sid.clone()),
+        BlockType::UnitDelay | BlockType::Integrator | BlockType::ZeroOrderHold => None,
+        _ => {
+            for line in &diagram.lines {
+                if (line.dst.block_sid == block.sid || line.dst.block_sid == block.name)
+                    && line.dst.port_kind != Some(crate::model::PortKind::Electrical)
+                {
+                    if let Some(sens) =
+                        detect_direct_sensor_feedthrough(&line.src.block_sid, diagram, visited)
+                    {
+                        return Some(sens);
+                    }
+                }
+            }
+            None
+        }
     }
 }

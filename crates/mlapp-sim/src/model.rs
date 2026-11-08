@@ -104,6 +104,11 @@ pub enum BlockType {
     Ground,
     Diode,
     IdealSwitch,
+    // Sensors and Controlled Sources (Milestone M7)
+    VoltageSensor,
+    CurrentSensor,
+    VoltageControlledVoltageSource,
+    VoltageControlledCurrentSource,
     Unknown(String),
 }
 
@@ -197,6 +202,10 @@ impl BlockType {
                 | BlockType::Ground
                 | BlockType::Diode
                 | BlockType::IdealSwitch
+                | BlockType::VoltageSensor
+                | BlockType::CurrentSensor
+                | BlockType::VoltageControlledVoltageSource
+                | BlockType::VoltageControlledCurrentSource
         )
     }
 
@@ -211,7 +220,11 @@ impl BlockType {
             | BlockType::AcVoltageSource
             | BlockType::DcCurrentSource
             | BlockType::Diode
-            | BlockType::IdealSwitch => 2,
+            | BlockType::IdealSwitch
+            | BlockType::VoltageSensor
+            | BlockType::CurrentSensor
+            | BlockType::VoltageControlledVoltageSource
+            | BlockType::VoltageControlledCurrentSource => 2,
             _ => 0,
         }
     }
@@ -236,8 +249,12 @@ impl BlockType {
             | BlockType::AcVoltageSource
             | BlockType::DcCurrentSource
             | BlockType::Ground
-            | BlockType::Diode => 0,
-            BlockType::IdealSwitch => 1,
+            | BlockType::Diode
+            | BlockType::VoltageSensor
+            | BlockType::CurrentSensor => 0,
+            BlockType::IdealSwitch
+            | BlockType::VoltageControlledVoltageSource
+            | BlockType::VoltageControlledCurrentSource => 1,
             BlockType::Sum => {
                 let signs = parameters.get("Inputs").map(|s| s.as_str()).unwrap_or("++");
                 let count = signs.chars().filter(|&c| c == '+' || c == '-').count();
@@ -305,7 +322,10 @@ impl BlockType {
             | BlockType::DcCurrentSource
             | BlockType::Ground
             | BlockType::Diode
-            | BlockType::IdealSwitch => 0,
+            | BlockType::IdealSwitch
+            | BlockType::VoltageControlledVoltageSource
+            | BlockType::VoltageControlledCurrentSource => 0,
+            BlockType::VoltageSensor | BlockType::CurrentSensor => 1,
             _ => 1,
         }
     }
@@ -347,6 +367,67 @@ impl BlockType {
                     kind: PortKind::Signal,
                     role: PortRole::Input,
                     label: "v".to_string(),
+                    index: 0,
+                });
+                list.push(PortDesc {
+                    kind: PortKind::Electrical,
+                    role: PortRole::Terminal,
+                    label: "p".to_string(),
+                    index: 0,
+                });
+                list.push(PortDesc {
+                    kind: PortKind::Electrical,
+                    role: PortRole::Terminal,
+                    label: "n".to_string(),
+                    index: 1,
+                });
+            }
+            BlockType::VoltageSensor => {
+                list.push(PortDesc {
+                    kind: PortKind::Signal,
+                    role: PortRole::Output,
+                    label: "V".to_string(),
+                    index: 0,
+                });
+                list.push(PortDesc {
+                    kind: PortKind::Electrical,
+                    role: PortRole::Terminal,
+                    label: "p".to_string(),
+                    index: 0,
+                });
+                list.push(PortDesc {
+                    kind: PortKind::Electrical,
+                    role: PortRole::Terminal,
+                    label: "n".to_string(),
+                    index: 1,
+                });
+            }
+            BlockType::CurrentSensor => {
+                list.push(PortDesc {
+                    kind: PortKind::Signal,
+                    role: PortRole::Output,
+                    label: "I".to_string(),
+                    index: 0,
+                });
+                list.push(PortDesc {
+                    kind: PortKind::Electrical,
+                    role: PortRole::Terminal,
+                    label: "p".to_string(),
+                    index: 0,
+                });
+                list.push(PortDesc {
+                    kind: PortKind::Electrical,
+                    role: PortRole::Terminal,
+                    label: "n".to_string(),
+                    index: 1,
+                });
+            }
+            BlockType::VoltageControlledVoltageSource
+            | BlockType::VoltageControlledCurrentSource => {
+                list.push(PortDesc {
+                    kind: PortKind::Signal,
+                    role: PortRole::Input,
+                    label: "in".to_string(),
                     index: 0,
                 });
                 list.push(PortDesc {

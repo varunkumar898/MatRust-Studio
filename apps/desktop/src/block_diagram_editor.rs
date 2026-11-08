@@ -542,7 +542,15 @@ impl BlockDiagramEditor {
 
             let src_is_electrical = src_block_opt
                 .map(|b| {
-                    if b.block_type == BlockType::IdealSwitch && w.src_port == 2 {
+                    if matches!(
+                        b.block_type,
+                        BlockType::IdealSwitch
+                            | BlockType::VoltageControlledVoltageSource
+                            | BlockType::VoltageControlledCurrentSource
+                            | BlockType::VoltageSensor
+                            | BlockType::CurrentSensor
+                    ) && w.src_port == 2
+                    {
                         false
                     } else {
                         b.block_type.is_electrical()
@@ -552,7 +560,15 @@ impl BlockDiagramEditor {
 
             let dst_is_electrical = dst_block_opt
                 .map(|b| {
-                    if b.block_type == BlockType::IdealSwitch && w.dst_port == 2 {
+                    if matches!(
+                        b.block_type,
+                        BlockType::IdealSwitch
+                            | BlockType::VoltageControlledVoltageSource
+                            | BlockType::VoltageControlledCurrentSource
+                            | BlockType::VoltageSensor
+                            | BlockType::CurrentSensor
+                    ) && w.dst_port == 2
+                    {
                         false
                     } else {
                         b.block_type.is_electrical()
@@ -1119,6 +1135,16 @@ impl BlockDiagramEditor {
                     ("Ground", BlockType::Ground),
                     ("Diode", BlockType::Diode),
                     ("Ideal Switch", BlockType::IdealSwitch),
+                    ("Voltage Sensor", BlockType::VoltageSensor),
+                    ("Current Sensor", BlockType::CurrentSensor),
+                    (
+                        "Controlled Voltage Source",
+                        BlockType::VoltageControlledVoltageSource,
+                    ),
+                    (
+                        "Controlled Current Source",
+                        BlockType::VoltageControlledCurrentSource,
+                    ),
                 ]),
             ),
             ("Subsystems", items(&[("Subsystem", BlockType::Subsystem)])),
@@ -1640,7 +1666,14 @@ impl BlockDiagramEditor {
                     b.sid.clone(),
                     (
                         b.block_type.is_electrical(),
-                        b.block_type == BlockType::IdealSwitch,
+                        matches!(
+                            b.block_type,
+                            BlockType::IdealSwitch
+                                | BlockType::VoltageControlledVoltageSource
+                                | BlockType::VoltageControlledCurrentSource
+                                | BlockType::VoltageSensor
+                                | BlockType::CurrentSensor
+                        ),
                     ),
                 )
             })
@@ -1707,6 +1740,10 @@ impl BlockDiagramEditor {
                 BlockType::Ground => "[GND]",
                 BlockType::Diode => "->|-",
                 BlockType::IdealSwitch => "-/ -",
+                BlockType::VoltageSensor => "(V)",
+                BlockType::CurrentSensor => "(A)",
+                BlockType::VoltageControlledVoltageSource => "(K*u)",
+                BlockType::VoltageControlledCurrentSource => "(Gm*u)",
                 _ => "[ ]",
             };
             painter.text(
@@ -1803,7 +1840,12 @@ impl BlockDiagramEditor {
                     }
                 }
 
-                if block.block_type == BlockType::IdealSwitch {
+                if matches!(
+                    block.block_type,
+                    BlockType::IdealSwitch
+                        | BlockType::VoltageControlledVoltageSource
+                        | BlockType::VoltageControlledCurrentSource
+                ) {
                     let ctrl_pos =
                         Self::get_block_input_port_pos(rect, self.pan_offset, self.zoom, block, 2);
                     painter.circle_filled(
@@ -1817,16 +1859,16 @@ impl BlockDiagramEditor {
                             Id::new(format!("in_port_{}_ctrl", block.sid)),
                             Sense::click(),
                         )
-                        .on_hover_text("Signal Control Input (ctrl)");
+                        .on_hover_text("Signal Control Input");
 
                     if port_resp.clicked() {
                         if let Some((source_sid, source_port)) = self.connecting_from.take() {
                             if source_sid != block.sid {
-                                let (source_is_elec, source_is_switch) = block_domains
+                                let (source_is_elec, source_is_hybrid) = block_domains
                                     .get(&source_sid)
                                     .copied()
                                     .unwrap_or((false, false));
-                                let source_is_electrical = if source_is_switch && source_port == 2 {
+                                let source_is_electrical = if source_is_hybrid && source_port == 2 {
                                     false
                                 } else {
                                     source_is_elec
@@ -1842,6 +1884,51 @@ impl BlockDiagramEditor {
                                         Some((source_sid, source_port, block.sid.clone(), 2));
                                 }
                             }
+                        }
+                    }
+                }
+
+                if matches!(
+                    block.block_type,
+                    BlockType::VoltageSensor | BlockType::CurrentSensor
+                ) {
+                    let meas_pos =
+                        Self::get_block_port_pos(rect, self.pan_offset, self.zoom, block, 2);
+                    painter.circle_filled(
+                        meas_pos,
+                        4.0 * self.zoom,
+                        Color32::from_rgb(90, 180, 255),
+                    );
+                    let port_resp = ui
+                        .interact(
+                            Rect::from_center_size(meas_pos, vec2(12.0, 12.0) * self.zoom),
+                            Id::new(format!("out_port_{}_meas", block.sid)),
+                            Sense::click(),
+                        )
+                        .on_hover_text("Signal Measurement Output");
+
+                    if port_resp.clicked() {
+                        if let Some((source_sid, source_port)) = self.connecting_from.take() {
+                            if source_sid != block.sid {
+                                let (source_is_elec, source_is_hybrid) = block_domains
+                                    .get(&source_sid)
+                                    .copied()
+                                    .unwrap_or((false, false));
+                                let source_is_electrical = if source_is_hybrid && source_port == 2 {
+                                    false
+                                } else {
+                                    source_is_elec
+                                };
+
+                                if source_is_electrical {
+                                    self.sim_status = format!(
+                                        "Error [E-DOMAIN]: Direct wire between electrical terminal and signal measurement output on blocks '{}' and '{}' rejected.",
+                                        source_sid, block.sid
+                                    );
+                                }
+                            }
+                        } else {
+                            self.connecting_from = Some((block.sid.clone(), 2));
                         }
                     }
                 }
@@ -1922,7 +2009,12 @@ impl BlockDiagramEditor {
             let dst_is_signal = dst_block
                 .map(|b| {
                     !b.block_type.is_electrical()
-                        || (b.block_type == BlockType::IdealSwitch && dst_port == 2)
+                        || (matches!(
+                            b.block_type,
+                            BlockType::IdealSwitch
+                                | BlockType::VoltageControlledVoltageSource
+                                | BlockType::VoltageControlledCurrentSource
+                        ) && dst_port == 2)
                 })
                 .unwrap_or(true);
             if dst_is_signal {
@@ -2003,7 +2095,15 @@ impl BlockDiagramEditor {
         port_index: usize,
     ) -> Pos2 {
         let (nx, ny) = if block.block_type.is_electrical() {
-            if block.block_type == BlockType::IdealSwitch && port_index == 2 {
+            let is_hybrid = matches!(
+                block.block_type,
+                BlockType::IdealSwitch
+                    | BlockType::VoltageControlledVoltageSource
+                    | BlockType::VoltageControlledCurrentSource
+                    | BlockType::VoltageSensor
+                    | BlockType::CurrentSensor
+            );
+            if is_hybrid && port_index == 2 {
                 pin_geometry(&block.block_type, PortKind::Signal, 0, block.rotation)
             } else {
                 pin_geometry(
@@ -2038,7 +2138,15 @@ impl BlockDiagramEditor {
         port_index: usize,
     ) -> Pos2 {
         let (nx, ny) = if block.block_type.is_electrical() {
-            if block.block_type == BlockType::IdealSwitch && port_index == 2 {
+            let is_hybrid = matches!(
+                block.block_type,
+                BlockType::IdealSwitch
+                    | BlockType::VoltageControlledVoltageSource
+                    | BlockType::VoltageControlledCurrentSource
+                    | BlockType::VoltageSensor
+                    | BlockType::CurrentSensor
+            );
+            if is_hybrid && port_index == 2 {
                 pin_geometry(&block.block_type, PortKind::Signal, 0, block.rotation)
             } else {
                 pin_geometry(
@@ -3283,7 +3391,7 @@ mod tests {
             "Electrical category must exist in library browser"
         );
         let items = &elec.unwrap().1;
-        assert_eq!(items.len(), 9);
+        assert_eq!(items.len(), 13);
         assert!(items
             .iter()
             .any(|i| i.label == "Resistor" && i.block_type == BlockType::Resistor));
@@ -3311,6 +3419,16 @@ mod tests {
         assert!(items
             .iter()
             .any(|i| i.label == "Ideal Switch" && i.block_type == BlockType::IdealSwitch));
+        assert!(items
+            .iter()
+            .any(|i| i.label == "Voltage Sensor" && i.block_type == BlockType::VoltageSensor));
+        assert!(items
+            .iter()
+            .any(|i| i.label == "Current Sensor" && i.block_type == BlockType::CurrentSensor));
+        assert!(items.iter().any(|i| i.label == "Controlled Voltage Source"
+            && i.block_type == BlockType::VoltageControlledVoltageSource));
+        assert!(items.iter().any(|i| i.label == "Controlled Current Source"
+            && i.block_type == BlockType::VoltageControlledCurrentSource));
     }
 
     #[test]

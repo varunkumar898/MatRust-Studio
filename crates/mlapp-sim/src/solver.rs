@@ -630,13 +630,35 @@ fn simulate_fixed_step_euler(
             if let Some(src_idx) = c.get_switch_driver_idx(&b.sid) {
                 c.set_switch_control(&b.sid, workspace.outputs[src_idx]);
             }
+            if let Some(src_idx) = c.get_vcvs_driver_idx(&b.sid) {
+                c.set_vcvs_control(&b.sid, workspace.outputs[src_idx]);
+            }
+            if let Some(src_idx) = c.get_vccs_driver_idx(&b.sid) {
+                c.set_vccs_control(&b.sid, workspace.outputs[src_idx]);
+            }
         }
         c.init_solve(config.start_time)?;
         for &(idx, b) in &electrical_blocks {
-            if let Some(v) = c.branch_voltage(&b.sid) {
-                workspace.outputs[idx] = v;
+            match b.block_type {
+                BlockType::VoltageSensor => {
+                    workspace.outputs[idx] = c.sensor_voltage(&b.sid).unwrap_or(0.0);
+                }
+                BlockType::CurrentSensor => {
+                    workspace.outputs[idx] = c.sensor_current(&b.sid).unwrap_or(0.0);
+                }
+                _ => {
+                    if let Some(v) = c.branch_voltage(&b.sid) {
+                        workspace.outputs[idx] = v;
+                    }
+                }
             }
         }
+        engine.eval(
+            config.start_time,
+            &continuous_states,
+            &discrete_states,
+            &mut workspace,
+        )?;
     }
 
     for step in 0..=num_steps {
@@ -704,12 +726,28 @@ fn simulate_fixed_step_euler(
                     if let Some(src_idx) = c.get_switch_driver_idx(&b.sid) {
                         c.set_switch_control(&b.sid, workspace.outputs[src_idx]);
                     }
+                    if let Some(src_idx) = c.get_vcvs_driver_idx(&b.sid) {
+                        c.set_vcvs_control(&b.sid, workspace.outputs[src_idx]);
+                    }
+                    if let Some(src_idx) = c.get_vccs_driver_idx(&b.sid) {
+                        c.set_vccs_control(&b.sid, workspace.outputs[src_idx]);
+                    }
                 }
                 let t_next = config.start_time + ((step + 1) as f64) * dt;
                 c.step(t_next, dt, step == 0)?;
                 for &(idx, b) in &electrical_blocks {
-                    if let Some(v) = c.branch_voltage(&b.sid) {
-                        workspace.outputs[idx] = v;
+                    match b.block_type {
+                        BlockType::VoltageSensor => {
+                            workspace.outputs[idx] = c.sensor_voltage(&b.sid).unwrap_or(0.0);
+                        }
+                        BlockType::CurrentSensor => {
+                            workspace.outputs[idx] = c.sensor_current(&b.sid).unwrap_or(0.0);
+                        }
+                        _ => {
+                            if let Some(v) = c.branch_voltage(&b.sid) {
+                                workspace.outputs[idx] = v;
+                            }
+                        }
                     }
                 }
             }
@@ -804,13 +842,35 @@ fn simulate_fixed_step_rk4(
             if let Some(src_idx) = c.get_switch_driver_idx(&b.sid) {
                 c.set_switch_control(&b.sid, workspace.outputs[src_idx]);
             }
+            if let Some(src_idx) = c.get_vcvs_driver_idx(&b.sid) {
+                c.set_vcvs_control(&b.sid, workspace.outputs[src_idx]);
+            }
+            if let Some(src_idx) = c.get_vccs_driver_idx(&b.sid) {
+                c.set_vccs_control(&b.sid, workspace.outputs[src_idx]);
+            }
         }
         c.init_solve(config.start_time)?;
         for &(idx, b) in &electrical_blocks {
-            if let Some(v) = c.branch_voltage(&b.sid) {
-                workspace.outputs[idx] = v;
+            match b.block_type {
+                BlockType::VoltageSensor => {
+                    workspace.outputs[idx] = c.sensor_voltage(&b.sid).unwrap_or(0.0);
+                }
+                BlockType::CurrentSensor => {
+                    workspace.outputs[idx] = c.sensor_current(&b.sid).unwrap_or(0.0);
+                }
+                _ => {
+                    if let Some(v) = c.branch_voltage(&b.sid) {
+                        workspace.outputs[idx] = v;
+                    }
+                }
             }
         }
+        engine.eval(
+            config.start_time,
+            &continuous_states,
+            &discrete_states,
+            &mut workspace,
+        )?;
     }
 
     let mut k1 = vec![0.0; num_states];
@@ -909,12 +969,28 @@ fn simulate_fixed_step_rk4(
                 if let Some(src_idx) = c.get_switch_driver_idx(&b.sid) {
                     c.set_switch_control(&b.sid, workspace.outputs[src_idx]);
                 }
+                if let Some(src_idx) = c.get_vcvs_driver_idx(&b.sid) {
+                    c.set_vcvs_control(&b.sid, workspace.outputs[src_idx]);
+                }
+                if let Some(src_idx) = c.get_vccs_driver_idx(&b.sid) {
+                    c.set_vccs_control(&b.sid, workspace.outputs[src_idx]);
+                }
             }
             let t_next = config.start_time + ((step + 1) as f64) * dt;
             c.step(t_next, dt, step == 0)?;
             for &(idx, b) in &electrical_blocks {
-                if let Some(v) = c.branch_voltage(&b.sid) {
-                    workspace.outputs[idx] = v;
+                match b.block_type {
+                    BlockType::VoltageSensor => {
+                        workspace.outputs[idx] = c.sensor_voltage(&b.sid).unwrap_or(0.0);
+                    }
+                    BlockType::CurrentSensor => {
+                        workspace.outputs[idx] = c.sensor_current(&b.sid).unwrap_or(0.0);
+                    }
+                    _ => {
+                        if let Some(v) = c.branch_voltage(&b.sid) {
+                            workspace.outputs[idx] = v;
+                        }
+                    }
                 }
             }
         }

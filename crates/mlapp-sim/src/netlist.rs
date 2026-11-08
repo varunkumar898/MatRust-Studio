@@ -164,13 +164,46 @@ pub fn resolve_electrical_nets(diagram: &BlockDiagram) -> NetlistResult {
             }
         };
 
+        let src_has_signal_out = matches!(
+            src_block.block_type,
+            BlockType::VoltageSensor | BlockType::CurrentSensor
+        );
+        let dst_has_signal_in = matches!(
+            dst_block.block_type,
+            BlockType::IdealSwitch
+                | BlockType::VoltageControlledVoltageSource
+                | BlockType::VoltageControlledCurrentSource
+        );
+
+        let is_signal_wire = line.src.port_kind == Some(PortKind::Signal)
+            || line.dst.port_kind == Some(PortKind::Signal)
+            || (!src_block.block_type.is_electrical() && !dst_block.block_type.is_electrical())
+            || (!src_block.block_type.is_electrical() && dst_has_signal_in)
+            || (src_has_signal_out && !dst_block.block_type.is_electrical())
+            || (src_has_signal_out && dst_has_signal_in);
+
         // Determine port kind for src
-        let (src_kind, src_term) = if src_block.block_type.is_electrical() {
-            if src_block.block_type == BlockType::IdealSwitch
-                && line.src.port_kind == Some(PortKind::Signal)
-            {
-                (PortKind::Signal, None)
-            } else if line.src.port_index < src_block.terminal_count() {
+        let (src_kind, src_term) = if line.src.port_kind == Some(PortKind::Electrical) {
+            if line.src.port_index < src_block.terminal_count() {
+                (PortKind::Electrical, Some(line.src.port_index))
+            } else {
+                diagnostics.push(Diagnostic::error(
+                    "E-PARAM",
+                    format!(
+                        "Unknown terminal index {} on block '{}' -> block only has {} terminal(s) -> use a valid terminal index (0..{})",
+                        line.src.port_index,
+                        line.src.block_sid,
+                        src_block.terminal_count(),
+                        src_block.terminal_count().saturating_sub(1)
+                    ),
+                    vec![line.src.block_sid.clone()],
+                ));
+                continue;
+            }
+        } else if is_signal_wire {
+            (PortKind::Signal, None)
+        } else if src_block.block_type.is_electrical() {
+            if line.src.port_index < src_block.terminal_count() {
                 (PortKind::Electrical, Some(line.src.port_index))
             } else {
                 diagnostics.push(Diagnostic::error(
@@ -191,14 +224,27 @@ pub fn resolve_electrical_nets(diagram: &BlockDiagram) -> NetlistResult {
         };
 
         // Determine port kind for dst
-        let (dst_kind, dst_term) = if dst_block.block_type.is_electrical() {
-            if dst_block.block_type == BlockType::IdealSwitch
-                && (line.dst.port_kind == Some(PortKind::Signal)
-                    || line.src.port_kind == Some(PortKind::Signal)
-                    || !src_block.block_type.is_electrical())
-            {
-                (PortKind::Signal, None)
-            } else if line.dst.port_index < dst_block.terminal_count() {
+        let (dst_kind, dst_term) = if line.dst.port_kind == Some(PortKind::Electrical) {
+            if line.dst.port_index < dst_block.terminal_count() {
+                (PortKind::Electrical, Some(line.dst.port_index))
+            } else {
+                diagnostics.push(Diagnostic::error(
+                    "E-PARAM",
+                    format!(
+                        "Unknown terminal index {} on block '{}' -> block only has {} terminal(s) -> use a valid terminal index (0..{})",
+                        line.dst.port_index,
+                        line.dst.block_sid,
+                        dst_block.terminal_count(),
+                        dst_block.terminal_count().saturating_sub(1)
+                    ),
+                    vec![line.dst.block_sid.clone()],
+                ));
+                continue;
+            }
+        } else if is_signal_wire {
+            (PortKind::Signal, None)
+        } else if dst_block.block_type.is_electrical() {
+            if line.dst.port_index < dst_block.terminal_count() {
                 (PortKind::Electrical, Some(line.dst.port_index))
             } else {
                 diagnostics.push(Diagnostic::error(

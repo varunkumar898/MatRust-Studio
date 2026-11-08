@@ -1,19 +1,39 @@
 # MatRust Studio / RustLab Project State
 
-**Current branch:** `feat/m6-nonlinear-circuits` (Milestone M6: Piecewise-Linear & Switching Circuits)
+**Current branch:** `feat/m7-sensors-sources` (Milestone M7: Bridges and Hybrid Coupling)
 **Repository:** `https://github.com/varunkumar898/MatRust-Studio.git`
-**Current base commit:** `115a66c` (`main` after PR #36 merged)
+**Current base commit:** `2dd7b5e` (`main` after PR #37 merged)
 **Date:** 2026-11-08
 **Platform:** Windows 11 ARM64 (`aarch64-pc-windows-gnullvm`)
 **Local stable toolchain:** Rust 1.99.1
 **Declared MSRV:** Rust 1.88.0
 **Verification status:** 
-- Local default, all-features, and no-default-features test runs pass at **555/555/555** (net +23 tests in M6; +15 tests added in follow-up hardening).
+- Local default, all-features, and no-default-features test runs pass at **563/563/563** (net +8 tests in M7).
 - Local clippy (all-features, no-default-features, per-crate no-default-features) passes with 0 warnings.
 - `cargo fmt --all -- --check` passes cleanly.
 - `scripts/verify.ps1` runs and exits 0 with all verification steps passing.
 
-## Current work: Milestone M6: Piecewise-Linear & Switching Circuits
+## Current work: Milestone M7: Bridges and Hybrid Coupling
+
+- **Branch `feat/m7-sensors-sources`**: Implements bridge components connecting continuous signal-flow and physical electrical domains (`VoltageSensor`, `CurrentSensor`, `VoltageControlledVoltageSource`, `VoltageControlledCurrentSource`).
+- **Voltage Sensor (`VoltageSensor`)**: Possesses two electrical terminals ($p, n$) and one signal output (port 0). Has ideal infinite input impedance ($G_{in} = 0$), adding no conductance or matrix row to MNA equations. Measures differential voltage $v = V_p - V_n$ in Volts.
+- **Current Sensor (`CurrentSensor`)**: Possesses two electrical terminals in series and one signal output (port 0). Ideal ammeter with zero internal resistance ($V_p - V_n = 0$), stamped identically to an independent 0 V voltage source ($E = 0$) augmenting MNA by 1 auxiliary branch current row. Measured branch current $i$ is output to the signal domain in Amperes.
+- **Controlled Voltage Source (`VoltageControlledVoltageSource` / `VCVS`)**: Possesses one signal input (port 0) and two electrical terminals ($p, n$). Dynamic branch equation $V_p - V_n = K \cdot u(t_k)$ stamped into auxiliary voltage source row of MNA RHS.
+- **Controlled Current Source (`VoltageControlledCurrentSource` / `VCCS`)**: Possesses one signal input (port 0) and two electrical terminals ($p, n$). Injected current $I = G_m \cdot u(t_k)$ injected directly into nodal current vector $J$ ($J_p \mathrel{+}= I$, $J_n \mathrel{-}= I$) without augmenting matrix dimension.
+- **Sampling & Hold Policy (Charter Decision D4/D5)**: Controlled source inputs ($u$) and switch controls are sampled at the start of step $k$ ($t_k$) from signal outputs and held constant across the step (Zero-Order Hold). Sensor outputs ($v, i$) are read at the completion of step $k$ from the MNA solution. Continuous signal states in fixed-step solvers observe held sensor values across internal stages (coupling accuracy $O(h)$).
+- **Direct Feedthrough Algebraic Loop Detection (`W-DELAY`)**: Direct sensor-to-source or sensor-to-switch paths without an intervening state block (`UnitDelay`, `Integrator`, `ZeroOrderHold`, strictly proper transfer function) emit warning `W-DELAY` and insert a 1-step unit delay ($z^{-1}$ hold) to break instantaneous algebraic dependency.
+- **Zero Heap Allocations**: Verified by `alloc_test` (5 tests passing) over 10,000 steps of sensors and controlled sources operation (0 allocations).
+- **Desktop UI Integration**: Electrical palette updated with 4 new bridge blocks, short labels `(V)`, `(A)`, `(K*u)`, `(Gm*u)`, hybrid port geometry rendering with top signal pin (port 2) and left/right electrical terminals (ports 0/1).
+- **Analytical Oracles**:
+  - Resistive divider voltage measurement parity ($5.0\text{ V}$, error $< 10^{-10}$).
+  - Series circuit current measurement parity ($0.020\text{ A}$, error $< 10^{-10}$, ammeter drop $< 10^{-10}\text{ V}$).
+  - Ammeter insertion parity (exact bit-level parity $< 10^{-12}$ between circuits with and without CurrentSensor).
+  - VCVS linear gain parity ($2.5\text{ V} \times 4.0 = 10.0\text{ V}$).
+  - VCCS transconductance parity ($3.0\text{ V} \times 0.05\text{ A/V} \times 200\,\Omega = 30.0\text{ V}$).
+  - Direct algebraic loop triggering `W-DELAY` diagnostic warning.
+  - Closed-loop inverting op-amp macro-model with dominant-pole integrator ($V_{out} = -10.0\text{ V}$ to $< 10^{-4}$).
+
+## Previous work: Milestone M6: Piecewise-Linear & Switching Circuits
 
 - **Branch `feat/m6-nonlinear-circuits`**: Implements piecewise-linear semiconductor elements (Diode) and controlled switching elements (Ideal Switch) within Modified Nodal Analysis (MNA), fully hardened with follow-ups F1-F7.
 - **Diode Piecewise-Linear Model**: Two-terminal element with parameters `ForwardVoltage` ($V_f \ge 0$), `OnResistance` ($R_{on} > 0$), and `OffResistance` ($R_{off} > R_{on}$). In ON state, stamps conductance $G_{on} = 1/R_{on}$ and companion current source $I_{eq} = G_{on} V_f$; in OFF state, stamps $G_{off} = 1/R_{off}$ and $I_{eq} = 0$. Knife-edge threshold behavior: strict $v_D > V_f$ for OFF->ON and $i_D < 0$ for ON->OFF.

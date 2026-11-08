@@ -2,18 +2,22 @@ use mlapp_sim::engine::SimWorkspace;
 use mlapp_sim::model::{Block, BlockDiagram, BlockType};
 use mlapp_sim::ExecutionEngine;
 use std::alloc::{GlobalAlloc, Layout, System};
-use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use std::cell::Cell;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Mutex;
 
 struct CountingAlloc;
 
 static ALLOC_COUNT: AtomicUsize = AtomicUsize::new(0);
-static ALLOC_TRACKING_ACTIVE: AtomicBool = AtomicBool::new(false);
 static TEST_LOCK: Mutex<()> = Mutex::new(());
+
+thread_local! {
+    static TRACKING_ACTIVE: Cell<bool> = const { Cell::new(false) };
+}
 
 unsafe impl GlobalAlloc for CountingAlloc {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        if ALLOC_TRACKING_ACTIVE.load(Ordering::Relaxed) {
+        if TRACKING_ACTIVE.try_with(|t| t.get()).unwrap_or(false) {
             ALLOC_COUNT.fetch_add(1, Ordering::Relaxed);
         }
         System.alloc(layout)
@@ -29,7 +33,7 @@ static A: CountingAlloc = CountingAlloc;
 
 #[test]
 fn test_zero_allocations_during_eval_and_update_discrete() {
-    let _lock = TEST_LOCK.lock().unwrap();
+    let _lock = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     let mut diagram = BlockDiagram::new("AllocTestModel");
 
     let step = Block::new("1", "Step", BlockType::Step)
@@ -83,9 +87,9 @@ fn test_zero_allocations_during_eval_and_update_discrete() {
     let continuous_states = engine.initial_continuous_states.clone();
     let mut discrete_states = engine.initial_discrete_states.clone();
 
-    // Start tracking allocations
+    // Start tracking allocations on this thread
     ALLOC_COUNT.store(0, Ordering::SeqCst);
-    ALLOC_TRACKING_ACTIVE.store(true, Ordering::SeqCst);
+    TRACKING_ACTIVE.with(|t| t.set(true));
 
     for step_idx in 0..10_000 {
         let t = step_idx as f64 * 0.001;
@@ -95,7 +99,7 @@ fn test_zero_allocations_during_eval_and_update_discrete() {
         engine.update_discrete(&workspace.outputs, &mut discrete_states);
     }
 
-    ALLOC_TRACKING_ACTIVE.store(false, Ordering::SeqCst);
+    TRACKING_ACTIVE.with(|t| t.set(false));
     let total_allocs = ALLOC_COUNT.load(Ordering::SeqCst);
 
     assert_eq!(
@@ -106,7 +110,7 @@ fn test_zero_allocations_during_eval_and_update_discrete() {
 
 #[test]
 fn test_zero_allocations_m3_blocks_during_eval_and_update_discrete() {
-    let _lock = TEST_LOCK.lock().unwrap();
+    let _lock = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     let mut diagram = BlockDiagram::new("AllocTestM3Model");
 
     diagram.add_block(Block::new("1", "Clock", BlockType::Clock));
@@ -213,9 +217,9 @@ fn test_zero_allocations_m3_blocks_during_eval_and_update_discrete() {
         ..Default::default()
     };
 
-    // Track allocations over 10,000 steps
+    // Track allocations over 10,000 steps on this thread
     ALLOC_COUNT.store(0, Ordering::SeqCst);
-    ALLOC_TRACKING_ACTIVE.store(true, Ordering::SeqCst);
+    TRACKING_ACTIVE.with(|t| t.set(true));
 
     for step_idx in 0..10_000 {
         let t = step_idx as f64 * 0.001;
@@ -225,7 +229,7 @@ fn test_zero_allocations_m3_blocks_during_eval_and_update_discrete() {
         engine.update_discrete_at(t, 0.0, &workspace.outputs, &mut discrete_states, &config);
     }
 
-    ALLOC_TRACKING_ACTIVE.store(false, Ordering::SeqCst);
+    TRACKING_ACTIVE.with(|t| t.set(false));
     let total_allocs = ALLOC_COUNT.load(Ordering::SeqCst);
 
     assert_eq!(
@@ -236,7 +240,7 @@ fn test_zero_allocations_m3_blocks_during_eval_and_update_discrete() {
 
 #[test]
 fn test_zero_allocations_during_mna_circuit_simulation_step() {
-    let _lock = TEST_LOCK.lock().unwrap();
+    let _lock = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     let mut diagram = BlockDiagram::new("AllocTestCircuit");
 
     diagram.add_block(Block::new("gnd", "GND", BlockType::Ground));
@@ -284,20 +288,25 @@ fn test_zero_allocations_during_mna_circuit_simulation_step() {
 
     // Warm-up step 1 (Backward Euler)
     solver.step(dt, dt, true).expect("first step");
+    // Warm-up step 2 (Trapezoidal) and signal query
+    solver.step(2.0 * dt, dt, false).expect("second step");
+    let _ = solver.branch_voltage("r1");
+    let _ = solver.branch_current("r1");
+    let _ = solver.node_voltage(1);
 
-    // Track allocations over 10,000 steps of Trapezoidal MNA stepping
+    // Track allocations over 10,000 steps of Trapezoidal MNA stepping on this thread
     ALLOC_COUNT.store(0, Ordering::SeqCst);
-    ALLOC_TRACKING_ACTIVE.store(true, Ordering::SeqCst);
+    TRACKING_ACTIVE.with(|t| t.set(true));
 
     for step_idx in 1..=10_000 {
-        let t = (step_idx as f64 + 1.0) * dt;
+        let t = (step_idx as f64 + 2.0) * dt;
         solver.step(t, dt, false).expect("mna step");
         let _ = solver.branch_voltage("r1");
         let _ = solver.branch_current("r1");
         let _ = solver.node_voltage(1);
     }
 
-    ALLOC_TRACKING_ACTIVE.store(false, Ordering::SeqCst);
+    TRACKING_ACTIVE.with(|t| t.set(false));
     let total_allocs = ALLOC_COUNT.load(Ordering::SeqCst);
 
     assert_eq!(

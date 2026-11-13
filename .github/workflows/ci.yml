@@ -210,7 +210,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        # ubuntu-latest moved to Ubuntu 26.04, where actions/setup-python no
+        # longer publishes Python 3.9 (only 22.04 and 24.04 are available).
+        # Pin the Python job to 24.04 so the 3.9 leg keeps running; the Rust
+        # build jobs stay on ubuntu-latest.
+        os: [ubuntu-24.04, windows-latest, macos-latest]
         python-version: ["3.9", "3.12"]
     steps:
       - uses: actions/checkout@v4

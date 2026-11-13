@@ -1931,9 +1931,9 @@ impl Interpreter {
         let mut func_env = self.env.child_for_function(name);
 
         // Bind fixed input arguments
-        for i in 0..fixed_inputs_len {
+        for (i, input_name) in def.inputs.iter().enumerate().take(fixed_inputs_len) {
             let val = args.get(i).cloned().unwrap_or_else(Value::empty);
-            func_env.set(&def.inputs[i], val);
+            func_env.set(input_name, val);
         }
 
         // Bind varargin if present
@@ -1974,8 +1974,7 @@ impl Interpreter {
         };
 
         let mut result_outputs = Vec::new();
-        for i in 0..fixed_outputs_len {
-            let out_name = &def.outputs[i];
+        for out_name in def.outputs.iter().take(fixed_outputs_len) {
             let val = func_env.get(out_name).unwrap_or_else(Value::empty);
             result_outputs.push(val);
         }

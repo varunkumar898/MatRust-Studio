@@ -1316,10 +1316,11 @@ mod tests {
             .toolbar_widgets
             .iter()
             .all(|widget| widget.max.x <= layout.toolbar.max.x + 2.0));
-        assert!(layout
-            .toolbar_widgets
-            .iter()
-            .all(|widget| widget.max.x <= layout.tab_body.max.x + 2.0),
+        assert!(
+            layout
+                .toolbar_widgets
+                .iter()
+                .all(|widget| widget.max.x <= layout.tab_body.max.x + 2.0),
             "tab body: {:?}; toolbar: {:?}; widgets: {:?}",
             layout.tab_body,
             layout.toolbar,

@@ -62,3 +62,35 @@ This document provides a structured handoff ledger between agent sessions, recor
 1. Await owner review and approval for Task H1 PR.
 2. Following merge, proceed with Wave 0 Task L1 (Layout audit - read-only) as governed by `docs/WORKPLAN.md`.
 3. Adhere strictly to Protocol P6 (one task per session).
+
+---
+
+## Session Handoff Entry: Wave 0 Task L1 - Layout Audit (Read-Only)
+
+- **Date:** 2026-11-14
+- **Branch:** `task/l1-layout-audit`
+- **Target PR Base:** `main` (commit `4950614`, PR #49)
+- **Session Focus:** Wave 0 Task L1 (Desktop layout audit against contracts C1–C12)
+
+### 1. Completed in This Session
+1. **Real-Window Captures at Supported Sizes**:
+   - `docs/screenshots/l1/desktop_900x600.png` (103,181 B, SHA-256 `AE97E3D11C508D147CD17B3661D930B50437444BBC95F56022ACADC9F4F6F560`)
+   - `docs/screenshots/l1/desktop_1280x800.png` (151,397 B, SHA-256 `FE1548E6061A159DAC40C631AE731AE455F6840A5215E7A641B108349091788F`)
+   - `docs/screenshots/l1/desktop_1920x1080.png` (207,773 B, SHA-256 `3F7C60D4FA23D14EC00BD3AD225B048D0D37A8A8C28FD841DECBFD1A83CDA836`)
+2. **Contracts C1–C12 Complete Table**:
+   - Updated `docs/layout-audit.md` with complete verdicts, concrete line references, and visual analysis across all three resolutions.
+   - Identified critical violations: C5 (HOME ribbon overflow without wrapping), C2 (unenforced panel minimum sizes in runtime dock), C6 (search box and help header clipping), C8 (inconsistent CWD state representation), C9 (bracket prefixes in tab titles), C10 (Figures empty-state clipping), C12 (unresponsive at 900×600).
+3. **Audit Ledgers & Session Records**:
+   - Updated `docs/STATE.md` with active Task L1 status.
+   - Preserved read-only contract: zero source code in `apps/**` or `crates/**` modified.
+
+### 2. Verified Baseline State
+- **Formatting:** `cargo fmt --all -- --check` passes cleanly.
+- **Documentation & Privacy Checks:** `python scripts/check_docs.py` passes (242 registered / 249 documented, 0 privacy leaks, 100% link resolution).
+- **Privacy Validator Test Suite:** `python scripts/test_check_docs.py` passes all 3 tests.
+- **Storage Budget Check:** All capture files individually <= 500 KB; total added footprint ~452 KB (well below 50 MB budget).
+
+### 3. Immediate Next Steps for Next Session
+1. Await owner review and approval for Task L1 PR.
+2. Following merge, proceed with Wave 0 Task L2 (Layout probe and contract checks) as governed by `docs/WORKPLAN.md`.
+3. Adhere strictly to Protocol P6 (one task per session).

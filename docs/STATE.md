@@ -1,8 +1,8 @@
 # MatRust Studio / RustLab Project State
 
-**Current branch:** `task/h1-hygiene-truth-audit`
+**Current branch:** `task/l1-layout-audit`
 **Repository:** `https://github.com/varunkumar898/MatRust-Studio.git`
-**Current commit:** `4f52800` (`docs(bootstrap): governance and workplan restoration baseline (#48)`)
+**Current commit:** `4950614` (`chore(governance): Wave 0 Task H1 repository hygiene and truth audit gate (#49)`)
 **Date:** 2026-11-14
 **Platform:** Windows 11 ARM64 (`aarch64-pc-windows-gnullvm`)
 **Local stable toolchain:** Rust 1.99.1
@@ -14,14 +14,21 @@
 - `scripts/verify.ps1` and `scripts/verify.sh` integrate `check_docs.py` as an automated gate.
 - `cargo fmt --all -- --check` passes cleanly.
 
-## Current work: Wave 0 Task H1: Repository Hygiene & Truth Audit
+## Current work: Wave 0 Task L1: Layout Audit (Read-Only)
 
-- **Branch `task/h1-hygiene-truth-audit`**: Automated repository hygiene baseline and truth audit.
-  - Zero personal paths or secrets across all tracked files (`scripts/check_docs.py` generic checks + untracked/env denylist).
-  - Test manifest synchronization: Verified `docs/test-manifest.txt` matches active workspace test count (599).
-  - Capability claims truth audit: Corrected stale test count in `README.md` (updated from 503 to 599).
-  - Verification harness gating: Integrated `scripts/check_docs.py` into both `scripts/verify.ps1` and `scripts/verify.sh`.
-  - Truth audit report: Recorded execution outputs and verification logs in `docs/audit/truth.md`.
+- **Branch `task/l1-layout-audit`**: Desktop layout contract audit against rules C1–C12.
+  - Executed real-window captures at the three supported sizes: 900×600, 1280×800, 1920×1080 via `scripts/capture-desktop-s1.ps1`.
+  - Recorded capture metadata, file sizes, and SHA-256 checksums in `docs/layout-audit.md`.
+  - Delivered comprehensive C1–C12 verdict table based on live capture evidence and static code review.
+  - Verified zero source code modified (read-only audit).
+
+## Previous work: Wave 0 Task H1: Repository Hygiene & Truth Audit
+
+- **Branch `task/h1-hygiene-truth-audit`** (Merged in PR #49, commit `4950614`):
+  - Zero personal paths or secrets across all tracked files.
+  - Test manifest synchronized with workspace count (599 named tests).
+  - Synchronized `README.md` test counter claim to 599.
+  - Integrated `scripts/check_docs.py` into `scripts/verify.ps1` (Step 10) and `scripts/verify.sh` (Step 7).
 
 ## Previous work: Milestones M11 & M12: C Code Generation & Workflow Polish
 

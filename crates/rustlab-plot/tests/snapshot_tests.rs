@@ -204,3 +204,220 @@ fn snapshot_subplot_empty_at_1280x800() {
     let _ax2 = fig.subplot(2, 1, 2); // empty subplot
     assert_snapshot("subplot_empty", &fig, 1280.0, 800.0);
 }
+
+#[test]
+fn test_independent_axes_properties_different_limits_and_scale() {
+    let mut fig = Figure::new(201);
+    fig.title = "Independent Axes Properties".to_string();
+
+    let ax1 = fig.subplot(1, 2, 1);
+    ax1.set_xlim(0.0, 10.0);
+    ax1.set_ylim(-5.0, 5.0);
+    ax1.set_xscale(rustlab_plot::Scale::Linear);
+    ax1.set_yscale(rustlab_plot::Scale::Linear);
+    ax1.set_xticks(vec![0.0, 5.0, 10.0]);
+    ax1.set_xticklabels(vec![
+        "start".to_string(),
+        "mid".to_string(),
+        "end".to_string(),
+    ]);
+    ax1.set_title("Linear Time Domain");
+    ax1.set_xlabel("Time (s)");
+    ax1.set_ylabel("Amplitude");
+    ax1.set_grid(true);
+    ax1.set_legend(rustlab_plot::LegendLocation::NorthEast);
+    ax1.push_series(Series::Line(Line::new(
+        "signal",
+        vec![0.0, 5.0, 10.0],
+        vec![0.0, 4.0, -2.0],
+    )));
+
+    let ax2 = fig.subplot(1, 2, 2);
+    ax2.set_xlim(1.0, 1000.0);
+    ax2.set_ylim(0.1, 100.0);
+    ax2.set_xscale(rustlab_plot::Scale::Log);
+    ax2.set_yscale(rustlab_plot::Scale::Log);
+    ax2.set_xticks(vec![1.0, 10.0, 100.0, 1000.0]);
+    ax2.set_xticklabels(vec!["1".into(), "10".into(), "100".into(), "1000".into()]);
+    ax2.set_title("Log Frequency Domain");
+    ax2.set_xlabel("Frequency (Hz)");
+    ax2.set_ylabel("Magnitude");
+    ax2.set_grid(false);
+    ax2.set_legend(rustlab_plot::LegendLocation::SouthWest);
+    ax2.push_series(Series::Line(Line::new(
+        "response",
+        vec![1.0, 10.0, 100.0, 1000.0],
+        vec![100.0, 10.0, 1.0, 0.1],
+    )));
+
+    // Verify distinct independent properties
+    let ax1_ref = fig.axes.iter().find(|a| a.id == 1).expect("ax1");
+    let ax2_ref = fig.axes.iter().find(|a| a.id == 2).expect("ax2");
+
+    assert_eq!(ax1_ref.xlim, Some([0.0, 10.0]));
+    assert_eq!(ax2_ref.xlim, Some([1.0, 1000.0]));
+    assert_eq!(ax1_ref.ylim, Some([-5.0, 5.0]));
+    assert_eq!(ax2_ref.ylim, Some([0.1, 100.0]));
+    assert_eq!(ax1_ref.xscale, rustlab_plot::Scale::Linear);
+    assert_eq!(ax2_ref.xscale, rustlab_plot::Scale::Log);
+    assert_eq!(ax1_ref.yscale, rustlab_plot::Scale::Linear);
+    assert_eq!(ax2_ref.yscale, rustlab_plot::Scale::Log);
+    assert!(ax1_ref.grid);
+    assert!(!ax2_ref.grid);
+    assert_eq!(ax1_ref.title, "Linear Time Domain");
+    assert_eq!(ax2_ref.title, "Log Frequency Domain");
+    assert_eq!(
+        ax1_ref.legend.as_ref().map(|l| l.location),
+        Some(rustlab_plot::LegendLocation::NorthEast)
+    );
+    assert_eq!(
+        ax2_ref.legend.as_ref().map(|l| l.location),
+        Some(rustlab_plot::LegendLocation::SouthWest)
+    );
+
+    let svg = to_svg(&fig, 800.0, 400.0);
+    assert!(svg.contains("Linear Time Domain"));
+    assert!(svg.contains("Log Frequency Domain"));
+    assert!(svg.contains("legend"));
+}
+
+#[test]
+fn test_axes_serialization_roundtrip_preserves_independent_state() {
+    let mut fig = Figure::new(202);
+    let ax1 = fig.subplot(1, 2, 1);
+    ax1.set_xlim(0.0, 50.0);
+    ax1.set_ylim(-1.0, 1.0);
+    ax1.set_xscale(rustlab_plot::Scale::Linear);
+    ax1.set_xticks(vec![0.0, 25.0, 50.0]);
+    ax1.set_xticklabels(vec!["A".into(), "B".into(), "C".into()]);
+    ax1.set_title("Plot A");
+    ax1.set_grid(true);
+
+    let ax2 = fig.subplot(1, 2, 2);
+    ax2.set_xlim(1.0, 100.0);
+    ax2.set_ylim(10.0, 1000.0);
+    ax2.set_xscale(rustlab_plot::Scale::Log);
+    ax2.set_yscale(rustlab_plot::Scale::Log);
+    ax2.set_title("Plot B");
+    ax2.set_grid(false);
+    ax2.set_legend(rustlab_plot::LegendLocation::NorthWest);
+
+    let serialized = serde_json::to_string(&fig).expect("serialize figure to JSON");
+    let deserialized: Figure =
+        serde_json::from_str(&serialized).expect("deserialize figure from JSON");
+
+    assert_eq!(fig, deserialized);
+
+    let d_ax1 = &deserialized.axes[0];
+    let d_ax2 = &deserialized.axes[1];
+
+    assert_eq!(d_ax1.xlim, Some([0.0, 50.0]));
+    assert_eq!(d_ax2.xlim, Some([1.0, 100.0]));
+    assert_eq!(d_ax1.xscale, rustlab_plot::Scale::Linear);
+    assert_eq!(d_ax2.xscale, rustlab_plot::Scale::Log);
+    assert!(d_ax1.grid);
+    assert!(!d_ax2.grid);
+    assert_eq!(d_ax1.title, "Plot A");
+    assert_eq!(d_ax2.title, "Plot B");
+    assert_eq!(
+        d_ax2.legend.as_ref().map(|l| l.location),
+        Some(rustlab_plot::LegendLocation::NorthWest)
+    );
+}
+
+#[test]
+fn test_axes_regression_no_crosstalk() {
+    let mut fig = Figure::new(203);
+    let _ax1 = fig.subplot(1, 2, 1);
+    let ax2 = fig.subplot(1, 2, 2);
+
+    // Baseline config for ax2
+    ax2.set_xlim(5.0, 15.0);
+    ax2.set_ylim(20.0, 30.0);
+    ax2.set_xscale(rustlab_plot::Scale::Linear);
+    ax2.set_grid(false);
+    ax2.set_title("Unchanged Subplot 2");
+    ax2.set_xlabel("X2");
+    ax2.set_ylabel("Y2");
+
+    let ax2_snapshot = fig.axes[1].clone();
+
+    // Now aggressively mutate ax1
+    let ax1 = &mut fig.axes[0];
+    ax1.set_xlim(-100.0, 100.0);
+    ax1.set_ylim(-200.0, 200.0);
+    ax1.set_xscale(rustlab_plot::Scale::Log);
+    ax1.set_yscale(rustlab_plot::Scale::Log);
+    ax1.set_xticks(vec![1.0, 10.0]);
+    ax1.set_xticklabels(vec!["one".into(), "ten".into()]);
+    ax1.set_yticks(vec![2.0, 20.0]);
+    ax1.set_yticklabels(vec!["two".into(), "twenty".into()]);
+    ax1.set_grid(true);
+    ax1.set_title("Mutated Subplot 1");
+    ax1.set_xlabel("Mutated X1");
+    ax1.set_ylabel("Mutated Y1");
+    ax1.set_legend(rustlab_plot::LegendLocation::SouthEast);
+    ax1.hold = true;
+
+    // Verify ax2 is completely untouched
+    assert_eq!(
+        fig.axes[1], ax2_snapshot,
+        "Mutations on ax1 caused crosstalk in ax2"
+    );
+
+    // Now aggressively mutate ax2
+    let ax1_snapshot = fig.axes[0].clone();
+    let ax2 = &mut fig.axes[1];
+    ax2.set_xlim(500.0, 1500.0);
+    ax2.set_title("Mutated Subplot 2");
+    ax2.set_legend(rustlab_plot::LegendLocation::NorthEast);
+
+    // Verify ax1 is completely untouched
+    assert_eq!(
+        fig.axes[0], ax1_snapshot,
+        "Mutations on ax2 caused crosstalk in ax1"
+    );
+}
+
+#[test]
+fn test_shared_axes_synchronization_and_unlinking() {
+    let mut fig = Figure::new(204);
+    let ax1 = fig.subplot(2, 1, 1);
+    ax1.push_series(Series::Line(Line::new(
+        "s1",
+        vec![0.0, 5.0],
+        vec![10.0, 20.0],
+    )));
+
+    let ax2 = fig.subplot(2, 1, 2);
+    ax2.push_series(Series::Line(Line::new(
+        "s2",
+        vec![2.0, 10.0],
+        vec![5.0, 15.0],
+    )));
+
+    // Link X axes across subplots
+    fig.link_axes(&[1, 2], "x");
+    assert_eq!(fig.axes[0].shared_x_with, Some(1));
+    assert_eq!(fig.axes[1].shared_x_with, Some(1));
+
+    // Both subplots render without error and synchronize
+    let svg = to_svg(&fig, 600.0, 600.0);
+    assert!(svg.contains(r#"id="axes-1""#));
+    assert!(svg.contains(r#"id="axes-2""#));
+
+    // Unlink axes
+    fig.unlink_axes(&[1, 2]);
+    assert_eq!(fig.axes[0].shared_x_with, None);
+    assert_eq!(fig.axes[1].shared_x_with, None);
+
+    // Direct axes linking helper test
+    fig.axes[1].link_x_with(1);
+    fig.axes[1].link_y_with(1);
+    assert_eq!(fig.axes[1].shared_x_with, Some(1));
+    assert_eq!(fig.axes[1].shared_y_with, Some(1));
+
+    fig.axes[1].unlink();
+    assert_eq!(fig.axes[1].shared_x_with, None);
+    assert_eq!(fig.axes[1].shared_y_with, None);
+}

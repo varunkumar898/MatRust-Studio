@@ -188,6 +188,8 @@ test_array_growth_on_assignment: test
 test_autotest_headless_e2e_with_plot_and_label_mutation: test
 test_autotest_script_json_deserialization: test
 test_axes_model_plotting_and_svg_export: test
+test_axes_regression_no_crosstalk: test
+test_axes_serialization_roundtrip_preserves_independent_state: test
 test_b2_corrcoef_diagonal_one_property: test
 test_b2_cov_and_corrcoef: test
 test_b2_cov_and_corrcoef_edge_cases: test
@@ -389,6 +391,7 @@ test_ieee754_nan_inf_semantics: test
 test_if_elseif_else: test
 test_image_processing_rgb2gray_and_filters: test
 test_incomplete_input_detection: test
+test_independent_axes_properties_different_limits_and_scale: test
 test_indexing_and_end: test
 test_indexing_with_end: test
 test_inspect_mlapp_structure: test
@@ -533,6 +536,7 @@ test_session_command_window_disp: test
 test_session_csv_import: test
 test_session_plotting_builtins_and_state: test
 test_shape_and_inspection: test
+test_shared_axes_synchronization_and_unlinking: test
 test_signal_and_fft: test
 test_signal_filters_windows_and_xcorr: test
 test_simulate_diagram_with_electrical_blocks_gives_e_unsupported: test

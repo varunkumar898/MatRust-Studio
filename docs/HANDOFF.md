@@ -181,6 +181,52 @@ This document provides a structured handoff ledger between agent sessions, recor
 
 ### 3. Immediate Next Steps for Next Session
 1. Await owner review and approval for Task L3 PR.
-2. Following merge, proceed with Wave 0 Task L4 (Toolstrip overflow menu & ribbon layout contract) as governed by `docs/WORKPLAN.md`.
+2. Following merge, proceed with Wave 0 Task L4 (Layout regression gate) as governed by `docs/WORKPLAN.md`.
 3. Adhere strictly to Protocol P6 (one task per session).
+
+---
+
+## Session Handoff Entry: Wave 0 Task L4 - Layout Regression Gate (Auto)
+
+- **Date:** 2026-11-14
+- **Branch:** `task/l4-layout-regression-gate`
+- **Target PR Base:** `main` (commit `fe235b4`, PR #52)
+- **Session Focus:** Wave 0 Task L4 (Layout regression gate, canonical snapshot storage, unapproved regression prevention)
+
+### 1. Completed in This Session
+1. **Canonical Layout Snapshot Manifest**:
+   - `docs/snapshots/layout-geometry.json`: Recorded canonical baseline geometry (all panel rect coordinates, minimum dimensions, containment bounds, and zero-overlap guarantees) for supported sizes: 900×600, 1280×800, and 1920×1080.
+2. **Snapshot Infrastructure & Verification Logic**:
+   - `apps/desktop/src/layout_contract.rs`:
+     - Added `PanelSnapshot`, `ResolutionSnapshot`, and `LayoutSnapshotManifest` with Serde derive.
+     - Implemented `build_current_layout_snapshot` extracting live dock panel rects.
+     - Implemented `verify_snapshot_integrity` asserting per-panel minimum floors and boundary containment.
+     - Implemented `compare_snapshots` detecting geometric rect drift against stored canonical snapshots.
+3. **Automated Unit & Regression Tests**:
+   - Added 3 new tests in `layout_contract::tests` (+3 net tests, bringing workspace total from 605 to 608):
+     - `layout_snapshot_matches_canonical_and_satisfies_minimums`: Verifies live layout matches `docs/snapshots/layout-geometry.json` within 0.5px tolerance and satisfies all minimum floors (supports `UPDATE_LAYOUT_SNAPSHOTS=1` regeneration).
+     - `layout_snapshot_negative_test_fails_when_panel_leaves_minimum_rect`: Proves check fails deterministically when a panel leaves its declared minimum rect.
+     - `layout_snapshot_negative_test_detects_geometry_drift`: Proves check fails on unauthorized geometric rect drift.
+4. **Automated Layout Regression Gate Checker**:
+   - Added `scripts/check_layout_gate.py` with `--self-test` coverage.
+   - Enforces snapshot integrity and guards against unapproved snapshot modifications without an explicit `[layout-approved]` commit rationale or `approved_reason`.
+5. **CI & Verification Harnesses Integration**:
+   - `.github/workflows/ci.yml`: Added `Layout Regression Gate (Wave 0 Task L4)` running on every pull request.
+   - `scripts/verify.ps1`: Step 11 runs `python scripts/check_layout_gate.py`.
+   - `scripts/verify.sh`: Step 8 runs `check_layout_gate.py`.
+6. **Manifest & Accounting Synchronization**:
+   - Synchronized `docs/test-manifest.txt` to 608 tests.
+   - Synchronized `README.md` test counter claim to 608 tests.
+   - Updated `docs/audit/truth.md` and `docs/STATE.md`.
+
+### 2. Verified Baseline State
+- **Formatting:** `cargo fmt --all -- --check` passes cleanly.
+- **Documentation & Privacy Checks:** `python scripts/check_docs.py` passes (242 registered / 249 documented, 0 privacy leaks, 100% link resolution).
+- **Layout Gate Checks:** `python scripts/check_layout_gate.py --self-test` and `python scripts/check_layout_gate.py` pass.
+- **Test Suite Verification:** 608/608 named tests in workspace match `docs/test-manifest.txt`.
+- **Desktop Test Suite:** All 107 desktop tests pass cleanly (18 layout contract tests, 50 unit tests, 28 desktop integration tests, 13 editor tests, 10 clean GUI tests, 3 current folder tests).
+
+### 3. Immediate Next Steps for Next Session
+1. Await owner review and approval for Task L4 PR.
+2. Following merge of Task L4 (completing Wave 0: Hygiene and Layout Foundations: H1, L1, L2, L3, L4), proceed to **Wave 1: Plotting and Visualization (Task P1: Subplot rendering)** as governed by `docs/WORKPLAN.md`.
 3. Adhere strictly to Protocol P6 (one task per session).

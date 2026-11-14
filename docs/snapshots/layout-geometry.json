@@ -1,0 +1,211 @@
+{
+  "version": 1,
+  "schema": "matrust-layout-snapshot-v1",
+  "approved_reason": "Wave 0 Task L4 canonical baseline for supported sizes (900x600, 1280x800, 1920x1080)",
+  "resolutions": [
+    {
+      "resolution": [
+        900.0,
+        600.0
+      ],
+      "dock_rect": [
+        0.0,
+        115.0,
+        900.0,
+        460.0
+      ],
+      "panels": [
+        {
+          "panel_id": "CurrentFolder",
+          "min_x": 0.0,
+          "min_y": 115.0,
+          "width": 220.0,
+          "height": 264.0,
+          "min_width_required": 220.0,
+          "min_height_required": 160.0
+        },
+        {
+          "panel_id": "Workspace",
+          "min_x": 0.0,
+          "min_y": 384.0,
+          "width": 220.0,
+          "height": 191.0,
+          "min_width_required": 220.0,
+          "min_height_required": 140.0
+        },
+        {
+          "panel_id": "Editor",
+          "min_x": 225.0,
+          "min_y": 115.0,
+          "width": 390.0,
+          "height": 295.0,
+          "min_width_required": 360.0,
+          "min_height_required": 240.0
+        },
+        {
+          "panel_id": "CommandWindow",
+          "min_x": 225.0,
+          "min_y": 415.0,
+          "width": 390.0,
+          "height": 160.0,
+          "min_width_required": 360.0,
+          "min_height_required": 160.0
+        },
+        {
+          "panel_id": "Help",
+          "min_x": 620.0,
+          "min_y": 115.0,
+          "width": 280.0,
+          "height": 250.0,
+          "min_width_required": 280.0,
+          "min_height_required": 200.0
+        },
+        {
+          "panel_id": "Figures",
+          "min_x": 620.0,
+          "min_y": 370.0,
+          "width": 280.0,
+          "height": 205.0,
+          "min_width_required": 280.0,
+          "min_height_required": 200.0
+        }
+      ]
+    },
+    {
+      "resolution": [
+        1280.0,
+        800.0
+      ],
+      "dock_rect": [
+        0.0,
+        115.0,
+        1280.0,
+        660.0
+      ],
+      "panels": [
+        {
+          "panel_id": "CurrentFolder",
+          "min_x": 0.0,
+          "min_y": 115.0,
+          "width": 255.0,
+          "height": 380.0,
+          "min_width_required": 220.0,
+          "min_height_required": 160.0
+        },
+        {
+          "panel_id": "Workspace",
+          "min_x": 0.0,
+          "min_y": 500.0,
+          "width": 255.0,
+          "height": 275.0,
+          "min_width_required": 220.0,
+          "min_height_required": 140.0
+        },
+        {
+          "panel_id": "Editor",
+          "min_x": 260.0,
+          "min_y": 115.0,
+          "width": 731.0,
+          "height": 432.0,
+          "min_width_required": 360.0,
+          "min_height_required": 240.0
+        },
+        {
+          "panel_id": "CommandWindow",
+          "min_x": 260.0,
+          "min_y": 552.0,
+          "width": 731.0,
+          "height": 223.0,
+          "min_width_required": 360.0,
+          "min_height_required": 160.0
+        },
+        {
+          "panel_id": "Help",
+          "min_x": 996.0,
+          "min_y": 115.0,
+          "width": 284.0,
+          "height": 360.0,
+          "min_width_required": 280.0,
+          "min_height_required": 200.0
+        },
+        {
+          "panel_id": "Figures",
+          "min_x": 996.0,
+          "min_y": 480.0,
+          "width": 284.0,
+          "height": 295.0,
+          "min_width_required": 280.0,
+          "min_height_required": 200.0
+        }
+      ]
+    },
+    {
+      "resolution": [
+        1920.0,
+        1080.0
+      ],
+      "dock_rect": [
+        0.0,
+        115.0,
+        1920.0,
+        940.0
+      ],
+      "panels": [
+        {
+          "panel_id": "CurrentFolder",
+          "min_x": 0.0,
+          "min_y": 115.0,
+          "width": 383.0,
+          "height": 542.0,
+          "min_width_required": 220.0,
+          "min_height_required": 160.0
+        },
+        {
+          "panel_id": "Workspace",
+          "min_x": 0.0,
+          "min_y": 662.0,
+          "width": 383.0,
+          "height": 393.0,
+          "min_width_required": 220.0,
+          "min_height_required": 140.0
+        },
+        {
+          "panel_id": "Editor",
+          "min_x": 388.0,
+          "min_y": 115.0,
+          "width": 1099.0,
+          "height": 617.0,
+          "min_width_required": 360.0,
+          "min_height_required": 240.0
+        },
+        {
+          "panel_id": "CommandWindow",
+          "min_x": 388.0,
+          "min_y": 737.0,
+          "width": 1099.0,
+          "height": 318.0,
+          "min_width_required": 360.0,
+          "min_height_required": 160.0
+        },
+        {
+          "panel_id": "Help",
+          "min_x": 1492.0,
+          "min_y": 115.0,
+          "width": 428.0,
+          "height": 514.0,
+          "min_width_required": 280.0,
+          "min_height_required": 200.0
+        },
+        {
+          "panel_id": "Figures",
+          "min_x": 1492.0,
+          "min_y": 634.0,
+          "width": 428.0,
+          "height": 421.0,
+          "min_width_required": 280.0,
+          "min_height_required": 200.0
+        }
+      ]
+    }
+  ]
+}

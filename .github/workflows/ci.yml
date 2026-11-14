@@ -99,6 +99,12 @@ jobs:
           fi
         shell: bash
 
+      - name: Layout Regression Gate (Wave 0 Task L4)
+        run: |
+          python3 scripts/check_layout_gate.py
+          cargo test -p matrust_studio --lib layout_contract::tests::layout_snapshot
+        shell: bash
+
       - name: Upload Test Logs Artifact
         if: always()
         uses: actions/upload-artifact@v4

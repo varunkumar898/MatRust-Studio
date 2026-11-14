@@ -45,6 +45,9 @@ layout_contract::tests::c2_minimum_table_has_no_duplicate_panels: test
 layout_contract::tests::c2_panel_minimum_lookup_is_exact: test
 layout_contract::tests::check_layout_full_aggregates_both_controls_and_panels: test
 layout_contract::tests::check_layout_reports_only_out_of_clip_probes: test
+layout_contract::tests::layout_snapshot_matches_canonical_and_satisfies_minimums: test
+layout_contract::tests::layout_snapshot_negative_test_detects_geometry_drift: test
+layout_contract::tests::layout_snapshot_negative_test_fails_when_panel_leaves_minimum_rect: test
 layout_contract::tests::lc_size_sweep_exercises_supported_sizes: test
 layout_contract::tests::le_mutation_check_detects_all_quadrant_shifts: test
 layout_contract::tests::three_size_geometry_panels_satisfy_bounds_and_no_overlaps: test

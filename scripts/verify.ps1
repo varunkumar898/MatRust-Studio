@@ -78,7 +78,14 @@ if ($LASTEXITCODE -ne 0) {
     exit 1
 }
 
-Write-Host "=== 11. Checking that tests left the working tree clean ==="
+Write-Host "=== 11. Checking layout regression gate (Wave 0 Task L4) ==="
+python scripts/check_layout_gate.py
+if ($LASTEXITCODE -ne 0) {
+    Write-Error "Layout regression gate check failed!"
+    exit 1
+}
+
+Write-Host "=== 12. Checking that tests left the working tree clean ==="
 # Tests must never write inside the repository. Any modification to a tracked
 # file, or a stray untracked artifact outside the approved output directories,
 # fails the run. Untracked verify/screenshot/bench/example outputs are expected

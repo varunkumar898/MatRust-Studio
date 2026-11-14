@@ -22,4 +22,13 @@ cargo test --workspace --all-features
 echo "=== 6. Running tests (no default features) ==="
 cargo test --workspace --no-default-features
 
+echo "=== 7. Checking documentation, privacy, and link integrity ==="
+if command -v python3 >/dev/null 2>&1; then
+    python3 scripts/check_docs.py
+elif command -v python >/dev/null 2>&1; then
+    python scripts/check_docs.py
+else
+    echo "Warning: Python not found, skipping check_docs.py" >&2
+fi
+
 echo "=== All verification steps passed successfully! ==="

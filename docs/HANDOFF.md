@@ -30,3 +30,35 @@ This document provides a structured handoff ledger between agent sessions, recor
 1. Await owner command to merge PR for `docs/a2-bootstrap`.
 2. Following merge, initiate Wave 0 / Planning Task `PLAN-F1` as governed by `docs/WORKPLAN.md`.
 3. Adhere strictly to Protocol P6 (one task per session).
+
+---
+
+## Session Handoff Entry: Wave 0 Task H1 - Repository Hygiene & Truth Audit
+
+- **Date:** 2026-11-14
+- **Branch:** `task/h1-hygiene-truth-audit`
+- **Target PR Base:** `main` (commit `4f52800`, PR #48)
+- **Session Focus:** Wave 0 Task H1 (Automated repository hygiene and truth audit)
+
+### 1. Completed in This Session
+1. **Verification Harness Gating**:
+   - `scripts/verify.ps1`: Added Step 10 executing `python scripts/check_docs.py` to gate documentation coverage, privacy hygiene, and link integrity before workspace cleanliness checks.
+   - `scripts/verify.sh`: Added Step 7 executing `check_docs.py` across Linux/macOS environments via `python3` or `python`.
+2. **Capability Claim Truth Audit**:
+   - Synchronized `README.md` test count claim from 503 to active verified count of 599.
+3. **Master Test Manifest Audit**:
+   - Audited `docs/test-manifest.txt` against `cargo test --workspace -- --list`; exact 1:1 match verified (599 named tests).
+4. **Audit Ledgers & Documentation Update**:
+   - Updated `docs/audit/truth.md` with execution evidence and verification gate mappings.
+   - Updated `docs/STATE.md` with active Task H1 status and branch details.
+
+### 2. Verified Baseline State
+- **Formatting:** `cargo fmt --all -- --check` passes cleanly.
+- **Documentation & Privacy Checks:** `python scripts/check_docs.py` passes (242 registered / 249 documented, 0 privacy leaks, 100% link resolution).
+- **Privacy Validator Test Suite:** `python scripts/test_check_docs.py` passes all 3 tests.
+- **Test Suite Verification:** 599 named tests in workspace match 599 entries in `docs/test-manifest.txt`.
+
+### 3. Immediate Next Steps for Next Session
+1. Await owner review and approval for Task H1 PR.
+2. Following merge, proceed with Wave 0 Task L1 (Layout audit - read-only) as governed by `docs/WORKPLAN.md`.
+3. Adhere strictly to Protocol P6 (one task per session).

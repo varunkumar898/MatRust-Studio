@@ -1,19 +1,29 @@
 # MatRust Studio / RustLab Project State
 
-**Current branch:** `main` (All Milestones M0 through M12 Completed and Merged)
+**Current branch:** `task/h1-hygiene-truth-audit`
 **Repository:** `https://github.com/varunkumar898/MatRust-Studio.git`
-**Current commit:** `ccbf804` (`feat(sim): Milestones M11 & M12 - C Code Generation and Workflow Polish (#42)`)
-**Date:** 2026-11-08
+**Current commit:** `4f52800` (`docs(bootstrap): governance and workplan restoration baseline (#48)`)
+**Date:** 2026-11-14
 **Platform:** Windows 11 ARM64 (`aarch64-pc-windows-gnullvm`)
 **Local stable toolchain:** Rust 1.99.1
 **Declared MSRV:** Rust 1.88.0
 **Verification status:** 
-- Local default, all-features, and no-default-features test runs pass at **599/599/599** (net +9 tests in M11 & M12).
-- Local clippy (all-features, no-default-features, per-crate no-default-features) passes with 0 warnings.
+- Local default, all-features, and no-default-features test runs pass at **599/599/599**.
+- Master test manifest `docs/test-manifest.txt` exactly matches `cargo test --workspace -- --list` (599 named tests).
+- `scripts/check_docs.py` verifies 0 privacy path leaks, 100% link resolution, and 242/249 builtin documentation coverage.
+- `scripts/verify.ps1` and `scripts/verify.sh` integrate `check_docs.py` as an automated gate.
 - `cargo fmt --all -- --check` passes cleanly.
-- `scripts/verify.ps1` runs and exits 0 with all verification steps passing.
 
-## Current work: Milestones M11 & M12: C Code Generation & Workflow Polish
+## Current work: Wave 0 Task H1: Repository Hygiene & Truth Audit
+
+- **Branch `task/h1-hygiene-truth-audit`**: Automated repository hygiene baseline and truth audit.
+  - Zero personal paths or secrets across all tracked files (`scripts/check_docs.py` generic checks + untracked/env denylist).
+  - Test manifest synchronization: Verified `docs/test-manifest.txt` matches active workspace test count (599).
+  - Capability claims truth audit: Corrected stale test count in `README.md` (updated from 503 to 599).
+  - Verification harness gating: Integrated `scripts/check_docs.py` into both `scripts/verify.ps1` and `scripts/verify.sh`.
+  - Truth audit report: Recorded execution outputs and verification logs in `docs/audit/truth.md`.
+
+## Previous work: Milestones M11 & M12: C Code Generation & Workflow Polish
 
 - **Branch `feat/m11-m12-codegen-workflow`**: Implements ISO C99 allocation-free code generation, MNA linear solver in C, parameter sweep engine, multi-level undo/redo, simulation cancellation, and release notes.
 - **Milestone M11 (ISO C99 Code Generation)**:

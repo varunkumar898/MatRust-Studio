@@ -71,7 +71,14 @@ foreach ($t in $required_faer_tests) {
 }
 Write-Host "Per-crate feature gate check passed: all feature-gated tests correctly gated."
 
-Write-Host "=== 10. Checking that tests left the working tree clean ==="
+Write-Host "=== 10. Checking documentation, privacy, and link integrity ==="
+python scripts/check_docs.py
+if ($LASTEXITCODE -ne 0) {
+    Write-Error "Documentation & path hygiene checks failed!"
+    exit 1
+}
+
+Write-Host "=== 11. Checking that tests left the working tree clean ==="
 # Tests must never write inside the repository. Any modification to a tracked
 # file, or a stray untracked artifact outside the approved output directories,
 # fails the run. Untracked verify/screenshot/bench/example outputs are expected

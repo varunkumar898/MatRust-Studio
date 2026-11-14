@@ -2,7 +2,7 @@
 
 **Audit Date:** 2026-11-14  
 **Auditor:** Antigravity AI Agent  
-**Branch:** `docs/a2-bootstrap` (Commit: `5f3caa5`)  
+**Branch:** `task/h1-hygiene-truth-audit` (Base: `4f52800`)  
 **Status:** PASSED  
 
 ---
@@ -75,3 +75,12 @@ All public capabilities asserted in `README.md` are cross-referenced and substan
 1. `docs/CLAIMS.md`: Concrete milestone delivered proofs (M1 through M12).
 2. `docs/FEATURE-REGISTRY.md`: Exact implementation source files and proving tests.
 3. Interactive desktop editor status is correctly qualified as `GUI: unverified`.
+4. `README.md` test counter was synchronized to reflect active verified test count: 599.
+
+---
+
+## 5. Automated Verification Gates Integration
+
+Task H1 integrated `scripts/check_docs.py` directly into the automated verification harnesses:
+- `scripts/verify.ps1`: Step 10 runs `python scripts/check_docs.py` before working tree cleanliness check.
+- `scripts/verify.sh`: Step 7 runs `check_docs.py` via `python3` or `python`.

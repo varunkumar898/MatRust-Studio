@@ -94,3 +94,48 @@ This document provides a structured handoff ledger between agent sessions, recor
 1. Await owner review and approval for Task L1 PR.
 2. Following merge, proceed with Wave 0 Task L2 (Layout probe and contract checks) as governed by `docs/WORKPLAN.md`.
 3. Adhere strictly to Protocol P6 (one task per session).
+
+---
+
+## Session Handoff Entry: Wave 0 Task L2 - Layout Probe & Contract Checks
+
+- **Date:** 2026-11-14
+- **Branch:** `task/l2-layout-probe-checks`
+- **Target PR Base:** `main` (commit `6793ca1`, PR #50)
+- **Session Focus:** Wave 0 Task L2 (Read-only layout probe and automated contract checks)
+
+### 1. Completed in This Session
+1. **Layout Probe & Contract Checking Infrastructure**:
+   - `apps/desktop/src/layout_contract.rs`:
+     - `LayoutProbe`: Lightweight rect ownership probe tracking panel ID, control ID, control rect, and authoritative clip rect.
+     - `check_layout` & `check_layout_full`: Aggregated invariant checker returning structured `LayoutReport`.
+     - `PanelClip`: C1 container check enforcing panel body clip intersection to prevent child paint bleed.
+     - `PANEL_MIN`: Centralized minimum panel dimensions table for 7 core panels (`panel_min` lookup).
+     - `check_mutation`: L-E mutation checker proving perturbation across all 4 quadrants ($+x, -x, +y, -y$) fails deterministically.
+     - `run_size_sweep` & `generate_capture_report`: L-C size sweep evaluating dock layout across resolutions.
+2. **Pure Dock Rect Geometry Extraction**:
+   - `apps/desktop/src/dock.rs`: Added read-only `DockNode::collect_leaf_rects` and `DockTree::collect_panel_rects` for headless geometry evaluation without UI mutation.
+3. **Automated Unit & Contract Test Suite**:
+   - Added 5 new tests in `layout_contract::tests` (+5 net tests, bringing workspace total from 599 to 604):
+     - `c2_all_panel_min_table_rows_exercised_below_threshold`: Exercises every row in `PANEL_MIN` with under-sized rects (proves V4 detection).
+     - `c2_all_panel_min_table_rows_exercised_at_or_above_threshold`: Exercises every row in `PANEL_MIN` at/above threshold (proves clean pass).
+     - `le_mutation_check_detects_all_quadrant_shifts`: Exercises L-E mutation checks in $+x, -x, +y, -y$.
+     - `lc_size_sweep_exercises_supported_sizes`: Evaluates 900×600, 1280×800, and 1920×1080 against standard dock tree.
+     - `check_layout_full_aggregates_both_controls_and_panels`: Verifies dual-mode aggregation.
+4. **Manifest and Documentation Synchronization**:
+   - Synchronized `docs/test-manifest.txt` to 604 tests (1:1 match with `cargo test --workspace -- --list`).
+   - Synchronized `README.md` test counter claim to 604 tests.
+   - Updated `docs/audit/truth.md` and `docs/STATE.md`.
+5. **Findings Only / No Panel Fixes**:
+   - Strict adherence to task boundary: zero panel layout fixes implemented (reserved for Task L3).
+
+### 2. Verified Baseline State
+- **Formatting:** `cargo fmt --all -- --check` passes cleanly.
+- **Documentation & Privacy Checks:** `python scripts/check_docs.py` passes (242 registered / 249 documented, 0 privacy leaks, 100% link resolution).
+- **Test Suite Verification:** 604/604 named tests in workspace match `docs/test-manifest.txt`.
+- **All 14 Layout Contract Tests Pass Cleanly.**
+
+### 3. Immediate Next Steps for Next Session
+1. Await owner review and approval for Task L2 PR.
+2. Following merge, proceed with Wave 0 Task L3 (Responsive layout fixes) as governed by `docs/WORKPLAN.md`.
+3. Adhere strictly to Protocol P6 (one task per session).

@@ -63,9 +63,9 @@ Scanned for removed personal alias and absolute workstation path literals:
 
 ## 3. Test Accounting Audit
 
-- **Master Test Manifest (`docs/test-manifest.txt`):** 599 named tests.
-- **Baseline Verification:** 599/599/599 passing across default, all-features, and no-default-features configurations (verified in `docs/STATE.md`).
-- **Monotonicity:** Zero tests removed; manifest matches active test suite.
+- **Master Test Manifest (`docs/test-manifest.txt`):** 604 named tests (+5 net layout probe tests in Task L2).
+- **Baseline Verification:** 604/604/604 passing across default, all-features, and no-default-features configurations (verified in `docs/STATE.md`).
+- **Monotonicity:** Zero tests removed; manifest strictly matches active workspace test suite.
 
 ---
 
@@ -75,7 +75,7 @@ All public capabilities asserted in `README.md` are cross-referenced and substan
 1. `docs/CLAIMS.md`: Concrete milestone delivered proofs (M1 through M12).
 2. `docs/FEATURE-REGISTRY.md`: Exact implementation source files and proving tests.
 3. Interactive desktop editor status is correctly qualified as `GUI: unverified`.
-4. `README.md` test counter was synchronized to reflect active verified test count: 599.
+4. `README.md` test counter was synchronized to reflect active verified test count: 604.
 
 ---
 

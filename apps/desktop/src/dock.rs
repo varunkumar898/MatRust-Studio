@@ -147,6 +147,57 @@ impl DockNode {
         }
     }
 
+    /// Read-only calculation of leaf panel rects without UI rendering.
+    pub fn collect_leaf_rects(&self, rect: Rect) -> Vec<(PanelId, Rect)> {
+        let mut out = Vec::new();
+        Self::collect_leaf_rects_rec(self, rect, &mut out);
+        out
+    }
+
+    fn collect_leaf_rects_rec(node: &DockNode, rect: Rect, out: &mut Vec<(PanelId, Rect)>) {
+        match node {
+            DockNode::Leaf { tabs, active_tab } => {
+                if let Some(&panel) = tabs.get(*active_tab) {
+                    out.push((panel, rect));
+                }
+            }
+            DockNode::Split {
+                orientation,
+                fraction,
+                left_or_top,
+                right_or_bottom,
+            } => {
+                let divider_size = 5.0_f32;
+                match orientation {
+                    SplitOrientation::Horizontal => {
+                        let total_w = (rect.width() - divider_size).max(10.0);
+                        let w_left = (total_w * *fraction).round();
+                        let w_right = total_w - w_left;
+                        let r_left = Rect::from_min_size(rect.min, vec2(w_left, rect.height()));
+                        let r_right = Rect::from_min_size(
+                            Pos2::new(rect.min.x + w_left + divider_size, rect.min.y),
+                            vec2(w_right, rect.height()),
+                        );
+                        Self::collect_leaf_rects_rec(left_or_top, r_left, out);
+                        Self::collect_leaf_rects_rec(right_or_bottom, r_right, out);
+                    }
+                    SplitOrientation::Vertical => {
+                        let total_h = (rect.height() - divider_size).max(10.0);
+                        let h_top = (total_h * *fraction).round();
+                        let h_bottom = total_h - h_top;
+                        let r_top = Rect::from_min_size(rect.min, vec2(rect.width(), h_top));
+                        let r_bottom = Rect::from_min_size(
+                            Pos2::new(rect.min.x, rect.min.y + h_top + divider_size),
+                            vec2(rect.width(), h_bottom),
+                        );
+                        Self::collect_leaf_rects_rec(left_or_top, r_top, out);
+                        Self::collect_leaf_rects_rec(right_or_bottom, r_bottom, out);
+                    }
+                }
+            }
+        }
+    }
+
     pub fn prune_empty(&mut self) -> bool {
         match self {
             DockNode::Leaf { tabs, .. } => tabs.is_empty(),
@@ -301,6 +352,11 @@ impl DockTree {
     /// Checks if a panel is currently present in the tree.
     pub fn is_open(&self, panel: PanelId) -> bool {
         self.root.contains_panel(panel)
+    }
+
+    /// Read-only collection of panel bounding rects across the tree.
+    pub fn collect_panel_rects(&self, rect: Rect) -> Vec<(PanelId, Rect)> {
+        self.root.collect_leaf_rects(rect)
     }
 
     /// Opens a panel if not present, or brings its tab to focus if already present.

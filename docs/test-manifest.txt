@@ -39,9 +39,14 @@ current_folder::tests::tree_totals_count_visible_entries_and_invalidate_on_new_f
 current_folder::tests::tree_totals_respect_hidden_toggle_and_expand_state_resets: test
 every_registered_builtin_has_docs_and_help: test
 layout_contract::tests::c1_panel_clip_owns_child_probes: test
+layout_contract::tests::c2_all_panel_min_table_rows_exercised_at_or_above_threshold: test
+layout_contract::tests::c2_all_panel_min_table_rows_exercised_below_threshold: test
 layout_contract::tests::c2_minimum_table_has_no_duplicate_panels: test
 layout_contract::tests::c2_panel_minimum_lookup_is_exact: test
+layout_contract::tests::check_layout_full_aggregates_both_controls_and_panels: test
 layout_contract::tests::check_layout_reports_only_out_of_clip_probes: test
+layout_contract::tests::lc_size_sweep_exercises_supported_sizes: test
+layout_contract::tests::le_mutation_check_detects_all_quadrant_shifts: test
 layout_contract::tests::v1_fails_when_control_outside_clip: test
 layout_contract::tests::v1_passes_when_control_inside_clip: test
 layout_contract::tests::v4_editor_at_minimum_is_clean: test

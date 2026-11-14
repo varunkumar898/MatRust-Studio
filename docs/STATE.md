@@ -8,8 +8,8 @@
 **Local stable toolchain:** Rust 1.99.1
 **Declared MSRV:** Rust 1.88.0
 **Verification status:** 
-- Local default, all-features, and no-default-features test runs pass at **613/613/613** (net +5 snapshot tests and +2 subplot unit tests in Task P1).
-- Master test manifest `docs/test-manifest.txt` exactly matches `cargo test --workspace -- --list` (613 named tests).
+- Local default, all-features, and no-default-features test runs pass at **615/615/615** (net +5 snapshot tests and +2 subplot unit tests in Task P1).
+- Master test manifest `docs/test-manifest.txt` exactly matches `cargo test --workspace -- --list` (615 named tests).
 - `scripts/check_docs.py` verifies 0 privacy path leaks, 100% link resolution, and 242/249 builtin documentation coverage.
 - `scripts/check_layout_gate.py` verifies canonical snapshot integrity, minimum panel bounds, and approval tracking.
 - `scripts/verify.ps1` and `scripts/verify.sh` integrate `check_docs.py` and `check_layout_gate.py` as automated gates.

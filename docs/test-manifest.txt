@@ -158,6 +158,7 @@ test_a3_find_variants_and_short_circuit: test
 test_a3_integer_types_and_saturating_arithmetic: test
 test_a3_logical_mask_assignment_errors: test
 test_a3_mixed_type_rules_and_errors: test
+test_a3_mixed_type_rules_and_errors: test
 test_a3_nd_deletion_3d_and_growth: test
 test_a3_nd_operations_cat_permute_meshgrid_reshape: test
 test_a3_nd_reductions_and_integer_preservation: test
@@ -182,6 +183,7 @@ test_anonymous_function: test
 test_app_host_session_lifecycle: test
 test_app_runtime_lifecycle_and_mutations: test
 test_array_generators: test
+test_array_growth_on_assignment: test
 test_array_growth_on_assignment: test
 test_autotest_headless_e2e_with_plot_and_label_mutation: test
 test_autotest_script_json_deserialization: test

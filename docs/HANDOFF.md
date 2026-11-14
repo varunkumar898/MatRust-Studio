@@ -272,8 +272,8 @@ This document provides a structured handoff ledger between agent sessions, recor
      - `snapshot_subplot_empty_at_1280x800`: 2x1 subplot snapshot with second subplot empty.
    - Committed 5 golden reference SVG files to `crates/rustlab-plot/tests/snapshots/`.
 5. **Accounting & Verification Synchronization**:
-   - Synchronized `docs/test-manifest.txt` to 613 tests (+7 net tests).
-   - Synchronized `README.md` test counter claim to 613 tests.
+   - Synchronized `docs/test-manifest.txt` to 615 tests (+7 net tests).
+   - Synchronized `README.md` test counter claim to 615 tests.
    - Updated `docs/STATE.md` and `docs/audit/truth.md`.
 
 ### 2. Verified Baseline State
@@ -283,7 +283,7 @@ This document provides a structured handoff ledger between agent sessions, recor
 - **Plotting & Snapshot Test Suite:** All 33 tests in `rustlab-plot` pass (23 unit tests + 10 snapshot tests, all matching byte-for-byte).
 - **Stdlib Test Suite:** All tests in `rustlab-stdlib` pass.
 - **Desktop Test Suite:** All 107 tests in `matrust_studio` pass.
-- **Workspace Master Test Manifest:** 613/613 named tests in workspace match `docs/test-manifest.txt`.
+- **Workspace Master Test Manifest:** 615/615 named tests in workspace match `docs/test-manifest.txt`.
 
 ### 3. Immediate Next Steps for Next Session
 1. Await owner review and approval for Task P1 PR.

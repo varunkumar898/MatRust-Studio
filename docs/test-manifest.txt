@@ -104,6 +104,11 @@ signal::radix2::tests::test_radix2_roundtrip: test
 snapshot_deterministic_across_runs: test
 snapshot_scatter_plot: test
 snapshot_single_line_plot: test
+snapshot_subplot_1x1_at_1280x800: test
+snapshot_subplot_2x1_at_1280x800: test
+snapshot_subplot_2x2_at_1280x800: test
+snapshot_subplot_empty_at_1280x800: test
+snapshot_subplot_spanning_at_1280x800: test
 span_to_location_crlf_bookkeeping: test
 span_to_location_edge_cases: test
 span_to_location_lf_bookkeeping: test
@@ -153,7 +158,6 @@ test_a3_find_variants_and_short_circuit: test
 test_a3_integer_types_and_saturating_arithmetic: test
 test_a3_logical_mask_assignment_errors: test
 test_a3_mixed_type_rules_and_errors: test
-test_a3_mixed_type_rules_and_errors: test
 test_a3_nd_deletion_3d_and_growth: test
 test_a3_nd_operations_cat_permute_meshgrid_reshape: test
 test_a3_nd_reductions_and_integer_preservation: test
@@ -178,7 +182,6 @@ test_anonymous_function: test
 test_app_host_session_lifecycle: test
 test_app_runtime_lifecycle_and_mutations: test
 test_array_generators: test
-test_array_growth_on_assignment: test
 test_array_growth_on_assignment: test
 test_autotest_headless_e2e_with_plot_and_label_mutation: test
 test_autotest_script_json_deserialization: test
@@ -327,6 +330,7 @@ test_editor_mouse_wheel_scrolls_a_long_document: test
 test_editor_section_extraction_and_syntax_analysis: test
 test_editor_toolbar_has_exactly_one_run_control_set: test
 test_elementwise_elementary_math: test
+test_empty_subplot_no_bleeding_or_collapsing: test
 test_end_to_end_callback_with_advanced_matlab_features: test
 test_euler_rk4_convergence_rates: test
 test_example_boost_converter: test
@@ -552,6 +556,7 @@ test_step_block_lands_exactly_on_step_time: test
 test_string_library_core: test
 test_strings_and_chars: test
 test_struct_arrays: test
+test_subplot_223_places_axes_in_bottom_left_cell: test
 test_summary_and_writetable_roundtrip: test
 test_supported_functions_doc_parity_and_coverage: test
 test_switch_chattering_limit_cycle_detection_triggers_e_chatter: test

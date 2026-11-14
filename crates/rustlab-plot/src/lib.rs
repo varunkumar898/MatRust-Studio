@@ -292,6 +292,95 @@ pub struct Legend {
     pub location: LegendLocation,
 }
 
+/// Subplot grid placement within a figure.
+///
+/// Supports m-by-n grid positioning with 1-based indices, as well as spanning
+/// multiple cell positions (e.g. `[1, 2]` across the top row of a 2x2 grid).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SubplotPosition {
+    pub rows: usize,
+    pub cols: usize,
+    pub indices: Vec<usize>,
+}
+
+impl SubplotPosition {
+    pub fn single(rows: usize, cols: usize, index: usize) -> Self {
+        Self {
+            rows: rows.max(1),
+            cols: cols.max(1),
+            indices: vec![index.max(1)],
+        }
+    }
+
+    pub fn spanning(rows: usize, cols: usize, indices: Vec<usize>) -> Self {
+        let indices = if indices.is_empty() { vec![1] } else { indices };
+        Self {
+            rows: rows.max(1),
+            cols: cols.max(1),
+            indices,
+        }
+    }
+
+    /// Primary 1-based index (for axes ID or title).
+    pub fn primary_index(&self) -> usize {
+        self.indices.first().copied().unwrap_or(1)
+    }
+
+    /// Returns 0-based grid bounding box `(min_col, max_col, min_row, max_row)`.
+    pub fn grid_bounds(&self) -> (usize, usize, usize, usize) {
+        let cols = self.cols.max(1);
+        let mut min_r = usize::MAX;
+        let mut max_r = 0;
+        let mut min_c = usize::MAX;
+        let mut max_c = 0;
+
+        for &idx in &self.indices {
+            let zero_idx = idx.saturating_sub(1);
+            let r = zero_idx / cols;
+            let c = zero_idx % cols;
+            min_r = min_r.min(r);
+            max_r = max_r.max(r);
+            min_c = min_c.min(c);
+            max_c = max_c.max(c);
+        }
+
+        if min_r == usize::MAX {
+            (0, 0, 0, 0)
+        } else {
+            (min_c, max_c, min_r, max_r)
+        }
+    }
+
+    /// Computes pixel rect `(x0, y0, width, height)` within the figure canvas.
+    /// Supports proportional margins between cells.
+    pub fn compute_rect(
+        &self,
+        total_x0: f64,
+        total_y0: f64,
+        total_w: f64,
+        total_h: f64,
+        gap_x: f64,
+        gap_y: f64,
+    ) -> (f64, f64, f64, f64) {
+        let rows = self.rows.max(1);
+        let cols = self.cols.max(1);
+
+        let cell_w = (total_w - (cols as f64 - 1.0) * gap_x).max(10.0) / (cols as f64);
+        let cell_h = (total_h - (rows as f64 - 1.0) * gap_y).max(10.0) / (rows as f64);
+
+        let (min_c, max_c, min_r, max_r) = self.grid_bounds();
+        let span_c = (max_c - min_c + 1) as f64;
+        let span_r = (max_r - min_r + 1) as f64;
+
+        let x0 = total_x0 + (min_c as f64) * (cell_w + gap_x);
+        let y0 = total_y0 + (min_r as f64) * (cell_h + gap_y);
+        let w = span_c * cell_w + (span_c - 1.0) * gap_x;
+        let h = span_r * cell_h + (span_r - 1.0) * gap_y;
+
+        (x0, y0, w, h)
+    }
+}
+
 /// One coordinate system holding series, labels, limits and grid state.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Axes {
@@ -315,6 +404,9 @@ pub struct Axes {
     pub legend: Option<Legend>,
     pub colorbar: Option<Colorbar>,
     pub camera: Camera,
+    pub subplot_pos: Option<SubplotPosition>,
+    pub shared_x_with: Option<usize>,
+    pub shared_y_with: Option<usize>,
 }
 
 impl Axes {
@@ -340,6 +432,9 @@ impl Axes {
             legend: None,
             colorbar: None,
             camera: Camera::default(),
+            subplot_pos: None,
+            shared_x_with: None,
+            shared_y_with: None,
         }
     }
 
@@ -447,6 +542,71 @@ impl Figure {
             self.current_axes = Some(axes.id);
         }
         self.axes.push(axes);
+    }
+
+    /// Returns axes sorted in deterministic row-major layout order:
+    /// by (min_row, min_col, id).
+    pub fn deterministic_axes(&self) -> Vec<&Axes> {
+        let mut sorted: Vec<&Axes> = self.axes.iter().collect();
+        sorted.sort_by_key(|a| {
+            if let Some(pos) = &a.subplot_pos {
+                let (min_c, _, min_r, _) = pos.grid_bounds();
+                (min_r, min_c, a.id)
+            } else {
+                (0, 0, a.id)
+            }
+        });
+        sorted
+    }
+
+    /// Select or create axes at subplot position `(m, n, p)`.
+    pub fn subplot(&mut self, m: usize, n: usize, p: usize) -> &mut Axes {
+        let pos = SubplotPosition::single(m, n, p);
+        if let Some(existing_idx) = self
+            .axes
+            .iter()
+            .position(|a| a.subplot_pos.as_ref() == Some(&pos))
+        {
+            let id = self.axes[existing_idx].id;
+            self.current_axes = Some(id);
+            return &mut self.axes[existing_idx];
+        }
+        let id = p;
+        let mut ax = Axes::new(id);
+        ax.title = format!("subplot({m},{n},{p})");
+        ax.subplot_pos = Some(pos);
+        self.add_axes(ax);
+        self.current_axes = Some(id);
+        let len = self.axes.len();
+        &mut self.axes[len - 1]
+    }
+
+    /// Select or create spanning axes at subplot position `(m, n, indices)`.
+    pub fn subplot_spanning(&mut self, m: usize, n: usize, indices: Vec<usize>) -> &mut Axes {
+        let pos = SubplotPosition::spanning(m, n, indices);
+        if let Some(existing_idx) = self
+            .axes
+            .iter()
+            .position(|a| a.subplot_pos.as_ref() == Some(&pos))
+        {
+            let id = self.axes[existing_idx].id;
+            self.current_axes = Some(id);
+            return &mut self.axes[existing_idx];
+        }
+        let id = pos.primary_index();
+        let mut ax = Axes::new(id);
+        let idx_str = pos
+            .indices
+            .iter()
+            .map(|i| i.to_string())
+            .collect::<Vec<_>>()
+            .join(",");
+        ax.title = format!("subplot({m},{n},[{idx_str}])");
+        ax.subplot_pos = Some(pos);
+        self.add_axes(ax);
+        self.current_axes = Some(id);
+        let len = self.axes.len();
+        &mut self.axes[len - 1]
     }
 }
 

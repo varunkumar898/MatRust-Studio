@@ -138,4 +138,49 @@ This document provides a structured handoff ledger between agent sessions, recor
 ### 3. Immediate Next Steps for Next Session
 1. Await owner review and approval for Task L2 PR.
 2. Following merge, proceed with Wave 0 Task L3 (Responsive layout fixes) as governed by `docs/WORKPLAN.md`.
+
+---
+
+## Session Handoff Entry: Wave 0 Task L3 - Responsive Layout Fixes
+
+- **Date:** 2026-11-14
+- **Branch:** `task/l3-responsive-layout-fixes`
+- **Target PR Base:** `main` (commit `5fb3c49`, PR #51)
+- **Session Focus:** Wave 0 Task L3 (Responsive dock layout fixes, C2/C12 resolution, three-size geometry testing)
+
+### 1. Completed in This Session
+1. **Dock Split Clamping Logic**:
+   - `apps/desktop/src/dock.rs`:
+     - Added `DockNode::min_width(&self) -> f32` and `DockNode::min_height(&self) -> f32` to compute aggregate minimum dimension floors across dock leaves and subtrees.
+     - Added `DockNode::split_h_sizes` and `DockNode::split_v_sizes` clamping split allocations to children's minimum dimensions, preventing panel collapse below minimum bounds.
+     - Integrated split clamping into both headless geometry extraction (`collect_leaf_rects`) and live UI rendering (`render_node`).
+2. **Typography and Header Polishing**:
+   - `apps/desktop/src/dock.rs`: Cleaned up bracket prefix tags (`[D]`, `[E]`) from tab headers and floating drag preview chips.
+   - `apps/desktop/src/app.rs`: Cleaned up bracket prefixes in View menu panel toggle checkboxes (`panel.title()`).
+   - `apps/desktop/src/app.rs`: Made the global search box responsive by clamping width dynamically to `(avail_w - 10.0).clamp(100.0, 260.0)` and truncating hint text on narrow widths.
+3. **Automated Three-Size Geometry Verification**:
+   - `apps/desktop/src/layout_contract.rs`:
+     - Added `three_size_geometry_panels_satisfy_bounds_and_no_overlaps`: Verifies per-panel minimums satisfied, panels contained within container bounds, and pairwise disjoint panel rects (zero overlap) across 900×600, 1280×800, and 1920×1080.
+     - Updated `lc_size_sweep_exercises_supported_sizes` to assert clean pass across all 3 supported resolutions.
+4. **Real-Window Captures at Supported Sizes**:
+   - Captured fresh screenshots into `docs/screenshots/l3/`:
+     - `desktop_900x600.png` (101,112 B, SHA-256 `C5012E16E42F2130361704496953B20DA71C9AF62D512708DF39144E3BBD15ED`)
+     - `desktop_1280x800.png` (151,526 B, SHA-256 `A2F85AD3BE37B3451C39E60F3DF5E5918FFBA2896E5388243F19D97DA12C6E6B`)
+     - `desktop_1920x1080.png` (206,126 B, SHA-256 `B30D32D9CB2240F18BBDEDCF02A9F1C6645DF2DD2A3C5529CF865899F9E58B07`)
+   - All files <= 500 KB; total added footprint ~458 KB (within 50 MB budget).
+5. **Manifest & Accounting Synchronization**:
+   - Synchronized `docs/test-manifest.txt` to 605 tests (+1 test: `three_size_geometry_panels_satisfy_bounds_and_no_overlaps`).
+   - Synchronized `README.md` test counter claim to 605 tests.
+   - Updated `docs/audit/truth.md` and `docs/STATE.md`.
+
+### 2. Verified Baseline State
+- **Formatting:** `cargo fmt --all -- --check` passes cleanly.
+- **Documentation & Privacy Checks:** `python scripts/check_docs.py` passes (242 registered / 249 documented, 0 privacy leaks, 100% link resolution).
+- **Test Suite Verification:** 605/605 named tests in workspace match `docs/test-manifest.txt`.
+- **Desktop Test Suite:** All 104 desktop tests pass cleanly (15 layout contract tests, 50 unit tests, 28 desktop integration tests, 13 editor tests, 10 clean GUI tests, 3 current folder tests).
+
+### 3. Immediate Next Steps for Next Session
+1. Await owner review and approval for Task L3 PR.
+2. Following merge, proceed with Wave 0 Task L4 (Toolstrip overflow menu & ribbon layout contract) as governed by `docs/WORKPLAN.md`.
+3. Adhere strictly to Protocol P6 (one task per session).
 3. Adhere strictly to Protocol P6 (one task per session).

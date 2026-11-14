@@ -147,6 +147,86 @@ impl DockNode {
         }
     }
 
+    /// Minimum width floor aggregated across active tabs and subtrees.
+    pub fn min_width(&self) -> f32 {
+        match self {
+            DockNode::Leaf { tabs, active_tab } => {
+                if let Some(&panel) = tabs.get(*active_tab) {
+                    crate::layout_contract::panel_min(panel).0
+                } else {
+                    0.0
+                }
+            }
+            DockNode::Split {
+                orientation,
+                left_or_top,
+                right_or_bottom,
+                ..
+            } => match orientation {
+                SplitOrientation::Horizontal => {
+                    left_or_top.min_width() + 5.0 + right_or_bottom.min_width()
+                }
+                SplitOrientation::Vertical => {
+                    left_or_top.min_width().max(right_or_bottom.min_width())
+                }
+            },
+        }
+    }
+
+    /// Minimum height floor aggregated across active tabs and subtrees.
+    pub fn min_height(&self) -> f32 {
+        match self {
+            DockNode::Leaf { tabs, active_tab } => {
+                if let Some(&panel) = tabs.get(*active_tab) {
+                    crate::layout_contract::panel_min(panel).1
+                } else {
+                    0.0
+                }
+            }
+            DockNode::Split {
+                orientation,
+                left_or_top,
+                right_or_bottom,
+                ..
+            } => match orientation {
+                SplitOrientation::Horizontal => {
+                    left_or_top.min_height().max(right_or_bottom.min_height())
+                }
+                SplitOrientation::Vertical => {
+                    left_or_top.min_height() + 5.0 + right_or_bottom.min_height()
+                }
+            },
+        }
+    }
+
+    /// Clamped split allocation ensuring neither child collapses below its minimum width.
+    pub fn split_h_sizes(left_min: f32, right_min: f32, total_w: f32, fraction: f32) -> (f32, f32) {
+        let w_left = if total_w >= left_min + right_min {
+            let desired = (total_w * fraction).round();
+            desired.clamp(left_min, total_w - right_min)
+        } else if left_min + right_min > 0.0 {
+            (total_w * (left_min / (left_min + right_min))).round()
+        } else {
+            (total_w * fraction).round()
+        };
+        let w_right = total_w - w_left;
+        (w_left, w_right)
+    }
+
+    /// Clamped split allocation ensuring neither child collapses below its minimum height.
+    pub fn split_v_sizes(top_min: f32, bottom_min: f32, total_h: f32, fraction: f32) -> (f32, f32) {
+        let h_top = if total_h >= top_min + bottom_min {
+            let desired = (total_h * fraction).round();
+            desired.clamp(top_min, total_h - bottom_min)
+        } else if top_min + bottom_min > 0.0 {
+            (total_h * (top_min / (top_min + bottom_min))).round()
+        } else {
+            (total_h * fraction).round()
+        };
+        let h_bottom = total_h - h_top;
+        (h_top, h_bottom)
+    }
+
     /// Read-only calculation of leaf panel rects without UI rendering.
     pub fn collect_leaf_rects(&self, rect: Rect) -> Vec<(PanelId, Rect)> {
         let mut out = Vec::new();
@@ -171,8 +251,12 @@ impl DockNode {
                 match orientation {
                     SplitOrientation::Horizontal => {
                         let total_w = (rect.width() - divider_size).max(10.0);
-                        let w_left = (total_w * *fraction).round();
-                        let w_right = total_w - w_left;
+                        let (w_left, w_right) = DockNode::split_h_sizes(
+                            left_or_top.min_width(),
+                            right_or_bottom.min_width(),
+                            total_w,
+                            *fraction,
+                        );
                         let r_left = Rect::from_min_size(rect.min, vec2(w_left, rect.height()));
                         let r_right = Rect::from_min_size(
                             Pos2::new(rect.min.x + w_left + divider_size, rect.min.y),
@@ -183,8 +267,12 @@ impl DockNode {
                     }
                     SplitOrientation::Vertical => {
                         let total_h = (rect.height() - divider_size).max(10.0);
-                        let h_top = (total_h * *fraction).round();
-                        let h_bottom = total_h - h_top;
+                        let (h_top, h_bottom) = DockNode::split_v_sizes(
+                            left_or_top.min_height(),
+                            right_or_bottom.min_height(),
+                            total_h,
+                            *fraction,
+                        );
                         let r_top = Rect::from_min_size(rect.min, vec2(rect.width(), h_top));
                         let r_bottom = Rect::from_min_size(
                             Pos2::new(rect.min.x, rect.min.y + h_top + divider_size),
@@ -597,7 +685,7 @@ impl DockTree {
                 painter.text(
                     chip_rect.center(),
                     egui::Align2::CENTER_CENTER,
-                    format!("{} {}", panel.icon(), panel.title()),
+                    panel.title(),
                     egui::FontId::proportional(12.0),
                     theme.text_primary,
                 );
@@ -635,8 +723,12 @@ impl DockTree {
                 match orientation {
                     SplitOrientation::Horizontal => {
                         let total_w = (rect.width() - divider_size).max(10.0);
-                        let w_left = (total_w * *fraction).round();
-                        let w_right = total_w - w_left;
+                        let (w_left, w_right) = DockNode::split_h_sizes(
+                            left_or_top.min_width(),
+                            right_or_bottom.min_width(),
+                            total_w,
+                            *fraction,
+                        );
 
                         let r_left = Rect::from_min_size(rect.min, vec2(w_left, rect.height()));
                         let r_div = Rect::from_min_size(
@@ -687,8 +779,12 @@ impl DockTree {
                     }
                     SplitOrientation::Vertical => {
                         let total_h = (rect.height() - divider_size).max(10.0);
-                        let h_top = (total_h * *fraction).round();
-                        let h_bottom = total_h - h_top;
+                        let (h_top, h_bottom) = DockNode::split_v_sizes(
+                            left_or_top.min_height(),
+                            right_or_bottom.min_height(),
+                            total_h,
+                            *fraction,
+                        );
 
                         let r_top = Rect::from_min_size(rect.min, vec2(rect.width(), h_top));
                         let r_div = Rect::from_min_size(
@@ -778,7 +874,7 @@ impl DockTree {
 
                 for (idx, &tab) in tabs.iter().enumerate() {
                     let is_active = idx == *active_tab;
-                    let tab_label = format!("{} {}", tab.icon(), tab.title());
+                    let tab_label = tab.title();
 
                     let resp = child_ui.selectable_label(
                         is_active,

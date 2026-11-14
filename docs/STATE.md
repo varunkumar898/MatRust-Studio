@@ -1,29 +1,39 @@
 # MatRust Studio / RustLab Project State
 
-**Current branch:** `task/l2-layout-probe-checks`
+**Current branch:** `task/l3-responsive-layout-fixes`
 **Repository:** `https://github.com/varunkumar898/MatRust-Studio.git`
-**Current commit:** `6793ca1` (`docs(audit): Wave 0 Task L1 desktop layout contract audit (C1-C12) (#50)`)
+**Current commit:** `5fb3c49` (`feat(layout): Wave 0 Task L2 layout probe and contract checks (#51)`)
 **Date:** 2026-11-14
 **Platform:** Windows 11 ARM64 (`aarch64-pc-windows-gnullvm`)
 **Local stable toolchain:** Rust 1.99.1
 **Declared MSRV:** Rust 1.88.0
 **Verification status:** 
-- Local default, all-features, and no-default-features test runs pass at **604/604/604** (net +5 tests in Task L2).
-- Master test manifest `docs/test-manifest.txt` exactly matches `cargo test --workspace -- --list` (604 named tests).
+- Local default, all-features, and no-default-features test runs pass at **605/605/605** (net +1 test in Task L3).
+- Master test manifest `docs/test-manifest.txt` exactly matches `cargo test --workspace -- --list` (605 named tests).
 - `scripts/check_docs.py` verifies 0 privacy path leaks, 100% link resolution, and 242/249 builtin documentation coverage.
 - `scripts/verify.ps1` and `scripts/verify.sh` integrate `check_docs.py` as an automated gate.
 - `cargo fmt --all -- --check` passes cleanly.
 
-## Current work: Wave 0 Task L2: Layout Probe & Contract Checks
+## Current work: Wave 0 Task L3: Responsive Layout Fixes
 
-- **Branch `task/l2-layout-probe-checks`**: Read-only layout probe and automated contract checks infrastructure.
+- **Branch `task/l3-responsive-layout-fixes`**: Responsive dock layout fixes and automated three-size geometry tests.
+  - Implemented responsive split clamping in `apps/desktop/src/dock.rs` (`min_width`, `min_height`, `split_h_sizes`, `split_v_sizes`) preventing panel collapse below minimums.
+  - Kept standard dock preset intact while guaranteeing panel minimums across all supported sizes: 900×600, 1280×800, and 1920×1080.
+  - Responsive global search box in `apps/desktop/src/app.rs` with clamped width and dynamic hint text based on available header width.
+  - Cleaned bracket prefixes `[D]`, `[E]` from tab headers, drag preview chips, and View menu checkboxes for clean display typography.
+  - Added automated test `three_size_geometry_panels_satisfy_bounds_and_no_overlaps` in `apps/desktop/src/layout_contract.rs` asserting per-panel minimums, container containment, and zero panel overlap across 900×600, 1280×800, and 1920×1080.
+  - Updated `lc_size_sweep_exercises_supported_sizes` to verify clean pass across all three supported resolutions.
+  - Real-window captures refreshed at all 3 supported sizes in `docs/screenshots/l3/` (all files <= 500 KB, within storage budget).
+
+## Previous work: Wave 0 Task L2: Layout Probe & Contract Checks
+
+- **Branch `task/l2-layout-probe-checks`** (Merged in PR #51, commit `5fb3c49`):
   - Implemented `LayoutProbe` and `check_layout_full` for structured violation reporting.
   - Added pure read-only `DockNode::collect_leaf_rects` and `DockTree::collect_panel_rects`.
   - Added `PanelClip` C1 container check preventing child paint bleed into neighbors.
   - Added `PANEL_MIN` table and verified all 7 rows below and at/above threshold.
   - Implemented `run_size_sweep` and `generate_capture_report` for L-C size sweep evaluating 900×600, 1280×800, and 1920×1080.
   - Implemented `check_mutation` verifying L-E element mutation in all 4 quadrant directions.
-  - Findings only; no panel fixes made (preserves separation of concerns for Task L3).
 
 ## Previous work: Wave 0 Task L1: Layout Audit (Read-Only)
 

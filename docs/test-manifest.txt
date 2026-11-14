@@ -47,6 +47,7 @@ layout_contract::tests::check_layout_full_aggregates_both_controls_and_panels: t
 layout_contract::tests::check_layout_reports_only_out_of_clip_probes: test
 layout_contract::tests::lc_size_sweep_exercises_supported_sizes: test
 layout_contract::tests::le_mutation_check_detects_all_quadrant_shifts: test
+layout_contract::tests::three_size_geometry_panels_satisfy_bounds_and_no_overlaps: test
 layout_contract::tests::v1_fails_when_control_outside_clip: test
 layout_contract::tests::v1_passes_when_control_inside_clip: test
 layout_contract::tests::v4_editor_at_minimum_is_clean: test

@@ -416,23 +416,12 @@ mod tests {
         assert_eq!(report[1].resolution, [1280.0, 800.0]);
         assert_eq!(report[2].resolution, [1920.0, 1080.0]);
 
-        // At 900x600, standard layout compresses left column (w=179 < 220) and right column (w=200 < 280)
+        // Across all 3 supported resolutions, responsive split clamping satisfies all panel minimums
         assert!(
-            !report[0].report.is_clean(),
-            "900x600 layout must detect panel minimum violations (C2/C12)"
+            report[0].report.is_clean(),
+            "900x600 standard layout must meet all declared minimums under responsive split clamping (got {:?})",
+            report[0].report.panel_violations
         );
-        let v_panels: Vec<_> = report[0]
-            .report
-            .panel_violations
-            .iter()
-            .map(|v| v.panel_id)
-            .collect();
-        assert!(v_panels.contains(&PanelId::CurrentFolder));
-        assert!(v_panels.contains(&PanelId::Workspace));
-        assert!(v_panels.contains(&PanelId::Help));
-        assert!(v_panels.contains(&PanelId::Figures));
-
-        // At 1280x800 and 1920x1080, all standard layout panels exceed their declared minimums
         assert!(
             report[1].report.is_clean(),
             "1280x800 standard preset must meet all declared minimums"
@@ -441,6 +430,77 @@ mod tests {
             report[2].report.is_clean(),
             "1920x1080 standard preset must meet all declared minimums"
         );
+    }
+
+    #[test]
+    fn three_size_geometry_panels_satisfy_bounds_and_no_overlaps() {
+        let dock = DockTree::standard();
+        let supported_sizes: &[[f32; 2]] = &[[900.0, 600.0], [1280.0, 800.0], [1920.0, 1080.0]];
+
+        for &res in supported_sizes {
+            let dock_h: f32 = (res[1] - 115.0 - 25.0).max(10.0);
+            let dock_rect = Rect::from_min_size(Pos2::new(0.0, 115.0), egui::vec2(res[0], dock_h));
+            let panels = dock.collect_panel_rects(dock_rect);
+
+            assert!(
+                !panels.is_empty(),
+                "Dock must have active panels at {:?}",
+                res
+            );
+
+            // 1. Each panel satisfies its declared minimum size
+            for &(panel_id, rect) in &panels {
+                let (min_w, min_h) = panel_min(panel_id);
+                assert!(
+                    rect.width() >= min_w - 0.5,
+                    "Panel {:?} width {:.1} < min {:.1} at {:?}",
+                    panel_id,
+                    rect.width(),
+                    min_w,
+                    res
+                );
+                assert!(
+                    rect.height() >= min_h - 0.5,
+                    "Panel {:?} height {:.1} < min {:.1} at {:?}",
+                    panel_id,
+                    rect.height(),
+                    min_h,
+                    res
+                );
+
+                // 2. Panel is fully within container dock bounds
+                assert!(
+                    rect.min.x >= dock_rect.min.x - 0.5
+                        && rect.max.x <= dock_rect.max.x + 0.5
+                        && rect.min.y >= dock_rect.min.y - 0.5
+                        && rect.max.y <= dock_rect.max.y + 0.5,
+                    "Panel {:?} rect {:?} clipped outside container {:?}",
+                    panel_id,
+                    rect,
+                    dock_rect
+                );
+            }
+
+            // 3. No two distinct panels overlap
+            for i in 0..panels.len() {
+                for j in (i + 1)..panels.len() {
+                    let (id_a, rect_a) = panels[i];
+                    let (id_b, rect_b) = panels[j];
+                    let intersection = rect_a.intersect(rect_b);
+                    let overlap_w = intersection.width().max(0.0);
+                    let overlap_h = intersection.height().max(0.0);
+                    assert!(
+                        overlap_w <= 0.0 || overlap_h <= 0.0,
+                        "Panels {:?} and {:?} overlap by {:.1}x{:.1} at {:?}",
+                        id_a,
+                        id_b,
+                        overlap_w,
+                        overlap_h,
+                        res
+                    );
+                }
+            }
+        }
     }
 
     #[test]

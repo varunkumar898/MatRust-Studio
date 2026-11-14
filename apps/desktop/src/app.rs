@@ -663,10 +663,7 @@ impl MatStudioApp {
                     PanelId::BlockDiagram,
                 ] {
                     let mut is_open = self.dock_tree.is_open(panel);
-                    if ui
-                        .checkbox(&mut is_open, format!("{} {}", panel.icon(), panel.title()))
-                        .clicked()
-                    {
+                    if ui.checkbox(&mut is_open, panel.title()).clicked() {
                         if is_open {
                             self.dock_tree.open_panel(panel);
                         } else {
@@ -793,16 +790,25 @@ impl MatStudioApp {
                 }
             }
 
-            // Global Search Box on right side of tab strip
+            // Global Search Box on right side of tab strip (responsive width)
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                ui.label(
-                    RichText::new("Ctrl+Shift+Space")
-                        .size(10.0)
-                        .color(self.theme.text_secondary),
-                );
+                let avail_w = ui.available_width();
+                if avail_w >= 220.0 {
+                    ui.label(
+                        RichText::new("Ctrl+Shift+Space")
+                            .size(10.0)
+                            .color(self.theme.text_secondary),
+                    );
+                }
+                let target_w = (ui.available_width() - 10.0).clamp(100.0, 260.0);
+                let hint = if target_w < 160.0 {
+                    "Search..."
+                } else {
+                    "Search documentation and commands"
+                };
                 let search_box = TextEdit::singleline(&mut self.global_search_query)
-                    .hint_text("Search documentation and commands")
-                    .desired_width(280.0);
+                    .hint_text(hint)
+                    .desired_width(target_w);
 
                 let resp = ui.add(search_box);
                 if resp.lost_focus() && ui.input(|i| i.key_pressed(Key::Enter)) {

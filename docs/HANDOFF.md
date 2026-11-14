@@ -272,20 +272,20 @@ This document provides a structured handoff ledger between agent sessions, recor
      - `snapshot_subplot_empty_at_1280x800`: 2x1 subplot snapshot with second subplot empty.
    - Committed 5 golden reference SVG files to `crates/rustlab-plot/tests/snapshots/`.
 5. **Accounting & Verification Synchronization**:
-   - Synchronized `docs/test-manifest.txt` to 619 tests (+4 net tests in Task P2).
-   - Synchronized `README.md` test counter claim to 619 tests.
+   - Synchronized `docs/test-manifest.txt` to 623 tests (+4 net tests in Task P3).
+   - Synchronized `README.md` test counter claim to 623 tests.
    - Updated `docs/STATE.md` and `docs/audit/truth.md`.
 
-### 2. Verified Baseline State (Wave 1 Task P2)
+### 2. Verified Baseline State (Wave 1 Task P3)
 - **Formatting:** `cargo fmt --all -- --check` passes cleanly.
 - **Documentation & Privacy Checks:** `python scripts/check_docs.py` passes (242 registered / 249 documented, 0 privacy leaks, 100% link resolution).
 - **Layout Gate Checks:** `python scripts/check_layout_gate.py` passes.
-- **Plotting & Snapshot Test Suite:** All 37 tests in `rustlab-plot` pass (23 unit tests + 14 integration and regression tests).
+- **Plotting & Snapshot Test Suite:** All 41 tests in `rustlab-plot` pass (23 unit tests + 18 integration and regression tests).
 - **Stdlib Test Suite:** All tests in `rustlab-stdlib` pass.
 - **Desktop Test Suite:** All 107 tests in `matrust_studio` pass.
-- **Workspace Master Test Manifest:** 619/619 named tests in workspace match `docs/test-manifest.txt`.
+- **Workspace Master Test Manifest:** 623/623 named tests in workspace match `docs/test-manifest.txt`.
 
 ### 3. Immediate Next Steps for Next Session
-1. Await owner review and approval for Task P2 PR.
-2. Following merge of Task P2, proceed to **Wave 1 Task P3: Figure toolbar and export** (or the next planned milestone in Wave 1) as governed by `docs/WORKPLAN.md`.
+1. Await owner review and approval for Task P3 PR.
+2. Following merge of Task P3, proceed to **Wave 1 Task P4: 3D plotting** as governed by `docs/WORKPLAN.md`.
 3. Adhere strictly to Protocol P6 (one task per session).

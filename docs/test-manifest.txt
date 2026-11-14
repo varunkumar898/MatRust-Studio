@@ -290,6 +290,7 @@ test_coordinate_transformation_bidirectional: test
 test_cross_domain_signal_to_electrical_error: test
 test_current_folder_registers_navigation_controls_in_a_narrow_panel: test
 test_current_sensor_series_circuit: test
+test_cursor_readout_matches_data_value: test
 test_dc_current_source_parallel_resistor: test
 test_decompressed_bytes_limit_with_forged_header: test
 test_desktop_block_diagram_delete_and_duplicate: test
@@ -401,6 +402,7 @@ test_interp1_linear_and_nearest: test
 test_island_semantics_shared_ground_and_partitioning: test
 test_knife_edge_diode_exact_vf_boundary_stable: test
 test_linear_algebra_and_system_solve: test
+test_linked_axes_move_together_on_zoom_and_pan: test
 test_loop_through_integrator_is_accepted: test
 test_loop_through_unit_delay_is_accepted: test
 test_lu_decomposition_pivoting_and_singular_rejection: test
@@ -481,6 +483,7 @@ test_parser_nesting_depth_limit: test
 test_path_which_exist_and_scripts: test
 test_perform_action_clears_the_named_scope_only: test
 test_pin_geometry_and_rotation_invariance: test
+test_pointer_hit_test_maps_click_to_correct_axes: test
 test_polyfit_linear_and_quadratic: test
 test_polyval_scalar_and_vector: test
 test_power_right_associativity: test
@@ -601,6 +604,7 @@ test_zero_allocations_m3_blocks_during_eval_and_update_discrete: test
 test_zero_continuous_states_under_variable_step: test
 test_zip_bomb_protection: test
 test_zip_slip_protection: test
+test_zooming_one_subplot_leaves_other_limits_unchanged: test
 tests::axes_data_bounds_empty: test
 tests::axes_data_bounds_line: test
 tests::current_figure_and_axes_tracking: test

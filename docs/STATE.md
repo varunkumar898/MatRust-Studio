@@ -1,38 +1,52 @@
 # MatRust Studio / RustLab Project State
 
-**Current branch:** `task/p2-independent-axes-and-limits`
+**Current branch:** `task/p3-per-subplot-interaction`
 **Repository:** `https://github.com/varunkumar898/MatRust-Studio.git`
-**Current commit:** `a139572` (`Merge pull request #54 from varunkumar898/task/p1-subplot-rendering`)
+**Current commit:** `d0873a3` (`Merge pull request #55 from varunkumar898/task/p2-independent-axes-and-limits`)
 **Date:** 2026-11-15
 **Platform:** Windows 11 ARM64 (`aarch64-pc-windows-gnullvm`)
 **Local stable toolchain:** Rust 1.99.1
 **Declared MSRV:** Rust 1.88.0
 **Verification status:** 
-- Local default, all-features, and no-default-features test runs pass at **619/619/619** (net +4 unit and regression tests in Task P2).
-- Master test manifest `docs/test-manifest.txt` exactly matches `cargo test --workspace -- --list` (619 named tests).
+- Local default, all-features, and no-default-features test runs pass at **623/623/623** (net +4 unit and regression tests in Task P3).
+- Master test manifest `docs/test-manifest.txt` exactly matches `cargo test --workspace -- --list` (623 named tests).
 - `scripts/check_docs.py` verifies 0 privacy path leaks, 100% link resolution, and 242/249 builtin documentation coverage.
 - `scripts/check_layout_gate.py` verifies canonical snapshot integrity, minimum panel bounds, and approval tracking.
 - `scripts/verify.ps1` and `scripts/verify.sh` integrate `check_docs.py` and `check_layout_gate.py` as automated gates.
 - `cargo fmt --all -- --check` passes cleanly.
 
-## Current work: Wave 1 Task P2: Shared Axes and Limits / Independent Axes Properties
+## Current work: Wave 1 Task P3: Per-Subplot Interaction
 
-- **Branch `task/p2-independent-axes-and-limits`**: Independent axes properties, scale, and shared limits.
+- **Branch `task/p3-per-subplot-interaction`**: Select, hover, zoom and pan the subplot under the pointer; cursor readout; opt-in shared axes synchronization.
+  - Implemented per-axes interaction model in `crates/rustlab-plot/src/lib.rs`:
+    - Added `AxesInteraction` (`is_selected`, `is_hovered`, `cursor_data`, `nearest_point`, `view_offset`, `zoom_factor`) and `NearestPoint` on `Axes`.
+    - Added coordinate mapping methods: `Axes::pixel_to_data`, `Axes::data_to_pixel`, `Axes::find_nearest_point`.
+    - Added `Figure::compute_axes_rects` computing non-overlapping screen geometry for single and multi-subplot figures.
+    - Added `Figure::hit_test_axes` mapping pointer screen coordinates `(px, py)` to the target axes.
+    - Added `Figure::handle_pointer_move` updating per-axes hover, cursor data, and nearest point readout.
+    - Added `Figure::handle_pointer_click` and `Figure::select_axes` managing per-axes selection and `current_axes`.
+    - Added `Figure::zoom_subplot` and `Figure::pan_subplot` with opt-in shared axes limit synchronization (zooming/panning linked subplots moves linked axes together while leaving unlinked subplots untouched).
+  - Enhanced desktop visualization in `apps/desktop/src/figures.rs`:
+    - Added per-subplot hover border highlight and cursor coordinate readout `(x, y)` inside hovered subplot boundaries.
+  - Added 4 integration and regression tests in `crates/rustlab-plot/tests/snapshot_tests.rs`:
+    - `test_pointer_hit_test_maps_click_to_correct_axes`
+    - `test_zooming_one_subplot_leaves_other_limits_unchanged`
+    - `test_linked_axes_move_together_on_zoom_and_pan`
+    - `test_cursor_readout_matches_data_value`
+  - Workspace test count grew from 619 to 623 (+4 tests).
+
+## Previous work: Wave 1 Task P2: Shared Axes and Limits / Independent Axes Properties
+
+- **Branch `task/p2-independent-axes-and-limits`** (Merged in PR #55, commit `d0873a3`):
   - Implemented independent axes properties in `crates/rustlab-plot/src/lib.rs`:
     - Added `xticks`, `xticklabels`, `yticks`, `yticklabels` on `Axes`.
-    - Added helper setters on `Axes`: `set_xlim`, `set_ylim`, `set_xscale`, `set_yscale`, `set_xticks`, `set_xticklabels`, `set_yticks`, `set_yticklabels`, `set_grid`, `set_title`, `set_xlabel`, `set_ylabel`, `set_legend`, `link_x_with`, `link_y_with`, `unlink`.
-    - Added figure-level linking helpers: `Figure::link_axes(&mut self, ax_ids: &[usize], axis: &str)` and `Figure::unlink_axes(&mut self, ax_ids: &[usize])`.
+    - Added helper setters on `Axes` for limits, scales, ticks, grid, titles, labels, and legends.
+    - Added `Figure::link_axes` and `Figure::unlink_axes`.
   - Updated SVG rendering in `crates/rustlab-plot/src/svg.rs`:
-    - Enhanced `resolve_limits` to synchronize shared axes limits across linked axes (honoring explicit limits or computing bounds union).
-    - Added `map_px` and `map_py` supporting both `Scale::Linear` and `Scale::Log` projections with 100% byte-exact backwards compatibility for linear axes.
-    - Implemented `render_legend` rendering styled legend boxes at `LegendLocation` (NorthEast, NorthWest, SouthEast, SouthWest) with series swatches and labels.
-    - Implemented `log_ticks` decade generator and updated `grid_lines` and `grid_lines_subplot` to support custom ticks and log scaling.
-  - Added comprehensive unit and regression tests in `crates/rustlab-plot/tests/snapshot_tests.rs`:
-    - `test_independent_axes_properties_different_limits_and_scale`
-    - `test_axes_serialization_roundtrip_preserves_independent_state`
-    - `test_axes_regression_no_crosstalk`
-    - `test_shared_axes_synchronization_and_unlinking`
-  - Workspace test count grew from 615 to 619 (+4 tests).
+    - Enhanced `resolve_limits` to synchronize shared axes limits across linked axes.
+    - Added `map_px` and `map_py` supporting both `Scale::Linear` and `Scale::Log` projections.
+    - Implemented `render_legend` and `log_ticks`.
+  - Added 4 unit and regression tests in `crates/rustlab-plot/tests/snapshot_tests.rs`.
 
 ## Previous work: Wave 1 Task P1: Subplot Rendering
 

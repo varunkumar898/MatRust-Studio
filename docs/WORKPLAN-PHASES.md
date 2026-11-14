@@ -1,6 +1,6 @@
 # MatRust Studio Engineering Phases (docs/WORKPLAN-PHASES.md)
 
-This document defines the detailed execution roadmap for MatRust Studio development across Phases **F1 through F14**, providing itemized accounting, dependency graphs, sizing, verification oracles, release trains, and governance rules.
+This document defines the detailed execution roadmap for MatRust Studio development across Phases **F1 through F16**, providing itemized accounting, dependency graphs, sizing, verification oracles, release trains, and governance rules.
 
 ---
 
@@ -13,13 +13,13 @@ This document defines the detailed execution roadmap for MatRust Studio developm
    - `EXISTS-UNVERIFIED`: Implemented in the codebase or UI, pending formal automated test or human visual verification.
    - `DEFERRED`: Explicitly deferred by owner decision (tracked in `docs/ROADMAP.md`).
    - `NEEDS-HUMAN-HARDWARE`: Target requiring physical hardware (microcontroller board, robot, external hardware-in-the-loop simulator). The software interface, code generator, and simulated host loopback mock must be built and tested; on-target claims are disallowed without physical verification.
-3. **Dependency and storage discipline**: Any new external crate dependency requires an ADR and owner approval; prefer self-contained in-tree numerical algorithms. Heavy optional capabilities (FMU co-simulation, Python C-API bindings, GPU compute shaders, ROS client libraries) must reside behind optional cargo feature flags or standalone modules, never bloating the default base installer. Every phase must audit release executable size and package footprint against [docs/STORAGE-BUDGET.md](file:///<repo>/docs/STORAGE-BUDGET.md).
+3. **Dependency and storage discipline**: Any new external crate dependency requires an ADR and owner approval; prefer self-contained in-tree numerical algorithms. Heavy optional capabilities (FMU co-simulation, Python C-API bindings, GPU compute shaders, ROS client libraries) must reside behind optional cargo feature flags or standalone modules, never bloating the default base installer. Every phase must audit release executable size and package footprint against [docs/STORAGE-BUDGET.md](STORAGE-BUDGET.md).
 4. **Clean-room naming standards**: Use generic, descriptive terminology in all user interface labels, source code identifiers, documentation, and file names (e.g., *state machine editor*, *model diagnostics & checks*, *custom block extension API*). Never copy MathWorks trademarks, proprietary brand names, or copyrighted interface descriptors.
 5. **Traceability and auditability**: Every merged item requires:
    - A named automated regression test in the test suite.
    - A dedicated generated documentation page in `docs/`.
-   - An active entry in [docs/FEATURE-REGISTRY.md](file:///<repo>/docs/FEATURE-REGISTRY.md) (with GUI rendering status marked `UNVERIFIED` until human visual inspection).
-   - An updated capability mapping line in [docs/CLAIMS.md](file:///<repo>/docs/CLAIMS.md) for any public-facing capability.
+   - An active entry in [docs/FEATURE-REGISTRY.md](FEATURE-REGISTRY.md) (with GUI rendering status marked `UNVERIFIED` until human visual inspection).
+   - An updated capability mapping line in [docs/CLAIMS.md](CLAIMS.md) for any public-facing capability.
 6. **Phase merge gate**: A phase is declared **MERGED** only when all constituent items are `MERGED`, `EXISTS-VERIFIED`, or `DEFERRED`, all stated entry and exit criteria pass, storage and performance budgets are satisfied, and its designated release-train reference example is integrated into the application's Examples catalog.
 
 ---
@@ -51,13 +51,14 @@ This document defines the detailed execution roadmap for MatRust Studio developm
 
 ---
 
-## 3. Phase Item Catalog (F1 through F14)
+## 3. Phase Item Catalog (F1 through F16)
 
 ### Phase F1: Professional Block Editor (14 Items)
 
 - **Goal**: Transform the block diagram editor into a high-productivity graphical modeling environment with fluid wire routing, visual inspection, alignment ergonomics, and keyboard navigation.
 - **Entry Criteria**: Baseline block diagram canvas (M12) with multi-level undo/redo, cancellation, and basic port connectivity.
 - **Exit Criteria**: Every editor action functions seamlessly via mouse and keyboard; geometric logic (snapping, routing, alignment, selection) is verified by unit tests; UI checklist is human-verified.
+- **Notes**: No item is XL. Snapping, routing, alignment, selection and auto-layout are pure geometry and must be unit-tested without a window; the GUI checklist stays HUMAN-VERIFIED per P13 rule 5. F1.13 depends on F3.01, so it may ship after F3 begins.
 
 | ID | Title | Status | Depends-On | Size | Evidence Test | Notes |
 | :--- | :--- | :---: | :---: | :---: | :--- | :--- |
@@ -84,6 +85,7 @@ This document defines the detailed execution roadmap for MatRust Studio developm
 - **Goal**: Full mathematical, routing, continuous, discrete, and non-linear block library with strict feedthrough definitions, sample-time rules, and C codegen support.
 - **Entry Criteria**: Spec table architecture (M3) and electrical port model (M4).
 - **Exit Criteria**: Every block has a spec-table definition, generated docs page, feedthrough/sample-time contracts, oracle test, palette entry, and codegen flag.
+- **Notes**: F2.00 is a prerequisite outside the 23-item count and requires an ADR plus owner approval; the Mux, Demux, Bus and Selector rows all depend on it. The enabled/triggered rows cover block presence only; execution semantics are F3.04 and F3.05. Every row must record an explicit codegen status per the exit criteria.
 
 | ID | Title | Status | Depends-On | Size | Evidence Test | Notes |
 | :--- | :--- | :---: | :---: | :---: | :--- | :--- |
@@ -99,7 +101,7 @@ This document defines the detailed execution roadmap for MatRust Studio developm
 | **F2.09** | Rate Transition | `TODO` | F2.00 | M | - | Deterministic buffer handling asynchronous sample rate transitions. |
 | **F2.10** | Derivative | `TODO` | - | S | - | Numerical continuous differentiator with high-frequency low-pass filter pole. |
 | **F2.11** | Advanced Integrator | `TODO` | - | M | - | Integrator with external reset port, state saturation limits, and IC input. |
-| **F2.12** | State-Space | `EXISTS-VERIFIED` | - | M | `test_m3_transfer_function_analytical_step` | Continuous and discrete state-space formulation $\dot{x} = Ax + Bu, y = Cx + Du$. |
+| **F2.12** | State-Space | `EXISTS-UNVERIFIED` | - | M | `test_m3_transfer_function_analytical_step` | The engine realizes the transfer-function block internally in controllable canonical state-space form, but there is no user-facing A,B,C,D block yet. |
 | **F2.13** | Zero-Pole-Gain | `TODO` | F2.12 | M | - | Factored transfer function block parameterized by zeros, poles, and scalar gain. |
 | **F2.14** | Discrete filters | `TODO` | - | M | - | Direct-form I/II discrete IIR and FIR digital filter difference equations. |
 | **F2.15** | Transport Delay | `TODO` | - | M | - | Time delay buffer $u(t - \tau)$ with cubic Hermite continuous interpolation. |
@@ -119,6 +121,7 @@ This document defines the detailed execution roadmap for MatRust Studio developm
 - **Goal**: Hierarchical composition, reusable sub-models, conditional subsystem execution, masked component abstractions, and centralized data dictionaries.
 - **Entry Criteria**: Block editor (F1) and core block library (F2).
 - **Exit Criteria**: Hierarchical model with nested subsystems, masked blocks, and variant selections executes bit-identical to flattened equivalent; schema version bumped with automated migration.
+- **Notes**: F3.07 Model Reference is XL and must be split by PLAN-F3 before code. The schema_version bump and migration are part of the exit criteria, so F3 cannot merge until old model files load unchanged. Variant subsystems and variant parameters share one variant-control design.
 
 | ID | Title | Status | Depends-On | Size | Evidence Test | Notes |
 | :--- | :--- | :---: | :---: | :---: | :--- | :--- |
@@ -146,6 +149,7 @@ This document defines the detailed execution roadmap for MatRust Studio developm
 - **Goal**: High-order stiff solvers (Radau, BDF), differential-algebraic equation (DAE) solver, microsecond zero-crossing bisection, and hybrid multi-rate scheduling.
 - **Entry Criteria**: Adaptive continuous solvers (M2) and MNA circuit stepping (M5/M6).
 - **Exit Criteria**: Stiff benchmarks (Robertson, Van der Pol $\mu=1000$) match analytical tolerances; bouncing ball bisection achieves $10^{-9}$ s event accuracy; operating point save/restore matches continuous run.
+- **Notes**: F4.03 Radau IIA and F4.04 DAE are XL and need PLAN-F4 plus an ADR. F4.07 folds in the deferred M6b thyristor and event-localization work. F4.17 is only a cooperative cancel flag today; pause, resume and restart are not implemented.
 
 | ID | Title | Status | Depends-On | Size | Evidence Test | Notes |
 | :--- | :--- | :---: | :---: | :---: | :--- | :--- |
@@ -165,7 +169,7 @@ This document defines the detailed execution roadmap for MatRust Studio developm
 | **F4.14** | Hybrid continuous/discrete execution | `EXISTS-VERIFIED` | - | M | `test_unit_delay_sample_time_under_dp` | Synchronized integration of continuous ODE states with discrete sample hits. |
 | **F4.15** | Algebraic loop solver | `EXISTS-UNVERIFIED` | - | L | `test_algebraic_loop_self_loop_gives_e_alg` | Loop detection (`E-ALG`) exists; Newton-Raphson iteration solver is planned. |
 | **F4.16** | Save & restore operating points | `TODO` | - | M | - | Serialization of entire continuous/discrete simulator state for warm restarts. |
-| **F4.17** | Pause, resume and restart | `EXISTS-UNVERIFIED` | - | S | `test_simulation_gain_parameter_change` | Thread-safe cancel flag exists; interactive pause/resume loop pending verification. |
+| **F4.17** | Pause, resume and restart | `EXISTS-UNVERIFIED` | - | S | `test_session_cancellation_flag` | Cooperative cancel flag is tested; interactive pause/resume/restart is not implemented yet. |
 | **F4.18** | Solver profiling and diagnostics | `TODO` | - | M | - | Detailed accounting of step attempts, rejections, Jacobian updates, and wall time. |
 
 ---
@@ -175,6 +179,7 @@ This document defines the detailed execution roadmap for MatRust Studio developm
 - **Goal**: Physics-based physical network simulation across mechanical, thermal, fluid, and power electronic domains with conservative energy balance and unit-consistent physical ports.
 - **Entry Criteria**: F4 stiff solver and event localization.
 - **Exit Criteria**: Every component features unit-consistent terminals and an analytical oracle test; energy conservation verified on lossless multi-domain couplings.
+- **Notes**: 46 rows in five groups: mechanical 11, thermal 8, hydraulic/pneumatic 9, electrical and power electronics 12, multidomain 6. No XL rows. Entry requires the F4 stiff solvers and event localization; the exit requires an analytic oracle per component and a stated energy-conservation tolerance for lossless couplings.
 
 | ID | Title | Status | Depends-On | Size | Evidence Test | Notes |
 | :--- | :--- | :---: | :---: | :---: | :--- | :--- |
@@ -232,6 +237,7 @@ This document defines the detailed execution roadmap for MatRust Studio developm
 - **Goal**: Deterministic finite state machine and statechart modeling engine with visual animation, hierarchical states, temporal logic, and embedded C code generation.
 - **Entry Criteria**: Hierarchical subsystem interfaces (F3) and event scheduler (F4).
 - **Exit Criteria**: Documented execution priority and transition semantics; state machine simulation traces verified by tests; generated C matches simulation traces.
+- **Notes**: F6.01 state diagram editor is XL and must be split by PLAN-F6 before code. Transition priority, temporal logic and parallel-state ordering must be written down before tests. F6.15 generated C must match recorded traces.
 
 | ID | Title | Status | Depends-On | Size | Evidence Test | Notes |
 | :--- | :--- | :---: | :---: | :---: | :--- | :--- |
@@ -278,7 +284,7 @@ This document defines the detailed execution roadmap for MatRust Studio developm
 | **F7.15** | Spectrogram | `EXISTS-UNVERIFIED` | - | M | `test_spectrum_fft_and_dft_and_window_functions` | Short-time Fourier transform engine verified; waterfall heat-map UI pending. |
 | **F7.16** | Replay results | `TODO` | F7.05 | M | - | Time-scrubber bar replaying past simulation traces and canvas states. |
 | **F7.17** | Save analysis sessions | `TODO` | - | S | - | Serialization of plotted signals, cursors, annotations, and run comparisons. |
-| **F7.18** | Export MAT, CSV and XLSX | `EXISTS-VERIFIED` | - | M | `test_csv_export_format_and_escaping` | RFC 4180 CSV export with formula injection escaping and MAT v5 verified. |
+| **F7.18** | Export MAT, CSV and XLSX | `EXISTS-VERIFIED` | - | M | `test_simulation_output_write_csv` | RFC 4180 CSV export with formula injection escaping and MAT v5 verified. |
 
 ---
 
@@ -287,19 +293,20 @@ This document defines the detailed execution roadmap for MatRust Studio developm
 - **Goal**: Linear control system design and synthesis tools, frequency-domain stability analysis, state estimation, and automated controller tuning.
 - **Entry Criteria**: Reference control models (M10) and linear algebra math crates.
 - **Exit Criteria**: Frequency responses and stability margins match textbook closed-form solutions; numerical linearization matches analytical Jacobians; LQR/Kalman match Riccati solutions.
+- **Notes**: F8.20 model predictive control is XL and needs PLAN-F8 plus an ADR. There is no user-facing state-space block and no Bode or margin implementation yet, so F8.01 is EXISTS-UNVERIFIED and F8.06/F8.10 are TODO. F8.03 depends on F8.02; F8.09, F8.11 and F8.12 follow the transfer-function and state-space work.
 
 | ID | Title | Status | Depends-On | Size | Evidence Test | Notes |
 | :--- | :--- | :---: | :---: | :---: | :--- | :--- |
-| **F8.01** | State-space models | `EXISTS-VERIFIED` | - | M | `test_m3_transfer_function_analytical_step` | Continuous and discrete state-space formulation with analytical step response. |
+| **F8.01** | State-space models | `EXISTS-UNVERIFIED` | F2.12 | M | `test_m3_transfer_function_analytical_step` | Transfer-function block carries a canonical state-space realization; no analytic A,B,C,D model API yet. |
 | **F8.02** | Transfer-function composition | `EXISTS-VERIFIED` | - | M | `test_m3_transfer_function_analytical_step` | Canonical controllable companion form transfer function evaluation. |
 | **F8.03** | Zero-pole-gain models | `TODO` | F8.02 | M | - | ZPK representation and polynomial conversion algorithms. |
 | **F8.04** | Step response | `EXISTS-VERIFIED` | - | S | `test_simulation_first_order_step_response` | Automated transient time-domain unit step response calculation. |
 | **F8.05** | Impulse response | `TODO` | F8.04 | S | - | Continuous and discrete impulse response computation. |
-| **F8.06** | Bode | `EXISTS-VERIFIED` | - | M | `test_bode_first_order_system` | Frequency response magnitude and phase array calculation. |
+| **F8.06** | Bode | `TODO` | F8.02 | M | - | Frequency response magnitude and phase array calculation; no Bode implementation exists yet. |
 | **F8.07** | Nyquist | `TODO` | F8.06 | M | - | Complex plane Nyquist polar plots $(-1, j0)$ with encirclement counting. |
 | **F8.08** | Nichols | `TODO` | F8.06 | M | - | Nichols chart plotting open-loop gain vs phase with closed-loop M-circles. |
 | **F8.09** | Root locus | `TODO` | F8.02 | L | - | Evans root locus trajectory plotting poles as scalar gain $K$ varies $0 \to \infty$. |
-| **F8.10** | Gain and phase margins | `EXISTS-VERIFIED` | F8.06 | M | `test_bode_first_order_system` | Exact gain margin, phase margin, and crossover frequency extraction. |
+| **F8.10** | Gain and phase margins | `TODO` | F8.06 | M | - | Exact gain margin, phase margin, and crossover frequency extraction. |
 | **F8.11** | Stability analysis | `TODO` | F8.01 | M | - | Eigenvalue analysis, Routh-Hurwitz, and Lyapunov matrix equation solving. |
 | **F8.12** | Model linearization | `TODO` | F4.01 | L | - | Numerical Jacobian perturbation linearizing non-linear diagrams around $(x_0, u_0)$. |
 | **F8.13** | Operating-point calculation | `TODO` | F8.12 | M | - | Non-linear steady-state equilibrium solve $\dot{x} = f(x_0, u_0) = 0$. |
@@ -319,6 +326,7 @@ This document defines the detailed execution roadmap for MatRust Studio developm
 - **Goal**: Multi-parameter sensitivity analysis, Monte Carlo statistical runs, least-squares parameter estimation, and Pareto multi-objective optimization.
 - **Entry Criteria**: Parameter sweep engine (M12).
 - **Exit Criteria**: Seeded stochastic runs produce identical distributions; parameter estimation recovers true parameters from noisy synthetic data; Pareto front verified on test problems.
+- **Notes**: F9.01 extends the existing sweep engine, which is tested. Seeded runs must be reproducible. Estimation and Pareto oracles use synthetic data with a stated tolerance; no external optimizer dependency is planned.
 
 | ID | Title | Status | Depends-On | Size | Evidence Test | Notes |
 | :--- | :--- | :---: | :---: | :---: | :--- | :--- |
@@ -343,6 +351,7 @@ This document defines the detailed execution roadmap for MatRust Studio developm
 - **Goal**: Model test harness management, back-to-back model vs generated code verification, structural coverage (MC/DC), and automated diagnostic repairs.
 - **Entry Criteria**: Diagnostic engine (M9) and CLI execution test runner.
 - **Exit Criteria**: Model test suite executes headless from CLI producing verified reports; structural coverage verified on test model; model-vs-C equivalence verified in CI.
+- **Notes**: F10.17 and F10.18 cite the same diagnostics test; coverage rows need a hand-computed model so the numbers can be checked. Model-versus-C equivalence reuses the F11 generator and must run headless in CI.
 
 | ID | Title | Status | Depends-On | Size | Evidence Test | Notes |
 | :--- | :--- | :---: | :---: | :---: | :--- | :--- |
@@ -373,6 +382,7 @@ This document defines the detailed execution roadmap for MatRust Studio developm
 - **Goal**: Safety-critical, MISRA C-oriented code generation targeting microcontrollers, fixed-point processors, hardware-in-the-loop simulators, and hardware description languages.
 - **Entry Criteria**: ISO C99 allocation-free generator (M11) and complete block library.
 - **Exit Criteria**: Generated code compiles cleanly with gcc/clang under `-Wall -Wextra -Werror` matching simulation outputs; RAM/stack usage reports verified; SIL runs in CI.
+- **Notes**: No row is EXISTS-*: only the Wave 2 M11 C99 baseline exists and every F11 row is an extension. The 6 rows that require a board or external tool are NEEDS-HUMAN-HARDWARE per P13 rule 2; PIL, HIL, AUTOSAR, PLC and HDL are XL and must be split by PLAN-F11.
 
 | ID | Title | Status | Depends-On | Size | Evidence Test | Notes |
 | :--- | :--- | :---: | :---: | :---: | :--- | :--- |
@@ -404,6 +414,7 @@ This document defines the detailed execution roadmap for MatRust Studio developm
 - **Goal**: Seamless interoperability with industry-standard simulation protocols (FMI/FMU), SPICE netlists, Modelica models, Python runtimes, and robotics simulators.
 - **Entry Criteria**: Hierarchical model interfaces (F3) and simulation engine (F4).
 - **Exit Criteria**: FMU import/export validated against official public FMI reference test models; Python bridge verified; ROS/Gazebo bridges verified with simulated mock nodes.
+- **Notes**: F12.04, F12.06, F12.10 and F12.11 are XL and need PLAN-F12. ROS/ROS 2 and Gazebo are NEEDS-HUMAN-HARDWARE: build a mock node and a simulated test, never claim on-target verification. The Python bridge is EXISTS-UNVERIFIED and must stay behind a cargo feature.
 
 | ID | Title | Status | Depends-On | Size | Evidence Test | Notes |
 | :--- | :--- | :---: | :---: | :---: | :--- | :--- |
@@ -428,6 +439,7 @@ This document defines the detailed execution roadmap for MatRust Studio developm
 - **Goal**: High-performance scaling for massive multi-domain models through multithreaded evaluation, sparse matrix algorithms, vectorization, and caching.
 - **Entry Criteria**: MNA circuit engine (M5/M6) and continuous execution engine.
 - **Exit Criteria**: Comprehensive benchmark suite; all acceleration claims substantiated with before/after measurements; bit-exact deterministic results; memory limits enforced.
+- **Notes**: GPU acceleration (F13.09) is XL and needs PLAN-F13 plus an ADR; heavy optional acceleration stays behind a cargo feature. F13.03, F13.07 and F13.08 are EXISTS-UNVERIFIED because only serial in-tree implementations exist. F13.13 points at the Criterion harness `crates/mlapp-host/benches/host_benches.rs`.
 
 | ID | Title | Status | Depends-On | Size | Evidence Test | Notes |
 | :--- | :--- | :---: | :---: | :---: | :--- | :--- |
@@ -443,32 +455,123 @@ This document defines the detailed execution roadmap for MatRust Studio developm
 | **F13.10** | Streaming data storage | `TODO` | F7.03 | M | - | Chunked binary disk buffering avoiding RAM exhaustion during gigabyte runs. |
 | **F13.11** | Simulation checkpointing | `TODO` | F4.16 | M | - | Periodic disk snapshots allowing instant rollback and failure recovery. |
 | **F13.12** | Memory & execution profiling | `TODO` | - | M | - | Per-block allocation tracking and sub-microsecond wall-clock timing telemetry. |
-| **F13.13** | Reproducible benchmarks | `EXISTS-VERIFIED` | - | S | `benches/host_benchmarks.rs` | Standardized Criterion benchmark harness verifying performance regressions. |
+| **F13.13** | Reproducible benchmarks | `EXISTS-VERIFIED` | - | S | `crates/mlapp-host/benches/host_benches.rs` | Standardized Criterion benchmark harness verifying performance regressions. |
 
 ---
 
 ### Phase F14: MATLAB Ecosystem Expansion (13 Domain Groups)
 
-Phase F14 expands language and toolbox compatibility across the broader technical computing ecosystem. Specific items will be expanded via individual planning tasks (`PLAN-F14`):
-1. **Programming Language**: Classdef OOP, packages, events/listeners, debugger hooks, execution profiler.
-2. **Numerical Computing**: Stiff ODE solvers (`ode15s`, `ode23t`), root finding (`fzero`, `fsolve`), adaptive quadrature (`integral`).
-3. **Optimization Toolbox**: `fminsearch`, `fminunc`, `lsqnonlin`, simplex `linprog`, quadratic programming `quadprog`.
-4. **Data Engineering**: Tables, timetables, XLSX reader (calamine), JSON encoder/decoder, relational joins.
-5. **Graphics & Visualization**: 3D surfaces, contour plots, vector fields, volumetric slices, animations (overlaps P4).
-6. **Signal Processing**: Butterworth, Chebyshev, elliptic filter design, FIR windowing, `pwelch`, spectrogram, resampling.
-7. **Audio Processing**: Audio file I/O (WAV/FLAC), sound synthesis, acoustic filtering, time-pitch scaling.
-8. **Image Processing**: Spatial filtering, edge detection (Sobel, Canny), morphological operations, Otsu thresholding.
-9. **Machine Learning**: Decision trees, random forests, k-means clustering, PCA dimensionality reduction, MLP neural networks.
-10. **Robotics & Automation**: SE(3) transformations, Euler/quaternion kinematics, Denavit-Hartenberg parameters, trajectory planning.
-11. **Parallel Computing**: Multi-core `parfor` scheduling, parallel batch execution, shared-memory worker pools.
-12. **App Development**: Standalone desktop deployment, application packaging, UI component layout builder.
-13. **Hardware Connectivity**: Serial port communication, TCP/UDP sockets, ring-buffered data acquisition streams.
+- **Goal**: Expand language and toolbox compatibility across the broader technical computing ecosystem, one domain group at a time, without claiming compatibility that is not tested.
+- **Entry Criteria**: The preceding F-phases relevant to a group are merged; a PLAN-F14 planning task has split that group into items of size L or smaller.
+- **Exit Criteria**: For every feature, compatibility tests plus a documented list of differences; no compatibility claim beyond tested behaviour.
+- **Notes**: Each row below is a domain group, not a sized item; `PLAN-F14` expands it and records sizes. The group is `TODO` until then. Sizes are XL at group granularity because P13 rule 1 requires a planning task before code. The graphics group overlaps P4 and reuses the plot model; nothing in F14 is implemented in this session.
+
+| ID | Domain Group | Status | Depends-On | Size | Evidence Test | Notes |
+| :--- | :--- | :---: | :---: | :---: | :--- | :--- |
+| **F14.01** | Programming language | `TODO` | - | XL | - | Class definition subset, packages, events and listeners, debugger hooks, execution profiler. |
+| **F14.02** | Numerical computing | `TODO` | F4.02 | XL | - | Stiff ODE solvers, root finding (`fzero`, `fsolve`), adaptive quadrature (`integral`). |
+| **F14.03** | Optimization | `TODO` | F9.07 | XL | - | `fminsearch`, `fminunc`, `lsqnonlin`, simplex `linprog`, quadratic programming `quadprog`. |
+| **F14.04** | Data engineering | `TODO` | - | XL | - | Tables, timetables, XLSX reader, JSON encoder/decoder, relational joins, large files. |
+| **F14.05** | Graphics and visualization | `TODO` | - | XL | - | 3D surfaces, contour plots, vector fields, volumetric slices, animations (overlaps P4; reuse). |
+| **F14.06** | Signal processing | `TODO` | - | XL | - | Butterworth, Chebyshev and elliptic filter design, FIR windowing, `pwelch`, spectrogram, resampling. |
+| **F14.07** | Audio processing | `TODO` | F14.06 | XL | - | Audio file I/O (WAV/FLAC), sound synthesis, acoustic filtering, time-pitch scaling. |
+| **F14.08** | Image processing | `TODO` | - | XL | - | Spatial filtering, edge detection (Sobel, Canny), morphological operations, Otsu thresholding. |
+| **F14.09** | Machine learning | `TODO` | - | XL | - | Decision trees, random forests, k-means clustering, PCA dimensionality reduction, small neural networks. |
+| **F14.10** | Robotics and automation | `TODO` | - | XL | - | SE(3) transformations, Euler/quaternion kinematics, Denavit-Hartenberg parameters, trajectory planning. |
+| **F14.11** | Parallel computing | `TODO` | F13.07 | XL | - | Multi-core `parfor` scheduling, parallel batch execution, shared-memory worker pools. |
+| **F14.12** | App development | `TODO` | - | XL | - | Standalone desktop deployment, application packaging, UI component layout builder. |
+| **F14.13** | Hardware connectivity | `TODO` | F11.09 | XL | - | Serial port communication, TCP/UDP sockets, ring-buffered data acquisition streams. |
+
+---
+
+### Phase F15: Octave Conformance (14 Items)
+
+- **Goal**: Establish measured, clean-room Octave conformance: a differential harness, a real gap report, then function batches with oracle tests, docs pages and provenance files.
+- **Entry Criteria**: `crates/mlapp-octave` exists and builds; the owner has installed Octave if a real oracle run is required (installing it is a user action).
+- **Exit Criteria**: A coverage table with real percentages per category; every new function has a test and a provenance file under `docs/provenance/`; claims are limited to tested behaviour.
+- **Notes**: All rows start `TODO`. F15.00 runs immediately after Wave 2 and F15.01 decides the rest of the phase. The batch rows F15.02..F15.12 are batch **series**: `PLAN-F15` emits one task per batch of at most 15 functions, using the real counts from `docs/compatibility/octave-gap.md`. Octave is an optional external program and CI never requires it (P14).
+
+| ID | Title | Status | Depends-On | Size | Evidence Test | Notes |
+| :--- | :--- | :---: | :---: | :---: | :--- | :--- |
+| **F15.00** | Differential-test harness | `TODO` | - | M | - | Runs one script in both engines through `crates/mlapp-octave`, compares values with stated tolerances, and skips cleanly when Octave is absent. |
+| **F15.01** | Gap analysis | `TODO` | F15.00 | M | - | Enumerate Octave's functions using Octave itself; record its version and the exact command; classify and compare with `docs/SUPPORTED_FUNCTIONS.md` and `docs/functions`; write `docs/compatibility/octave-gap.md` with real counts per category. |
+| **F15.02** | Core arithmetic and linear algebra batch series | `TODO` | F15.01 | M | - | Oracle tests, docs pages and provenance files, at most 15 functions per emitted task. |
+| **F15.03** | Strings batch series | `TODO` | F15.01 | M | - | At most 15 functions per emitted task. |
+| **F15.04** | Cell and struct batch series | `TODO` | F15.01 | M | - | At most 15 functions per emitted task. |
+| **F15.05** | Logical and set operations batch series | `TODO` | F15.01 | M | - | At most 15 functions per emitted task. |
+| **F15.06** | Statistics batch series | `TODO` | F15.01 | M | - | At most 15 functions per emitted task. |
+| **F15.07** | Polynomials and interpolation batch series | `TODO` | F15.01 | M | - | At most 15 functions per emitted task. |
+| **F15.08** | Signal batch series | `TODO` | F15.01 | M | - | At most 15 functions per emitted task. |
+| **F15.09** | Optimization batch series | `TODO` | F15.01 | M | - | At most 15 functions per emitted task. |
+| **F15.10** | Sparse batch series | `TODO` | F15.01 | M | - | At most 15 functions per emitted task. |
+| **F15.11** | ODE batch series | `TODO` | F15.01 | M | - | At most 15 functions per emitted task. |
+| **F15.12** | File I/O batch series | `TODO` | F15.01 | M | - | At most 15 functions per emitted task. |
+| **F15.13** | Language semantic differences | `TODO` | F15.01 | M | - | Write `docs/compatibility/octave-differences.md`; behaviour described in our own words. |
+
+### Phase F16: Julia Bridge and Export (5 Items)
+
+- **Goal**: Add an optional, opt-in Julia bridge and model export, used for cross-checking our solvers against an independent implementation.
+- **Entry Criteria**: `PLAN-F16` and F16.01 are approved; Julia is installed by the owner for any real cross-check (Julia is optional).
+- **Exit Criteria**: Bridge tests use a stub Julia executable so CI needs no Julia; one optional test uses a real Julia and is skipped when absent.
+- **Notes**: All rows start `TODO`. The default design is an **external process**, not embedding `libjulia`; embedding is rejected unless the owner approves it with size and platform numbers. Never in the base installer; check Julia's current platform support (including Windows ARM64) and record it before promising anything. Julia is MIT; its packages carry their own licences; nothing is bundled.
+
+| ID | Title | Status | Depends-On | Size | Evidence Test | Notes |
+| :--- | :--- | :---: | :---: | :---: | :--- | :--- |
+| **F16.01** | ADR: bridge versus embedding | `TODO` | F12.07 | M | - | Default external process; record platform support and size before any promise. |
+| **F16.02** | Crate `mlapp-julia` | `TODO` | F16.01 | L | - | Modelled on `mlapp-octave`: detect, JSON protocol over pipes, session, safety list, timeouts, `forbid(unsafe_code)`, opt-in `--allow-julia`, off by default. |
+| **F16.03** | Export a model to a Julia script | `TODO` | F16.02 | L | - | Continuous parts emitted as an ODE problem. |
+| **F16.04** | Cross-check harness | `TODO` | F16.02 | M | - | Our solvers versus Julia on stiff and non-stiff benchmarks; tolerances recorded; skips when Julia is absent. |
+| **F16.05** | Documentation | `TODO` | F16.02 | S | - | Install, versions, licence note, first-run latency and package precompilation time. |
 
 ---
 
 ## 4. Phase Accounting & Audit Summary
 
-- **Total Phase Items (F1 through F13)**: **248 items** (exact match with charter count).
-- **EXISTS-VERIFIED**: **20 items** (backed by named automated tests in the repository).
-- **EXISTS-UNVERIFIED**: **12 items** (backend implemented; full UI or integration check pending).
-- **TODO / NEEDS-HUMAN-HARDWARE**: **216 items** (future developmental roadmap).
+### 4.1 Item counts per phase
+
+| Phase | Items | TODO | EXISTS-VERIFIED | EXISTS-UNVERIFIED | NEEDS-HUMAN-HARDWARE | DEFERRED |
+| :--- | ---: | ---: | ---: | ---: | ---: | ---: |
+| F1 | 14 | 11 | 1 | 2 | 0 | 0 |
+| F2 (includes F2.00) | 24 | 21 | 2 | 1 | 0 | 0 |
+| F3 | 16 | 16 | 0 | 0 | 0 | 0 |
+| F4 | 18 | 14 | 2 | 2 | 0 | 0 |
+| F5 | 46 | 44 | 2 | 0 | 0 | 0 |
+| F6 | 15 | 15 | 0 | 0 | 0 | 0 |
+| F7 | 18 | 14 | 2 | 2 | 0 | 0 |
+| F8 | 21 | 17 | 2 | 2 | 0 | 0 |
+| F9 | 13 | 12 | 1 | 0 | 0 | 0 |
+| F10 | 18 | 14 | 4 | 0 | 0 | 0 |
+| F11 | 20 | 14 | 0 | 0 | 6 | 0 |
+| F12 | 13 | 10 | 0 | 1 | 2 | 0 |
+| F13 | 13 | 9 | 1 | 3 | 0 | 0 |
+| **Total** | **249** | **211** | **17** | **13** | **8** | **0** |
+
+Phases F1 through F13 contain **248 items**; `F2.00` is the additional prerequisite row, so the catalog has 249 rows. Phase F14 is listed as 13 domain groups and is not counted as items until `PLAN-F14` expands it. The A3 addendum adds Phase F15 (14 rows) and Phase F16 (5 rows), both entirely `TODO`:
+
+| Phase | Rows | TODO | EXISTS-VERIFIED | EXISTS-UNVERIFIED | NEEDS-HUMAN-HARDWARE | Status source |
+| :--- | ---: | ---: | ---: | ---: | ---: | :--- |
+| F14 (domain groups) | 13 | 13 | 0 | 0 | 0 | Owner-supplied group list; `PLAN-F14` expands it |
+| F15 Octave conformance | 14 | 14 | 0 | 0 | 0 | Audit: `mlapp-octave` exists, the differential harness does not |
+| F16 Julia bridge | 5 | 5 | 0 | 0 | 0 | Audit: `mlapp-julia` does not exist |
+
+The full catalog therefore has **281 rows** (249 + 13 + 14 + 5). The F1-F13 status totals above are unchanged by A3.
+
+### 4.2 Audit step 1e - expected existing capabilities
+
+| Capability | Status | Evidence | Phase row |
+| :--- | :---: | :--- | :--- |
+| Adaptive Dormand-Prince | `EXISTS-VERIFIED` | `test_dormand_prince_tolerance_compliance` | F4.01 |
+| Transfer function (continuous and discrete) | `EXISTS-VERIFIED` | `test_m3_transfer_function_analytical_step` | F2.12 notes the canonical realization; F8.02 |
+| State-space block (user A,B,C,D) | `EXISTS-UNVERIFIED` | `test_m3_transfer_function_analytical_step`; no `BlockType::StateSpace` in `crates/mlapp-sim/src/model.rs` | F2.12, F8.01 |
+| Switch, relational and logical control blocks | `EXISTS-VERIFIED` | `test_m3_control_eval_and_feedthrough`, `test_ideal_switch_driven_by_step_control_signal` | Wave 2 M3/M6 baseline; F2.21 covers the multiport switch only |
+| Algebraic-loop detection | `EXISTS-UNVERIFIED` | `test_algebraic_loop_self_loop_gives_e_alg` | F4.15 |
+| Parameter sweep | `EXISTS-VERIFIED` | `test_parameter_sweep_gain_variation` | F9.01, F13.07 |
+| C99 generation | `EXISTS-VERIFIED` | `test_codegen_signal_model_allocation_free` | Wave 2 M11 baseline; F11 items are extensions |
+| FFT | `EXISTS-UNVERIFIED` | `test_spectrum_fft_and_dft_and_window_functions` | F7.14 |
+| THD | `EXISTS-VERIFIED` | `test_thd_pure_sine_and_distorted`, `test_sampled_square_wave_discrete_vs_continuous_thd` | Wave 2 M8 baseline |
+| Sensors and controlled sources | `EXISTS-VERIFIED` | `test_voltage_sensor_resistive_divider`, `test_current_sensor_series_circuit`, `test_voltage_controlled_voltage_source_gain`, `test_voltage_controlled_current_source_transconductance` | Wave 2 M7 baseline |
+| Undo and redo | `EXISTS-UNVERIFIED` | No automated test; `undo()` and `redo()` exist in `apps/desktop/src/block_diagram_editor.rs` | F10.18 notes single-level undo |
+
+### 4.3 Items that could not be classified
+
+Five expected-existing capabilities predate the phase catalog and have no F-item of their own: the M3 control/evaluation blocks, the M11 C99 baseline, the M8 THD measurement, the M7 sensor and controlled-source set, and the editor undo/redo stacks. Section 4.2 records them as Wave 2 baseline capabilities. Tracking them as phase items would require a planning task to add rows; this document neither drops nor renames any item on the owner's list.

@@ -21,7 +21,7 @@ Welcome to **MatRust Studio**! This guide is designed to help first-time open-so
 
 ## 2. Project Maturity & Evolution
 
-The project is actively evolving. Milestone phases M1 through M12 have established the core language, App Designer extraction, block simulation, MNA electrical networks, and C99 code generation. The current roadmap focuses on **Phases F1 through F14** (detailed in [docs/WORKPLAN-PHASES.md](file:///<repo>/docs/WORKPLAN-PHASES.md)), expanding the block editor, block catalog, hierarchical modeling, stiff solvers, multi-domain physics, and testing infrastructure.
+The project is actively evolving. Milestone phases M1 through M12 have established the core language, App Designer extraction, block simulation, MNA electrical networks, and C99 code generation. The current roadmap focuses on **Phases F1 through F16** (detailed in [docs/WORKPLAN-PHASES.md](WORKPLAN-PHASES.md)), expanding the block editor, block catalog, hierarchical modeling, stiff solvers, multi-domain physics, testing infrastructure, Octave conformance and the optional Julia bridge.
 
 ---
 
@@ -55,7 +55,7 @@ MatRust Studio strictly enforces a clean-room development methodology:
 
 ### Supported Platforms
 - **Windows**: x86_64 MSVC and ARM64 (`aarch64-pc-windows-gnullvm`).
-  - *Note on Windows ARM64 gnullvm*: Run via `cargo run --release -p matrust_studio` or ensure `libunwind.dll` is on your PATH (see [docs/DEVELOPMENT.md](file:///<repo>/docs/DEVELOPMENT.md)).
+  - *Note on Windows ARM64 gnullvm*: Run via `cargo run --release -p matrust_studio` or ensure `libunwind.dll` is on your PATH (see [docs/DEVELOPMENT.md](DEVELOPMENT.md)).
 - **Linux**: x86_64 and AArch64 (Ubuntu 22.04+ or modern glibc).
 - **macOS**: Apple Silicon (`aarch64-apple-darwin`) and Intel (`x86_64-apple-darwin`).
 
@@ -120,7 +120,7 @@ bash scripts/verify.sh
 ## 7. How to Choose a Task
 
 1. **Check the Issue Tracker**: Review issues labeled by component or domain.
-2. **Review the Roadmap**: Consult [docs/WORKPLAN-PHASES.md](file:///<repo>/docs/WORKPLAN-PHASES.md) and [docs/FEATURE-REGISTRY.md](file:///<repo>/docs/FEATURE-REGISTRY.md) for current phase priorities.
+2. **Review the Roadmap**: Consult [docs/WORKPLAN-PHASES.md](WORKPLAN-PHASES.md) and [docs/FEATURE-REGISTRY.md](FEATURE-REGISTRY.md) for current phase priorities.
 3. **Scope Discipline**: Always propose or claim a task before writing code. If a planned roadmap item is sized **XL**, it must first undergo a planning breakdown (`PLAN-F<n>`) with an Architecture Decision Record (ADR) before implementation.
 4. **Good First Contributions**:
    - Adding missing unit tests for existing built-in functions.
@@ -149,7 +149,7 @@ flowchart LR
 3. **Implement in Small Steps**: Limit changes to small, cohesive increments ($\sim 150$ lines of change where feasible).
 4. **Verify Locally**: Run the specific test using `cargo test -p <crate> --test <suite> <test_name>`.
 5. **Run Quality Gates**: Run formatting and clippy (`cargo clippy --workspace --all-targets -- -D warnings`).
-6. **Update Documentation**: Update [docs/FEATURE-REGISTRY.md](file:///<repo>/docs/FEATURE-REGISTRY.md) and `docs/test-manifest.txt` if tests were added.
+6. **Update Documentation**: Update [docs/FEATURE-REGISTRY.md](FEATURE-REGISTRY.md) and `docs/test-manifest.txt` if tests were added.
 7. **Submit PR**: Open a focused pull request against `main`.
 
 ---
@@ -194,14 +194,14 @@ flowchart LR
 1. **Single-Purpose PRs**: One roadmap item or bug fix per pull request. Avoid mixing refactorings with feature work.
 2. **Zero Warnings**: CI enforces zero warnings across all targets (`-D warnings`).
 3. **Tests Never Decrease**: The total number of passing tests in `docs/test-manifest.txt` must never decrease. If a test is renamed or replaced, document the exact reason.
-4. **Privacy & Path Hygiene**: Never include personal machine paths (e.g., `C:\Users\...` or `/home/...`), internal tokens, or local secrets in code or documentation. Use `<repo>` and `<user-home>` placeholders.
+4. **Privacy & Path Hygiene**: Never include personal machine paths (a local user-profile directory, a home directory, or an absolute checkout path), internal tokens, or local secrets in code or documentation. Use `<repo>` and `<user-home>` placeholders.
 5. **No Force-Pushes to Shared Branches**: Keep git history clean and traceable.
 
 ---
 
 ## 12. First-Time Contributor Checklist
 
-- [ ] Read this guide and [docs/ENGINEERING-CHARTER.md](file:///<repo>/docs/ENGINEERING-CHARTER.md).
+- [ ] Read this guide and [docs/ENGINEERING-CHARTER.md](ENGINEERING-CHARTER.md).
 - [ ] Confirmed compiler meets MSRV (`rustc --version` $\ge 1.88.0$).
 - [ ] Built the workspace cleanly (`cargo build --workspace`).
 - [ ] Created a new branch from `main` (`git checkout -b feat/my-change`).
@@ -210,4 +210,4 @@ flowchart LR
 - [ ] Ran `cargo clippy --workspace --all-targets -- -D warnings`.
 - [ ] Ran full test suite (`cargo test --workspace`).
 - [ ] Verified zero personal machine paths in added files.
-- [ ] Updated documentation and [docs/FEATURE-REGISTRY.md](file:///<repo>/docs/FEATURE-REGISTRY.md).
+- [ ] Updated documentation and [docs/FEATURE-REGISTRY.md](FEATURE-REGISTRY.md).

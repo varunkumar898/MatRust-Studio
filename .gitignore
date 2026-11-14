@@ -10,6 +10,9 @@ re/targets/*.exe
 .env.*
 *.pem
 *.key
+.agent-lock
+target-*/
+.privacy-denylist
 
 # IDE and editor files
 .idea/

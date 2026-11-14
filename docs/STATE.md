@@ -1,31 +1,42 @@
 # MatRust Studio / RustLab Project State
 
-**Current branch:** `task/l3-responsive-layout-fixes`
+**Current branch:** `task/l4-layout-regression-gate`
 **Repository:** `https://github.com/varunkumar898/MatRust-Studio.git`
-**Current commit:** `5fb3c49` (`feat(layout): Wave 0 Task L2 layout probe and contract checks (#51)`)
+**Current commit:** `fe235b4` (`fix(layout): Wave 0 Task L3 responsive layout fixes and three-size geometry tests (#52)`)
 **Date:** 2026-11-14
 **Platform:** Windows 11 ARM64 (`aarch64-pc-windows-gnullvm`)
 **Local stable toolchain:** Rust 1.99.1
 **Declared MSRV:** Rust 1.88.0
 **Verification status:** 
-- Local default, all-features, and no-default-features test runs pass at **605/605/605** (net +1 test in Task L3).
-- Master test manifest `docs/test-manifest.txt` exactly matches `cargo test --workspace -- --list` (605 named tests).
+- Local default, all-features, and no-default-features test runs pass at **608/608/608** (net +3 tests in Task L4).
+- Master test manifest `docs/test-manifest.txt` exactly matches `cargo test --workspace -- --list` (608 named tests).
 - `scripts/check_docs.py` verifies 0 privacy path leaks, 100% link resolution, and 242/249 builtin documentation coverage.
-- `scripts/verify.ps1` and `scripts/verify.sh` integrate `check_docs.py` as an automated gate.
+- `scripts/check_layout_gate.py` verifies canonical snapshot integrity, minimum panel bounds, and approval tracking.
+- `scripts/verify.ps1` and `scripts/verify.sh` integrate `check_docs.py` and `check_layout_gate.py` as automated gates.
 - `cargo fmt --all -- --check` passes cleanly.
 
-## Current work: Wave 0 Task L3: Responsive Layout Fixes
+## Current work: Wave 0 Task L4: Layout Regression Gate (Auto)
 
-- **Branch `task/l3-responsive-layout-fixes`**: Responsive dock layout fixes and automated three-size geometry tests.
-  - Implemented responsive split clamping in `apps/desktop/src/dock.rs` (`min_width`, `min_height`, `split_h_sizes`, `split_v_sizes`) preventing panel collapse below minimums.
+- **Branch `task/l4-layout-regression-gate`**: Layout regression gate in CI and automated verification harnesses.
+  - Defined `LayoutSnapshotManifest`, `ResolutionSnapshot`, and `PanelSnapshot` structures with serialization in `apps/desktop/src/layout_contract.rs`.
+  - Added `docs/snapshots/layout-geometry.json` storing approved canonical panel rects across 900×600, 1280×800, and 1920×1080.
+  - Implemented `verify_snapshot_integrity` and `compare_snapshots` asserting per-panel minimum floors, containment within container bounds, and pairwise non-overlapping geometry.
+  - Added unit test `layout_snapshot_matches_canonical_and_satisfies_minimums` comparing live layout against canonical snapshot (with `UPDATE_LAYOUT_SNAPSHOTS=1` regeneration support).
+  - Added negative unit tests:
+    - `layout_snapshot_negative_test_fails_when_panel_leaves_minimum_rect`: Proves check fails when a panel leaves its declared minimum rect.
+    - `layout_snapshot_negative_test_detects_geometry_drift`: Proves check fails on unapproved geometric rect drift.
+  - Implemented `scripts/check_layout_gate.py` (with `--self-test` coverage) verifying snapshot integrity and ensuring modifications require explicit approval rationale (`[layout-approved]`).
+  - Integrated `Layout Regression Gate` into `.github/workflows/ci.yml`, `scripts/verify.ps1` (Step 11), and `scripts/verify.sh` (Step 8).
+
+## Previous work: Wave 0 Task L3: Responsive Layout Fixes
+
+- **Branch `task/l3-responsive-layout-fixes`** (Merged in PR #52, commit `fe235b4`):
+  - Responsive split clamping in `apps/desktop/src/dock.rs` (`min_width`, `min_height`, `split_h_sizes`, `split_v_sizes`).
   - Kept standard dock preset intact while guaranteeing panel minimums across all supported sizes: 900×600, 1280×800, and 1920×1080.
-  - Responsive global search box in `apps/desktop/src/app.rs` with clamped width and dynamic hint text based on available header width.
-  - Cleaned bracket prefixes `[D]`, `[E]` from tab headers, drag preview chips, and View menu checkboxes for clean display typography.
-  - Added automated test `three_size_geometry_panels_satisfy_bounds_and_no_overlaps` in `apps/desktop/src/layout_contract.rs` asserting per-panel minimums, container containment, and zero panel overlap across 900×600, 1280×800, and 1920×1080.
-  - Updated `lc_size_sweep_exercises_supported_sizes` to verify clean pass across all three supported resolutions.
-  - Real-window captures refreshed at all 3 supported sizes in `docs/screenshots/l3/` (all files <= 500 KB, within storage budget).
-
-## Previous work: Wave 0 Task L2: Layout Probe & Contract Checks
+  - Responsive global search box in `apps/desktop/src/app.rs` with clamped width and dynamic hint text.
+  - Cleaned bracket prefixes `[D]`, `[E]` from tab headers, drag preview chips, and View menu checkboxes.
+  - Added automated test `three_size_geometry_panels_satisfy_bounds_and_no_overlaps` in `apps/desktop/src/layout_contract.rs`.
+  - Refreshed real-window captures at all 3 supported sizes in `docs/screenshots/l3/`.
 
 - **Branch `task/l2-layout-probe-checks`** (Merged in PR #51, commit `5fb3c49`):
   - Implemented `LayoutProbe` and `check_layout_full` for structured violation reporting.

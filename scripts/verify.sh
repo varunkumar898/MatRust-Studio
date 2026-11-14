@@ -31,4 +31,13 @@ else
     echo "Warning: Python not found, skipping check_docs.py" >&2
 fi
 
+echo "=== 8. Checking layout regression gate (Wave 0 Task L4) ==="
+if command -v python3 >/dev/null 2>&1; then
+    python3 scripts/check_layout_gate.py
+elif command -v python >/dev/null 2>&1; then
+    python scripts/check_layout_gate.py
+else
+    echo "Warning: Python not found, skipping check_layout_gate.py" >&2
+fi
+
 echo "=== All verification steps passed successfully! ==="

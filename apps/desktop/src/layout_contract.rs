@@ -218,6 +218,237 @@ pub fn generate_capture_report(dock: &DockTree) -> Vec<SweepEvaluation> {
     run_size_sweep(supported_sizes, dock, 115.0, 25.0)
 }
 
+/// Canonical snapshot record for a single active panel in the dock layout.
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct PanelSnapshot {
+    pub panel_id: String,
+    pub min_x: f32,
+    pub min_y: f32,
+    pub width: f32,
+    pub height: f32,
+    pub min_width_required: f32,
+    pub min_height_required: f32,
+}
+
+/// Canonical snapshot record for a tested window resolution.
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct ResolutionSnapshot {
+    pub resolution: [f32; 2],
+    pub dock_rect: [f32; 4], // [min_x, min_y, width, height]
+    pub panels: Vec<PanelSnapshot>,
+}
+
+/// Canonical layout snapshot manifest stored on disk as a regression gate (Wave 0 Task L4).
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct LayoutSnapshotManifest {
+    pub version: u32,
+    pub schema: String,
+    pub approved_reason: String,
+    pub resolutions: Vec<ResolutionSnapshot>,
+}
+
+/// Builds the canonical layout snapshot manifest from the active dock tree across supported resolutions:
+/// 900x600, 1280x800, and 1920x1080.
+pub fn build_current_layout_snapshot(dock: &DockTree) -> LayoutSnapshotManifest {
+    let supported_sizes: &[[f32; 2]] = &[[900.0, 600.0], [1280.0, 800.0], [1920.0, 1080.0]];
+    let top_bar_height = 115.0f32;
+    let status_bar_height = 25.0f32;
+
+    let mut resolutions = Vec::new();
+    for &res in supported_sizes {
+        let dock_h: f32 = (res[1] - top_bar_height - status_bar_height).max(10.0);
+        let dock_rect = Rect::from_min_size(Pos2::new(0.0, top_bar_height), vec2(res[0], dock_h));
+        let panels_raw = dock.collect_panel_rects(dock_rect);
+
+        let mut panels = Vec::new();
+        for (id, rect) in panels_raw {
+            let (req_w, req_h) = panel_min(id);
+            panels.push(PanelSnapshot {
+                panel_id: format!("{:?}", id),
+                min_x: rect.min.x,
+                min_y: rect.min.y,
+                width: rect.width(),
+                height: rect.height(),
+                min_width_required: req_w,
+                min_height_required: req_h,
+            });
+        }
+
+        resolutions.push(ResolutionSnapshot {
+            resolution: res,
+            dock_rect: [
+                dock_rect.min.x,
+                dock_rect.min.y,
+                dock_rect.width(),
+                dock_rect.height(),
+            ],
+            panels,
+        });
+    }
+
+    LayoutSnapshotManifest {
+        version: 1,
+        schema: "matrust-layout-snapshot-v1".to_string(),
+        approved_reason:
+            "Wave 0 Task L4 canonical baseline for supported sizes (900x600, 1280x800, 1920x1080)"
+                .to_string(),
+        resolutions,
+    }
+}
+
+/// Verifies that all panel records in the snapshot satisfy per-panel minimum floors, container
+/// bounds, and pairwise non-overlapping geometry.
+pub fn verify_snapshot_integrity(snapshot: &LayoutSnapshotManifest) -> Result<(), Vec<String>> {
+    let mut errors = Vec::new();
+
+    if snapshot.resolutions.is_empty() {
+        errors.push("Snapshot contains zero resolutions".to_string());
+        return Err(errors);
+    }
+
+    for res in &snapshot.resolutions {
+        if res.panels.is_empty() {
+            errors.push(format!(
+                "Resolution {:?} contains zero panels",
+                res.resolution
+            ));
+            continue;
+        }
+
+        let [dock_min_x, dock_min_y, dock_w, dock_h] = res.dock_rect;
+        let dock_max_x = dock_min_x + dock_w;
+        let dock_max_y = dock_min_y + dock_h;
+
+        // 1. Verify per-panel minimum rect floors and container bounds
+        for p in &res.panels {
+            if p.width < p.min_width_required - 0.5 {
+                errors.push(format!(
+                    "Panel {} width {:.1} is below minimum {:.1} at {:?}",
+                    p.panel_id, p.width, p.min_width_required, res.resolution
+                ));
+            }
+            if p.height < p.min_height_required - 0.5 {
+                errors.push(format!(
+                    "Panel {} height {:.1} is below minimum {:.1} at {:?}",
+                    p.panel_id, p.height, p.min_height_required, res.resolution
+                ));
+            }
+
+            let max_x = p.min_x + p.width;
+            let max_y = p.min_y + p.height;
+            if p.min_x < dock_min_x - 0.5
+                || max_x > dock_max_x + 0.5
+                || p.min_y < dock_min_y - 0.5
+                || max_y > dock_max_y + 0.5
+            {
+                errors.push(format!(
+                    "Panel {} rect [min=({:.1}, {:.1}), max=({:.1}, {:.1})] clipped outside dock container [min=({:.1}, {:.1}), max=({:.1}, {:.1})] at {:?}",
+                    p.panel_id, p.min_x, p.min_y, max_x, max_y, dock_min_x, dock_min_y, dock_max_x, dock_max_y, res.resolution
+                ));
+            }
+        }
+
+        // 2. Verify no two panels overlap
+        for i in 0..res.panels.len() {
+            for j in (i + 1)..res.panels.len() {
+                let a = &res.panels[i];
+                let b = &res.panels[j];
+
+                let a_max_x = a.min_x + a.width;
+                let a_max_y = a.min_y + a.height;
+                let b_max_x = b.min_x + b.width;
+                let b_max_y = b.min_y + b.height;
+
+                let overlap_x = (a_max_x.min(b_max_x) - a.min_x.max(b.min_x)).max(0.0);
+                let overlap_y = (a_max_y.min(b_max_y) - a.min_y.max(b.min_y)).max(0.0);
+
+                if overlap_x > 0.5 && overlap_y > 0.5 {
+                    errors.push(format!(
+                        "Panels {} and {} overlap by {:.1}x{:.1} at {:?}",
+                        a.panel_id, b.panel_id, overlap_x, overlap_y, res.resolution
+                    ));
+                }
+            }
+        }
+    }
+
+    if errors.is_empty() {
+        Ok(())
+    } else {
+        Err(errors)
+    }
+}
+
+/// Compares actual live snapshot against expected canonical snapshot within numerical tolerance.
+pub fn compare_snapshots(
+    actual: &LayoutSnapshotManifest,
+    expected: &LayoutSnapshotManifest,
+    tolerance: f32,
+) -> Result<(), Vec<String>> {
+    let mut diffs = Vec::new();
+
+    if actual.resolutions.len() != expected.resolutions.len() {
+        diffs.push(format!(
+            "Resolution count mismatch: actual {} vs expected {}",
+            actual.resolutions.len(),
+            expected.resolutions.len()
+        ));
+        return Err(diffs);
+    }
+
+    for (act_res, exp_res) in actual.resolutions.iter().zip(expected.resolutions.iter()) {
+        if act_res.resolution != exp_res.resolution {
+            diffs.push(format!(
+                "Resolution mismatch: actual {:?} vs expected {:?}",
+                act_res.resolution, exp_res.resolution
+            ));
+            continue;
+        }
+
+        if act_res.panels.len() != exp_res.panels.len() {
+            diffs.push(format!(
+                "Panel count mismatch at {:?}: actual {} vs expected {}",
+                act_res.resolution,
+                act_res.panels.len(),
+                exp_res.panels.len()
+            ));
+            continue;
+        }
+
+        for (act_p, exp_p) in act_res.panels.iter().zip(exp_res.panels.iter()) {
+            if act_p.panel_id != exp_p.panel_id {
+                diffs.push(format!(
+                    "Panel ID sequence mismatch at {:?}: actual {} vs expected {}",
+                    act_res.resolution, act_p.panel_id, exp_p.panel_id
+                ));
+                continue;
+            }
+
+            let dx = (act_p.min_x - exp_p.min_x).abs();
+            let dy = (act_p.min_y - exp_p.min_y).abs();
+            let dw = (act_p.width - exp_p.width).abs();
+            let dh = (act_p.height - exp_p.height).abs();
+
+            if dx > tolerance || dy > tolerance || dw > tolerance || dh > tolerance {
+                diffs.push(format!(
+                    "Panel {} rect drift at {:?}: actual [x={:.1}, y={:.1}, w={:.1}, h={:.1}] vs expected [x={:.1}, y={:.1}, w={:.1}, h={:.1}] (diffs: dx={:.2}, dy={:.2}, dw={:.2}, dh={:.2})",
+                    act_p.panel_id,
+                    act_res.resolution,
+                    act_p.min_x, act_p.min_y, act_p.width, act_p.height,
+                    exp_p.min_x, exp_p.min_y, exp_p.width, exp_p.height,
+                    dx, dy, dw, dh
+                ));
+            }
+        }
+    }
+
+    if diffs.is_empty() {
+        Ok(())
+    } else {
+        Err(diffs)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -523,5 +754,97 @@ mod tests {
         assert_eq!(report.control_violations[0].rule, "V1");
         assert_eq!(report.panel_violations.len(), 1);
         assert_eq!(report.panel_violations[0].rule, "V4");
+    }
+
+    #[test]
+    fn layout_snapshot_matches_canonical_and_satisfies_minimums() {
+        use std::path::Path;
+
+        let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+        let snapshot_path = manifest_dir.join("../../docs/snapshots/layout-geometry.json");
+
+        let dock = DockTree::standard();
+        let current_snapshot = build_current_layout_snapshot(&dock);
+
+        // 1. Verify integrity of current live layout
+        if let Err(errors) = verify_snapshot_integrity(&current_snapshot) {
+            panic!(
+                "Current layout violates minimum rect or geometry constraints: {:?}",
+                errors
+            );
+        }
+
+        // 2. Support updating snapshot if explicitly requested
+        if std::env::var("UPDATE_LAYOUT_SNAPSHOTS").as_deref() == Ok("1") {
+            if let Some(parent) = snapshot_path.parent() {
+                std::fs::create_dir_all(parent).expect("Failed to create snapshot directory");
+            }
+            let serialized = serde_json::to_string_pretty(&current_snapshot)
+                .expect("Failed to serialize snapshot");
+            std::fs::write(&snapshot_path, serialized).expect("Failed to write snapshot file");
+            println!("Updated layout snapshot at {:?}", snapshot_path);
+            return;
+        }
+
+        assert!(
+            snapshot_path.exists(),
+            "Canonical layout snapshot missing at {:?}. Run with UPDATE_LAYOUT_SNAPSHOTS=1 to generate.",
+            snapshot_path
+        );
+
+        let snapshot_data =
+            std::fs::read_to_string(&snapshot_path).expect("Failed to read snapshot file");
+        let expected_snapshot: LayoutSnapshotManifest = serde_json::from_str(&snapshot_data)
+            .expect("Failed to parse canonical layout snapshot JSON");
+
+        if let Err(diffs) = compare_snapshots(&current_snapshot, &expected_snapshot, 0.5) {
+            panic!(
+                "Layout regression detected! Live layout deviates from canonical snapshot in docs/snapshots/layout-geometry.json:\n{}\n\nIf this layout change is intentional and approved, update the snapshot with UPDATE_LAYOUT_SNAPSHOTS=1.",
+                diffs.join("\n")
+            );
+        }
+    }
+
+    #[test]
+    fn layout_snapshot_negative_test_fails_when_panel_leaves_minimum_rect() {
+        let dock = DockTree::standard();
+        let mut mutated_snapshot = build_current_layout_snapshot(&dock);
+
+        assert!(!mutated_snapshot.resolutions.is_empty());
+        let res0 = &mut mutated_snapshot.resolutions[0];
+        assert!(!res0.panels.is_empty());
+        // Deliberately force a panel width to 50px (below required minimum)
+        res0.panels[0].width = 50.0;
+
+        let result = verify_snapshot_integrity(&mutated_snapshot);
+        assert!(
+            result.is_err(),
+            "verify_snapshot_integrity must fail when a panel leaves its minimum rect"
+        );
+        let errs = result.unwrap_err();
+        assert!(errs
+            .iter()
+            .any(|e| e.contains("width") && e.contains("below minimum")));
+    }
+
+    #[test]
+    fn layout_snapshot_negative_test_detects_geometry_drift() {
+        let dock = DockTree::standard();
+        let base_snapshot = build_current_layout_snapshot(&dock);
+        let mut mutated_snapshot = base_snapshot.clone();
+
+        assert!(!mutated_snapshot.resolutions.is_empty());
+        let res0 = &mut mutated_snapshot.resolutions[0];
+        assert!(!res0.panels.is_empty());
+        // Mutate panel x position by 15px
+        res0.panels[0].min_x += 15.0;
+
+        let result = compare_snapshots(&mutated_snapshot, &base_snapshot, 0.5);
+        assert!(
+            result.is_err(),
+            "compare_snapshots must detect geometry drift"
+        );
+        let diffs = result.unwrap_err();
+        assert!(diffs.iter().any(|d| d.contains("rect drift")));
     }
 }

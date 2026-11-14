@@ -63,8 +63,8 @@ Scanned for removed personal alias and absolute workstation path literals:
 
 ## 3. Test Accounting Audit
 
-- **Master Test Manifest (`docs/test-manifest.txt`):** 605 named tests (+1 responsive layout geometry test in Task L3, +5 net layout probe tests in Task L2).
-- **Baseline Verification:** 605/605/605 passing across default, all-features, and no-default-features configurations (verified in `docs/STATE.md`).
+- **Master Test Manifest (`docs/test-manifest.txt`):** 608 named tests (+3 layout snapshot regression gate tests in Task L4, +1 responsive layout geometry test in Task L3, +5 net layout probe tests in Task L2).
+- **Baseline Verification:** 608/608/608 passing across default, all-features, and no-default-features configurations (verified in `docs/STATE.md`).
 - **Monotonicity:** Zero tests removed; manifest strictly matches active workspace test suite.
 
 ---
@@ -75,12 +75,12 @@ All public capabilities asserted in `README.md` are cross-referenced and substan
 1. `docs/CLAIMS.md`: Concrete milestone delivered proofs (M1 through M12).
 2. `docs/FEATURE-REGISTRY.md`: Exact implementation source files and proving tests.
 3. Interactive desktop editor status is correctly qualified as `GUI: unverified`.
-4. `README.md` test counter was synchronized to reflect active verified test count: 605.
+4. `README.md` test counter was synchronized to reflect active verified test count: 608.
 
 ---
 
 ## 5. Automated Verification Gates Integration
 
-Task H1 integrated `scripts/check_docs.py` directly into the automated verification harnesses:
-- `scripts/verify.ps1`: Step 10 runs `python scripts/check_docs.py` before working tree cleanliness check.
-- `scripts/verify.sh`: Step 7 runs `check_docs.py` via `python3` or `python`.
+The verification harnesses integrate automated release and regression gates:
+- `scripts/check_docs.py`: Verified in `scripts/verify.ps1` (Step 10) and `scripts/verify.sh` (Step 7).
+- `scripts/check_layout_gate.py`: Integrated in `scripts/verify.ps1` (Step 11), `scripts/verify.sh` (Step 8), and `.github/workflows/ci.yml` (Layout Regression Gate step running on every pull request). Enforces that `docs/snapshots/layout-geometry.json` cannot be modified without an explicit approved reason and verifies per-panel minimum geometry floors.

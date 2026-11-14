@@ -456,8 +456,9 @@ pub fn zlabel_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalErro
 
 /// `subplot(m, n, p)` — create axes in an m×n grid at position p (1-based).
 /// `subplot(mnp)` — three-digit form, e.g. `subplot(211)` == `subplot(2,1,1)`.
+/// `subplot(m, n, [p1, p2, ...])` — spanning subplot across multiple positions.
 pub fn subplot_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError> {
-    let (m, n, p) = if args.len() == 1 {
+    let (m, n, indices) = if args.len() == 1 {
         let mnp = args[0].as_scalar_i64().map_err(math_err)? as usize;
         if !(100..=999).contains(&mnp) {
             return Err(user_err(
@@ -465,47 +466,41 @@ pub fn subplot_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalErr
                 "subplot(mnp) requires a 3-digit number.",
             ));
         }
-        (mnp / 100, (mnp / 10) % 10, mnp % 10)
+        (mnp / 100, (mnp / 10) % 10, vec![mnp % 10])
     } else if args.len() == 3 {
-        (
-            args[0].as_scalar_i64().map_err(math_err)? as usize,
-            args[1].as_scalar_i64().map_err(math_err)? as usize,
-            args[2].as_scalar_i64().map_err(math_err)? as usize,
-        )
+        let m = args[0].as_scalar_i64().map_err(math_err)? as usize;
+        let n = args[1].as_scalar_i64().map_err(math_err)? as usize;
+        let indices = if args[2].is_scalar() {
+            vec![args[2].as_scalar_i64().map_err(math_err)? as usize]
+        } else {
+            let arr = extract_f64_array(&args[2])?;
+            arr.as_slice().iter().map(|&x| x as usize).collect()
+        };
+        (m, n, indices)
     } else {
         return Err(user_err(
             "RUSTLAB:plot:badArgs",
             "subplot requires 3 inputs (m, n, p) or 1 input (mnp).",
         ));
     };
-    if m == 0 || n == 0 || p == 0 || p > m * n {
+
+    if m == 0 || n == 0 || indices.is_empty() || indices.iter().any(|&p| p == 0 || p > m * n) {
         return Err(user_err(
             "RUSTLAB:plot:badArgs",
             "Invalid subplot dimensions.",
         ));
     }
-    let m = args[0].as_scalar_i64().map_err(math_err)? as usize;
-    let n = args[1].as_scalar_i64().map_err(math_err)? as usize;
-    let p = args[2].as_scalar_i64().map_err(math_err)? as usize;
-    if m == 0 || n == 0 || p == 0 || p > m * n {
-        return Err(user_err(
-            "RUSTLAB:plot:badArgs",
-            "Invalid subplot dimensions.",
-        ));
-    }
+
     rustlab_plot::with_plot_state(|reg| {
         let fig = reg.current_figure_mut().ok_or(user_err(
             "RUSTLAB:plot:noFigure",
             "No current figure. Call figure first.",
         ))?;
-        // Reuse existing axes with id p if present.
-        if fig.axes.iter().any(|a| a.id == p) {
-            fig.current_axes = Some(p);
-            return Ok::<(), EvalError>(());
+        if indices.len() == 1 {
+            fig.subplot(m, n, indices[0]);
+        } else {
+            fig.subplot_spanning(m, n, indices);
         }
-        let mut ax = Axes::new(p);
-        ax.title = format!("subplot({m},{n},{p})");
-        fig.add_axes(ax);
         Ok::<(), EvalError>(())
     })?;
     Ok(vec![])

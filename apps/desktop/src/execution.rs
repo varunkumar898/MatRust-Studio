@@ -532,11 +532,12 @@ impl Session {
                         message: "Invalid subplot dimensions.".to_string(),
                         span: rustlab_parse::Span::default(),
                     })? as usize;
-                    let p = args[2].as_scalar_i64().map_err(|_| EvalError::UserError {
-                        identifier: "RUSTLAB:plot:badArgs".to_string(),
-                        message: "Invalid subplot dimensions.".to_string(),
-                        span: rustlab_parse::Span::default(),
-                    })? as usize;
+                    let p = if let Ok(val) = args[2].as_scalar_i64() {
+                        val as usize
+                    } else {
+                        let vec = Self::extract_vec(&args[2]);
+                        vec.first().copied().unwrap_or(1.0) as usize
+                    };
                     fig.subplot(m, n, p);
                 } else if args.len() == 1 {
                     let mnp = args[0].as_scalar_i64().map_err(|_| EvalError::UserError {

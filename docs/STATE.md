@@ -1,23 +1,42 @@
 # MatRust Studio / RustLab Project State
 
-**Current branch:** `task/l4-layout-regression-gate`
+**Current branch:** `task/p1-subplot-rendering`
 **Repository:** `https://github.com/varunkumar898/MatRust-Studio.git`
-**Current commit:** `fe235b4` (`fix(layout): Wave 0 Task L3 responsive layout fixes and three-size geometry tests (#52)`)
+**Current commit:** `a35d047` (`Merge pull request #53 from varunkumar898/task/l4-layout-regression-gate`)
 **Date:** 2026-11-14
 **Platform:** Windows 11 ARM64 (`aarch64-pc-windows-gnullvm`)
 **Local stable toolchain:** Rust 1.99.1
 **Declared MSRV:** Rust 1.88.0
 **Verification status:** 
-- Local default, all-features, and no-default-features test runs pass at **608/608/608** (net +3 tests in Task L4).
-- Master test manifest `docs/test-manifest.txt` exactly matches `cargo test --workspace -- --list` (608 named tests).
+- Local default, all-features, and no-default-features test runs pass at **615/615/615** (net +5 snapshot tests and +2 subplot unit tests in Task P1).
+- Master test manifest `docs/test-manifest.txt` exactly matches `cargo test --workspace -- --list` (615 named tests).
 - `scripts/check_docs.py` verifies 0 privacy path leaks, 100% link resolution, and 242/249 builtin documentation coverage.
 - `scripts/check_layout_gate.py` verifies canonical snapshot integrity, minimum panel bounds, and approval tracking.
 - `scripts/verify.ps1` and `scripts/verify.sh` integrate `check_docs.py` and `check_layout_gate.py` as automated gates.
 - `cargo fmt --all -- --check` passes cleanly.
 
-## Current work: Wave 0 Task L4: Layout Regression Gate (Auto)
+## Current work: Wave 1 Task P1: Subplot Rendering
 
-- **Branch `task/l4-layout-regression-gate`**: Layout regression gate in CI and automated verification harnesses.
+- **Branch `task/p1-subplot-rendering`**: Subplot grid placement, spanning cells, and golden SVG snapshots.
+  - Implemented `SubplotPosition` with `single`, `spanning`, `grid_bounds`, and `compute_rect` in `crates/rustlab-plot/src/lib.rs`.
+  - Added `subplot_pos`, `shared_x_with`, and `shared_y_with` on `Axes`.
+  - Added `Figure::deterministic_axes()`, `Figure::subplot(m, n, p)`, and `Figure::subplot_spanning(m, n, indices)`.
+  - Implemented multi-axes deterministic SVG layout in `crates/rustlab-plot/src/svg.rs` with `grid_lines_subplot` preventing neighbor bleeding and strict backward-compatible preservation of single default axes.
+  - Updated `crates/rustlab-stdlib/src/plot_builtins.rs` `subplot_fn` to support 1-arg (`211`), 3-arg scalar (`2, 2, 3`), and 3-arg vector (`2, 2, [1, 2]`) with dimension validation and axes selection.
+  - Updated `apps/desktop/src/figures.rs` to render all axes for multi-axes figures in their respective grid tiles.
+  - Added golden SVG snapshot tests in `crates/rustlab-plot/tests/snapshot_tests.rs`:
+    - `snapshot_subplot_1x1_at_1280x800`
+    - `snapshot_subplot_2x1_at_1280x800`
+    - `snapshot_subplot_2x2_at_1280x800`
+    - `snapshot_subplot_spanning_at_1280x800`
+    - `snapshot_subplot_empty_at_1280x800`
+    - `test_subplot_223_places_axes_in_bottom_left_cell`
+    - `test_empty_subplot_no_bleeding_or_collapsing`
+  - Committed 5 golden SVG references in `crates/rustlab-plot/tests/snapshots/`.
+
+## Previous work: Wave 0 Task L4: Layout Regression Gate (Auto)
+
+- **Branch `task/l4-layout-regression-gate`** (Merged in PR #53, commit `a35d047`):
   - Defined `LayoutSnapshotManifest`, `ResolutionSnapshot`, and `PanelSnapshot` structures with serialization in `apps/desktop/src/layout_contract.rs`.
   - Added `docs/snapshots/layout-geometry.json` storing approved canonical panel rects across 900×600, 1280×800, and 1920×1080.
   - Implemented `verify_snapshot_integrity` and `compare_snapshots` asserting per-panel minimum floors, containment within container bounds, and pairwise non-overlapping geometry.

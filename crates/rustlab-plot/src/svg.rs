@@ -31,60 +31,21 @@ pub fn to_svg(fig: &Figure, width: f64, height: f64) -> String {
         ));
     }
 
-    for axes in &fig.axes {
-        let subpad = pad + 20.0;
-        let sub_w = plot_w - 20.0;
-        let sub_h = plot_h - 40.0;
-        if fig.axes.len() > 1 {
-            out.push_str(&format!(
-                r#"<g id="axes-{}"><rect x="{}" y="{}" width="{}" height="{}" class="axes-bg"/>"#,
-                axes.id,
-                fmt2(subpad),
-                fmt2(60.0),
-                fmt2(sub_w),
-                fmt2(sub_h)
-            ));
-        } else {
-            out.push_str(&format!(
-                r#"<g id="axes-{}"><rect x="{}" y="{}" width="{}" height="{}" class="axes-bg"/>"#,
-                axes.id,
-                fmt2(pad),
-                fmt2(60.0),
-                fmt2(plot_w),
-                fmt2(plot_h)
-            ));
-        }
+    let is_single_default = fig.axes.len() == 1 && fig.axes[0].subplot_pos.is_none();
 
-        // Determine plot area.
-        let (px0, py0, pw, ph) = if fig.axes.len() > 1 {
-            (subpad, 60.0, sub_w, sub_h)
-        } else {
-            (pad, 60.0, plot_w, plot_h)
-        };
+    if is_single_default {
+        let axes = &fig.axes[0];
+        out.push_str(&format!(
+            r#"<g id="axes-{}"><rect x="{}" y="{}" width="{}" height="{}" class="axes-bg"/>"#,
+            axes.id,
+            fmt2(pad),
+            fmt2(60.0),
+            fmt2(plot_w),
+            fmt2(plot_h)
+        ));
 
-        // Axis limits: explicit xlim/ylim/zlim, else data bounds.
-        let db = axes.data_bounds();
-        let (x_min, x_max) = match axes.xlim {
-            Some([lo, hi]) => (lo, hi),
-            None => match db {
-                Some((xr, _, _)) => margin(xr[0], xr[1]),
-                None => (0.0, 1.0),
-            },
-        };
-        let (y_min, y_max) = match axes.ylim {
-            Some([lo, hi]) => (lo, hi),
-            None => match db {
-                Some((_, yr, _)) => margin(yr[0], yr[1]),
-                None => (0.0, 1.0),
-            },
-        };
-        let (z_min, z_max) = match axes.zlim {
-            Some([lo, hi]) => (lo, hi),
-            None => match db {
-                Some((_, _, zr)) => margin(zr[0], zr[1]),
-                None => (0.0, 1.0),
-            },
-        };
+        let (px0, py0, pw, ph) = (pad, 60.0, plot_w, plot_h);
+        let (x_min, x_max, y_min, y_max, z_min, z_max) = axis_limits(axes);
 
         let ctx = RenderContext {
             px0,
@@ -104,22 +65,89 @@ pub fn to_svg(fig: &Figure, width: f64, height: f64) -> String {
                 .any(|s| matches!(s, crate::Series::Surface(_))),
         };
 
-        // X axis line + ticks.
         if axes.grid {
             out.push_str(&grid_lines(&ctx));
         }
 
-        // Series.
         for series in &axes.series {
             out.push_str(&render_series(series, &ctx));
         }
 
-        // Colorbar (drawn after series so it sits on top).
         if let Some(cb) = &axes.colorbar {
             out.push_str(&render_colorbar(&ctx, cb));
         }
 
         out.push_str("</g>\n");
+    } else {
+        let sorted_axes = fig.deterministic_axes();
+        let total_x0 = 60.0;
+        let total_y0 = 60.0;
+        let total_w = (width - 110.0).max(10.0);
+        let total_h = (height - 110.0).max(10.0);
+        let gap_x = 60.0;
+        let gap_y = 60.0;
+
+        for (idx, axes) in sorted_axes.iter().enumerate() {
+            let (px0, py0, pw, ph) = if let Some(pos) = &axes.subplot_pos {
+                pos.compute_rect(total_x0, total_y0, total_w, total_h, gap_x, gap_y)
+            } else {
+                let n = sorted_axes.len();
+                crate::SubplotPosition::single(n, 1, idx + 1)
+                    .compute_rect(total_x0, total_y0, total_w, total_h, gap_x, gap_y)
+            };
+
+            let (x_min, x_max, y_min, y_max, z_min, z_max) = resolve_limits(axes, &fig.axes);
+
+            out.push_str(&format!(
+                r#"<g id="axes-{}"><rect x="{}" y="{}" width="{}" height="{}" class="axes-bg"/>"#,
+                axes.id,
+                fmt2(px0),
+                fmt2(py0),
+                fmt2(pw),
+                fmt2(ph)
+            ));
+
+            if !axes.title.is_empty() {
+                out.push_str(&format!(
+                    r#"<text x="{}" y="{}" class="axes-label" font-weight="bold">{}</text>"#,
+                    fmt2(px0 + pw / 2.0),
+                    fmt2(py0 - 8.0),
+                    esc(&axes.title)
+                ));
+            }
+
+            let ctx = RenderContext {
+                px0,
+                py0,
+                pw,
+                ph,
+                axes,
+                x_min,
+                x_max,
+                y_min,
+                y_max,
+                _z_min: z_min,
+                _z_max: z_max,
+                _has_surface: axes
+                    .series
+                    .iter()
+                    .any(|s| matches!(s, crate::Series::Surface(_))),
+            };
+
+            if axes.grid {
+                out.push_str(&grid_lines_subplot(&ctx));
+            }
+
+            for series in &axes.series {
+                out.push_str(&render_series(series, &ctx));
+            }
+
+            if let Some(cb) = &axes.colorbar {
+                out.push_str(&render_colorbar(&ctx, cb));
+            }
+
+            out.push_str("</g>\n");
+        }
     }
 
     out.push_str("</svg>");
@@ -168,6 +196,26 @@ fn style_block() -> &'static str {
 .legend { fill:#ffffff; stroke:#999999; stroke-width:1; }
 .legend-text { font-size: 10px; fill:#222222; }
 </style></defs>"#
+}
+
+/// Resolve limits, honoring shared axis links (`shared_x_with`, `shared_y_with`).
+fn resolve_limits(axes: &Axes, all_axes: &[Axes]) -> (f64, f64, f64, f64, f64, f64) {
+    let (mut x_min, mut x_max, mut y_min, mut y_max, z_min, z_max) = axis_limits(axes);
+    if let Some(target_id) = axes.shared_x_with {
+        if let Some(target) = all_axes.iter().find(|a| a.id == target_id) {
+            let (tx_min, tx_max, _, _, _, _) = axis_limits(target);
+            x_min = tx_min;
+            x_max = tx_max;
+        }
+    }
+    if let Some(target_id) = axes.shared_y_with {
+        if let Some(target) = all_axes.iter().find(|a| a.id == target_id) {
+            let (_, _, ty_min, ty_max, _, _) = axis_limits(target);
+            y_min = ty_min;
+            y_max = ty_max;
+        }
+    }
+    (x_min, x_max, y_min, y_max, z_min, z_max)
 }
 
 /// Resolve explicit limits or fall back to data bounds, with a small
@@ -658,6 +706,47 @@ fn grid_lines(ctx: &RenderContext) -> String {
             fmt2(ctx.px0 + ctx.pw),
             fmt2(y)
         ));
+    }
+    // Axis frame.
+    out.push_str(&format!(
+        r#"<rect x="{}" y="{}" width="{}" height="{}" class="axis-line" fill="none" />"#,
+        fmt2(ctx.px0),
+        fmt2(ctx.py0),
+        fmt2(ctx.pw),
+        fmt2(ctx.ph)
+    ));
+    out
+}
+
+/// Render grid lines for subplot 2D view, clipped within the subplot bounds
+/// to ensure non-overlapping rects with zero neighbour bleeding.
+fn grid_lines_subplot(ctx: &RenderContext) -> String {
+    let mut out = String::new();
+    let xticks = crate::ticks::nice_ticks(ctx.x_min, ctx.x_max, 6);
+    let yticks = crate::ticks::nice_ticks(ctx.y_min, ctx.y_max, 5);
+    for tx in &xticks {
+        let x = px(*tx, ctx.x_min, ctx.x_max, ctx.px0, ctx.pw);
+        if x >= ctx.px0 - 0.01 && x <= ctx.px0 + ctx.pw + 0.01 {
+            out.push_str(&format!(
+                r#"<line class="grid-line" x1="{}" y1="{}" x2="{}" y2="{}" />"#,
+                fmt2(x),
+                fmt2(ctx.py0),
+                fmt2(x),
+                fmt2(ctx.py0 + ctx.ph)
+            ));
+        }
+    }
+    for ty in &yticks {
+        let y = py(*ty, ctx.y_min, ctx.y_max, ctx.py0, ctx.ph);
+        if y >= ctx.py0 - 0.01 && y <= ctx.py0 + ctx.ph + 0.01 {
+            out.push_str(&format!(
+                r#"<line class="grid-line" x1="{}" y1="{}" x2="{}" y2="{}" />"#,
+                fmt2(ctx.px0),
+                fmt2(y),
+                fmt2(ctx.px0 + ctx.pw),
+                fmt2(y)
+            ));
+        }
     }
     // Axis frame.
     out.push_str(&format!(

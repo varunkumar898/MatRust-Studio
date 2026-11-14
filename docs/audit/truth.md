@@ -63,8 +63,8 @@ Scanned for removed personal alias and absolute workstation path literals:
 
 ## 3. Test Accounting Audit
 
-- **Master Test Manifest (`docs/test-manifest.txt`):** 608 named tests (+3 layout snapshot regression gate tests in Task L4, +1 responsive layout geometry test in Task L3, +5 net layout probe tests in Task L2).
-- **Baseline Verification:** 608/608/608 passing across default, all-features, and no-default-features configurations (verified in `docs/STATE.md`).
+- **Master Test Manifest (`docs/test-manifest.txt`):** 615 named tests (+5 subplot golden snapshot tests and +2 subplot placement/empty tests in Wave 1 Task P1, +3 layout snapshot regression gate tests in Task L4, +1 responsive layout geometry test in Task L3, +5 net layout probe tests in Task L2).
+- **Baseline Verification:** 615/615/615 passing across default, all-features, and no-default-features configurations (verified in `docs/STATE.md`).
 - **Monotonicity:** Zero tests removed; manifest strictly matches active workspace test suite.
 
 ---
@@ -75,7 +75,7 @@ All public capabilities asserted in `README.md` are cross-referenced and substan
 1. `docs/CLAIMS.md`: Concrete milestone delivered proofs (M1 through M12).
 2. `docs/FEATURE-REGISTRY.md`: Exact implementation source files and proving tests.
 3. Interactive desktop editor status is correctly qualified as `GUI: unverified`.
-4. `README.md` test counter was synchronized to reflect active verified test count: 608.
+4. `README.md` test counter was synchronized to reflect active verified test count: 615.
 
 ---
 

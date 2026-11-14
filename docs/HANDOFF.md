@@ -230,3 +230,62 @@ This document provides a structured handoff ledger between agent sessions, recor
 1. Await owner review and approval for Task L4 PR.
 2. Following merge of Task L4 (completing Wave 0: Hygiene and Layout Foundations: H1, L1, L2, L3, L4), proceed to **Wave 1: Plotting and Visualization (Task P1: Subplot rendering)** as governed by `docs/WORKPLAN.md`.
 3. Adhere strictly to Protocol P6 (one task per session).
+
+---
+
+## Session Handoff Entry: Wave 1 Task P1 - Subplot Rendering
+
+- **Date:** 2026-11-14
+- **Branch:** `task/p1-subplot-rendering`
+- **Target PR Base:** `main` (commit `a35d047`, PR #53)
+- **Session Focus:** Wave 1 Task P1 (Subplot rendering, grid positioning, spanning cells, non-overlapping rects, and golden SVG snapshots)
+
+### 1. Completed in This Session
+1. **Subplot Position & Core Modeling**:
+   - `crates/rustlab-plot/src/lib.rs`:
+     - Added `SubplotPosition` struct with `single`, `spanning`, `primary_index`, `grid_bounds`, and `compute_rect`.
+     - Added `subplot_pos`, `shared_x_with`, and `shared_y_with` on `Axes`.
+     - Added `Figure::deterministic_axes(&self) -> Vec<&Axes>` sorting axes deterministically by `(min_row, min_col, id)`.
+     - Added `Figure::subplot(&mut self, m, n, p) -> &mut Axes` and `Figure::subplot_spanning(&mut self, m, n, indices) -> &mut Axes`.
+2. **Deterministic SVG Multi-Axes Layout Engine**:
+   - `crates/rustlab-plot/src/svg.rs`:
+     - Updated `to_svg` to layout subplots across available figure canvas with 60px gutters and non-overlapping cell bounding rects.
+     - Preserved 100% byte-exact backwards compatibility for single default axes (`fig.axes.len() == 1 && fig.axes[0].subplot_pos.is_none()`).
+     - Implemented `resolve_limits` honoring shared axis synchronization (`shared_x_with`, `shared_y_with`).
+     - Implemented `grid_lines_subplot` with boundary tick clipping to prevent grid lines or ticks bleeding into neighboring subplots.
+3. **MATLAB Built-in & Desktop Integration**:
+   - `crates/rustlab-stdlib/src/plot_builtins.rs`:
+     - Updated `subplot_fn` to support 1-argument (`subplot(211)`), 3-argument scalar (`subplot(2, 2, 3)`), and 3-argument vector spanning (`subplot(2, 2, [1, 2])`).
+     - Added validation for dimension boundaries ($1 \le p \le m \times n$).
+   - `apps/desktop/src/execution.rs`:
+     - Extended desktop subplot builtin to handle scalar and vector spanning arguments.
+   - `apps/desktop/src/figures.rs`:
+     - Extended `FiguresPanel::show` to render all axes for multi-axes figures into tiled grid positions.
+4. **Golden SVG Snapshots & Unit Tests**:
+   - `crates/rustlab-plot/tests/snapshot_tests.rs`:
+     - `test_subplot_223_places_axes_in_bottom_left_cell`: Asserts `subplot(2, 2, 3)` lands at bottom-left (row 1, col 0) with exact coordinates.
+     - `test_empty_subplot_no_bleeding_or_collapsing`: Asserts empty subplots preserve positive width/height without collapsing or bleeding.
+     - `snapshot_subplot_1x1_at_1280x800`: 1x1 subplot snapshot.
+     - `snapshot_subplot_2x1_at_1280x800`: 2x1 grid subplot snapshot.
+     - `snapshot_subplot_2x2_at_1280x800`: 2x2 grid subplot snapshot.
+     - `snapshot_subplot_spanning_at_1280x800`: Spanning top-row subplot snapshot (`[1, 2]`) with 2 bottom subplots.
+     - `snapshot_subplot_empty_at_1280x800`: 2x1 subplot snapshot with second subplot empty.
+   - Committed 5 golden reference SVG files to `crates/rustlab-plot/tests/snapshots/`.
+5. **Accounting & Verification Synchronization**:
+   - Synchronized `docs/test-manifest.txt` to 615 tests (+7 net tests).
+   - Synchronized `README.md` test counter claim to 615 tests.
+   - Updated `docs/STATE.md` and `docs/audit/truth.md`.
+
+### 2. Verified Baseline State
+- **Formatting:** `cargo fmt --all -- --check` passes cleanly.
+- **Documentation & Privacy Checks:** `python scripts/check_docs.py` passes (242 registered / 249 documented, 0 privacy leaks, 100% link resolution).
+- **Layout Gate Checks:** `python scripts/check_layout_gate.py` passes.
+- **Plotting & Snapshot Test Suite:** All 33 tests in `rustlab-plot` pass (23 unit tests + 10 snapshot tests, all matching byte-for-byte).
+- **Stdlib Test Suite:** All tests in `rustlab-stdlib` pass.
+- **Desktop Test Suite:** All 107 tests in `matrust_studio` pass.
+- **Workspace Master Test Manifest:** 615/615 named tests in workspace match `docs/test-manifest.txt`.
+
+### 3. Immediate Next Steps for Next Session
+1. Await owner review and approval for Task P1 PR.
+2. Following merge of Task P1, proceed to **Wave 1 Task P2: Shared axes and limits** as governed by `docs/WORKPLAN.md`.
+3. Adhere strictly to Protocol P6 (one task per session).

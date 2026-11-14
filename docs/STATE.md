@@ -1,26 +1,36 @@
 # MatRust Studio / RustLab Project State
 
-**Current branch:** `task/l1-layout-audit`
+**Current branch:** `task/l2-layout-probe-checks`
 **Repository:** `https://github.com/varunkumar898/MatRust-Studio.git`
-**Current commit:** `4950614` (`chore(governance): Wave 0 Task H1 repository hygiene and truth audit gate (#49)`)
+**Current commit:** `6793ca1` (`docs(audit): Wave 0 Task L1 desktop layout contract audit (C1-C12) (#50)`)
 **Date:** 2026-11-14
 **Platform:** Windows 11 ARM64 (`aarch64-pc-windows-gnullvm`)
 **Local stable toolchain:** Rust 1.99.1
 **Declared MSRV:** Rust 1.88.0
 **Verification status:** 
-- Local default, all-features, and no-default-features test runs pass at **599/599/599**.
-- Master test manifest `docs/test-manifest.txt` exactly matches `cargo test --workspace -- --list` (599 named tests).
+- Local default, all-features, and no-default-features test runs pass at **604/604/604** (net +5 tests in Task L2).
+- Master test manifest `docs/test-manifest.txt` exactly matches `cargo test --workspace -- --list` (604 named tests).
 - `scripts/check_docs.py` verifies 0 privacy path leaks, 100% link resolution, and 242/249 builtin documentation coverage.
 - `scripts/verify.ps1` and `scripts/verify.sh` integrate `check_docs.py` as an automated gate.
 - `cargo fmt --all -- --check` passes cleanly.
 
-## Current work: Wave 0 Task L1: Layout Audit (Read-Only)
+## Current work: Wave 0 Task L2: Layout Probe & Contract Checks
 
-- **Branch `task/l1-layout-audit`**: Desktop layout contract audit against rules C1–C12.
-  - Executed real-window captures at the three supported sizes: 900×600, 1280×800, 1920×1080 via `scripts/capture-desktop-s1.ps1`.
-  - Recorded capture metadata, file sizes, and SHA-256 checksums in `docs/layout-audit.md`.
-  - Delivered comprehensive C1–C12 verdict table based on live capture evidence and static code review.
-  - Verified zero source code modified (read-only audit).
+- **Branch `task/l2-layout-probe-checks`**: Read-only layout probe and automated contract checks infrastructure.
+  - Implemented `LayoutProbe` and `check_layout_full` for structured violation reporting.
+  - Added pure read-only `DockNode::collect_leaf_rects` and `DockTree::collect_panel_rects`.
+  - Added `PanelClip` C1 container check preventing child paint bleed into neighbors.
+  - Added `PANEL_MIN` table and verified all 7 rows below and at/above threshold.
+  - Implemented `run_size_sweep` and `generate_capture_report` for L-C size sweep evaluating 900×600, 1280×800, and 1920×1080.
+  - Implemented `check_mutation` verifying L-E element mutation in all 4 quadrant directions.
+  - Findings only; no panel fixes made (preserves separation of concerns for Task L3).
+
+## Previous work: Wave 0 Task L1: Layout Audit (Read-Only)
+
+- **Branch `task/l1-layout-audit`** (Merged in PR #50, commit `6793ca1`):
+  - Desktop layout contract audit against rules C1–C12.
+  - Real-window captures at supported sizes: 900×600, 1280×800, 1920×1080.
+  - Comprehensive C1–C12 verdict table in `docs/layout-audit.md`.
 
 ## Previous work: Wave 0 Task H1: Repository Hygiene & Truth Audit
 

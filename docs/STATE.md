@@ -1,38 +1,49 @@
 # MatRust Studio / RustLab Project State
 
-**Current branch:** `task/p1-subplot-rendering`
+**Current branch:** `task/p2-independent-axes-and-limits`
 **Repository:** `https://github.com/varunkumar898/MatRust-Studio.git`
-**Current commit:** `a35d047` (`Merge pull request #53 from varunkumar898/task/l4-layout-regression-gate`)
-**Date:** 2026-11-14
+**Current commit:** `a139572` (`Merge pull request #54 from varunkumar898/task/p1-subplot-rendering`)
+**Date:** 2026-11-15
 **Platform:** Windows 11 ARM64 (`aarch64-pc-windows-gnullvm`)
 **Local stable toolchain:** Rust 1.99.1
 **Declared MSRV:** Rust 1.88.0
 **Verification status:** 
-- Local default, all-features, and no-default-features test runs pass at **615/615/615** (net +5 snapshot tests and +2 subplot unit tests in Task P1).
-- Master test manifest `docs/test-manifest.txt` exactly matches `cargo test --workspace -- --list` (615 named tests).
+- Local default, all-features, and no-default-features test runs pass at **619/619/619** (net +4 unit and regression tests in Task P2).
+- Master test manifest `docs/test-manifest.txt` exactly matches `cargo test --workspace -- --list` (619 named tests).
 - `scripts/check_docs.py` verifies 0 privacy path leaks, 100% link resolution, and 242/249 builtin documentation coverage.
 - `scripts/check_layout_gate.py` verifies canonical snapshot integrity, minimum panel bounds, and approval tracking.
 - `scripts/verify.ps1` and `scripts/verify.sh` integrate `check_docs.py` and `check_layout_gate.py` as automated gates.
 - `cargo fmt --all -- --check` passes cleanly.
 
-## Current work: Wave 1 Task P1: Subplot Rendering
+## Current work: Wave 1 Task P2: Shared Axes and Limits / Independent Axes Properties
 
-- **Branch `task/p1-subplot-rendering`**: Subplot grid placement, spanning cells, and golden SVG snapshots.
+- **Branch `task/p2-independent-axes-and-limits`**: Independent axes properties, scale, and shared limits.
+  - Implemented independent axes properties in `crates/rustlab-plot/src/lib.rs`:
+    - Added `xticks`, `xticklabels`, `yticks`, `yticklabels` on `Axes`.
+    - Added helper setters on `Axes`: `set_xlim`, `set_ylim`, `set_xscale`, `set_yscale`, `set_xticks`, `set_xticklabels`, `set_yticks`, `set_yticklabels`, `set_grid`, `set_title`, `set_xlabel`, `set_ylabel`, `set_legend`, `link_x_with`, `link_y_with`, `unlink`.
+    - Added figure-level linking helpers: `Figure::link_axes(&mut self, ax_ids: &[usize], axis: &str)` and `Figure::unlink_axes(&mut self, ax_ids: &[usize])`.
+  - Updated SVG rendering in `crates/rustlab-plot/src/svg.rs`:
+    - Enhanced `resolve_limits` to synchronize shared axes limits across linked axes (honoring explicit limits or computing bounds union).
+    - Added `map_px` and `map_py` supporting both `Scale::Linear` and `Scale::Log` projections with 100% byte-exact backwards compatibility for linear axes.
+    - Implemented `render_legend` rendering styled legend boxes at `LegendLocation` (NorthEast, NorthWest, SouthEast, SouthWest) with series swatches and labels.
+    - Implemented `log_ticks` decade generator and updated `grid_lines` and `grid_lines_subplot` to support custom ticks and log scaling.
+  - Added comprehensive unit and regression tests in `crates/rustlab-plot/tests/snapshot_tests.rs`:
+    - `test_independent_axes_properties_different_limits_and_scale`
+    - `test_axes_serialization_roundtrip_preserves_independent_state`
+    - `test_axes_regression_no_crosstalk`
+    - `test_shared_axes_synchronization_and_unlinking`
+  - Workspace test count grew from 615 to 619 (+4 tests).
+
+## Previous work: Wave 1 Task P1: Subplot Rendering
+
+- **Branch `task/p1-subplot-rendering`** (Merged in PR #54, commit `a139572`):
   - Implemented `SubplotPosition` with `single`, `spanning`, `grid_bounds`, and `compute_rect` in `crates/rustlab-plot/src/lib.rs`.
   - Added `subplot_pos`, `shared_x_with`, and `shared_y_with` on `Axes`.
   - Added `Figure::deterministic_axes()`, `Figure::subplot(m, n, p)`, and `Figure::subplot_spanning(m, n, indices)`.
   - Implemented multi-axes deterministic SVG layout in `crates/rustlab-plot/src/svg.rs` with `grid_lines_subplot` preventing neighbor bleeding and strict backward-compatible preservation of single default axes.
   - Updated `crates/rustlab-stdlib/src/plot_builtins.rs` `subplot_fn` to support 1-arg (`211`), 3-arg scalar (`2, 2, 3`), and 3-arg vector (`2, 2, [1, 2]`) with dimension validation and axes selection.
   - Updated `apps/desktop/src/figures.rs` to render all axes for multi-axes figures in their respective grid tiles.
-  - Added golden SVG snapshot tests in `crates/rustlab-plot/tests/snapshot_tests.rs`:
-    - `snapshot_subplot_1x1_at_1280x800`
-    - `snapshot_subplot_2x1_at_1280x800`
-    - `snapshot_subplot_2x2_at_1280x800`
-    - `snapshot_subplot_spanning_at_1280x800`
-    - `snapshot_subplot_empty_at_1280x800`
-    - `test_subplot_223_places_axes_in_bottom_left_cell`
-    - `test_empty_subplot_no_bleeding_or_collapsing`
-  - Committed 5 golden SVG references in `crates/rustlab-plot/tests/snapshots/`.
+  - Added golden SVG snapshot tests in `crates/rustlab-plot/tests/snapshot_tests.rs`.
 
 ## Previous work: Wave 0 Task L4: Layout Regression Gate (Auto)
 

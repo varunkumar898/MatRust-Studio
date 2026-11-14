@@ -77,6 +77,10 @@ pub fn to_svg(fig: &Figure, width: f64, height: f64) -> String {
             out.push_str(&render_colorbar(&ctx, cb));
         }
 
+        if let Some(leg) = &axes.legend {
+            out.push_str(&render_legend(&ctx, leg));
+        }
+
         out.push_str("</g>\n");
     } else {
         let sorted_axes = fig.deterministic_axes();
@@ -146,6 +150,10 @@ pub fn to_svg(fig: &Figure, width: f64, height: f64) -> String {
                 out.push_str(&render_colorbar(&ctx, cb));
             }
 
+            if let Some(leg) = &axes.legend {
+                out.push_str(&render_legend(&ctx, leg));
+            }
+
             out.push_str("</g>\n");
         }
     }
@@ -204,15 +212,29 @@ fn resolve_limits(axes: &Axes, all_axes: &[Axes]) -> (f64, f64, f64, f64, f64, f
     if let Some(target_id) = axes.shared_x_with {
         if let Some(target) = all_axes.iter().find(|a| a.id == target_id) {
             let (tx_min, tx_max, _, _, _, _) = axis_limits(target);
-            x_min = tx_min;
-            x_max = tx_max;
+            if axes.xlim.is_some() {
+                // self has explicit limits
+            } else if target.xlim.is_some() {
+                x_min = tx_min;
+                x_max = tx_max;
+            } else {
+                x_min = x_min.min(tx_min);
+                x_max = x_max.max(tx_max);
+            }
         }
     }
     if let Some(target_id) = axes.shared_y_with {
         if let Some(target) = all_axes.iter().find(|a| a.id == target_id) {
             let (_, _, ty_min, ty_max, _, _) = axis_limits(target);
-            y_min = ty_min;
-            y_max = ty_max;
+            if axes.ylim.is_some() {
+                // self has explicit limits
+            } else if target.ylim.is_some() {
+                y_min = ty_min;
+                y_max = ty_max;
+            } else {
+                y_min = y_min.min(ty_min);
+                y_max = y_max.max(ty_max);
+            }
         }
     }
     (x_min, x_max, y_min, y_max, z_min, z_max)
@@ -273,6 +295,38 @@ fn py(y: f64, y_min: f64, y_max: f64, origin: f64, height: f64) -> f64 {
         return origin + height / 2.0;
     }
     origin + height - ((y - y_min) / (y_max - y_min)) * height
+}
+
+/// Map data x to pixel x within the plot box, honoring axis scale (Linear or Log).
+fn map_px(x: f64, scale: crate::Scale, x_min: f64, x_max: f64, origin: f64, width: f64) -> f64 {
+    match scale {
+        crate::Scale::Linear => px(x, x_min, x_max, origin, width),
+        crate::Scale::Log => {
+            let x = if x <= 0.0 { 1e-10 } else { x };
+            let x_min = if x_min <= 0.0 { 1e-10 } else { x_min };
+            let x_max = if x_max <= x_min { x_min * 10.0 } else { x_max };
+            let lx = x.log10();
+            let lmin = x_min.log10();
+            let lmax = x_max.log10();
+            px(lx, lmin, lmax, origin, width)
+        }
+    }
+}
+
+/// Map data y to pixel y within the plot box, honoring axis scale (Linear or Log).
+fn map_py(y: f64, scale: crate::Scale, y_min: f64, y_max: f64, origin: f64, height: f64) -> f64 {
+    match scale {
+        crate::Scale::Linear => py(y, y_min, y_max, origin, height),
+        crate::Scale::Log => {
+            let y = if y <= 0.0 { 1e-10 } else { y };
+            let y_min = if y_min <= 0.0 { 1e-10 } else { y_min };
+            let y_max = if y_max <= y_min { y_min * 10.0 } else { y_max };
+            let ly = y.log10();
+            let lmin = y_min.log10();
+            let lmax = y_max.log10();
+            py(ly, lmin, lmax, origin, height)
+        }
+    }
 }
 
 /// Bundles the plot box and axis limits so render helpers take few args.
@@ -460,8 +514,22 @@ fn render_series(series: &crate::Series, ctx: &RenderContext) -> String {
             for (x, y) in l.x.iter().zip(l.y.iter()) {
                 pts.push_str(&format!(
                     "{},{} ",
-                    fmt2(px(*x, ctx.x_min, ctx.x_max, ctx.px0, ctx.pw)),
-                    fmt2(py(*y, ctx.y_min, ctx.y_max, ctx.py0, ctx.ph))
+                    fmt2(map_px(
+                        *x,
+                        ctx.axes.xscale,
+                        ctx.x_min,
+                        ctx.x_max,
+                        ctx.px0,
+                        ctx.pw
+                    )),
+                    fmt2(map_py(
+                        *y,
+                        ctx.axes.yscale,
+                        ctx.y_min,
+                        ctx.y_max,
+                        ctx.py0,
+                        ctx.ph
+                    ))
                 ));
             }
             let color = rgb255(l.color);
@@ -480,8 +548,8 @@ fn render_series(series: &crate::Series, ctx: &RenderContext) -> String {
             let color = rgb255(s.color);
             let r = fmt2((s.size / 2.0).into());
             for (x, y) in s.x.iter().zip(s.y.iter()) {
-                let cx = px(*x, ctx.x_min, ctx.x_max, ctx.px0, ctx.pw);
-                let cy = py(*y, ctx.y_min, ctx.y_max, ctx.py0, ctx.ph);
+                let cx = map_px(*x, ctx.axes.xscale, ctx.x_min, ctx.x_max, ctx.px0, ctx.pw);
+                let cy = map_py(*y, ctx.axes.yscale, ctx.y_min, ctx.y_max, ctx.py0, ctx.ph);
                 out.push_str(&format!(
                     r#"<circle class="series-scatter" fill="{}" cx="{}" cy="{}" r="{}" />"#,
                     color,
@@ -502,7 +570,7 @@ fn render_series(series: &crate::Series, ctx: &RenderContext) -> String {
             let mut out = String::new();
             for (i, (_x, y)) in b.x.iter().zip(b.y.iter()).enumerate() {
                 let bx = ctx.px0 + (i as f64 + 0.15) / n * ctx.pw;
-                let by = py(*y, ctx.y_min, ctx.y_max, ctx.py0, ctx.ph);
+                let by = map_py(*y, ctx.axes.yscale, ctx.y_min, ctx.y_max, ctx.py0, ctx.ph);
                 let top = ctx.py0 + ctx.ph;
                 out.push_str(&format!(
                     r#"<rect class="series-bar" fill="{}" x="{}" y="{}" width="{}" height="{}" />"#,
@@ -682,13 +750,122 @@ fn rgb255(c: [f32; 4]) -> String {
     format!("#{:02x}{:02x}{:02x}", r, g, b)
 }
 
+/// Generate decade ticks for log scale between lo and hi.
+pub fn log_ticks(lo: f64, hi: f64) -> Vec<f64> {
+    let lo = if lo <= 0.0 { 1e-10 } else { lo };
+    let hi = if hi <= lo { lo * 10.0 } else { hi };
+    let start_exp = lo.log10().floor() as i32;
+    let end_exp = hi.log10().ceil() as i32;
+    let mut ticks = Vec::new();
+    for exp in start_exp..=end_exp {
+        let val = 10f64.powi(exp);
+        if val >= lo * 0.999 && val <= hi * 1.001 {
+            ticks.push(val);
+        }
+    }
+    if ticks.is_empty() {
+        ticks.push(lo);
+        ticks.push(hi);
+    }
+    ticks
+}
+
+fn series_name_and_color(s: &crate::Series) -> (&str, [f32; 4]) {
+    match s {
+        crate::Series::Line(l) => (l.name.as_str(), l.color),
+        crate::Series::Scatter(s) => (s.name.as_str(), s.color),
+        crate::Series::Bar(b) => (b.name.as_str(), b.color),
+        crate::Series::Histogram(h) => (h.name.as_str(), h.color),
+        crate::Series::Surface(s) => (s.name.as_str(), s.color),
+    }
+}
+
+/// Render a legend box describing the series in the axes.
+fn render_legend(ctx: &RenderContext, leg: &crate::Legend) -> String {
+    if ctx.axes.series.is_empty() {
+        return String::new();
+    }
+
+    let n = ctx.axes.series.len();
+    let row_h = 16.0;
+    let pad_y = 6.0;
+    let box_h = pad_y * 2.0 + (n as f64) * row_h;
+
+    let max_len = ctx
+        .axes
+        .series
+        .iter()
+        .map(|s| series_name_and_color(s).0.len())
+        .max()
+        .unwrap_or(0);
+    let box_w = (40.0 + (max_len as f64) * 7.0).max(65.0).min(ctx.pw * 0.8);
+
+    let margin = 8.0;
+    let (bx, by) = match leg.location {
+        crate::LegendLocation::NorthEast => (ctx.px0 + ctx.pw - box_w - margin, ctx.py0 + margin),
+        crate::LegendLocation::NorthWest => (ctx.px0 + margin, ctx.py0 + margin),
+        crate::LegendLocation::SouthEast => (
+            ctx.px0 + ctx.pw - box_w - margin,
+            ctx.py0 + ctx.ph - box_h - margin,
+        ),
+        crate::LegendLocation::SouthWest => (ctx.px0 + margin, ctx.py0 + ctx.ph - box_h - margin),
+    };
+
+    let mut out = String::new();
+    out.push_str(&format!(
+        r#"<rect class="legend" x="{}" y="{}" width="{}" height="{}" rx="2" ry="2" />"#,
+        fmt2(bx),
+        fmt2(by),
+        fmt2(box_w),
+        fmt2(box_h)
+    ));
+
+    for (i, s) in ctx.axes.series.iter().enumerate() {
+        let (name, color_f) = series_name_and_color(s);
+        let color = rgb255(color_f);
+        let item_y = by + pad_y + (i as f64 + 0.7) * row_h;
+        let swatch_y = by + pad_y + (i as f64 + 0.5) * row_h;
+
+        out.push_str(&format!(
+            r#"<line x1="{}" y1="{}" x2="{}" y2="{}" stroke="{}" stroke-width="2" />"#,
+            fmt2(bx + 8.0),
+            fmt2(swatch_y),
+            fmt2(bx + 22.0),
+            fmt2(swatch_y),
+            color
+        ));
+        out.push_str(&format!(
+            r#"<text x="{}" y="{}" class="legend-text">{}</text>"#,
+            fmt2(bx + 26.0),
+            fmt2(item_y),
+            esc(name)
+        ));
+    }
+
+    out
+}
+
 /// Render grid lines for 2D view.
 fn grid_lines(ctx: &RenderContext) -> String {
     let mut out = String::new();
-    let xticks = crate::ticks::nice_ticks(ctx.x_min, ctx.x_max, 6);
-    let yticks = crate::ticks::nice_ticks(ctx.y_min, ctx.y_max, 5);
+    let xticks = if let Some(custom) = &ctx.axes.xticks {
+        custom.clone()
+    } else if ctx.axes.xscale == crate::Scale::Log {
+        log_ticks(ctx.x_min, ctx.x_max)
+    } else {
+        crate::ticks::nice_ticks(ctx.x_min, ctx.x_max, 6)
+    };
+
+    let yticks = if let Some(custom) = &ctx.axes.yticks {
+        custom.clone()
+    } else if ctx.axes.yscale == crate::Scale::Log {
+        log_ticks(ctx.y_min, ctx.y_max)
+    } else {
+        crate::ticks::nice_ticks(ctx.y_min, ctx.y_max, 5)
+    };
+
     for tx in &xticks {
-        let x = px(*tx, ctx.x_min, ctx.x_max, ctx.px0, ctx.pw);
+        let x = map_px(*tx, ctx.axes.xscale, ctx.x_min, ctx.x_max, ctx.px0, ctx.pw);
         out.push_str(&format!(
             r#"<line class="grid-line" x1="{}" y1="{}" x2="{}" y2="{}" />"#,
             fmt2(x),
@@ -698,7 +875,7 @@ fn grid_lines(ctx: &RenderContext) -> String {
         ));
     }
     for ty in &yticks {
-        let y = py(*ty, ctx.y_min, ctx.y_max, ctx.py0, ctx.ph);
+        let y = map_py(*ty, ctx.axes.yscale, ctx.y_min, ctx.y_max, ctx.py0, ctx.ph);
         out.push_str(&format!(
             r#"<line class="grid-line" x1="{}" y1="{}" x2="{}" y2="{}" />"#,
             fmt2(ctx.px0),
@@ -722,10 +899,24 @@ fn grid_lines(ctx: &RenderContext) -> String {
 /// to ensure non-overlapping rects with zero neighbour bleeding.
 fn grid_lines_subplot(ctx: &RenderContext) -> String {
     let mut out = String::new();
-    let xticks = crate::ticks::nice_ticks(ctx.x_min, ctx.x_max, 6);
-    let yticks = crate::ticks::nice_ticks(ctx.y_min, ctx.y_max, 5);
-    for tx in &xticks {
-        let x = px(*tx, ctx.x_min, ctx.x_max, ctx.px0, ctx.pw);
+    let xticks = if let Some(custom) = &ctx.axes.xticks {
+        custom.clone()
+    } else if ctx.axes.xscale == crate::Scale::Log {
+        log_ticks(ctx.x_min, ctx.x_max)
+    } else {
+        crate::ticks::nice_ticks(ctx.x_min, ctx.x_max, 6)
+    };
+
+    let yticks = if let Some(custom) = &ctx.axes.yticks {
+        custom.clone()
+    } else if ctx.axes.yscale == crate::Scale::Log {
+        log_ticks(ctx.y_min, ctx.y_max)
+    } else {
+        crate::ticks::nice_ticks(ctx.y_min, ctx.y_max, 5)
+    };
+
+    for (idx, tx) in xticks.iter().enumerate() {
+        let x = map_px(*tx, ctx.axes.xscale, ctx.x_min, ctx.x_max, ctx.px0, ctx.pw);
         if x >= ctx.px0 - 0.01 && x <= ctx.px0 + ctx.pw + 0.01 {
             out.push_str(&format!(
                 r#"<line class="grid-line" x1="{}" y1="{}" x2="{}" y2="{}" />"#,
@@ -734,10 +925,20 @@ fn grid_lines_subplot(ctx: &RenderContext) -> String {
                 fmt2(x),
                 fmt2(ctx.py0 + ctx.ph)
             ));
+            if let Some(labels) = &ctx.axes.xticklabels {
+                if let Some(lbl) = labels.get(idx) {
+                    out.push_str(&format!(
+                        r#"<text x="{}" y="{}" class="axes-label">{}</text>"#,
+                        fmt2(x),
+                        fmt2(ctx.py0 + ctx.ph + 14.0),
+                        esc(lbl)
+                    ));
+                }
+            }
         }
     }
-    for ty in &yticks {
-        let y = py(*ty, ctx.y_min, ctx.y_max, ctx.py0, ctx.ph);
+    for (idx, ty) in yticks.iter().enumerate() {
+        let y = map_py(*ty, ctx.axes.yscale, ctx.y_min, ctx.y_max, ctx.py0, ctx.ph);
         if y >= ctx.py0 - 0.01 && y <= ctx.py0 + ctx.ph + 0.01 {
             out.push_str(&format!(
                 r#"<line class="grid-line" x1="{}" y1="{}" x2="{}" y2="{}" />"#,
@@ -746,6 +947,16 @@ fn grid_lines_subplot(ctx: &RenderContext) -> String {
                 fmt2(ctx.px0 + ctx.pw),
                 fmt2(y)
             ));
+            if let Some(labels) = &ctx.axes.yticklabels {
+                if let Some(lbl) = labels.get(idx) {
+                    out.push_str(&format!(
+                        r#"<text x="{}" y="{}" class="axes-label" text-anchor="end">{}</text>"#,
+                        fmt2(ctx.px0 - 4.0),
+                        fmt2(y + 4.0),
+                        esc(lbl)
+                    ));
+                }
+            }
         }
     }
     // Axis frame.

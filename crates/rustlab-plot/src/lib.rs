@@ -395,6 +395,10 @@ pub struct Axes {
     pub xscale: Scale,
     pub yscale: Scale,
     pub zscale: Scale,
+    pub xticks: Option<Vec<f64>>,
+    pub xticklabels: Option<Vec<String>>,
+    pub yticks: Option<Vec<f64>>,
+    pub yticklabels: Option<Vec<String>>,
     pub grid: bool,
     pub hold: bool,
     pub colormap: Colormap,
@@ -423,6 +427,10 @@ impl Axes {
             xscale: Scale::Linear,
             yscale: Scale::Linear,
             zscale: Scale::Linear,
+            xticks: None,
+            xticklabels: None,
+            yticks: None,
+            yticklabels: None,
             grid: true,
             hold: false,
             colormap: Colormap::Rustlab,
@@ -436,6 +444,71 @@ impl Axes {
             shared_x_with: None,
             shared_y_with: None,
         }
+    }
+
+    pub fn set_xlim(&mut self, lo: f64, hi: f64) {
+        self.xlim = Some([lo, hi]);
+    }
+
+    pub fn set_ylim(&mut self, lo: f64, hi: f64) {
+        self.ylim = Some([lo, hi]);
+    }
+
+    pub fn set_xscale(&mut self, scale: Scale) {
+        self.xscale = scale;
+    }
+
+    pub fn set_yscale(&mut self, scale: Scale) {
+        self.yscale = scale;
+    }
+
+    pub fn set_xticks(&mut self, ticks: Vec<f64>) {
+        self.xticks = Some(ticks);
+    }
+
+    pub fn set_xticklabels(&mut self, labels: Vec<String>) {
+        self.xticklabels = Some(labels);
+    }
+
+    pub fn set_yticks(&mut self, ticks: Vec<f64>) {
+        self.yticks = Some(ticks);
+    }
+
+    pub fn set_yticklabels(&mut self, labels: Vec<String>) {
+        self.yticklabels = Some(labels);
+    }
+
+    pub fn set_grid(&mut self, grid: bool) {
+        self.grid = grid;
+    }
+
+    pub fn set_title(&mut self, title: impl Into<String>) {
+        self.title = title.into();
+    }
+
+    pub fn set_xlabel(&mut self, label: impl Into<String>) {
+        self.xlabel = label.into();
+    }
+
+    pub fn set_ylabel(&mut self, label: impl Into<String>) {
+        self.ylabel = label.into();
+    }
+
+    pub fn set_legend(&mut self, location: LegendLocation) {
+        self.legend = Some(Legend { location });
+    }
+
+    pub fn link_x_with(&mut self, other_id: usize) {
+        self.shared_x_with = Some(other_id);
+    }
+
+    pub fn link_y_with(&mut self, other_id: usize) {
+        self.shared_y_with = Some(other_id);
+    }
+
+    pub fn unlink(&mut self) {
+        self.shared_x_with = None;
+        self.shared_y_with = None;
     }
 
     /// Push a series, clearing existing series unless hold is on.
@@ -607,6 +680,41 @@ impl Figure {
         self.current_axes = Some(id);
         let len = self.axes.len();
         &mut self.axes[len - 1]
+    }
+
+    /// Link multiple axes along 'x', 'y', or 'xy' / 'both'.
+    pub fn link_axes(&mut self, ax_ids: &[usize], axis: &str) {
+        if ax_ids.len() < 2 {
+            return;
+        }
+        let lead_id = ax_ids[0];
+        let link_x = axis.eq_ignore_ascii_case("x")
+            || axis.eq_ignore_ascii_case("xy")
+            || axis.eq_ignore_ascii_case("both");
+        let link_y = axis.eq_ignore_ascii_case("y")
+            || axis.eq_ignore_ascii_case("xy")
+            || axis.eq_ignore_ascii_case("both");
+
+        for ax in &mut self.axes {
+            if ax_ids.contains(&ax.id) {
+                if link_x {
+                    ax.shared_x_with = Some(lead_id);
+                }
+                if link_y {
+                    ax.shared_y_with = Some(lead_id);
+                }
+            }
+        }
+    }
+
+    /// Unlink specified axes so each retains independent limits.
+    pub fn unlink_axes(&mut self, ax_ids: &[usize]) {
+        for ax in &mut self.axes {
+            if ax_ids.contains(&ax.id) {
+                ax.shared_x_with = None;
+                ax.shared_y_with = None;
+            }
+        }
     }
 }
 

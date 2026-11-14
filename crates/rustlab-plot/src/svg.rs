@@ -207,7 +207,7 @@ fn style_block() -> &'static str {
 }
 
 /// Resolve limits, honoring shared axis links (`shared_x_with`, `shared_y_with`).
-fn resolve_limits(axes: &Axes, all_axes: &[Axes]) -> (f64, f64, f64, f64, f64, f64) {
+pub fn resolve_limits(axes: &Axes, all_axes: &[Axes]) -> (f64, f64, f64, f64, f64, f64) {
     let (mut x_min, mut x_max, mut y_min, mut y_max, z_min, z_max) = axis_limits(axes);
     if let Some(target_id) = axes.shared_x_with {
         if let Some(target) = all_axes.iter().find(|a| a.id == target_id) {
@@ -242,7 +242,7 @@ fn resolve_limits(axes: &Axes, all_axes: &[Axes]) -> (f64, f64, f64, f64, f64, f
 
 /// Resolve explicit limits or fall back to data bounds, with a small
 /// margin so points are not clipped exactly on the edge.
-fn axis_limits(axes: &Axes) -> (f64, f64, f64, f64, f64, f64) {
+pub fn axis_limits(axes: &Axes) -> (f64, f64, f64, f64, f64, f64) {
     let (x_min, x_max) = match axes.xlim {
         Some([lo, hi]) => (lo, hi),
         None => match axes.data_bounds() {

@@ -421,3 +421,183 @@ fn test_shared_axes_synchronization_and_unlinking() {
     assert_eq!(fig.axes[1].shared_x_with, None);
     assert_eq!(fig.axes[1].shared_y_with, None);
 }
+
+#[test]
+fn test_pointer_hit_test_maps_click_to_correct_axes() {
+    let mut fig = Figure::new(301);
+    let _ax1 = fig.subplot(2, 2, 1);
+    let _ax2 = fig.subplot(2, 2, 2);
+    let _ax3 = fig.subplot(2, 2, 3);
+    let _ax4 = fig.subplot(2, 2, 4);
+
+    let rects = fig.compute_axes_rects(1280.0, 800.0);
+    assert_eq!(rects.len(), 4, "Expected 4 distinct subplots");
+
+    // Assert that a click within each subplot's bounds maps exactly to that axes ID
+    for (expected_id, (rx, ry, rw, rh)) in &rects {
+        let center_x = rx + rw * 0.5;
+        let center_y = ry + rh * 0.5;
+
+        let hit = fig.hit_test_axes(center_x, center_y, 1280.0, 800.0);
+        assert_eq!(hit, Some(*expected_id));
+
+        let clicked = fig.handle_pointer_click(center_x, center_y, 1280.0, 800.0);
+        assert_eq!(clicked, Some(*expected_id));
+        assert_eq!(fig.current_axes, Some(*expected_id));
+
+        let ax = fig.axes.iter().find(|a| a.id == *expected_id).unwrap();
+        assert!(ax.interaction.is_selected);
+
+        // Verify all other axes are not selected
+        for other in &fig.axes {
+            if other.id != *expected_id {
+                assert!(!other.interaction.is_selected);
+            }
+        }
+    }
+
+    // A click outside all axes (e.g. in margins at 10.0, 10.0) hits none
+    let outside_hit = fig.hit_test_axes(10.0, 10.0, 1280.0, 800.0);
+    assert_eq!(outside_hit, None);
+}
+
+#[test]
+fn test_zooming_one_subplot_leaves_other_limits_unchanged() {
+    let mut fig = Figure::new(302);
+    let ax1 = fig.subplot(1, 2, 1);
+    ax1.set_xlim(0.0, 10.0);
+    ax1.set_ylim(0.0, 100.0);
+
+    let ax2 = fig.subplot(1, 2, 2);
+    ax2.set_xlim(-5.0, 5.0);
+    ax2.set_ylim(-50.0, 50.0);
+
+    let ax2_initial_xlim = ax2.xlim;
+    let ax2_initial_ylim = ax2.ylim;
+
+    // Zoom subplot 1 by factor 0.5 (2x zoom in) centered at (5.0, 50.0)
+    let ok = fig.zoom_subplot(1, 0.5, Some((5.0, 50.0)));
+    assert!(ok);
+
+    let ax1_zoomed = fig.axes.iter().find(|a| a.id == 1).unwrap();
+    assert_eq!(ax1_zoomed.xlim, Some([2.5, 7.5]));
+    assert_eq!(ax1_zoomed.ylim, Some([25.0, 75.0]));
+
+    // Subplot 2 limits MUST remain completely unchanged
+    let ax2_after = fig.axes.iter().find(|a| a.id == 2).unwrap();
+    assert_eq!(ax2_after.xlim, ax2_initial_xlim);
+    assert_eq!(ax2_after.ylim, ax2_initial_ylim);
+
+    // Pan subplot 1 by (1.0, -10.0)
+    let pan_ok = fig.pan_subplot(1, 1.0, -10.0);
+    assert!(pan_ok);
+
+    let ax1_panned = fig.axes.iter().find(|a| a.id == 1).unwrap();
+    assert_eq!(ax1_panned.xlim, Some([3.5, 8.5]));
+    assert_eq!(ax1_panned.ylim, Some([15.0, 65.0]));
+
+    // Subplot 2 limits still untouched
+    let ax2_after_pan = fig.axes.iter().find(|a| a.id == 2).unwrap();
+    assert_eq!(ax2_after_pan.xlim, ax2_initial_xlim);
+    assert_eq!(ax2_after_pan.ylim, ax2_initial_ylim);
+}
+
+#[test]
+fn test_linked_axes_move_together_on_zoom_and_pan() {
+    let mut fig = Figure::new(303);
+    let ax1 = fig.subplot(1, 3, 1);
+    ax1.set_xlim(0.0, 10.0);
+    ax1.set_ylim(0.0, 20.0);
+
+    let ax2 = fig.subplot(1, 3, 2);
+    ax2.set_xlim(0.0, 10.0);
+    ax2.set_ylim(100.0, 200.0);
+
+    let ax3 = fig.subplot(1, 3, 3);
+    ax3.set_xlim(0.0, 10.0);
+    ax3.set_ylim(500.0, 600.0);
+
+    // Opt-in shared X axes between subplot 1 and subplot 2
+    fig.link_axes(&[1, 2], "x");
+
+    // Zoom subplot 1 along X (center (5.0, 10.0), zoom ratio 0.5)
+    let ok = fig.zoom_subplot(1, 0.5, Some((5.0, 10.0)));
+    assert!(ok);
+
+    let ax1_after = fig.axes.iter().find(|a| a.id == 1).unwrap();
+    let ax2_after = fig.axes.iter().find(|a| a.id == 2).unwrap();
+    let ax3_after = fig.axes.iter().find(|a| a.id == 3).unwrap();
+
+    // Linked X pair moved together
+    assert_eq!(ax1_after.xlim, Some([2.5, 7.5]));
+    assert_eq!(ax2_after.xlim, Some([2.5, 7.5]));
+
+    // Y axes were NOT linked: ax2 kept its original Y limits
+    assert_eq!(ax2_after.ylim, Some([100.0, 200.0]));
+
+    // Unlinked subplot 3 remained completely untouched
+    assert_eq!(ax3_after.xlim, Some([0.0, 10.0]));
+    assert_eq!(ax3_after.ylim, Some([500.0, 600.0]));
+
+    // Pan linked subplot 2 along X by +2.0
+    let pan_ok = fig.pan_subplot(2, 2.0, 0.0);
+    assert!(pan_ok);
+
+    let ax1_panned = fig.axes.iter().find(|a| a.id == 1).unwrap();
+    let ax2_panned = fig.axes.iter().find(|a| a.id == 2).unwrap();
+    let ax3_panned = fig.axes.iter().find(|a| a.id == 3).unwrap();
+
+    assert_eq!(ax1_panned.xlim, Some([4.5, 9.5]));
+    assert_eq!(ax2_panned.xlim, Some([4.5, 9.5]));
+    assert_eq!(ax3_panned.xlim, Some([0.0, 10.0]));
+}
+
+#[test]
+fn test_cursor_readout_matches_data_value() {
+    let mut fig = Figure::new(304);
+    let ax = fig.subplot(1, 1, 1);
+    ax.set_xlim(0.0, 30.0);
+    ax.set_ylim(100.0, 400.0);
+    ax.push_series(Series::Line(Line::new(
+        "sensor_data",
+        vec![0.0, 10.0, 20.0, 30.0],
+        vec![100.0, 200.0, 300.0, 400.0],
+    )));
+
+    let width = 600.0;
+    let height = 400.0;
+    let rects = fig.compute_axes_rects(width, height);
+    assert_eq!(rects.len(), 1);
+    let (_id, rect) = rects[0];
+
+    // Point (10.0, 200.0) is a known series vertex
+    let (px, py) = fig.axes[0].data_to_pixel(10.0, 200.0, rect, (0.0, 30.0, 100.0, 400.0));
+
+    // Hover directly at that pixel
+    let hovered = fig.handle_pointer_move(px, py, width, height);
+    assert_eq!(hovered, Some(1));
+
+    let ax = &fig.axes[0];
+    assert!(ax.interaction.is_hovered);
+
+    // Readout must match cursor data coordinates
+    let cursor = ax.interaction.cursor_data.expect("cursor data present");
+    assert!((cursor[0] - 10.0).abs() < 1e-4, "X mismatch: {}", cursor[0]);
+    assert!(
+        (cursor[1] - 200.0).abs() < 1e-4,
+        "Y mismatch: {}",
+        cursor[1]
+    );
+
+    // Nearest point must identify the exact series and coordinate
+    let nearest = ax
+        .interaction
+        .nearest_point
+        .as_ref()
+        .expect("nearest point present");
+    assert_eq!(nearest.series_name, "sensor_data");
+    assert_eq!(nearest.point_index, 1);
+    assert!((nearest.x - 10.0).abs() < 1e-6);
+    assert!((nearest.y - 200.0).abs() < 1e-6);
+    assert!(nearest.distance_px < 1e-3);
+}

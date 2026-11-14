@@ -30,7 +30,7 @@ mod svg;
 mod ticks;
 
 pub use state::{plot_state_reset, with_plot_state, with_plot_state_ref};
-pub use svg::to_svg;
+pub use svg::{axis_limits, resolve_limits, to_svg};
 pub use ticks::nice_ticks;
 
 use serde::{Deserialize, Serialize};
@@ -292,6 +292,41 @@ pub struct Legend {
     pub location: LegendLocation,
 }
 
+/// Per-subplot interactive state: selection, hover, cursor readout coordinates, and view offsets.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct AxesInteraction {
+    pub is_selected: bool,
+    pub is_hovered: bool,
+    pub cursor_data: Option<[f64; 2]>,
+    pub nearest_point: Option<NearestPoint>,
+    pub view_offset: [f64; 2],
+    pub zoom_factor: f64,
+}
+
+impl Default for AxesInteraction {
+    fn default() -> Self {
+        Self {
+            is_selected: false,
+            is_hovered: false,
+            cursor_data: None,
+            nearest_point: None,
+            view_offset: [0.0, 0.0],
+            zoom_factor: 1.0,
+        }
+    }
+}
+
+/// Nearest series data point to the cursor during hover.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct NearestPoint {
+    pub series_name: String,
+    pub series_index: usize,
+    pub point_index: usize,
+    pub x: f64,
+    pub y: f64,
+    pub distance_px: f64,
+}
+
 /// Subplot grid placement within a figure.
 ///
 /// Supports m-by-n grid positioning with 1-based indices, as well as spanning
@@ -411,6 +446,8 @@ pub struct Axes {
     pub subplot_pos: Option<SubplotPosition>,
     pub shared_x_with: Option<usize>,
     pub shared_y_with: Option<usize>,
+    #[serde(default)]
+    pub interaction: AxesInteraction,
 }
 
 impl Axes {
@@ -443,7 +480,155 @@ impl Axes {
             subplot_pos: None,
             shared_x_with: None,
             shared_y_with: None,
+            interaction: AxesInteraction::default(),
         }
+    }
+
+    /// Resolve limits for this axes against sibling axes in a figure.
+    pub fn resolve_limits(&self, all_axes: &[Axes]) -> (f64, f64, f64, f64, f64, f64) {
+        crate::svg::resolve_limits(self, all_axes)
+    }
+
+    /// Map pixel coordinates within `rect` `(px0, py0, pw, ph)` to data coordinates `(x, y)`
+    /// using `limits` `(x_min, x_max, y_min, y_max)`.
+    pub fn pixel_to_data(
+        &self,
+        px: f64,
+        py: f64,
+        rect: (f64, f64, f64, f64),
+        limits: (f64, f64, f64, f64),
+    ) -> (f64, f64) {
+        let (rx, ry, rw, rh) = rect;
+        let (x_min, x_max, y_min, y_max) = limits;
+        let norm_x = if rw.abs() < 1e-12 {
+            0.0
+        } else {
+            ((px - rx) / rw).clamp(0.0, 1.0)
+        };
+        let norm_y = if rh.abs() < 1e-12 {
+            0.0
+        } else {
+            ((ry + rh - py) / rh).clamp(0.0, 1.0)
+        };
+
+        let data_x = match self.xscale {
+            Scale::Linear => x_min + norm_x * (x_max - x_min),
+            Scale::Log => {
+                let x_min = if x_min <= 0.0 { 1e-10 } else { x_min };
+                let x_max = if x_max <= x_min { x_min * 10.0 } else { x_max };
+                let lx = x_min.log10() + norm_x * (x_max.log10() - x_min.log10());
+                10f64.powf(lx)
+            }
+        };
+
+        let data_y = match self.yscale {
+            Scale::Linear => y_min + norm_y * (y_max - y_min),
+            Scale::Log => {
+                let y_min = if y_min <= 0.0 { 1e-10 } else { y_min };
+                let y_max = if y_max <= y_min { y_min * 10.0 } else { y_max };
+                let ly = y_min.log10() + norm_y * (y_max.log10() - y_min.log10());
+                10f64.powf(ly)
+            }
+        };
+
+        (data_x, data_y)
+    }
+
+    /// Map data coordinates `(dx, dy)` to pixel coordinates within `rect` `(px0, py0, pw, ph)`
+    /// using `limits` `(x_min, x_max, y_min, y_max)`.
+    pub fn data_to_pixel(
+        &self,
+        dx: f64,
+        dy: f64,
+        rect: (f64, f64, f64, f64),
+        limits: (f64, f64, f64, f64),
+    ) -> (f64, f64) {
+        let (rx, ry, rw, rh) = rect;
+        let (x_min, x_max, y_min, y_max) = limits;
+        let px = match self.xscale {
+            Scale::Linear => {
+                let span = x_max - x_min;
+                if span.abs() < 1e-12 {
+                    rx
+                } else {
+                    rx + ((dx - x_min) / span) * rw
+                }
+            }
+            Scale::Log => {
+                let dx = if dx <= 0.0 { 1e-10 } else { dx };
+                let x_min = if x_min <= 0.0 { 1e-10 } else { x_min };
+                let x_max = if x_max <= x_min { x_min * 10.0 } else { x_max };
+                let span = x_max.log10() - x_min.log10();
+                if span.abs() < 1e-12 {
+                    rx
+                } else {
+                    rx + ((dx.log10() - x_min.log10()) / span) * rw
+                }
+            }
+        };
+
+        let py = match self.yscale {
+            Scale::Linear => {
+                let span = y_max - y_min;
+                if span.abs() < 1e-12 {
+                    ry + rh
+                } else {
+                    ry + rh - ((dy - y_min) / span) * rh
+                }
+            }
+            Scale::Log => {
+                let dy = if dy <= 0.0 { 1e-10 } else { dy };
+                let y_min = if y_min <= 0.0 { 1e-10 } else { y_min };
+                let y_max = if y_max <= y_min { y_min * 10.0 } else { y_max };
+                let span = y_max.log10() - y_min.log10();
+                if span.abs() < 1e-12 {
+                    ry + rh
+                } else {
+                    ry + rh - ((dy.log10() - y_min.log10()) / span) * rh
+                }
+            }
+        };
+
+        (px, py)
+    }
+
+    /// Find the nearest series point to screen coordinate `(px, py)`
+    /// using `limits` `(x_min, x_max, y_min, y_max)`.
+    pub fn find_nearest_point(
+        &self,
+        px: f64,
+        py: f64,
+        rect: (f64, f64, f64, f64),
+        limits: (f64, f64, f64, f64),
+    ) -> Option<NearestPoint> {
+        let mut best: Option<NearestPoint> = None;
+        let mut min_dist_sq = f64::INFINITY;
+
+        for (s_idx, series) in self.series.iter().enumerate() {
+            let (name, xs, ys): (&str, &[f64], &[f64]) = match series {
+                Series::Line(l) => (&l.name, &l.x, &l.y),
+                Series::Scatter(s) => (&s.name, &s.x, &s.y),
+                Series::Bar(b) => (&b.name, &b.x, &b.y),
+                _ => continue,
+            };
+
+            for (p_idx, (&x, &y)) in xs.iter().zip(ys.iter()).enumerate() {
+                let (pt_px, pt_py) = self.data_to_pixel(x, y, rect, limits);
+                let d2 = (pt_px - px).powi(2) + (pt_py - py).powi(2);
+                if d2 < min_dist_sq {
+                    min_dist_sq = d2;
+                    best = Some(NearestPoint {
+                        series_name: name.to_string(),
+                        series_index: s_idx,
+                        point_index: p_idx,
+                        x,
+                        y,
+                        distance_px: d2.sqrt(),
+                    });
+                }
+            }
+        }
+        best
     }
 
     pub fn set_xlim(&mut self, lo: f64, hi: f64) {
@@ -715,6 +900,244 @@ impl Figure {
                 ax.shared_y_with = None;
             }
         }
+    }
+
+    /// Compute screen rects `(px0, py0, pw, ph)` for all axes at the given canvas dimensions.
+    pub fn compute_axes_rects(
+        &self,
+        width: f64,
+        height: f64,
+    ) -> Vec<(usize, (f64, f64, f64, f64))> {
+        let is_single_default = self.axes.len() == 1 && self.axes[0].subplot_pos.is_none();
+        if is_single_default {
+            let pad = 50.0;
+            let plot_w = (width - 2.0 * pad).max(10.0);
+            let plot_h = (height - 2.0 * pad).max(10.0);
+            return vec![(self.axes[0].id, (pad, 60.0, plot_w, plot_h))];
+        }
+
+        let sorted = self.deterministic_axes();
+        let total_x0 = 60.0;
+        let total_y0 = 60.0;
+        let total_w = (width - 110.0).max(10.0);
+        let total_h = (height - 110.0).max(10.0);
+        let gap_x = 60.0;
+        let gap_y = 60.0;
+        let n = sorted.len();
+
+        let mut rects = Vec::with_capacity(sorted.len());
+        for (idx, ax) in sorted.iter().enumerate() {
+            let rect = if let Some(pos) = &ax.subplot_pos {
+                pos.compute_rect(total_x0, total_y0, total_w, total_h, gap_x, gap_y)
+            } else {
+                SubplotPosition::single(n, 1, idx + 1)
+                    .compute_rect(total_x0, total_y0, total_w, total_h, gap_x, gap_y)
+            };
+            rects.push((ax.id, rect));
+        }
+        rects
+    }
+
+    /// Hit-test pointer screen coordinates `(px, py)` against all axes.
+    /// Returns the ID of the axes containing the pointer, if any.
+    pub fn hit_test_axes(&self, px: f64, py: f64, width: f64, height: f64) -> Option<usize> {
+        let rects = self.compute_axes_rects(width, height);
+        for (id, (rx, ry, rw, rh)) in rects {
+            if px >= rx && px <= rx + rw && py >= ry && py <= ry + rh {
+                return Some(id);
+            }
+        }
+        None
+    }
+
+    /// Update hover and cursor readout for pointer coordinates `(px, py)` on a canvas of `(width, height)`.
+    /// Automatically updates each axes' `is_hovered`, `cursor_data`, and `nearest_point`.
+    /// Returns the ID of the hovered axes, if any.
+    pub fn handle_pointer_move(
+        &mut self,
+        px: f64,
+        py: f64,
+        width: f64,
+        height: f64,
+    ) -> Option<usize> {
+        let rects = self.compute_axes_rects(width, height);
+        let mut hovered_id = None;
+
+        for (id, rect) in rects {
+            let (rx, ry, rw, rh) = rect;
+            let inside = px >= rx && px <= rx + rw && py >= ry && py <= ry + rh;
+
+            let (x_min, x_max, y_min, y_max, _, _) = {
+                let ax = match self.axes.iter().find(|a| a.id == id) {
+                    Some(a) => a,
+                    None => continue,
+                };
+                crate::svg::resolve_limits(ax, &self.axes)
+            };
+
+            let ax = match self.axes.iter_mut().find(|a| a.id == id) {
+                Some(a) => a,
+                None => continue,
+            };
+
+            ax.interaction.is_hovered = inside;
+            if inside {
+                hovered_id = Some(id);
+                let limits = (x_min, x_max, y_min, y_max);
+                let (dx, dy) = ax.pixel_to_data(px, py, rect, limits);
+                ax.interaction.cursor_data = Some([dx, dy]);
+                ax.interaction.nearest_point = ax.find_nearest_point(px, py, rect, limits);
+            } else {
+                ax.interaction.cursor_data = None;
+                ax.interaction.nearest_point = None;
+            }
+        }
+
+        hovered_id
+    }
+
+    /// Handle pointer click: selects the clicked axes, unselects other axes,
+    /// and sets `current_axes` to the clicked axes ID.
+    pub fn handle_pointer_click(
+        &mut self,
+        px: f64,
+        py: f64,
+        width: f64,
+        height: f64,
+    ) -> Option<usize> {
+        let hit_id = self.hit_test_axes(px, py, width, height);
+        if let Some(id) = hit_id {
+            self.select_axes(id);
+        }
+        hit_id
+    }
+
+    /// Select an axes by ID, setting it as `current_axes` and updating `is_selected`.
+    pub fn select_axes(&mut self, ax_id: usize) {
+        self.current_axes = Some(ax_id);
+        for ax in &mut self.axes {
+            ax.interaction.is_selected = ax.id == ax_id;
+        }
+    }
+
+    /// Zoom the specified subplot by `zoom_ratio` (e.g. 0.5 = zoom in 2x, 2.0 = zoom out 2x).
+    /// `center` is an optional data coordinate `(cx, cy)` around which to zoom; if None, centers on mid-range.
+    /// If axes are linked (via `shared_x_with` or `shared_y_with`), linked subplots move together.
+    /// Unlinked subplots remain completely unaffected.
+    pub fn zoom_subplot(
+        &mut self,
+        ax_id: usize,
+        zoom_ratio: f64,
+        center: Option<(f64, f64)>,
+    ) -> bool {
+        if zoom_ratio <= 0.0 || zoom_ratio.is_nan() {
+            return false;
+        }
+
+        let (orig_x_min, orig_x_max, orig_y_min, orig_y_max) = {
+            let ax = match self.axes.iter().find(|a| a.id == ax_id) {
+                Some(a) => a,
+                None => return false,
+            };
+            let (x0, x1, y0, y1, _, _) = crate::svg::resolve_limits(ax, &self.axes);
+            (x0, x1, y0, y1)
+        };
+
+        let (cx, cy) = center.unwrap_or((
+            (orig_x_min + orig_x_max) / 2.0,
+            (orig_y_min + orig_y_max) / 2.0,
+        ));
+
+        let new_x_min = cx - (cx - orig_x_min) * zoom_ratio;
+        let new_x_max = cx + (orig_x_max - cx) * zoom_ratio;
+        let new_y_min = cy - (cy - orig_y_min) * zoom_ratio;
+        let new_y_max = cy + (orig_y_max - cy) * zoom_ratio;
+
+        let target_x_lead = self
+            .axes
+            .iter()
+            .find(|a| a.id == ax_id)
+            .and_then(|a| a.shared_x_with)
+            .unwrap_or(ax_id);
+        let target_y_lead = self
+            .axes
+            .iter()
+            .find(|a| a.id == ax_id)
+            .and_then(|a| a.shared_y_with)
+            .unwrap_or(ax_id);
+
+        for ax in &mut self.axes {
+            let shares_x = ax.id == ax_id
+                || ax.shared_x_with == Some(target_x_lead)
+                || (ax.id == target_x_lead && target_x_lead != ax_id);
+            let shares_y = ax.id == ax_id
+                || ax.shared_y_with == Some(target_y_lead)
+                || (ax.id == target_y_lead && target_y_lead != ax_id);
+
+            if shares_x {
+                ax.xlim = Some([new_x_min, new_x_max]);
+            }
+            if shares_y {
+                ax.ylim = Some([new_y_min, new_y_max]);
+            }
+            if ax.id == ax_id {
+                ax.interaction.zoom_factor *= 1.0 / zoom_ratio;
+            }
+        }
+
+        true
+    }
+
+    /// Pan the specified subplot by data offsets `(dx, dy)`.
+    /// If axes are linked, linked subplots move together.
+    /// Unlinked subplots remain completely unaffected.
+    pub fn pan_subplot(&mut self, ax_id: usize, dx: f64, dy: f64) -> bool {
+        let (orig_x_min, orig_x_max, orig_y_min, orig_y_max) = {
+            let ax = match self.axes.iter().find(|a| a.id == ax_id) {
+                Some(a) => a,
+                None => return false,
+            };
+            let (x0, x1, y0, y1, _, _) = crate::svg::resolve_limits(ax, &self.axes);
+            (x0, x1, y0, y1)
+        };
+
+        let new_x_min = orig_x_min + dx;
+        let new_x_max = orig_x_max + dx;
+        let new_y_min = orig_y_min + dy;
+        let new_y_max = orig_y_max + dy;
+
+        let target_x_lead = self
+            .axes
+            .iter()
+            .find(|a| a.id == ax_id)
+            .and_then(|a| a.shared_x_with)
+            .unwrap_or(ax_id);
+        let target_y_lead = self
+            .axes
+            .iter()
+            .find(|a| a.id == ax_id)
+            .and_then(|a| a.shared_y_with)
+            .unwrap_or(ax_id);
+
+        for ax in &mut self.axes {
+            let shares_x = ax.id == ax_id
+                || ax.shared_x_with == Some(target_x_lead)
+                || (ax.id == target_x_lead && target_x_lead != ax_id);
+            let shares_y = ax.id == ax_id
+                || ax.shared_y_with == Some(target_y_lead)
+                || (ax.id == target_y_lead && target_y_lead != ax_id);
+
+            if shares_x {
+                ax.xlim = Some([new_x_min, new_x_max]);
+                ax.interaction.view_offset[0] += dx;
+            }
+            if shares_y {
+                ax.ylim = Some([new_y_min, new_y_max]);
+                ax.interaction.view_offset[1] += dy;
+            }
+        }
+
+        true
     }
 }
 

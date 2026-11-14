@@ -178,13 +178,15 @@ impl FiguresPanel {
                     Rect::from_min_max(Pos2::new(x0, y0), Pos2::new(x0 + cell_w, y0 + cell_h))
                 };
 
+                let is_hovered = ui.rect_contains_pointer(plot_box);
+                let border_stroke = if is_hovered {
+                    Stroke::new(2.0_f32, theme.accent)
+                } else {
+                    Stroke::new(1.5_f32, theme.border)
+                };
+
                 // Draw Axes border
-                painter.rect_stroke(
-                    plot_box,
-                    0.0,
-                    Stroke::new(1.5_f32, theme.border),
-                    StrokeKind::Inside,
-                );
+                painter.rect_stroke(plot_box, 0.0, border_stroke, StrokeKind::Inside);
 
                 if ax.items.is_empty() {
                     continue;
@@ -395,6 +397,23 @@ impl FiguresPanel {
                                 painter.rect_filled(r, 0.0, fill);
                             }
                         }
+                    }
+                }
+
+                if is_hovered {
+                    if let Some(ptr) = ui.input(|i| i.pointer.hover_pos()) {
+                        let norm_x = ((ptr.x - plot_box.min.x) / plot_box.width()).clamp(0.0, 1.0);
+                        let norm_y = ((plot_box.max.y - ptr.y) / plot_box.height()).clamp(0.0, 1.0);
+                        let data_x = min_x + (norm_x as f64) * (max_x - min_x);
+                        let data_y = min_y + (norm_y as f64) * (max_y - min_y);
+                        let readout = format!("({:.2}, {:.2})", data_x, data_y);
+                        painter.text(
+                            Pos2::new(plot_box.max.x - 6.0, plot_box.min.y + 6.0),
+                            egui::Align2::RIGHT_TOP,
+                            readout,
+                            egui::FontId::proportional(11.0),
+                            theme.text_secondary,
+                        );
                     }
                 }
             }

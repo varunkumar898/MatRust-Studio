@@ -1,5 +1,9 @@
 # PLAN-F1: Professional Block Editor Architecture & Work Plan (docs/milestones/plan-f1-block-editor.md)
 
+> **STATUS: DRAFT - NOT APPROVED**  
+> This planning document is a draft proposal awaiting formal project owner review and approval prior to implementation of Phase F1.
+
+
 This planning document outlines the technical design, subtask decomposition, touch list, and acceptance testing suite for **Phase F1: Professional Block Editor**.
 
 ---

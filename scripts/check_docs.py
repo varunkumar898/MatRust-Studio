@@ -5,6 +5,8 @@ Validates:
 1. Built-in function documentation coverage in docs/functions/.
 2. Markdown relative and repo-relative link integrity across docs/.
 3. Privacy path hygiene: ensures zero personal user paths or environment leaks exist.
+   Generic patterns check for user directories and secret patterns.
+   Custom denylist terms are loaded from an untracked .privacy-denylist file or PRIVACY_DENYLIST env var.
 """
 
 import os
@@ -50,16 +52,54 @@ def check_builtin_docs():
 
     return True
 
-def check_privacy_paths():
-    print("\n=== 2. Checking Privacy Path Hygiene (Zero Personal Leaks) ===")
-    # Forbidden path patterns that leak developer or machine-specific identities
-    forbidden_patterns = [
-        re.compile(r'[Cc]:\\[Uu]sers\\[a-zA-Z0-9_-]+'),
-        re.compile(r'/Users/[a-zA-Z0-9_-]+'),
-        re.compile(r'/home/[a-zA-Z0-9_-]+'),
-        re.compile(r'Desktop\\MATSTUDIO'),
-        re.compile(r'varun3102004', re.IGNORECASE),
+def get_privacy_patterns(denylist_file=None, env_var='PRIVACY_DENYLIST'):
+    """
+    Returns generic privacy patterns plus any custom denylist entries loaded from an
+    untracked denylist file or environment variable.
+    """
+    patterns = [
+        re.compile(r'[Cc]:\\[Uu]sers\\[a-zA-Z0-9_.-]+'),
+        re.compile(r'/(?:Users|home)/[a-zA-Z0-9_.-]+'),
+        re.compile(r'-----BEGIN [A-Z ]+ PRIVATE KEY-----'),
+        re.compile(r'(?i)(?:api_key|secret_key|private_key|auth_token)\s*[:=]\s*["\'][a-zA-Z0-9_\-]{16,}["\']'),
     ]
+
+    custom_tokens = []
+
+    # 1. Check untracked denylist file
+    if denylist_file is None:
+        denylist_file = REPO_ROOT / '.privacy-denylist'
+    else:
+        denylist_file = Path(denylist_file)
+
+    if denylist_file.exists():
+        try:
+            with open(denylist_file, 'r', encoding='utf-8') as f:
+                for line in f:
+                    token = line.strip()
+                    if token and not token.startswith('#'):
+                        custom_tokens.append(token)
+            print(f"Loaded {len(custom_tokens)} custom privacy pattern(s) from {denylist_file.name}.")
+        except Exception as e:
+            print(f"Notice: Failed to read {denylist_file}: {e}")
+    else:
+        print(f"Notice: No {denylist_file.name} file found; running generic checks only.")
+
+    # 2. Check environment variable
+    env_val = os.environ.get(env_var, '').strip()
+    if env_val:
+        tokens_from_env = [t.strip() for t in re.split(r'[,;\n]', env_val) if t.strip()]
+        custom_tokens.extend(tokens_from_env)
+        print(f"Loaded {len(tokens_from_env)} custom privacy pattern(s) from environment variable {env_var}.")
+
+    for token in set(custom_tokens):
+        patterns.append(re.compile(re.escape(token), re.IGNORECASE))
+
+    return patterns
+
+def check_privacy_paths(denylist_file=None):
+    print("\n=== 2. Checking Privacy Path Hygiene (Zero Personal Leaks) ===")
+    forbidden_patterns = get_privacy_patterns(denylist_file=denylist_file)
 
     violations = []
     docs_dir = REPO_ROOT / 'docs'

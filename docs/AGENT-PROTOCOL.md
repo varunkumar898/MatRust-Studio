@@ -6,6 +6,7 @@ This protocol governs all development, verification, audit, and submission activ
 
 ## 1. Core Operating Principles
 
+- **P0 Mission & Authority**: Build MatRust Studio as a clean-room, high-performance numerical computing platform and App Designer runtime in Rust. Precedence is: (1) `docs/AGENT-PROTOCOL.md`, (2) `docs/ENGINEERING-CHARTER.md`, (3) `docs/legacy/AGENTS-legacy.md`. The project owner is the sole authority for roadmap modifications, scope adjustments, and item deferrals.
 - **P1 Evidence Before Citation**: Every claim that code compiles, passes tests, or achieves a performance target must be substantiated by command output executed in the active session. Save raw logs to `<repo>/docs/verify-logs/` or `<repo>/bench-results/`.
 - **P2 Documentation Integrity**: Never modify or abbreviate historical milestone records. Maintain docstrings and comments.
 - **P3 Clean-Room & Legal Compliance**: Implement clean-room Rust code based exclusively on public standards, published numerical literature, and open references (SciPy, netlib, public documentation). Never inspect or reverse engineer proprietary MathWorks binaries or P-code.

@@ -1,27 +1,39 @@
 # MatRust Studio Storage Budget Ledger (docs/STORAGE-BUDGET.md)
 
-This document tracks executable binary sizes, dynamic link dependencies, and packaged installer footprints across milestones and phases to prevent binary bloat and maintain lightweight deployment.
+This ledger defines and tracks all machine-enforced repository and artifact storage budgets for MatRust Studio. Every measured number derives directly from automated command executions recorded in this session. Anything not measured is explicitly designated as `NOT MEASURED`.
+
+> **Installer note:** There is currently no installer package for MatRust Studio. The installer budget applies only once an installer packaging mechanism is introduced.
 
 ---
 
-## 1. Storage Budget Targets
+## 1. Owner Storage Budgets & Current Measured Status
 
-| Component / Artifact | Target Maximum | Current Baseline | Status | Policy & Notes |
+| Metric / Artifact | Budget Ceiling | Measured Value | Status | Measurement Source |
 | :--- | :---: | :---: | :---: | :--- |
-| **Release CLI Binary (`mlapp-cli.exe`)** | $\le 15.0\text{ MB}$ | $\approx 4.8\text{ MB}$ | PASS | Headless execution, MNA solver, code generator, and CLI diagnostic engine. |
-| **Release IDE Binary (`matrust_studio.exe`)** | $\le 35.0\text{ MB}$ | $\approx 22.4\text{ MB}$ | PASS | Full egui graphical interface, block diagram canvas, and plotting tools. |
-| **Release Installer Package (`.zip` / setup)** | $\le 45.0\text{ MB}$ | $\approx 28.0\text{ MB}$ | PASS | Compressed distribution including documentation assets and standard examples. |
-| **Dynamic Library Footprint (`libunwind`, etc.)** | $\le 5.0\text{ MB}$ | $\approx 1.2\text{ MB}$ | PASS | Toolchain runtime libraries required for specific host platforms. |
+| **Tracked Repository Size** | $\le 50\text{ MB}$ | **9.48 MB** (9,941,412 B) | **PASS** | `powershell -File scripts/storage-report.ps1` |
+| **New Tracked File Limit** | $\le 500\text{ KB}$ | **218.1 KB** (largest file) | **PASS** | `scripts/storage-report.ps1` (top 15 tracked files) |
+| **Release Desktop Executable** | $\le 12.84\text{ MB}$ (13.0 MB) | **10.20 MB** (10,696,704 B) | **PASS** | `Get-Item target/release/matrust_studio.exe` |
+| **Installer Package** | $\le 100\text{ MB}$ | **NOT MEASURED** | **N/A** | There is no installer |
+| **Shared Target Directory Alarm** | $\le 20\text{ GB}$ (Alarm) | **24.18 GB** (25,966,983,505 B) | **ALARM** | `scripts/storage-report.ps1` (cache cleanup advised) |
+| **Free Disk Space Floor** | $\ge 20\text{ GB}$ | **100.96 GB** (108,404,842,496 B) | **PASS** | `[System.IO.DriveInfo]::new('C').AvailableFreeSpace` |
 
 ---
 
-## 2. Phase-by-Phase Tracking Ledger
+## 2. Release Executable Measurement
 
-| Phase / Milestone | Commit / Hash | CLI Size | Desktop Size | Package Size | Notes |
-| :--- | :---: | :---: | :---: | :---: | :--- |
-| **M12 (Codegen & Polish)** | `ccbf804` | 4.8 MB | 22.4 MB | 28.0 MB | Baseline release build with MNA and ISO C99 codegen. |
-| **R1 (v0.3: F1 + F2)** | - | *Target $\le 16\text{ MB}$* | *Target $\le 25\text{ MB}$* | *Target $\le 30\text{ MB}$* | Complete block library and professional editor layout. |
-| **R2 (v0.4: F3 + F4)** | - | *Target $\le 18\text{ MB}$* | *Target $\le 28\text{ MB}$* | *Target $\le 34\text{ MB}$* | Stiff numerical solvers (Radau/BDF) and hierarchy. |
-| **R3 (v0.5: F5 + F7 + F8)** | - | *Target $\le 22\text{ MB}$* | *Target $\le 32\text{ MB}$* | *Target $\le 38\text{ MB}$* | Multidomain physical networks and Data Inspector. |
-| **R4 (v0.6: F6 + F9 + F10)** | - | *Target $\le 25\text{ MB}$* | *Target $\le 35\text{ MB}$* | *Target $\le 42\text{ MB}$* | State machines, optimization sweeps, and verification. |
-| **R5 (v0.7: F11 + F12 + F13)** | - | *Target $\le 28\text{ MB}$* | *Target $\le 38\text{ MB}$* | *Target $\le 45\text{ MB}$* | Embedded deployment and high-performance scaling. |
+- **Target Build Command:** `cargo build --release -p matrust_studio`
+- **Binary Location:** `target/release/matrust_studio.exe`
+- **Measured Size:** Exactly `10,696,704` bytes (~10.20 MB).
+- **Headroom Ceiling Calculation:** $10{,}696{,}704\text{ B} \times 1.20 = 12{,}836{,}044\text{ B}$ (~12.24 MB; enforced ceiling $\le 13.0\text{ MB}$).
+
+---
+
+## 3. Enforcement & Quality Gates
+
+Storage budgets are automated by `scripts/storage-report.ps1` and `scripts/storage-report.sh`. These checks exit with a non-zero error code if any hard budget threshold is breached:
+1. Tracked repository size exceeding $50\text{ MB}$.
+2. Any individual tracked file exceeding $500\text{ KB}$.
+3. Release executable exceeding $13.0\text{ MB}$.
+4. Free filesystem disk space falling below $20\text{ GB}$.
+
+An alarm is emitted when the shared build target directory exceeds $20\text{ GB}$.

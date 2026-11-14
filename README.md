@@ -88,7 +88,7 @@ cargo run --release -p matrust_studio
 ```
 
 > [!NOTE]
-> **Windows ARM64 with the gnullvm toolchain**: run via `cargo run --release -p matrust_studio`, or copy `libunwind.dll` from the toolchain bin directory next to the exe. CI release builds (x64 MSVC) are not affected.
+> **Windows ARM64 with the gnullvm toolchain**: run via `cargo run --release -p matrust_studio`, or copy `libunwind.dll` from the toolchain bin directory next to the exe. CI builds on x64 Windows with the MSVC toolchain and does not need this DLL.
 
 ### Inspect Simulink Model (`.slx`)
 ```bash

@@ -1566,6 +1566,62 @@ pub fn get_help_text(name: &str) -> Option<&'static str> {
                x = fminsearch(fun, x0) finds the minimum of an unconstrained multivariable\n\
                function starting at x0 using the Nelder-Mead simplex algorithm.\n"
         ),
+        "fminbnd" => Some(
+            "FMINBND  Find minimum of single-variable function on fixed interval.\n\n\
+             Syntax:\n\
+               x = fminbnd(fun, x1, x2)\n\
+               [x, fval] = fminbnd(fun, x1, x2)\n\n\
+             Description:\n\
+               x = fminbnd(fun, x1, x2) finds the local minimum of scalar function fun in [x1, x2].\n"
+        ),
+        "fminunc" => Some(
+            "FMINUNC  Find minimum of unconstrained multivariable function.\n\n\
+             Syntax:\n\
+               x = fminunc(fun, x0)\n\
+               [x, fval] = fminunc(fun, x0)\n\n\
+             Description:\n\
+               x = fminunc(fun, x0) finds a local minimum using BFGS quasi-Newton optimization.\n"
+        ),
+        "fsolve" => Some(
+            "FSOLVE  Solve system of nonlinear equations.\n\n\
+             Syntax:\n\
+               x = fsolve(fun, x0)\n\
+               [x, fval] = fsolve(fun, x0)\n\n\
+             Description:\n\
+               x = fsolve(fun, x0) solves F(x) = 0 using Levenberg-Marquardt.\n"
+        ),
+        "lsqnonlin" => Some(
+            "LSQNONLIN  Solve nonlinear least-squares problem.\n\n\
+             Syntax:\n\
+               x = lsqnonlin(fun, x0)\n\
+               [x, resnorm] = lsqnonlin(fun, x0)\n\n\
+             Description:\n\
+               x = lsqnonlin(fun, x0) solves min sum(F_i(x)^2) via Levenberg-Marquardt.\n"
+        ),
+        "lsqcurvefit" => Some(
+            "LSQCURVEFIT  Solve nonlinear curve-fitting problem in least-squares sense.\n\n\
+             Syntax:\n\
+               x = lsqcurvefit(fun, x0, xdata, ydata)\n\
+               [x, resnorm] = lsqcurvefit(fun, x0, xdata, ydata)\n\n\
+             Description:\n\
+               x = lsqcurvefit(fun, x0, xdata, ydata) fits nonlinear model to data.\n"
+        ),
+        "linprog" => Some(
+            "LINPROG  Solve linear programming problems.\n\n\
+             Syntax:\n\
+               x = linprog(f, A, b)\n\
+               [x, fval, exitflag] = linprog(f, A, b, Aeq, beq, lb, ub)\n\n\
+             Description:\n\
+               x = linprog(f, A, b) minimizes f'*x subject to A*x <= b via Two-Phase Simplex.\n"
+        ),
+        "optimset" => Some(
+            "OPTIMSET  Create or modify optimization options structure.\n\n\
+             Syntax:\n\
+               options = optimset('param1', value1, ...)\n\
+               options = optimset('solver_name')\n\n\
+             Description:\n\
+               options = optimset(...) creates or updates optimization parameter settings.\n"
+        ),
         "integral" => Some(
             "INTEGRAL  Numerically evaluate integral of function.\n\n\
              Syntax:\n\

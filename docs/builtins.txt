@@ -73,9 +73,12 @@ flintmax
 fliplr
 flipud
 floor
+fminbnd
 fminsearch
+fminunc
 fprintf
 freqz
+fsolve
 full
 fzero
 gca
@@ -129,6 +132,7 @@ kmeans
 kron
 legend
 length
+linprog
 linsolve
 linspace
 load
@@ -138,6 +142,8 @@ log2
 logical
 logspace
 lower
+lsqcurvefit
+lsqnonlin
 lu
 magic
 mat2str
@@ -165,6 +171,7 @@ ode23
 ode45
 odeset
 ones
+optimset
 orth
 pchip
 peaks

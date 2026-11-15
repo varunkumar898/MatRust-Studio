@@ -355,7 +355,10 @@ fn test_signal_deconv_and_freqz() {
         (h_dc - 1.0).abs() < 1e-6,
         "Expected H(DC) = 1.0, got {h_dc}"
     );
-    assert!(h_nyq < 0.02, "Expected H near Nyquist to be attenuated (< 0.02), got {h_nyq}");
+    assert!(
+        h_nyq < 0.02,
+        "Expected H near Nyquist to be attenuated (< 0.02), got {h_nyq}"
+    );
 }
 
 #[test]

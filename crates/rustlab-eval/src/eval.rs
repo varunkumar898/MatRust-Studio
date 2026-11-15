@@ -1516,7 +1516,8 @@ impl Interpreter {
                 }
 
                 if subs.iter().all(|s| s.is_scalar()) {
-                    let coords: Vec<usize> = subs.iter().map(|s| s.as_slice()[0] as usize).collect();
+                    let coords: Vec<usize> =
+                        subs.iter().map(|s| s.as_slice()[0] as usize).collect();
                     let elem = *ca
                         .get_subscript(&coords)
                         .map_err(|e| EvalError::Math { error: e, span })?;
@@ -1533,7 +1534,8 @@ impl Interpreter {
                     let mut out_data = Vec::with_capacity(total_elements);
 
                     for out_offset in 0..total_elements {
-                        let out_coords = rustlab_math::offset_to_coords(out_offset, &norm_out_shape);
+                        let out_coords =
+                            rustlab_math::offset_to_coords(out_offset, &norm_out_shape);
                         let mut target_coords = Vec::with_capacity(dim_indices.len());
                         for (d, &c) in out_coords.iter().enumerate() {
                             if d < dim_indices.len() {

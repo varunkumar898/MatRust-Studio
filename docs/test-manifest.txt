@@ -370,7 +370,10 @@ test_feedback_example_produces_identical_output: test
 test_file_count_limit: test
 test_file_save_and_load: test
 test_fixtures_generation_and_inspection: test
+test_fminbnd_scalar_minimization: test
+test_fminunc_multivariable_bfgs: test
 test_for_loop_and_column_iteration: test
+test_fsolve_nonlinear_system: test
 test_full_shell_controls_fit_at_target_sizes_and_scales: test
 test_full_wave_bridge_rectifier_oracle: test
 test_function_def: test
@@ -417,8 +420,10 @@ test_island_semantics_shared_ground_and_partitioning: test
 test_knife_edge_diode_exact_vf_boundary_stable: test
 test_linear_algebra_and_system_solve: test
 test_linked_axes_move_together_on_zoom_and_pan: test
+test_linprog_two_phase_simplex: test
 test_loop_through_integrator_is_accepted: test
 test_loop_through_unit_delay_is_accepted: test
+test_lsqnonlin_and_lsqcurvefit: test
 test_lu_decomposition_pivoting_and_singular_rejection: test
 test_lu_hardening_1x1_scalar_system: test
 test_lu_hardening_50_pseudo_random_lcg_systems: test
@@ -493,6 +498,7 @@ test_odeset_options_struct: test
 test_op_amp_inverting_amplifier_closed_loop_gain: test
 test_operator_precedence: test
 test_opt_in_real_apps_validation: test
+test_optimset_options_management: test
 test_panel_action_controls_are_registered_and_reachable: test
 test_parameter_sweep_gain_variation: test
 test_parameter_sweep_invalid_target_error: test

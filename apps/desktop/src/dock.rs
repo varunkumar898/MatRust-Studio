@@ -18,8 +18,8 @@ pub enum PanelId {
     Help,
     AddOns,
     MathGallery,
-// Added CentralWorkspace identifier for grouping central panels.
-    CentralWorkspace,
+    // Added CentralWorkspace identifier for grouping central panels.
+    BlockDiagram,
 }
 
 impl PanelId {
@@ -451,35 +451,40 @@ impl DockTree {
         self.root.collect_leaf_rects(rect)
     }
 
-    /// Opens a panel if not present, or brings its tab to focus if already present.
-    pub fn open_panel(&mut self, panel: PanelId) {
-        if self.is_open(panel) {
-            self.focus_panel(panel);
-            return;
-        }
-
-        // Added helper to migrate old MathGallery placement from Help to Editor leaf.
-    fn migrate_old_math_gallery(&mut self) -> bool {
+    /// Migrates any legacy MathGallery placement from the Help dock into the Editor (central) dock.
+    pub fn migrate_old_math_gallery(&mut self) -> bool {
         // Find leaf containing Help.
         fn find_help_leaf(node: &mut DockNode) -> Option<&mut DockNode> {
             match node {
                 DockNode::Leaf { tabs, .. } => {
-                    if tabs.contains(&PanelId::Help) { Some(node) } else { None }
+                    if tabs.contains(&PanelId::Help) {
+                        Some(node)
+                    } else {
+                        None
+                    }
                 }
-                DockNode::Split { left_or_top, right_or_bottom, .. } => {
-                    find_help_leaf(left_or_top).or_else(|| find_help_leaf(right_or_bottom))
-                }
+                DockNode::Split {
+                    left_or_top,
+                    right_or_bottom,
+                    ..
+                } => find_help_leaf(left_or_top).or_else(|| find_help_leaf(right_or_bottom)),
             }
         }
         // Find leaf containing Editor (the central leaf).
         fn find_editor_leaf(node: &mut DockNode) -> Option<&mut DockNode> {
             match node {
                 DockNode::Leaf { tabs, .. } => {
-                    if tabs.contains(&PanelId::Editor) { Some(node) } else { None }
+                    if tabs.contains(&PanelId::Editor) {
+                        Some(node)
+                    } else {
+                        None
+                    }
                 }
-                DockNode::Split { left_or_top, right_or_bottom, .. } => {
-                    find_editor_leaf(left_or_top).or_else(|| find_editor_leaf(right_or_bottom))
-                }
+                DockNode::Split {
+                    left_or_top,
+                    right_or_bottom,
+                    ..
+                } => find_editor_leaf(left_or_top).or_else(|| find_editor_leaf(right_or_bottom)),
             }
         }
         let mut migrated = false;
@@ -501,6 +506,18 @@ impl DockTree {
         }
         migrated
     }
+
+    /// Opens a panel if not present, or brings its tab to focus if already present.
+    pub fn open_panel(&mut self, panel: PanelId) {
+        if panel == PanelId::MathGallery {
+            self.migrate_old_math_gallery();
+        }
+
+        if self.is_open(panel) {
+            self.focus_panel(panel);
+            return;
+        }
+
         let target_leaf = match panel {
             PanelId::Figures | PanelId::Workspace => PanelId::Workspace,
             PanelId::CommandWindow | PanelId::History => PanelId::CommandWindow,

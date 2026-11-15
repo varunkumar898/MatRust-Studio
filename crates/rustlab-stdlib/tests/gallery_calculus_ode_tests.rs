@@ -57,9 +57,19 @@ fn test_gallery_adaptive_quadrature() {
     let script = read_gallery_script("examples/math/calculus/adaptive_quadrature.m");
     interp.eval_script(&script).unwrap();
 
-    let i_val = interp.env.get("I").expect("I must exist").as_scalar_f64().unwrap();
+    let i_val = interp
+        .env
+        .get("I")
+        .expect("I must exist")
+        .as_scalar_f64()
+        .unwrap();
     let exact = (1.0 - (-1.0_f64).exp()).powi(2) / 4.0;
-    assert!((i_val - exact).abs() < 1e-5, "Expected I ~ {}, got {}", exact, i_val);
+    assert!(
+        (i_val - exact).abs() < 1e-5,
+        "Expected I ~ {}, got {}",
+        exact,
+        i_val
+    );
 }
 
 #[test]

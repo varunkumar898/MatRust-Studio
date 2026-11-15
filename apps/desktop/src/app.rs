@@ -143,6 +143,26 @@ impl Default for MatStudioApp {
                 _ => TopTab::Home,
             };
         }
+        if let Ok(panel) = std::env::var("MATSTUDIO_START_PANEL") {
+            match panel.to_ascii_lowercase().as_str() {
+                "math_gallery" | "gallery" => {
+                    app.dock_tree.open_panel(PanelId::MathGallery);
+                }
+                "block_diagram" => {
+                    app.dock_tree.open_panel(PanelId::BlockDiagram);
+                }
+                _ => {}
+            }
+        }
+        if let Ok(gallery_id) = std::env::var("MATSTUDIO_START_GALLERY_ID") {
+            if gallery_id == "linalg-eigen" {
+                app.math_gallery_panel.selected_domain = Some("Linear Algebra");
+                app.math_gallery_panel.selected_item_id = Some("linalg-eigen");
+            }
+        }
+        if let Ok(script) = std::env::var("MATSTUDIO_START_RUN") {
+            app.execute_code(script.replace("\\n", "\n"));
+        }
         if std::env::var_os("MATSTUDIO_START_THIS_PC").is_some() {
             app.current_folder.show_this_pc = true;
             app.current_folder.refresh_locations();
@@ -363,7 +383,8 @@ impl MatStudioApp {
                 });
 
             if let Some((title, code)) = on_open_gallery_item {
-                self.editor.open_scratch(title.to_string(), code.to_string());
+                self.editor
+                    .open_scratch(title.to_string(), code.to_string());
                 self.dock_tree.open_panel(PanelId::Editor);
             }
 
@@ -1549,8 +1570,13 @@ impl MatStudioApp {
         }
         let temp_dir = std::env::temp_dir();
         let path = temp_dir.join("matrust_dock_layout.json");
-        if let Ok(json) = std::fs::read_to_string(path) {
-            if let Ok(tree) = DockTree::from_json(&json) {
+        if let Ok(json) = std::fs::read_to_string(&path) {
+            if let Ok(mut tree) = DockTree::from_json(&json) {
+                if tree.migrate_old_math_gallery() {
+                    if let Ok(migrated_json) = tree.to_json() {
+                        let _ = std::fs::write(&path, migrated_json);
+                    }
+                }
                 self.dock_tree = tree;
             }
         }

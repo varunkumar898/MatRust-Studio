@@ -9,7 +9,7 @@
 //! 6. Fractals & Chaos
 
 use crate::theme::Theme;
-use egui::{Color32, RichText, ScrollArea, Ui};
+use egui::{pos2, vec2, Color32, Frame, Label, Layout, Rect, RichText, ScrollArea, Stroke, Ui};
 
 /// Information about a Math Gallery example entry.
 #[derive(Clone, Debug)]
@@ -784,161 +784,272 @@ impl MathGalleryPanel {
                 })
                 .collect();
 
-            // Split into Catalog List (Left) and Detail View (Right)
-            let total_width = ui.available_width();
-            let left_width = (total_width * 0.38).clamp(220.0, 360.0);
+            // Split into Catalog List (Left) and Detail View (Right) filling 100% of the available panel height
+            let avail_rect = ui.available_rect_before_wrap();
+            let avail_height = avail_rect.height().max(160.0);
+            let total_width = avail_rect.width();
+            let left_width = (total_width * 0.32).clamp(240.0, 360.0);
+            let right_width = (total_width - left_width - 12.0).max(200.0);
 
-            ui.horizontal(|ui| {
-                // --- Left: Item List ---
-                ui.allocate_ui_with_layout(
-                    egui::vec2(left_width, ui.available_height()),
-                    egui::Layout::top_down(egui::Align::Min),
-                    |ui| {
-                        ScrollArea::vertical()
-                            .id_salt("gallery_items_list")
-                            .auto_shrink([false, false])
+            let left_rect =
+                egui::Rect::from_min_size(avail_rect.min, egui::vec2(left_width, avail_height));
+            let right_rect = egui::Rect::from_min_size(
+                egui::pos2(avail_rect.min.x + left_width + 12.0, avail_rect.min.y),
+                egui::vec2(right_width, avail_height),
+            );
+
+            // Reserve the entire space in the parent ui
+            ui.allocate_rect(avail_rect, egui::Sense::hover());
+
+            // Draw clean vertical divider between list and detail pane
+            ui.painter().line_segment(
+                [
+                    egui::pos2(avail_rect.min.x + left_width + 6.0, avail_rect.min.y),
+                    egui::pos2(
+                        avail_rect.min.x + left_width + 6.0,
+                        avail_rect.min.y + avail_height,
+                    ),
+                ],
+                egui::Stroke::new(1.0_f32, theme.border),
+            );
+
+            // --- Left: Item List ---
+            let mut left_ui = ui.new_child(
+                egui::UiBuilder::default()
+                    .max_rect(left_rect)
+                    .layout(egui::Layout::top_down(egui::Align::LEFT)),
+            );
+            ScrollArea::vertical()
+                .id_salt("gallery_items_list")
+                .auto_shrink([false, false])
+                .max_height(avail_height)
+                .show(&mut left_ui, |ui| {
+                    ui.label(
+                        RichText::new(format!("Programs ({})", matching_items.len()))
+                            .size(11.0)
+                            .strong()
+                            .color(theme.text_secondary),
+                    );
+                    ui.add_space(4.0);
+
+                    for item in &matching_items {
+                        let is_selected = self.selected_item_id == Some(item.id);
+                        let bg = if is_selected {
+                            theme.active_tab
+                        } else {
+                            Color32::TRANSPARENT
+                        };
+
+                        egui::Frame::NONE
+                            .fill(bg)
+                            .inner_margin(6.0)
+                            .corner_radius(4.0)
                             .show(ui, |ui| {
-                                for item in &matching_items {
-                                    let is_selected = self.selected_item_id == Some(item.id);
-                                    let bg = if is_selected {
-                                        theme.active_tab
+                                ui.vertical(|ui| {
+                                    let title_color = if is_selected {
+                                        theme.accent
                                     } else {
-                                        Color32::TRANSPARENT
+                                        theme.text_primary
                                     };
-
-                                    egui::Frame::NONE.fill(bg).inner_margin(6.0).show(ui, |ui| {
-                                        ui.horizontal(|ui| {
-                                            ui.vertical(|ui| {
-                                                let title_color = if is_selected {
-                                                    theme.accent
-                                                } else {
-                                                    theme.text_primary
-                                                };
-                                                if ui
-                                                    .selectable_label(
-                                                        is_selected,
-                                                        RichText::new(item.title)
-                                                            .size(13.0)
-                                                            .color(title_color)
-                                                            .strong(),
-                                                    )
-                                                    .clicked()
-                                                {
-                                                    self.selected_item_id = Some(item.id);
-                                                }
-                                                ui.horizontal(|ui| {
-                                                    ui.label(
-                                                        RichText::new(item.domain)
-                                                            .size(10.0)
-                                                            .color(theme.accent),
-                                                    );
-                                                });
-                                            });
-                                        });
+                                    if ui
+                                        .selectable_label(
+                                            is_selected,
+                                            RichText::new(item.title)
+                                                .size(13.0)
+                                                .color(title_color)
+                                                .strong(),
+                                        )
+                                        .clicked()
+                                    {
+                                        self.selected_item_id = Some(item.id);
+                                    }
+                                    ui.horizontal(|ui| {
+                                        ui.label(
+                                            RichText::new(item.domain)
+                                                .size(10.0)
+                                                .color(theme.accent),
+                                        );
+                                        let snippet = if item.description.len() > 50 {
+                                            format!("• {}...", &item.description[..47])
+                                        } else {
+                                            format!("• {}", item.description)
+                                        };
+                                        ui.label(
+                                            RichText::new(snippet)
+                                                .size(10.0)
+                                                .color(theme.text_secondary),
+                                        );
                                     });
-                                    ui.separator();
-                                }
-                            });
-                    },
-                );
-
-                ui.separator();
-
-                // --- Right: Details & Code Preview ---
-                ui.vertical(|ui| {
-                    let selected = matching_items
-                        .iter()
-                        .find(|i| Some(i.id) == self.selected_item_id)
-                        .copied()
-                        .or_else(|| matching_items.first().copied());
-
-                    if let Some(item) = selected {
-                        ScrollArea::vertical()
-                            .id_salt("gallery_detail_scroll")
-                            .show(ui, |ui| {
-                                ui.horizontal(|ui| {
-                                    ui.heading(
-                                        RichText::new(item.title)
-                                            .size(18.0)
-                                            .color(theme.text_primary),
-                                    );
-                                    ui.label(
-                                        RichText::new(format!("[{}]", item.domain))
-                                            .size(12.0)
-                                            .color(theme.accent),
-                                    );
                                 });
+                            });
+                        ui.separator();
+                    }
+                });
 
-                                ui.add_space(4.0);
+            // --- Right: Details & Code Preview ---
+            let mut right_ui = ui.new_child(
+                egui::UiBuilder::default()
+                    .max_rect(right_rect)
+                    .layout(egui::Layout::top_down(egui::Align::LEFT)),
+            );
+
+            let selected = matching_items
+                .iter()
+                .find(|i| Some(i.id) == self.selected_item_id)
+                .copied()
+                .or_else(|| matching_items.first().copied());
+
+            if let Some(item) = selected {
+                ScrollArea::vertical()
+                    .id_salt("gallery_detail_scroll")
+                    .auto_shrink([false, false])
+                    .max_height(avail_height)
+                    .show(&mut right_ui, |ui| {
+                        // Title & Domain Badges
+                        ui.horizontal(|ui| {
+                            ui.heading(
+                                RichText::new(item.title)
+                                    .size(18.0)
+                                    .color(theme.text_primary),
+                            );
+                            ui.label(
+                                RichText::new(format!("[{}]", item.domain))
+                                    .size(12.0)
+                                    .color(theme.accent),
+                            );
+                            ui.label(
+                                RichText::new("[Verified Numerical Simulation]")
+                                    .size(11.0)
+                                    .color(Color32::from_rgb(46, 160, 67)),
+                            );
+                        });
+
+                        ui.add_space(4.0);
+                        // Description card
+                        egui::Frame::NONE
+                            .fill(theme.panel_bg)
+                            .stroke(egui::Stroke::new(1.0_f32, theme.border))
+                            .corner_radius(4.0)
+                            .inner_margin(8.0)
+                            .show(ui, |ui| {
                                 ui.label(
                                     RichText::new(item.description)
                                         .size(13.0)
-                                        .color(theme.text_secondary),
-                                );
-
-                                ui.add_space(8.0);
-                                ui.horizontal(|ui| {
-                                    if ui
-                                        .button(
-                                            RichText::new("> Run in Engine")
-                                                .size(13.0)
-                                                .color(Color32::WHITE),
-                                        )
-                                        .clicked()
-                                    {
-                                        *on_run_script = Some(item.script.to_string());
-                                    }
-
-                                    if ui
-                                        .button(
-                                            RichText::new("Open in Editor")
-                                                .size(13.0)
-                                                .color(theme.text_primary),
-                                        )
-                                        .clicked()
-                                    {
-                                        *on_open_in_editor = Some((item.title, item.script));
-                                    }
-
-                                    if ui.button("Copy Code").clicked() {
-                                        ui.ctx().copy_text(item.script.to_string());
-                                    }
-                                });
-
-                                ui.add_space(6.0);
-                                ui.label(
-                                    RichText::new(format!(
-                                        "Expected Verification: {}",
-                                        item.expected_answer
-                                    ))
-                                    .size(11.0)
-                                    .color(theme.text_secondary),
-                                );
-
-                                ui.separator();
-                                ui.label(
-                                    RichText::new("MATLAB Program Code:")
-                                        .size(12.0)
-                                        .color(theme.text_secondary)
-                                        .strong(),
-                                );
-
-                                let mut code_str = item.script.to_string();
-                                ui.add(
-                                    egui::TextEdit::multiline(&mut code_str)
-                                        .font(egui::TextStyle::Monospace)
-                                        .code_editor()
-                                        .desired_width(ui.available_width() - 10.0)
-                                        .desired_rows(18),
+                                        .color(theme.text_primary),
                                 );
                             });
-                    } else {
-                        ui.centered_and_justified(|ui| {
-                            ui.label("No example matching search filter.");
+
+                        ui.add_space(6.0);
+
+                        // Actions Row
+                        ui.horizontal(|ui| {
+                            let run_btn = egui::Button::new(
+                                RichText::new("▶  Run in Engine")
+                                    .size(13.0)
+                                    .color(Color32::WHITE)
+                                    .strong(),
+                            )
+                            .fill(theme.accent)
+                            .min_size(egui::vec2(120.0, 26.0));
+
+                            if ui
+                                .add(run_btn)
+                                .on_hover_text(
+                                    "Execute simulation script in engine worker and display output \
+                                     in Figures",
+                                )
+                                .clicked()
+                            {
+                                *on_run_script = Some(item.script.to_string());
+                            }
+
+                            ui.add_space(4.0);
+
+                            let edit_btn = egui::Button::new(
+                                RichText::new("Open in Editor")
+                                    .size(13.0)
+                                    .color(theme.text_primary),
+                            )
+                            .min_size(egui::vec2(110.0, 26.0));
+
+                            if ui
+                                .add(edit_btn)
+                                .on_hover_text("Open complete .m source in new Editor scratch tab")
+                                .clicked()
+                            {
+                                *on_open_in_editor = Some((item.title, item.script));
+                            }
+
+                            ui.add_space(4.0);
+
+                            let copy_btn = egui::Button::new(
+                                RichText::new("Copy Code")
+                                    .size(13.0)
+                                    .color(theme.text_secondary),
+                            )
+                            .min_size(egui::vec2(90.0, 26.0));
+
+                            if ui
+                                .add(copy_btn)
+                                .on_hover_text("Copy MATLAB code to clipboard")
+                                .clicked()
+                            {
+                                ui.ctx().copy_text(item.script.to_string());
+                            }
                         });
-                    }
+
+                        ui.add_space(6.0);
+
+                        // Verification Benchmark Box
+                        egui::Frame::NONE
+                            .fill(Color32::from_rgba_unmultiplied(0, 114, 189, 20))
+                            .stroke(egui::Stroke::new(1.0_f32, theme.accent))
+                            .corner_radius(4.0)
+                            .inner_margin(8.0)
+                            .show(ui, |ui| {
+                                ui.horizontal(|ui| {
+                                    ui.label(
+                                        RichText::new("Numerical Verification:")
+                                            .size(11.0)
+                                            .strong()
+                                            .color(theme.accent),
+                                    );
+                                    ui.label(
+                                        RichText::new(item.expected_answer)
+                                            .size(11.0)
+                                            .color(theme.text_primary),
+                                    );
+                                });
+                                ui.label(
+                                    RichText::new(format!("Script reference: {}", item.doc_path))
+                                        .size(10.0)
+                                        .color(theme.text_secondary),
+                                );
+                            });
+
+                        ui.add_space(6.0);
+                        ui.label(
+                            RichText::new("MATLAB Program Code:")
+                                .size(12.0)
+                                .color(theme.text_secondary)
+                                .strong(),
+                        );
+
+                        let mut code_str = item.script.to_string();
+                        let code_rows = code_str.lines().count().max(16);
+                        ui.add(
+                            egui::TextEdit::multiline(&mut code_str)
+                                .font(egui::TextStyle::Monospace)
+                                .code_editor()
+                                .desired_width(ui.available_width() - 8.0)
+                                .desired_rows(code_rows),
+                        );
+                    });
+            } else {
+                right_ui.centered_and_justified(|ui| {
+                    ui.label("No example matching search filter.");
                 });
-            });
+            }
         });
     }
 }

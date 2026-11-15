@@ -515,8 +515,87 @@ fn test_dock_tree_help_addons_block_diagram_panels() {
     assert_eq!(PanelId::AddOns.title(), "Add-On Explorer");
     assert_eq!(PanelId::AddOns.icon(), "[A]");
 
+    assert_eq!(PanelId::MathGallery.title(), "Math Gallery");
+    assert_eq!(PanelId::MathGallery.icon(), "[M]");
+
     assert_eq!(PanelId::BlockDiagram.title(), "Block Diagram Editor");
     assert_eq!(PanelId::BlockDiagram.icon(), "[B]");
+}
+
+#[test]
+fn test_math_gallery_dock_placement_and_migration() {
+    let mut tree = DockTree::standard();
+    // Open Math Gallery
+    tree.open_panel(PanelId::MathGallery);
+    assert!(tree.is_open(PanelId::MathGallery));
+
+    // Verify it is placed with Editor (central dock)
+    fn find_leaf_with_panels(
+        node: &matrust_studio::dock::DockNode,
+        p1: PanelId,
+        p2: PanelId,
+    ) -> bool {
+        match node {
+            matrust_studio::dock::DockNode::Leaf { tabs, .. } => {
+                tabs.contains(&p1) && tabs.contains(&p2)
+            }
+            matrust_studio::dock::DockNode::Split {
+                left_or_top,
+                right_or_bottom,
+                ..
+            } => {
+                find_leaf_with_panels(left_or_top, p1, p2)
+                    || find_leaf_with_panels(right_or_bottom, p1, p2)
+            }
+        }
+    }
+    assert!(
+        find_leaf_with_panels(&tree.root, PanelId::Editor, PanelId::MathGallery),
+        "MathGallery must be co-located in the Editor central dock leaf"
+    );
+
+    // Now test migration from legacy layout where MathGallery was in Help leaf
+    tree.root.remove_panel(PanelId::MathGallery);
+    fn add_to_help(node: &mut matrust_studio::dock::DockNode) {
+        match node {
+            matrust_studio::dock::DockNode::Leaf { tabs, .. } => {
+                if tabs.contains(&PanelId::Help) {
+                    tabs.push(PanelId::MathGallery);
+                }
+            }
+            matrust_studio::dock::DockNode::Split {
+                left_or_top,
+                right_or_bottom,
+                ..
+            } => {
+                add_to_help(left_or_top);
+                add_to_help(right_or_bottom);
+            }
+        }
+    }
+    add_to_help(&mut tree.root);
+    assert!(find_leaf_with_panels(
+        &tree.root,
+        PanelId::Help,
+        PanelId::MathGallery
+    ));
+
+    // Run migration
+    assert!(tree.migrate_old_math_gallery());
+    // Verify it is now with Editor and NOT with Help
+    assert!(!find_leaf_with_panels(
+        &tree.root,
+        PanelId::Help,
+        PanelId::MathGallery
+    ));
+    assert!(find_leaf_with_panels(
+        &tree.root,
+        PanelId::Editor,
+        PanelId::MathGallery
+    ));
+
+    // Subsequent migration run should return false (already migrated)
+    assert!(!tree.migrate_old_math_gallery());
 }
 
 #[test]

@@ -17,7 +17,9 @@ pub enum PanelId {
     History,
     Help,
     AddOns,
-    BlockDiagram,
+    MathGallery,
+// Added CentralWorkspace identifier for grouping central panels.
+    CentralWorkspace,
 }
 
 impl PanelId {
@@ -31,6 +33,7 @@ impl PanelId {
             PanelId::History => "Command History",
             PanelId::Help => "Help & Documentation",
             PanelId::AddOns => "Add-On Explorer",
+            PanelId::MathGallery => "Math Gallery",
             PanelId::BlockDiagram => "Block Diagram Editor",
         }
     }
@@ -45,6 +48,7 @@ impl PanelId {
             PanelId::History => "[H]",
             PanelId::Help => "[?]",
             PanelId::AddOns => "[A]",
+            PanelId::MathGallery => "[M]",
             PanelId::BlockDiagram => "[B]",
         }
     }
@@ -454,13 +458,56 @@ impl DockTree {
             return;
         }
 
-        // Insert into most appropriate leaf
+        // Added helper to migrate old MathGallery placement from Help to Editor leaf.
+    fn migrate_old_math_gallery(&mut self) -> bool {
+        // Find leaf containing Help.
+        fn find_help_leaf(node: &mut DockNode) -> Option<&mut DockNode> {
+            match node {
+                DockNode::Leaf { tabs, .. } => {
+                    if tabs.contains(&PanelId::Help) { Some(node) } else { None }
+                }
+                DockNode::Split { left_or_top, right_or_bottom, .. } => {
+                    find_help_leaf(left_or_top).or_else(|| find_help_leaf(right_or_bottom))
+                }
+            }
+        }
+        // Find leaf containing Editor (the central leaf).
+        fn find_editor_leaf(node: &mut DockNode) -> Option<&mut DockNode> {
+            match node {
+                DockNode::Leaf { tabs, .. } => {
+                    if tabs.contains(&PanelId::Editor) { Some(node) } else { None }
+                }
+                DockNode::Split { left_or_top, right_or_bottom, .. } => {
+                    find_editor_leaf(left_or_top).or_else(|| find_editor_leaf(right_or_bottom))
+                }
+            }
+        }
+        let mut migrated = false;
+        if let Some(help_leaf) = find_help_leaf(&mut self.root) {
+            if let DockNode::Leaf { tabs, .. } = help_leaf {
+                if let Some(pos) = tabs.iter().position(|p| *p == PanelId::MathGallery) {
+                    tabs.remove(pos);
+                    migrated = true;
+                }
+            }
+        }
+        if migrated {
+            if let Some(editor_leaf) = find_editor_leaf(&mut self.root) {
+                if let DockNode::Leaf { tabs, active_tab } = editor_leaf {
+                    tabs.push(PanelId::MathGallery);
+                    *active_tab = tabs.len() - 1;
+                }
+            }
+        }
+        migrated
+    }
         let target_leaf = match panel {
             PanelId::Figures | PanelId::Workspace => PanelId::Workspace,
             PanelId::CommandWindow | PanelId::History => PanelId::CommandWindow,
             PanelId::CurrentFolder => PanelId::CurrentFolder,
             PanelId::Editor | PanelId::BlockDiagram => PanelId::Editor,
             PanelId::Help | PanelId::AddOns => PanelId::Help,
+            PanelId::MathGallery => PanelId::Editor,
         };
 
         if !self.insert_tab_next_to(target_leaf, panel) {

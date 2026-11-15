@@ -42,7 +42,11 @@ def check_builtin_docs():
     if help_path.exists():
         with open(help_path, 'r', encoding='utf-8') as f:
             help_content = f.read()
-        help_entries = set(re.findall(r'"([^"]+)"\s*=>\s*Some\(', help_content))
+        arm_matches = re.findall(r'((?:"[a-zA-Z0-9_]+"\s*\|\s*)*"[a-zA-Z0-9_]+")\s*=>\s*Some\(', help_content)
+        help_entries = set()
+        for arm in arm_matches:
+            for s in re.findall(r'"([a-zA-Z0-9_]+)"', arm):
+                help_entries.add(s)
         missing_help = [b for b in builtins if b not in help_entries]
         print(f"Total help entries: {len(help_entries)}")
         if missing_help:

@@ -602,33 +602,45 @@ pub fn title_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError
     Ok(vec![])
 }
 
-/// `legend(loc)` — set legend location on current axes.
+/// `legend('label1', 'label2', ...)` or `legend(loc)` — set legend labels and location on current axes.
 pub fn legend_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError> {
-    if args.len() != 1 {
+    if args.is_empty() {
         return Err(user_err(
             "RUSTLAB:plot:badArgs",
-            "legend requires exactly 1 input (location).",
+            "legend requires at least 1 input.",
         ));
     }
-    let loc = extract_string(&args[0])?;
-    let location = match loc.as_str() {
-        "northeast" => LegendLocation::NorthEast,
-        "northwest" => LegendLocation::NorthWest,
-        "southeast" => LegendLocation::SouthEast,
-        "southwest" => LegendLocation::SouthWest,
-        _ => {
-            return Err(user_err(
-                "RUSTLAB:plot:badArgs",
-                "legend location must be 'northeast', 'northwest', 'southeast', or 'southwest'.",
-            ));
-        }
-    };
+    let mut location = LegendLocation::NorthEast;
     rustlab_plot::with_plot_state(|reg| {
         let fig = reg.current_figure_mut().ok_or(user_err(
             "RUSTLAB:plot:noFigure",
             "No current figure. Call figure first.",
         ))?;
         let ax = ensure_current_axes(fig)?;
+        let mut label_idx = 0;
+        for arg in args {
+            if let Ok(s) = extract_string(arg) {
+                match s.to_lowercase().as_str() {
+                    "northeast" => location = LegendLocation::NorthEast,
+                    "northwest" => location = LegendLocation::NorthWest,
+                    "southeast" => location = LegendLocation::SouthEast,
+                    "southwest" => location = LegendLocation::SouthWest,
+                    _ => {
+                        if label_idx < ax.series.len() {
+                            match &mut ax.series[label_idx] {
+                                Series::Line(l) => l.name = s,
+                                Series::Scatter(sc) => sc.name = s,
+                                Series::Bar(b) => b.name = s,
+                                Series::Line3D(l3) => l3.name = s,
+                                Series::Surface(sf) => sf.name = s,
+                                Series::Histogram(h) => h.name = s,
+                            }
+                            label_idx += 1;
+                        }
+                    }
+                }
+            }
+        }
         ax.legend = Some(Legend { location });
         Ok::<(), EvalError>(())
     })?;
@@ -1353,7 +1365,18 @@ pub fn contourf_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalEr
 
 /// `imagesc(C)` or `imagesc(X, Y, C)` — scaled image plot with colormap.
 pub fn imagesc_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError> {
-    surf_fn(args, 0)?;
+    if args.is_empty() {
+        return Err(user_err(
+            "RUSTLAB:plot:badArgs",
+            "imagesc requires at least 1 input.",
+        ));
+    }
+    let c = if args.len() >= 3 {
+        &args[2]
+    } else {
+        &args[0]
+    };
+    surf_fn(&[c.clone()], 0)?;
     rustlab_plot::with_plot_state(|reg| {
         if let Some(fig) = reg.current_figure_mut() {
             if let Ok(ax) = ensure_current_axes(fig) {

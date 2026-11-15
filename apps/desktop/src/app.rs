@@ -18,6 +18,7 @@ use crate::editor::{extract_active_section, EditorPanel};
 use crate::execution::{GraphicsState, VariableRow, WorkerClient, WorkerResponse};
 use crate::figures::FiguresPanel;
 use crate::help_panel::HelpPanel;
+use crate::math_gallery::MathGalleryPanel;
 use crate::preferences::Preferences;
 use crate::statusbar::{EngineStatus, StatusAction, StatusBar};
 use crate::theme::{Theme, ThemeMode};
@@ -51,6 +52,7 @@ pub struct MatStudioApp {
     pub figures_panel: FiguresPanel,
     pub help_panel: HelpPanel,
     pub addons_panel: AddOnsPanel,
+    pub math_gallery_panel: MathGalleryPanel,
     pub block_diagram_editor: BlockDiagramEditor,
 
     pub worker: WorkerClient,
@@ -96,6 +98,7 @@ impl Default for MatStudioApp {
             figures_panel: FiguresPanel::default(),
             help_panel: HelpPanel::default(),
             addons_panel: AddOnsPanel::default(),
+            math_gallery_panel: MathGalleryPanel::default(),
             block_diagram_editor: BlockDiagramEditor::default(),
 
             worker: WorkerClient::new(),
@@ -293,8 +296,11 @@ impl MatStudioApp {
             let figures_panel = &mut self.figures_panel;
             let help_panel = &mut self.help_panel;
             let addons_panel = &mut self.addons_panel;
+            let math_gallery_panel = &mut self.math_gallery_panel;
             let block_diagram_editor = &mut self.block_diagram_editor;
             let graphics = &mut self.graphics;
+
+            let mut on_open_gallery_item: Option<(&'static str, &'static str)> = None;
 
             self.dock_tree
                 .render(ui, &theme, |body_ui, panel_id| match panel_id {
@@ -343,10 +349,23 @@ impl MatStudioApp {
                     PanelId::AddOns => {
                         addons_panel.show(body_ui, &theme, &mut on_launch_app);
                     }
+                    PanelId::MathGallery => {
+                        math_gallery_panel.show(
+                            body_ui,
+                            &theme,
+                            &mut on_open_gallery_item,
+                            &mut on_run_script,
+                        );
+                    }
                     PanelId::BlockDiagram => {
                         block_diagram_editor.show(body_ui, &theme);
                     }
                 });
+
+            if let Some((title, code)) = on_open_gallery_item {
+                self.editor.open_scratch(title.to_string(), code.to_string());
+                self.dock_tree.open_panel(PanelId::Editor);
+            }
 
             if let Some(path) = open_file {
                 let _ = self.editor.open_file(path);
@@ -960,6 +979,12 @@ impl MatStudioApp {
         {
             self.dock_tree.open_panel(PanelId::AddOns);
         }
+        if Self::ribbon_button(ui, "ribbon.home.gallery", "Math Gallery")
+            .on_hover_text("Open Math Gallery interactive examples and verified simulations")
+            .clicked()
+        {
+            self.dock_tree.open_panel(PanelId::MathGallery);
+        }
         ui.separator();
         if Self::ribbon_button(ui, "ribbon.home.help", "Help")
             .on_hover_text("Toggle Help and Documentation panel")
@@ -1050,6 +1075,12 @@ impl MatStudioApp {
             .clicked()
         {
             self.dock_tree.open_panel(PanelId::AddOns);
+        }
+        if Self::ribbon_button(ui, "ribbon.apps.gallery", "Math Gallery")
+            .on_hover_text("Explore and run verified mathematical example simulations")
+            .clicked()
+        {
+            self.dock_tree.open_panel(PanelId::MathGallery);
         }
     }
 

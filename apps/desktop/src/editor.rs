@@ -726,6 +726,15 @@ impl EditorPanel {
         self.active_tab_idx = self.tabs.len() - 1;
     }
 
+    pub fn open_scratch(&mut self, title: String, content: String) {
+        let mut doc = DocumentTab::new_untitled(self.next_untitled_id);
+        self.next_untitled_id += 1;
+        doc.title = title;
+        doc.content = content;
+        self.tabs.push(doc);
+        self.active_tab_idx = self.tabs.len() - 1;
+    }
+
     pub fn close_active_tab(&mut self) {
         if self.tabs.len() <= 1 {
             // Keep at least one tab

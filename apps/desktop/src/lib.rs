@@ -13,6 +13,7 @@ pub mod execution;
 pub mod figures;
 pub mod help_panel;
 pub mod layout_contract;
+pub mod math_gallery;
 pub mod preferences;
 pub mod statusbar;
 pub mod syntax;

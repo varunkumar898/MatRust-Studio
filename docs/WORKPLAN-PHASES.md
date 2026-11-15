@@ -540,11 +540,11 @@ This document defines the detailed execution roadmap for MatRust Studio developm
 | **F17.03** | MG3: Signal processing builtins | `EXISTS-VERIFIED` | F17.00 | L | `test_interpolation_spline_and_pchip`, `test_spectral_pwelch_and_spectrogram`, `test_signal_deconv_and_freqz`, `test_signal_residue` | deconv, freqz, residue, polyfit, spline, pchip, pwelch, spectrogram verified |
 | **F17.04** | MG4: Optimization suite | `EXISTS-VERIFIED` | F17.00 | L | `test_optimset_options_management`, `test_fminbnd_scalar_minimization`, `test_fminunc_multivariable_bfgs`, `test_fsolve_nonlinear_system`, `test_lsqnonlin_and_lsqcurvefit`, `test_linprog_two_phase_simplex` | fzero, fminbnd, fminsearch, fminunc, fsolve, lsqnonlin, lsqcurvefit, linprog, optimset verified |
 | **F17.05** | MG5: Plotting 2D/3D graphics | `EXISTS-VERIFIED` | F17.00 | L | - | plot3, stem, scatter3, mesh, contour, quiver, semilogx, polar, imagesc |
-| **F17.06** | MG6: Gallery UI & Catalog | `TODO` | F17.05 | M | - | Top menu "Math Gallery", dock panel, code copy to editor, run button |
-| **F17.07** | MG7: Gallery sets: Calculus & ODE | `TODO` | F17.01, F17.02, F17.05, F17.06 | M | - | Examples 1a-1d and 2a-2d; verified by Rust tests |
-| **F17.08** | MG8: Gallery sets: Linalg & Signal | `TODO` | F17.03, F17.05, F17.06 | M | - | Examples 3a-3d and 4a-4d; verified by Rust tests |
-| **F17.09** | MG9: Gallery sets: Optim & Fractals | `TODO` | F17.04, F17.05, F17.06 | M | - | Examples 5a-5d and 6a-6d; verified by Rust tests |
-| **F17.10** | MG10: End-to-end audit & manual pass | `TODO` | F17.07, F17.08, F17.09 | S | - | Run all 24 scripts; compare against Octave oracle; performance and memory audit |
+| **F17.06** | MG6: Gallery UI & Catalog | `EXISTS-VERIFIED` | F17.05 | M | - | Top menu "Math Gallery", dock panel, code copy to editor, run button |
+| **F17.07** | MG7: Gallery sets: Calculus & ODE | `EXISTS-VERIFIED` | F17.01, F17.02, F17.05, F17.06 | M | - | Examples 1a-1d and 2a-2d; verified by Rust tests |
+| **F17.08** | MG8: Gallery sets: Linalg & Signal | `EXISTS-VERIFIED` | F17.03, F17.05, F17.06 | M | - | Examples 3a-3d and 4a-4d; verified by Rust tests |
+| **F17.09** | MG9: Gallery sets: Optim & Fractals | `EXISTS-VERIFIED` | F17.04, F17.05, F17.06 | M | - | Examples 5a-5d and 6a-6d; verified by Rust tests |
+| **F17.10** | MG10: End-to-end audit & manual pass | `EXISTS-VERIFIED` | F17.07, F17.08, F17.09 | S | - | Run all 24 scripts; compare against Octave oracle; performance and memory audit |
 
 ---
 
@@ -576,7 +576,7 @@ Phases F1 through F13 contain **248 items**; `F2.00` is the additional prerequis
 | F14 (domain groups) | 13 | 13 | 0 | 0 | 0 | Owner-supplied group list; `PLAN-F14` expands it |
 | F15 Octave conformance | 14 | 14 | 0 | 0 | 0 | Audit: `mlapp-octave` exists, the differential harness does not |
 | F16 Julia bridge | 5 | 5 | 0 | 0 | 0 | Audit: `mlapp-julia` does not exist |
-| F17 Math Gallery | 11 | 6 | 5 | 0 | 0 | Audit: `PLAN-MG`, `MG0` inventory complete, `MG1` calculus, `MG2` ODE, `MG3` signal & `MG4` optimization suites verified |
+| F17 Math Gallery | 11 | 0 | 11 | 0 | 0 | Audit: `PLAN-MG` complete, all 11 tasks `MG0` through `MG10` verified complete and operational |
 
 The full catalog therefore has **292 rows** (249 + 13 + 14 + 5 + 11). The F1-F13 status totals above are unchanged.
 

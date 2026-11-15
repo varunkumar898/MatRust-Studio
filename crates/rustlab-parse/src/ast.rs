@@ -168,6 +168,8 @@ pub enum AssignTarget {
     },
     /// Multiple variable assignment from function returns: `[a, b, c] = ...`
     MultiAssign(Vec<AssignTarget>, Span),
+    /// Ignored output in multi-assignment: `[~, b] = ...`
+    Ignore(Span),
 }
 
 impl AssignTarget {
@@ -178,6 +180,7 @@ impl AssignTarget {
             Self::CellIndex { span, .. } => *span,
             Self::Dot { span, .. } => *span,
             Self::MultiAssign(_, span) => *span,
+            Self::Ignore(span) => *span,
         }
     }
 }

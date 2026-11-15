@@ -62,7 +62,7 @@ pub fn to_svg(fig: &Figure, width: f64, height: f64) -> String {
             _has_surface: axes
                 .series
                 .iter()
-                .any(|s| matches!(s, crate::Series::Surface(_))),
+                .any(|s| matches!(s, crate::Series::Surface(_) | crate::Series::Line3D(_))),
         };
 
         if axes.grid {
@@ -135,7 +135,7 @@ pub fn to_svg(fig: &Figure, width: f64, height: f64) -> String {
                 _has_surface: axes
                     .series
                     .iter()
-                    .any(|s| matches!(s, crate::Series::Surface(_))),
+                    .any(|s| matches!(s, crate::Series::Surface(_) | crate::Series::Line3D(_))),
             };
 
             if axes.grid {
@@ -624,7 +624,45 @@ fn render_series(series: &crate::Series, ctx: &RenderContext) -> String {
             out
         }
         crate::Series::Surface(s) => render_surface(s, ctx),
+        crate::Series::Line3D(l) => render_line3d(l, ctx),
     }
+}
+
+/// Render a 3D line trajectory projected into 2D canvas coordinates.
+fn render_line3d(l: &crate::Line3D, ctx: &RenderContext) -> String {
+    if l.x.len() < 2 {
+        return String::new();
+    }
+    let (x_min, x_max, y_min, y_max, z_min, z_max) = axis_limits(ctx.axes);
+    let mut pts_str = String::new();
+    let n = l.x.len().min(l.y.len()).min(l.z.len());
+    for i in 0..n {
+        let p = project3d(
+            l.x[i],
+            l.y[i],
+            l.z[i],
+            x_min,
+            x_max,
+            y_min,
+            y_max,
+            z_min,
+            z_max,
+            &ctx.axes.camera,
+            ctx.px0,
+            ctx.pw,
+            ctx.ph,
+        );
+        if i > 0 {
+            pts_str.push(' ');
+        }
+        pts_str.push_str(&format!("{},{}", fmt2(p.sx), fmt2(p.sy)));
+    }
+    format!(
+        r#"<polyline class="series-line" fill="none" stroke="{}" stroke-width="{}" points="{}" />"#,
+        rgb255(l.color),
+        l.width,
+        pts_str
+    )
 }
 
 /// Render a surface series as a mesh of quads with painter's-algorithm
@@ -777,6 +815,7 @@ fn series_name_and_color(s: &crate::Series) -> (&str, [f32; 4]) {
         crate::Series::Bar(b) => (b.name.as_str(), b.color),
         crate::Series::Histogram(h) => (h.name.as_str(), h.color),
         crate::Series::Surface(s) => (s.name.as_str(), s.color),
+        crate::Series::Line3D(l) => (l.name.as_str(), l.color),
     }
 }
 
@@ -1049,6 +1088,24 @@ mod tests {
         assert_eq!(a, b);
         assert!(a.contains("polygon"));
         assert!(a.contains("series-surface"));
+    }
+
+    #[test]
+    fn line3d_renders_deterministically() {
+        let mut fig = Figure::new(1);
+        let mut ax = Axes::new(1);
+        ax.push_series(crate::Series::Line3D(crate::Line3D::new(
+            "helix",
+            vec![1.0, 2.0, 3.0],
+            vec![2.0, 4.0, 6.0],
+            vec![3.0, 6.0, 9.0],
+        )));
+        fig.add_axes(ax);
+        let a = to_svg(&fig, 400.0, 300.0);
+        let b = to_svg(&fig, 400.0, 300.0);
+        assert_eq!(a, b);
+        assert!(a.contains("polyline"));
+        assert!(a.contains("series-line"));
     }
 
     #[test]

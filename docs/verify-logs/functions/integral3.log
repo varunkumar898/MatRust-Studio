@@ -3,16 +3,15 @@ Category: Calculus
 Test expression: q = integral3(@(x,y,z) x.*y.*z, 0, 1, 0, 1, 0, 1); disp(q)
 Expected result: 0.125
 Actual stdout:
+    0.1250
+ans =
+
+   []
 
 Actual stderr:
-Error: Undefined function or variable 'integral3'.
-  --> Line 1, Column 5:
-   |
-  1 | q = integral3(@(x,y,z) x.*y.*z, 0, 1, 0, 1, 0, 1); disp(q)
-   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Exit code: 1
-Duration: 29ms
-Status: MISSING
+Exit code: 0
+Duration: 75ms
+Status: EXISTS-WORKS
 Oracle / tolerance: Triple integral of x*y*z over unit cube equals 1/8
-Notes: Function undefined or not registered in interpreter runtime
+Notes: Executed successfully and produced expected output

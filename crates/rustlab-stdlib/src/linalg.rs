@@ -54,22 +54,33 @@ pub fn mldivide_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalEr
     let a_shp = a_arr.shape();
     let b_shp = b_arr.shape();
 
-    if a_shp.len() != 2 || a_shp[0] != a_shp[1] {
+    if a_shp.len() != 2 {
         return Err(user_err(
             "MATLAB:dimagree",
-            "Left division currently requires square coefficient matrix A.",
+            "Left division requires 2D matrix A.",
         ));
     }
-    let n = a_shp[0];
-    if b_shp[0] != n {
+    let m = a_shp[0];
+    let n = a_shp[1];
+    if b_shp[0] != m {
         return Err(user_err(
             "MATLAB:dimagree",
             "Matrix dimensions must agree in A \\ b.",
         ));
     }
-    let n_rhs = b_shp[1];
+    let n_rhs = if b_shp.len() > 1 { b_shp[1] } else { 1 };
 
-    // Build augmented matrix [A | B] of shape [N, N + n_rhs] in row-major for convenient row ops
+    // Overdetermined system (m > n): solve least-squares via QR decomposition
+    if m > n {
+        return solve_least_squares_qr(&a_arr, &b_arr, m, n, n_rhs);
+    }
+
+    // Underdetermined system (m < n): solve minimum-norm via pseudoinverse
+    if m < n {
+        return solve_underdetermined_pinv(&args[0], &args[1]);
+    }
+
+    // Square system (m == n): solve via Gauss-Jordan elimination with partial pivoting
     let total_cols = n + n_rhs;
     let mut aug = vec![0.0; n * total_cols];
     let a_slice = a_arr.as_slice();
@@ -153,6 +164,98 @@ pub fn mldivide_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalEr
 
     let out = DenseArray::from_vec(vec![n, n_rhs], x_data).map_err(math_err)?;
     Ok(vec![Value::Double(out)])
+}
+
+fn solve_least_squares_qr(
+    a_arr: &DenseArray<f64>,
+    b_arr: &DenseArray<f64>,
+    m: usize,
+    n: usize,
+    n_rhs: usize,
+) -> Result<Vec<Value>, EvalError> {
+    let mut a_work = a_arr.as_slice().to_vec();
+    let mut b_work = b_arr.as_slice().to_vec();
+
+    for k in 0..n {
+        let mut sum_sq = 0.0;
+        for i in k..m {
+            let val = a_work[i + k * m];
+            sum_sq += val * val;
+        }
+        let norm_x = sum_sq.sqrt();
+        if norm_x < 1e-15 {
+            continue;
+        }
+
+        let x0 = a_work[k + k * m];
+        let alpha = if x0 >= 0.0 { -norm_x } else { norm_x };
+        let v0 = x0 - alpha;
+        let tau = (alpha - x0) / alpha;
+
+        let len = m - k;
+        let mut v = vec![0.0; len];
+        v[0] = 1.0;
+        for i in (k + 1)..m {
+            v[i - k] = a_work[i + k * m] / v0;
+        }
+
+        a_work[k + k * m] = alpha;
+        for i in (k + 1)..m {
+            a_work[i + k * m] = 0.0;
+        }
+
+        for j in (k + 1)..n {
+            let mut dot = 0.0;
+            for idx in 0..len {
+                dot += v[idx] * a_work[(k + idx) + j * m];
+            }
+            for idx in 0..len {
+                a_work[(k + idx) + j * m] -= tau * dot * v[idx];
+            }
+        }
+
+        for rhs in 0..n_rhs {
+            let mut dot_b = 0.0;
+            for idx in 0..len {
+                dot_b += v[idx] * b_work[(k + idx) + rhs * m];
+            }
+            for idx in 0..len {
+                b_work[(k + idx) + rhs * m] -= tau * dot_b * v[idx];
+            }
+        }
+    }
+
+    let mut x_sol = vec![0.0; n * n_rhs];
+    for rhs in 0..n_rhs {
+        for k in (0..n).rev() {
+            let mut sum = b_work[k + rhs * m];
+            for c in (k + 1)..n {
+                sum -= a_work[k + c * m] * x_sol[c + rhs * n];
+            }
+            let diag = a_work[k + k * m];
+            if diag.abs() < 1e-15 {
+                x_sol[k + rhs * n] = 0.0;
+            } else {
+                x_sol[k + rhs * n] = sum / diag;
+            }
+        }
+    }
+
+    let out = DenseArray::from_vec(vec![n, n_rhs], x_sol).map_err(math_err)?;
+    Ok(vec![Value::Double(out)])
+}
+
+fn solve_underdetermined_pinv(a_val: &Value, b_val: &Value) -> Result<Vec<Value>, EvalError> {
+    let pinv_res = svd::pinv_fn(std::slice::from_ref(a_val), 1)?;
+    let p_arr = extract_f64_array(&pinv_res[0])?;
+    let b_arr = extract_f64_array(b_val)?;
+    let x_arr = rustlab_math::matmul_2d(&p_arr, &b_arr).map_err(math_err)?;
+    Ok(vec![Value::Double(x_arr)])
+}
+
+/// Solves linear system: x = linsolve(A, B).
+pub fn linsolve_fn(args: &[Value], nargout: usize) -> Result<Vec<Value>, EvalError> {
+    mldivide_fn(args, nargout)
 }
 
 pub fn mrdivide_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError> {

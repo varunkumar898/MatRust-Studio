@@ -11,7 +11,7 @@ ans =
 Actual stderr:
 
 Exit code: 0
-Duration: 29ms
+Duration: 125ms
 Status: EXISTS-WORKS
 Oracle / tolerance: Display grid lines on axes
 Notes: Executed successfully without errors

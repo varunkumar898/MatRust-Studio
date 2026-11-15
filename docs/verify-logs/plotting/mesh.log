@@ -12,7 +12,7 @@ Error: Undefined function or variable 'mesh'.
    |                                                           ^^^^^^^^^^^^^
 
 Exit code: 1
-Duration: 31ms
+Duration: 96ms
 Status: MISSING
 Oracle / tolerance: 3D wireframe mesh plot
 Notes: Function undefined or not registered in interpreter runtime

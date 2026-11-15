@@ -12,7 +12,7 @@ ans =
 Actual stderr:
 
 Exit code: 0
-Duration: 28ms
+Duration: 72ms
 Status: EXISTS-WORKS
 Oracle / tolerance: QR factorization reconstruction residual Q * R - A == 0
 Notes: Executed successfully and produced expected output

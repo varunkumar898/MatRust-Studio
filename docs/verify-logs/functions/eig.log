@@ -12,7 +12,7 @@ ans =
 Actual stderr:
 
 Exit code: 0
-Duration: 32ms
+Duration: 76ms
 Status: EXISTS-WORKS
 Oracle / tolerance: Eigenvalues of diagonal matrix [2, 0; 0, 5]
 Notes: Executed successfully and produced expected output

@@ -12,7 +12,7 @@ ans =
 Actual stderr:
 
 Exit code: 0
-Duration: 31ms
+Duration: 110ms
 Status: EXISTS-WORKS
 Oracle / tolerance: A * inv(A) equals 2x2 identity matrix within 1e-12
 Notes: Executed successfully and produced expected output

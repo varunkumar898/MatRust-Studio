@@ -11,7 +11,7 @@ ans =
 Actual stderr:
 
 Exit code: 0
-Duration: 33ms
+Duration: 76ms
 Status: EXISTS-WORKS
 Oracle / tolerance: Vertical bar graph
 Notes: Executed successfully; valid SVG rendered (2243 bytes)

@@ -3,16 +3,15 @@ Category: Calculus
 Test expression: q = quadgk(@(x) x.^2, 0, 1); disp(q)
 Expected result: 0.3333333333
 Actual stdout:
+    0.3333
+ans =
+
+   []
 
 Actual stderr:
-Error: Undefined function or variable 'quadgk'.
-  --> Line 1, Column 5:
-   |
-  1 | q = quadgk(@(x) x.^2, 0, 1); disp(q)
-   |     ^^^^^^^^^^^^^^^^^^^^^^^
 
-Exit code: 1
-Duration: 29ms
-Status: MISSING
+Exit code: 0
+Duration: 107ms
+Status: EXISTS-WORKS
 Oracle / tolerance: Gauss-Kronrod quadrature on [0, 1]
-Notes: Function undefined or not registered in interpreter runtime
+Notes: Executed successfully and produced expected output

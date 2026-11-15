@@ -12,7 +12,7 @@ Error: Undefined function or variable 'linprog'.
    |                                                 ^^^^^^^^^^^^^^^^
 
 Exit code: 1
-Duration: 27ms
+Duration: 51ms
 Status: MISSING
 Oracle / tolerance: Linear programming simplex or interior-point solver
 Notes: Function undefined or not registered in interpreter runtime

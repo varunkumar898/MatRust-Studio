@@ -12,7 +12,7 @@ Error: Undefined function or variable 'histogram'.
    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Exit code: 1
-Duration: 31ms
+Duration: 102ms
 Status: MISSING
 Oracle / tolerance: Modern histogram plot object
 Notes: Function undefined or not registered in interpreter runtime

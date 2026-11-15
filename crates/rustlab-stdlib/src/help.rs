@@ -1329,6 +1329,13 @@ pub fn get_help_text(name: &str) -> Option<&'static str> {
              Description:\
                plot(x, y) plots y versus x as a line on the current axes.\n               Requires x and y to have the same length.\n"
         ),
+        "plot3" => Some(
+            "PLOT3  Plot lines and points in 3-D space.\n\n\
+             Syntax:\n\
+               plot3(x, y, z)\n\n\
+             Description:\n\
+               plot3(x, y, z) plots coordinates in 3-D space connecting them with straight line segments.\n"
+        ),
         "scatter" => Some(
             "SCATTER  Scatter plot.\n\n\
              Syntax:\n\
@@ -1465,10 +1472,201 @@ pub fn get_help_text(name: &str) -> Option<&'static str> {
         ),
         "zlabel" => Some(
             "ZLABEL  Set z-axis label.\n\n\
-             Syntax:\
+             Syntax:\n\
                zlabel(txt)\n\n\
-             Description:\
+             Description:\n\
                zlabel(txt) sets the z-axis label on the current axes.\n"
+        ),
+        "del2" => Some(
+            "DEL2  Discrete Laplacian of array.\n\n\
+             Syntax:\n\
+               L = del2(U)\n\
+               L = del2(U, h)\n\
+               L = del2(U, hx, hy)\n\n\
+             Description:\n\
+               L = del2(U) computes a discrete approximation of Laplace's differential\n\
+               operator applied to U, defined as 1/(2*ndim) * nabla^2 U.\n"
+        ),
+        "ind2sub" => Some(
+            "IND2SUB  Multiple subscripts from linear index.\n\n\
+             Syntax:\n\
+               [I, J] = ind2sub(sz, IND)\n\
+               [I1, I2, ..., In] = ind2sub(sz, IND)\n\n\
+             Description:\n\
+               ind2sub determines the equivalent subscript values corresponding to a\n\
+               given single index into an array of size sz.\n"
+        ),
+        "sub2ind" => Some(
+            "SUB2IND  Linear index from multiple subscripts.\n\n\
+             Syntax:\n\
+               IND = sub2ind(sz, I, J)\n\
+               IND = sub2ind(sz, I1, I2, ..., In)\n\n\
+             Description:\n\
+               sub2ind determines the equivalent single index corresponding to given\n\
+               subscript values into an array of size sz.\n"
+        ),
+        "linsolve" => Some(
+            "LINSOLVE  Solve linear system of equations.\n\n\
+             Syntax:\n\
+               X = linsolve(A, B)\n\n\
+             Description:\n\
+               X = linsolve(A, B) solves the linear system A*X = B using LU factorization\n\
+               for square matrices or QR factorization for rectangular matrices.\n"
+        ),
+        "ode45" => Some(
+            "ODE45  Solve non-stiff differential equations, medium order method.\n\n\
+             Syntax:\n\
+               [t, y] = ode45(odefun, tspan, y0)\n\n\
+             Description:\n\
+               [t, y] = ode45(odefun, tspan, y0) integrates the system of differential\n\
+               equations y' = f(t,y) from time tspan(1) to tspan(end) with initial\n\
+               conditions y0 using the Dormand-Prince (4,5) pair.\n"
+        ),
+        "ode23" => Some(
+            "ODE23  Solve non-stiff differential equations, low order method.\n\n\
+             Syntax:\n\
+               [t, y] = ode23(odefun, tspan, y0)\n\n\
+             Description:\n\
+               [t, y] = ode23(odefun, tspan, y0) integrates the system of differential\n\
+               equations y' = f(t,y) from time tspan(1) to tspan(end) with initial\n\
+               conditions y0 using the Bogacki-Shampine (2,3) pair.\n"
+        ),
+        "ode15s" => Some(
+            "ODE15S  Solve stiff differential equations and DAEs, variable order method.\n\n\
+             Syntax:\n\
+               [t, y] = ode15s(odefun, tspan, y0)\n\
+               [t, y] = ode15s(odefun, tspan, y0, options)\n\n\
+             Description:\n\
+               [t, y] = ode15s(odefun, tspan, y0) integrates a system of stiff differential equations\n\
+               y' = f(t, y) using adaptive implicit numerical differentiation formulas.\n"
+        ),
+        "odeset" => Some(
+            "ODESET  Create or alter ODE options structure.\n\n\
+             Syntax:\n\
+               options = odeset()\n\
+               options = odeset('Name1', Value1, 'Name2', Value2, ...)\n\
+               options = odeset(oldopts, 'Name1', Value1, ...)\n\n\
+             Description:\n\
+               options = odeset('Name', Value, ...) creates an options structure with parameters.\n"
+        ),
+        "fzero" => Some(
+            "FZERO  Root of single-variable nonlinear function.\n\n\
+             Syntax:\n\
+               x = fzero(fun, x0)\n\
+               [x, fval] = fzero(fun, x0)\n\n\
+             Description:\n\
+               x = fzero(fun, x0) tries to find a zero of fun near x0 using Brent's method.\n"
+        ),
+        "fminsearch" => Some(
+            "FMINSEARCH  Multidimensional unconstrained nonlinear minimization (Nelder-Mead).\n\n\
+             Syntax:\n\
+               x = fminsearch(fun, x0)\n\
+               [x, fval] = fminsearch(fun, x0)\n\n\
+             Description:\n\
+               x = fminsearch(fun, x0) finds the minimum of an unconstrained multivariable\n\
+               function starting at x0 using the Nelder-Mead simplex algorithm.\n"
+        ),
+        "integral" => Some(
+            "INTEGRAL  Numerically evaluate integral of function.\n\n\
+             Syntax:\n\
+               q = integral(fun, a, b)\n\n\
+             Description:\n\
+               q = integral(fun, a, b) numerically approximates the integral of function\n\
+               fun from a to b using adaptive quadrature.\n"
+        ),
+        "divergence" => Some(
+            "DIVERGENCE  Divergence of vector field.\n\n\
+             Syntax:\n\
+               div = divergence(X, Y, U, V)\n\
+               div = divergence(U, V)\n\n\
+             Description:\n\
+               div = divergence(X, Y, U, V) computes the divergence of a 2-D vector field with components U and V.\n"
+        ),
+        "curl" => Some(
+            "CURL  Curl and angular velocity of 2-D vector field.\n\n\
+             Syntax:\n\
+               [cav, vor] = curl(X, Y, U, V)\n\
+               [cav, vor] = curl(U, V)\n\n\
+             Description:\n\
+               [cav, vor] = curl(X, Y, U, V) calculates the angular velocity (cav) and vorticity (vor) of a 2-D vector field.\n"
+        ),
+        "quad" => Some(
+            "QUAD  Numerically evaluate integral, adaptive Simpson quadrature.\n\n\
+             Syntax:\n\
+               q = quad(fun, a, b)\n\n\
+             Description:\n\
+               q = quad(fun, a, b) approximates the integral of function fun from a to b.\n"
+        ),
+        "integral2" => Some(
+            "INTEGRAL2  Numerically evaluate double integral.\n\n\
+             Syntax:\n\
+               q = integral2(fun, xmin, xmax, ymin, ymax)\n\n\
+             Description:\n\
+               q = integral2(fun, xmin, xmax, ymin, ymax) evaluates double integral over planar rectangle.\n"
+        ),
+        "integral3" => Some(
+            "INTEGRAL3  Numerically evaluate triple integral.\n\n\
+             Syntax:\n\
+               q = integral3(fun, xmin, xmax, ymin, ymax, zmin, zmax)\n\n\
+             Description:\n\
+               q = integral3(fun, xmin, xmax, ymin, ymax, zmin, zmax) evaluates triple integral over rectangular cuboid.\n"
+        ),
+        "quadgk" => Some(
+            "QUADGK  Adaptive Gauss-Kronrod numerical quadrature.\n\n\
+             Syntax:\n\
+               q = quadgk(fun, a, b)\n\n\
+             Description:\n\
+               q = quadgk(fun, a, b) numerically approximates integral of fun from a to b.\n"
+        ),
+        "deconv" => Some(
+            "DECONV  Deconvolution and polynomial division.\n\n\
+             Syntax:\n\
+               [q, r] = deconv(b, a)\n\n\
+             Description:\n\
+               [q, r] = deconv(b, a) deconvolves polynomial a out of b, returning quotient q and remainder r.\n"
+        ),
+        "freqz" => Some(
+            "FREQZ  Frequency response of digital filter.\n\n\
+             Syntax:\n\
+               [h, w] = freqz(b, a, n)\n\
+               [h, w] = freqz(b, a, n, 'whole')\n\n\
+             Description:\n\
+               [h, w] = freqz(b, a, n) returns frequency response vector h and frequencies w.\n"
+        ),
+        "residue" => Some(
+            "RESIDUE  Partial fraction expansion (residues, poles, direct term).\n\n\
+             Syntax:\n\
+               [r, p, k] = residue(b, a)\n\n\
+             Description:\n\
+               [r, p, k] = residue(b, a) computes partial fraction residues r, poles p, and polynomial direct term k.\n"
+        ),
+        "spline" => Some(
+            "SPLINE  Cubic spline data interpolation.\n\n\
+             Syntax:\n\
+               yy = spline(x, y, xx)\n\n\
+             Description:\n\
+               yy = spline(x, y, xx) performs cubic spline interpolation at query values xx.\n"
+        ),
+        "pchip" => Some(
+            "PCHIP  Piecewise Cubic Hermite Interpolating Polynomial.\n\n\
+             Syntax:\n\
+               yy = pchip(x, y, xx)\n\n\
+             Description:\n\
+               yy = pchip(x, y, xx) performs shape-preserving piecewise cubic Hermite interpolation.\n"
+        ),
+        "pwelch" => Some(
+            "PWELCH  Welch's power spectral density estimate.\n\n\
+             Syntax:\n\
+               [pxx, f] = pwelch(x, window, noverlap, nfft, fs)\n\n\
+             Description:\n\
+               [pxx, f] = pwelch(x, ...) estimates power spectral density using Welch's averaged periodogram.\n"
+        ),
+        "spectrogram" => Some(
+            "SPECTROGRAM  Spectrogram using Short-Time Fourier Transform.\n\n\
+             Syntax:\n\
+               [s, f, t] = spectrogram(x, window, noverlap, nfft, fs)\n\n\
+             Description:\n\
+               [s, f, t] = spectrogram(x, ...) calculates short-time Fourier transform matrix s, frequencies f, and time centers t.\n"
         ),
         _ => None,
     }

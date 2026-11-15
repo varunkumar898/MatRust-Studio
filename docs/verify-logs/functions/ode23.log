@@ -3,16 +3,15 @@ Category: ODE & Simulation
 Test expression: [t, y] = ode23(@(t,y) -y, [0, 1], 1); disp(abs(y(end) - exp(-1)) < 1e-2)
 Expected result: 1
 Actual stdout:
+     1
+ans =
+
+   []
 
 Actual stderr:
-Error: Undefined function or variable 'ode23'.
-  --> Line 1, Column 10:
-   |
-  1 | [t, y] = ode23(@(t,y) -y, [0, 1], 1); disp(abs(y(end) - exp(-1)) < 1e-2)
-   |          ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Exit code: 1
-Duration: 31ms
-Status: MISSING
+Exit code: 0
+Duration: 133ms
+Status: EXISTS-WORKS
 Oracle / tolerance: Bogacki-Shampine 3(2) solver y' = -y, y(0)=1 => y(1)=exp(-1)
-Notes: Function undefined or not registered in interpreter runtime
+Notes: Executed successfully and produced expected output

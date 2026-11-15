@@ -11,7 +11,7 @@ ans =
 Actual stderr:
 
 Exit code: 0
-Duration: 31ms
+Duration: 133ms
 Status: EXISTS-WORKS
 Oracle / tolerance: Label x-axis
 Notes: Executed successfully without errors

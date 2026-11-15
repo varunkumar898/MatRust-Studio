@@ -12,7 +12,7 @@ Error: Undefined function or variable 'meshz'.
    |                                                           ^^^^^^^^^^^^^^
 
 Exit code: 1
-Duration: 28ms
+Duration: 61ms
 Status: MISSING
 Oracle / tolerance: 3D wireframe mesh with curtain / reference plane
 Notes: Function undefined or not registered in interpreter runtime

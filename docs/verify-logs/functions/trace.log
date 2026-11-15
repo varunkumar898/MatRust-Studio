@@ -11,7 +11,7 @@ ans =
 Actual stderr:
 
 Exit code: 0
-Duration: 29ms
+Duration: 71ms
 Status: EXISTS-WORKS
 Oracle / tolerance: trace([4,7; 2,6]) = 4 + 6 = 10
 Notes: Executed successfully and produced expected output

@@ -12,7 +12,7 @@ ans =
 Actual stderr:
 
 Exit code: 0
-Duration: 31ms
+Duration: 76ms
 Status: EXISTS-WORKS
 Oracle / tolerance: 2D Inverse FFT of spectrum
 Notes: Executed successfully and produced expected output

@@ -12,7 +12,7 @@ Error: Undefined function or variable 'colormap'.
    |                                                                   ^^^^^^^^^^^^^^^
 
 Exit code: 1
-Duration: 53ms
+Duration: 61ms
 Status: MISSING
 Oracle / tolerance: Set color lookup table for current figure
 Notes: Function undefined or not registered in interpreter runtime

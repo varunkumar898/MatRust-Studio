@@ -12,7 +12,7 @@ ans =
 Actual stderr:
 
 Exit code: 0
-Duration: 28ms
+Duration: 56ms
 Status: EXISTS-WORKS
 Oracle / tolerance: 2D FFT of 2x2 ones matrix
 Notes: Executed successfully and produced expected output

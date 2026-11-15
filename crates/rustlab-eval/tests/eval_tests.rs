@@ -186,3 +186,41 @@ fn test_dos_runtime_recursion_limit() {
         other => panic!("expected MATLAB:recursionLimitExceeded, got {other:?}"),
     }
 }
+
+#[test]
+fn test_tilde_ignore_multi_assign() {
+    let mut interp = Interpreter::new();
+    let code = "
+    function [a, b, c] = three_outs()
+        a = 10;
+        b = 20;
+        c = 30;
+    end
+    [~, second, ~] = three_outs();
+    ";
+    interp.eval_script(code).unwrap();
+    assert_eq!(
+        interp.env.get("second").unwrap().as_scalar_f64().unwrap(),
+        20.0
+    );
+    assert!(interp.env.get("a").is_none());
+    assert!(interp.env.get("c").is_none());
+}
+
+#[test]
+fn test_clc_and_clear_command_syntax() {
+    let mut interp = Interpreter::new();
+    let code = "
+    x = 42;
+    y = 84;
+    clc;
+    clear x;
+    ";
+    interp.eval_script(code).unwrap();
+    assert!(interp.env.get("x").is_none());
+    assert_eq!(interp.env.get("y").unwrap().as_scalar_f64().unwrap(), 84.0);
+    assert!(interp.output_log.is_empty());
+
+    interp.eval_script("clear;").unwrap();
+    assert!(interp.env.get("y").is_none());
+}

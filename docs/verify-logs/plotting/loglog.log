@@ -12,7 +12,7 @@ Error: Undefined function or variable 'loglog'.
    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Exit code: 1
-Duration: 33ms
+Duration: 52ms
 Status: MISSING
 Oracle / tolerance: Log-log scale plot
 Notes: Function undefined or not registered in interpreter runtime

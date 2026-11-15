@@ -12,7 +12,7 @@ Error: Undefined function or variable 'semilogx'.
    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Exit code: 1
-Duration: 31ms
+Duration: 48ms
 Status: MISSING
 Oracle / tolerance: Semi-logarithmic line plot with log x-axis
 Notes: Function undefined or not registered in interpreter runtime

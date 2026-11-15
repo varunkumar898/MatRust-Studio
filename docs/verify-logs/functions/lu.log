@@ -12,7 +12,7 @@ ans =
 Actual stderr:
 
 Exit code: 0
-Duration: 34ms
+Duration: 77ms
 Status: EXISTS-WORKS
 Oracle / tolerance: LU factorization reconstruction residual P' * L * U - A == 0
 Notes: Executed successfully and produced expected output

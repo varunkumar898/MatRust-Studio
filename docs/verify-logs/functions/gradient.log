@@ -11,7 +11,7 @@ ans =
 Actual stderr:
 
 Exit code: 0
-Duration: 45ms
+Duration: 600ms
 Status: EXISTS-WORKS
 Oracle / tolerance: 1D central differences with one-sided endpoints
 Notes: Executed successfully and produced expected output

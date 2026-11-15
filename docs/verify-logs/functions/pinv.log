@@ -12,7 +12,7 @@ ans =
 Actual stderr:
 
 Exit code: 0
-Duration: 28ms
+Duration: 115ms
 Status: EXISTS-WORKS
 Oracle / tolerance: Moore-Penrose pseudoinverse of diagonal matrix
 Notes: Executed successfully and produced expected output

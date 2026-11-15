@@ -11,7 +11,7 @@ ans =
 Actual stderr:
 
 Exit code: 0
-Duration: 31ms
+Duration: 120ms
 Status: EXISTS-WORKS
 Oracle / tolerance: Retain current plot when adding new plots
 Notes: Executed successfully without errors

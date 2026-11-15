@@ -3,16 +3,16 @@ Category: Signal Processing
 Test expression: b = [1]; a = [1, -3, 2]; [r, p, k] = residue(b, a); disp(p)
 Expected result: [2; 1]
 Actual stdout:
+    2 + 0i
+    1 + 0i
+ans =
+
+   []
 
 Actual stderr:
-Error: Undefined function or variable 'residue'.
-  --> Line 1, Column 38:
-   |
-  1 | b = [1]; a = [1, -3, 2]; [r, p, k] = residue(b, a); disp(p)
-   |                                      ^^^^^^^^^^^^^
 
-Exit code: 1
-Duration: 28ms
-Status: MISSING
+Exit code: 0
+Duration: 70ms
+Status: EXISTS-WORKS
 Oracle / tolerance: Partial fraction expansion (residues and poles)
-Notes: Function undefined or not registered in interpreter runtime
+Notes: Executed successfully and produced expected output

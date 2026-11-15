@@ -25,6 +25,28 @@ where
     }
 }
 
+thread_local! {
+    static ACTIVE_INTERPRETER: std::cell::RefCell<Option<*mut Interpreter>> = const { std::cell::RefCell::new(None) };
+}
+
+/// Calls a function handle using the currently active Interpreter on the calling thread.
+pub fn call_active_handle(
+    handle: &FunctionHandle,
+    args: Vec<Value>,
+    nargout: usize,
+) -> Result<Vec<Value>, EvalError> {
+    let ptr = ACTIVE_INTERPRETER.with(|cell| *cell.borrow());
+    if let Some(interp_ptr) = ptr {
+        unsafe { (*interp_ptr).call_function_handle(handle, args, nargout, Span::default()) }
+    } else {
+        Err(EvalError::UserError {
+            identifier: "RustLab:noActiveInterpreter".to_string(),
+            message: "No active interpreter available to call function handle.".to_string(),
+            span: Span::default(),
+        })
+    }
+}
+
 /// Control flow signals produced during statement evaluation.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Flow {
@@ -102,6 +124,25 @@ impl Interpreter {
         F: Fn(&str, &[Value], usize) -> Result<Vec<Value>, EvalError> + Send + Sync + 'static,
     {
         self.fallback_handler = Some(Arc::new(handler));
+    }
+
+    /// Invokes a builtin function with this interpreter active in thread-local storage.
+    pub fn call_builtin(
+        &self,
+        builtin: &Arc<dyn BuiltinFn>,
+        args: &[Value],
+        nargout: usize,
+    ) -> Result<Vec<Value>, EvalError> {
+        let prev = ACTIVE_INTERPRETER
+            .with(|cell| cell.replace(Some(self as *const Interpreter as *mut Interpreter)));
+        struct ResetGuard(Option<*mut Interpreter>);
+        impl Drop for ResetGuard {
+            fn drop(&mut self) {
+                ACTIVE_INTERPRETER.with(|cell| cell.replace(self.0));
+            }
+        }
+        let _guard = ResetGuard(prev);
+        builtin.call(args, nargout)
     }
 
     /// Returns a sorted list of all registered builtin function names.
@@ -432,13 +473,21 @@ impl Interpreter {
             Expr::CharVector(s, _) => Ok(Value::char_vector(s)),
             Expr::StringLiteral(s, _) => Ok(Value::string_scalar(s)),
             Expr::Ident(name, span) => {
+                if name == "clc" {
+                    self.output_log.clear();
+                    return Ok(Value::empty());
+                }
+                if name == "clear" {
+                    self.env.clear_locals();
+                    return Ok(Value::empty());
+                }
                 if let Some(val) = self.env.get(name) {
                     Ok(val)
                 } else if self.functions.contains_key(name) {
                     // Function called with zero arguments
                     self.call_user_function(name, Vec::new(), 1, *span)
                 } else if let Some(builtin) = self.builtins.get(name).cloned() {
-                    let res = builtin.call(&[], 1)?;
+                    let res = self.call_builtin(&builtin, &[], 1)?;
                     Ok(res.into_iter().next().unwrap_or_else(Value::empty))
                 } else if self.resolve_and_load_mfile(name)? {
                     if self.functions.contains_key(name) {
@@ -659,6 +708,9 @@ impl Interpreter {
         let val = self.eval_expr(value_expr)?;
 
         match target {
+            AssignTarget::Ignore(_) => {
+                // Ignore assignment target: ~ = val
+            }
             AssignTarget::Ident(name, _) => {
                 if print_result {
                     let out = format!("{} =\n\n{}\n", name, val);
@@ -956,7 +1008,7 @@ impl Interpreter {
                                 *f_span,
                             )?
                         } else if let Some(builtin) = self.builtins.get(func_name).cloned() {
-                            builtin.call(&evaluated_args, targets.len())?
+                            self.call_builtin(&builtin, &evaluated_args, targets.len())?
                         } else if self.resolve_and_load_mfile(func_name)? {
                             self.call_user_function_multi(
                                 func_name,
@@ -974,10 +1026,16 @@ impl Interpreter {
                         };
 
                         for (i, t) in targets.iter().enumerate() {
-                            if let AssignTarget::Ident(n, _) = t {
-                                if let Some(v) = outputs.get(i) {
-                                    self.env.set(n, v.clone());
+                            match t {
+                                AssignTarget::Ident(n, _) => {
+                                    if let Some(v) = outputs.get(i) {
+                                        self.env.set(n, v.clone());
+                                    }
                                 }
+                                AssignTarget::Ignore(_) => {
+                                    // Ignored output: ~
+                                }
+                                _ => {}
                             }
                         }
                     }
@@ -1078,6 +1136,29 @@ impl Interpreter {
     ) -> Result<Value, EvalError> {
         // Special higher-order builtins with evaluator access
         if let Expr::Ident(name, _) = callee {
+            if name == "clc" {
+                self.output_log.clear();
+                return Ok(Value::empty());
+            }
+            if name == "clear" {
+                if args.is_empty() {
+                    self.env.clear_locals();
+                } else {
+                    for a in args {
+                        if let Expr::Ident(var_name, _) = a {
+                            self.env.remove_local(var_name);
+                        } else if let Ok(Value::String(sa)) = self.eval_expr(a) {
+                            for s in sa.as_slice() {
+                                self.env.remove_local(s);
+                            }
+                        } else if let Ok(Value::Char(ca)) = self.eval_expr(a) {
+                            let s: String = ca.as_slice().iter().collect();
+                            self.env.remove_local(&s);
+                        }
+                    }
+                }
+                return Ok(Value::empty());
+            }
             if name == "cellfun" {
                 return self.eval_cellfun(args, span);
             }
@@ -1132,7 +1213,7 @@ impl Interpreter {
                 for a in args {
                     evaluated_args.push(self.eval_expr(a)?);
                 }
-                let mut results = builtin.call(&evaluated_args, 1)?;
+                let mut results = self.call_builtin(&builtin, &evaluated_args, 1)?;
                 return Ok(results.pop().unwrap_or_else(Value::empty));
             }
 
@@ -1348,6 +1429,36 @@ impl Interpreter {
                 return Ok(masked);
             }
 
+            if let Value::ComplexDouble(ref ca) = val {
+                let idx_arr = idx_val
+                    .to_double_array()
+                    .map_err(|e| EvalError::Math { error: e, span })?;
+
+                if idx_arr.is_scalar() {
+                    let i = idx_arr.as_slice()[0] as usize;
+                    let elem = *ca
+                        .get_linear(i)
+                        .map_err(|e| EvalError::Math { error: e, span })?;
+                    return Ok(Value::ComplexDouble(DenseArray::scalar(elem)));
+                } else {
+                    let mut sliced_data = Vec::with_capacity(idx_arr.numel());
+                    for &i_flt in idx_arr.as_slice() {
+                        let elem = *ca
+                            .get_linear(i_flt as usize)
+                            .map_err(|e| EvalError::Math { error: e, span })?;
+                        sliced_data.push(elem);
+                    }
+                    let out_shape = if matches!(args[0], Expr::Colon(_)) {
+                        vec![idx_arr.numel(), 1]
+                    } else {
+                        idx_arr.shape().to_vec()
+                    };
+                    let out_arr = DenseArray::from_vec(out_shape, sliced_data)
+                        .map_err(|e| EvalError::Math { error: e, span })?;
+                    return Ok(Value::ComplexDouble(out_arr));
+                }
+            }
+
             let da = val
                 .to_double_array()
                 .map_err(|e| EvalError::Math { error: e, span })?;
@@ -1381,6 +1492,65 @@ impl Interpreter {
             }
         } else {
             // Multi-subscript indexing: A(r, c, ...)
+            if let Value::ComplexDouble(ref ca) = val {
+                let mut subs = Vec::with_capacity(args.len());
+                let shp = ca.shape().to_vec();
+
+                for (d, a) in args.iter().enumerate() {
+                    let dim_len = if d == args.len() - 1 && shp.len() > args.len() {
+                        shp[d..].iter().product()
+                    } else {
+                        shp.get(d).copied().unwrap_or(1)
+                    };
+                    self.indexing_stack.push(IndexingContext {
+                        current_dim_len: dim_len,
+                        total_len: ca.numel(),
+                    });
+                    let sub_res = self.eval_expr(a);
+                    self.indexing_stack.pop();
+                    let sub_val = sub_res?;
+                    let sub_arr = sub_val
+                        .to_double_array()
+                        .map_err(|e| EvalError::Math { error: e, span })?;
+                    subs.push(sub_arr);
+                }
+
+                if subs.iter().all(|s| s.is_scalar()) {
+                    let coords: Vec<usize> = subs.iter().map(|s| s.as_slice()[0] as usize).collect();
+                    let elem = *ca
+                        .get_subscript(&coords)
+                        .map_err(|e| EvalError::Math { error: e, span })?;
+                    return Ok(Value::ComplexDouble(DenseArray::scalar(elem)));
+                } else {
+                    let dim_indices: Vec<Vec<usize>> = subs
+                        .iter()
+                        .map(|s| s.as_slice().iter().map(|&x| x as usize).collect())
+                        .collect();
+
+                    let out_shape: Vec<usize> = dim_indices.iter().map(|s| s.len()).collect();
+                    let norm_out_shape = rustlab_math::normalize_shape(&out_shape);
+                    let total_elements: usize = norm_out_shape.iter().product();
+                    let mut out_data = Vec::with_capacity(total_elements);
+
+                    for out_offset in 0..total_elements {
+                        let out_coords = rustlab_math::offset_to_coords(out_offset, &norm_out_shape);
+                        let mut target_coords = Vec::with_capacity(dim_indices.len());
+                        for (d, &c) in out_coords.iter().enumerate() {
+                            if d < dim_indices.len() {
+                                target_coords.push(dim_indices[d][c]);
+                            }
+                        }
+                        let elem = *ca
+                            .get_subscript(&target_coords)
+                            .map_err(|e| EvalError::Math { error: e, span })?;
+                        out_data.push(elem);
+                    }
+                    let out_arr = DenseArray::from_vec(norm_out_shape, out_data)
+                        .map_err(|e| EvalError::Math { error: e, span })?;
+                    return Ok(Value::ComplexDouble(out_arr));
+                }
+            }
+
             let da = val
                 .to_double_array()
                 .map_err(|e| EvalError::Math { error: e, span })?;
@@ -1812,7 +1982,7 @@ impl Interpreter {
                 if self.functions.contains_key(name) {
                     self.call_user_function_multi(name, args, nargout, span)
                 } else if let Some(builtin) = self.builtins.get(name).cloned() {
-                    builtin.call(&args, nargout)
+                    self.call_builtin(&builtin, &args, nargout)
                 } else if self.resolve_and_load_mfile(name)? {
                     self.call_user_function_multi(name, args, nargout, span)
                 } else if let Some(fallback) = self.fallback_handler.clone() {
@@ -2516,8 +2686,9 @@ impl Interpreter {
                 if left.is_scalar() && right.is_scalar() {
                     left.dot_div(right)
                         .map_err(|e| EvalError::Math { error: e, span })
-                } else if let Some(builtin) = self.builtins.get("mrdivide") {
-                    let mut outs = builtin.call(&[left.clone(), right.clone()], 1)?;
+                } else if let Some(builtin) = self.builtins.get("mrdivide").cloned() {
+                    let mut outs =
+                        self.call_builtin(&builtin, &[left.clone(), right.clone()], 1)?;
                     Ok(outs.pop().unwrap_or_else(Value::empty))
                 } else {
                     left.dot_div(right)
@@ -2528,8 +2699,9 @@ impl Interpreter {
                 if left.is_scalar() && right.is_scalar() {
                     left.dot_left_div(right)
                         .map_err(|e| EvalError::Math { error: e, span })
-                } else if let Some(builtin) = self.builtins.get("mldivide") {
-                    let mut outs = builtin.call(&[left.clone(), right.clone()], 1)?;
+                } else if let Some(builtin) = self.builtins.get("mldivide").cloned() {
+                    let mut outs =
+                        self.call_builtin(&builtin, &[left.clone(), right.clone()], 1)?;
                     Ok(outs.pop().unwrap_or_else(Value::empty))
                 } else {
                     left.dot_left_div(right)

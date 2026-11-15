@@ -12,7 +12,7 @@ ans =
 Actual stderr:
 
 Exit code: 0
-Duration: 28ms
+Duration: 74ms
 Status: EXISTS-WORKS
 Oracle / tolerance: Cholesky factorization reconstruction R' * R - A == 0
 Notes: Executed successfully and produced expected output

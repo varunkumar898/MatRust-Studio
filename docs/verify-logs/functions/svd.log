@@ -12,7 +12,7 @@ ans =
 Actual stderr:
 
 Exit code: 0
-Duration: 32ms
+Duration: 81ms
 Status: EXISTS-WORKS
 Oracle / tolerance: Singular values in descending order [4; 3]
 Notes: Executed successfully and produced expected output

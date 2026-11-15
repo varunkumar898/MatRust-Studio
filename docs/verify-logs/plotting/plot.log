@@ -11,7 +11,7 @@ ans =
 Actual stderr:
 
 Exit code: 0
-Duration: 34ms
+Duration: 72ms
 Status: EXISTS-WORKS
 Oracle / tolerance: 2D line plot with saveas SVG rendering verification
 Notes: Executed successfully; valid SVG rendered (2079 bytes)

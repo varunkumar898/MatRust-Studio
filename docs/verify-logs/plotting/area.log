@@ -12,7 +12,7 @@ Error: Undefined function or variable 'area'.
    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Exit code: 1
-Duration: 45ms
+Duration: 124ms
 Status: MISSING
 Oracle / tolerance: Filled area 2D plot
 Notes: Function undefined or not registered in interpreter runtime

@@ -535,9 +535,9 @@ This document defines the detailed execution roadmap for MatRust Studio developm
 | ID | Title | Status | Depends-On | Size | Evidence Test | Notes |
 | :--- | :--- | :---: | :---: | :---: | :--- | :--- |
 | **F17.00** | MG0: Probe and inventory | `EXISTS-VERIFIED` | - | S | `docs/audit/math-probe.md` | Probed 99 names; 47 EXISTS-WORKS, 52 MISSING |
-| **F17.01** | MG1: Calculus builtins | `TODO` | F17.00 | M | - | del2, divergence, curl, integral, integral2, quad |
-| **F17.02** | MG2: ODE solver suite | `TODO` | F17.00 | L | - | ode45, ode23, ode15s, odeset, adaptive step-size |
-| **F17.03** | MG3: Signal processing builtins | `TODO` | F17.00 | L | - | deconv, freqz, residue, polyfit, spline, pchip, pwelch, spectrogram |
+| **F17.01** | MG1: Calculus builtins | `EXISTS-VERIFIED` | F17.00 | M | `test_del2_1d_and_2d`, `test_divergence_and_curl_2d`, `test_quadrature_1d_integral_quad_quadgk`, `test_quadrature_2d_and_3d` | del2, divergence, curl, integral, integral2, integral3, quad, quadgk verified |
+| **F17.02** | MG2: ODE solver suite | `EXISTS-VERIFIED` | F17.00 | L | `test_odeset_options_struct`, `test_ode45_and_ode23_with_options`, `test_ode15s_stiff_system`, `test_ode15s_vanderpol_oscillator`, `test_expm_and_interp1_integration` | ode45, ode23, ode15s, odeset, expm, interp1 verified |
+| **F17.03** | MG3: Signal processing builtins | `EXISTS-VERIFIED` | F17.00 | L | `test_interpolation_spline_and_pchip`, `test_spectral_pwelch_and_spectrogram`, `test_signal_deconv_and_freqz`, `test_signal_residue` | deconv, freqz, residue, polyfit, spline, pchip, pwelch, spectrogram verified |
 | **F17.04** | MG4: Optimization suite | `TODO` | F17.00 | L | - | fzero, fminbnd, fminsearch, fminunc, fsolve, lsqcurvefit, linprog |
 | **F17.05** | MG5: Plotting 2D/3D graphics | `TODO` | F17.00 | L | - | plot3, stem, scatter3, mesh, contour, quiver, semilogx, polar, imagesc |
 | **F17.06** | MG6: Gallery UI & Catalog | `TODO` | F17.05 | M | - | Top menu "Math Gallery", dock panel, code copy to editor, run button |
@@ -576,7 +576,7 @@ Phases F1 through F13 contain **248 items**; `F2.00` is the additional prerequis
 | F14 (domain groups) | 13 | 13 | 0 | 0 | 0 | Owner-supplied group list; `PLAN-F14` expands it |
 | F15 Octave conformance | 14 | 14 | 0 | 0 | 0 | Audit: `mlapp-octave` exists, the differential harness does not |
 | F16 Julia bridge | 5 | 5 | 0 | 0 | 0 | Audit: `mlapp-julia` does not exist |
-| F17 Math Gallery | 11 | 10 | 1 | 0 | 0 | Audit: `PLAN-MG`, `MG0` inventory complete |
+| F17 Math Gallery | 11 | 7 | 4 | 0 | 0 | Audit: `PLAN-MG`, `MG0` inventory complete, `MG1` calculus, `MG2` ODE & `MG3` signal suite verified |
 
 The full catalog therefore has **292 rows** (249 + 13 + 14 + 5 + 11). The F1-F13 status totals above are unchanged.
 

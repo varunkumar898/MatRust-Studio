@@ -349,3 +349,133 @@ pub fn rot90(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError> {
         _ => unreachable!(),
     }
 }
+
+/// Subscripts from linear index: [I1, I2, ...] = ind2sub(siz, IND).
+pub fn ind2sub(args: &[Value], nargout: usize) -> Result<Vec<Value>, EvalError> {
+    if args.len() < 2 {
+        return Err(user_err(
+            "MATLAB:minrhs",
+            "ind2sub requires at least 2 inputs (siz, IND).",
+        ));
+    }
+    let siz_vec = match &args[0] {
+        Value::Double(d) => d.as_slice().iter().map(|&x| x as usize).collect::<Vec<_>>(),
+        Value::Int32(i) => i.as_slice().iter().map(|&x| x as usize).collect::<Vec<_>>(),
+        _ => {
+            return Err(user_err(
+                "MATLAB:ind2sub:invalidSize",
+                "Size must be a numeric vector.",
+            ))
+        }
+    };
+    if siz_vec.is_empty() {
+        return Err(user_err(
+            "MATLAB:ind2sub:emptySize",
+            "Size vector cannot be empty.",
+        ));
+    }
+
+    let ind_da = extract_f64_array(&args[1])?;
+    let ind_shape = ind_da.shape().to_vec();
+    let num_out = nargout.max(1);
+
+    // Compute cumprod base strides
+    let mut k_strides = vec![1usize; siz_vec.len()];
+    for i in 1..siz_vec.len() {
+        k_strides[i] = k_strides[i - 1] * siz_vec[i - 1];
+    }
+
+    let mut out_arrays: Vec<Vec<f64>> = (0..num_out)
+        .map(|_| Vec::with_capacity(ind_da.numel()))
+        .collect();
+
+    for &val in ind_da.as_slice() {
+        let mut idx = val as usize;
+        if idx == 0 {
+            return Err(user_err(
+                "MATLAB:badsubscript",
+                "Index exceeds matrix dimensions. Index must be >= 1.",
+            ));
+        }
+        idx -= 1; // 0-based
+        for d in (0..num_out).rev() {
+            if d == 0 {
+                out_arrays[0].push((idx + 1) as f64);
+            } else if d < siz_vec.len() {
+                let stride = k_strides[d];
+                let sub = idx / stride;
+                idx %= stride;
+                out_arrays[d].push((sub + 1) as f64);
+            } else {
+                out_arrays[d].push(1.0);
+            }
+        }
+    }
+
+    let mut results = Vec::with_capacity(num_out);
+    for data in out_arrays {
+        let arr = DenseArray::from_vec(ind_shape.clone(), data).map_err(math_err)?;
+        results.push(Value::Double(arr));
+    }
+    Ok(results)
+}
+
+/// Linear index from subscripts: IND = sub2ind(siz, I1, I2, ...).
+pub fn sub2ind(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError> {
+    if args.len() < 3 {
+        return Err(user_err(
+            "MATLAB:minrhs",
+            "sub2ind requires at least 3 inputs (siz, I1, I2, ...).",
+        ));
+    }
+    let siz_vec = match &args[0] {
+        Value::Double(d) => d.as_slice().iter().map(|&x| x as usize).collect::<Vec<_>>(),
+        Value::Int32(i) => i.as_slice().iter().map(|&x| x as usize).collect::<Vec<_>>(),
+        _ => {
+            return Err(user_err(
+                "MATLAB:sub2ind:invalidSize",
+                "Size must be a numeric vector.",
+            ))
+        }
+    };
+
+    let mut strides = vec![1usize; siz_vec.len()];
+    for i in 1..siz_vec.len() {
+        strides[i] = strides[i - 1] * siz_vec[i - 1];
+    }
+
+    let first_idx_da = extract_f64_array(&args[1])?;
+    let shape = first_idx_da.shape().to_vec();
+    let numel = first_idx_da.numel();
+
+    let mut linear_indices = vec![0.0; numel];
+    for (d, arg) in args[1..].iter().enumerate() {
+        let da = extract_f64_array(arg)?;
+        if da.numel() != numel {
+            return Err(user_err(
+                "MATLAB:sub2ind:sizeMismatch",
+                "Subscript vectors must have the same size.",
+            ));
+        }
+        let stride = if d < strides.len() { strides[d] } else { 1 };
+        let dim_limit = if d < siz_vec.len() { siz_vec[d] } else { 1 };
+
+        for (i, &sub) in da.as_slice().iter().enumerate() {
+            let s = sub as usize;
+            if s == 0 || s > dim_limit {
+                return Err(user_err(
+                    "MATLAB:sub2ind:outOfRange",
+                    "Out of range subscript.",
+                ));
+            }
+            linear_indices[i] += ((s - 1) * stride) as f64;
+        }
+    }
+
+    for idx in &mut linear_indices {
+        *idx += 1.0; // 1-based
+    }
+
+    let arr = DenseArray::from_vec(shape, linear_indices).map_err(math_err)?;
+    Ok(vec![Value::Double(arr)])
+}

@@ -432,6 +432,43 @@ impl Parser {
             });
         }
 
+        // Check for command-style invocation: `cmd arg1 arg2 ...`
+        if matches!(self.peek().kind, TokenKind::Ident(_)) && self.is_command_ahead() {
+            let cmd_tok = self.advance();
+            let cmd_name = match &cmd_tok.kind {
+                TokenKind::Ident(s) => s.clone(),
+                _ => unreachable!(),
+            };
+            let mut args = Vec::new();
+            while !self.is_eof()
+                && self.peek().kind != TokenKind::Semicolon
+                && self.peek().kind != TokenKind::Newline
+                && self.peek().kind != TokenKind::Comma
+            {
+                let tok = self.advance();
+                let arg_str = match &tok.kind {
+                    TokenKind::Ident(s) => s.clone(),
+                    TokenKind::StringLiteral(s) => s.clone(),
+                    TokenKind::CharVector(s) => s.clone(),
+                    TokenKind::Number(n) => n.to_string(),
+                    _ => format!("{:?}", tok.kind),
+                };
+                args.push(Expr::StringLiteral(arg_str, tok.span));
+            }
+            let (print_result, end_span) = self.consume_print_flag();
+            let callee = Expr::Ident(cmd_name, cmd_tok.span);
+            let span = start_span.merge(end_span);
+            return Ok(Stmt::Expr {
+                span,
+                expr: Expr::Index {
+                    callee: Box::new(callee),
+                    args,
+                    span,
+                },
+                print_result,
+            });
+        }
+
         let expr = self.parse_expr()?;
 
         // If followed by '=', this is an assignment
@@ -453,6 +490,17 @@ impl Parser {
             expr,
             print_result,
         })
+    }
+
+    fn is_command_ahead(&self) -> bool {
+        if self.cursor + 1 >= self.tokens.len() {
+            return false;
+        }
+        let next = &self.tokens[self.cursor + 1];
+        matches!(
+            next.kind,
+            TokenKind::Ident(_) | TokenKind::StringLiteral(_) | TokenKind::CharVector(_)
+        )
     }
 
     fn is_multi_assign_ahead(&self) -> bool {
@@ -482,8 +530,13 @@ impl Parser {
         let mut targets = Vec::new();
 
         while !self.is_eof() && self.peek().kind != TokenKind::RBracket {
-            let expr = self.parse_postfix()?;
-            targets.push(self.expr_to_assign_target(expr)?);
+            if self.peek().kind == TokenKind::Not {
+                let span = self.advance().span;
+                targets.push(AssignTarget::Ignore(span));
+            } else {
+                let expr = self.parse_postfix()?;
+                targets.push(self.expr_to_assign_target(expr)?);
+            }
             if self.peek().kind == TokenKind::Comma {
                 self.advance();
             }

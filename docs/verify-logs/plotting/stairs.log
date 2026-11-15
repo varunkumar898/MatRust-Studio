@@ -12,7 +12,7 @@ Error: Undefined function or variable 'stairs'.
    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Exit code: 1
-Duration: 30ms
+Duration: 104ms
 Status: MISSING
 Oracle / tolerance: Stairstep plot
 Notes: Function undefined or not registered in interpreter runtime

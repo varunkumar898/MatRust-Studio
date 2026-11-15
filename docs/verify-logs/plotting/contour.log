@@ -12,7 +12,7 @@ Error: Undefined function or variable 'contour'.
    |                                                           ^^^^^^^^^^
 
 Exit code: 1
-Duration: 31ms
+Duration: 87ms
 Status: MISSING
 Oracle / tolerance: 2D contour isolines plot
 Notes: Function undefined or not registered in interpreter runtime

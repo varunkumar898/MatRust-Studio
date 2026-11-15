@@ -12,7 +12,7 @@ Error: Undefined function or variable 'fminbnd'.
    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Exit code: 1
-Duration: 30ms
+Duration: 53ms
 Status: MISSING
 Oracle / tolerance: Golden section search / parabolic interpolation on [0, 4]
 Notes: Function undefined or not registered in interpreter runtime

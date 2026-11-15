@@ -12,7 +12,7 @@ Error: Undefined function or variable 'stem'.
    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Exit code: 1
-Duration: 32ms
+Duration: 94ms
 Status: MISSING
 Oracle / tolerance: Discrete sequence / stem plot
 Notes: Function undefined or not registered in interpreter runtime

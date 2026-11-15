@@ -11,7 +11,7 @@ ans =
 Actual stderr:
 
 Exit code: 0
-Duration: 29ms
+Duration: 58ms
 Status: EXISTS-WORKS
 Oracle / tolerance: Shift zero-frequency component to center of spectrum
 Notes: Executed successfully and produced expected output

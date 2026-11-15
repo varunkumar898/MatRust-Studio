@@ -12,7 +12,7 @@ Error: Undefined function or variable 'contourf'.
    |                                                           ^^^^^^^^^^^
 
 Exit code: 1
-Duration: 28ms
+Duration: 52ms
 Status: MISSING
 Oracle / tolerance: Filled 2D contour plot
 Notes: Function undefined or not registered in interpreter runtime

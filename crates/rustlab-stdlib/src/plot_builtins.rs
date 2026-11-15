@@ -9,7 +9,7 @@ use rustlab_eval::EvalError;
 use rustlab_math::Value;
 use rustlab_plot::{
     to_svg, with_plot_state_ref, Axes, Bar, Figure, Histogram, Legend, LegendLocation, Line,
-    Scatter, Series, Shading,
+    Line3D, Scatter, Series, Shading,
 };
 
 /// `figure` — create a new figure or switch to an existing one.
@@ -20,13 +20,13 @@ pub fn figure_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalErro
         0 => rustlab_plot::with_plot_state(|reg| reg.create_figure()),
         1 => {
             let id = args[0].as_scalar_i64().map_err(math_err)? as usize;
-            let set = rustlab_plot::with_plot_state(|reg| reg.set_current(id));
-            if !set {
-                return Err(user_err(
-                    "RUSTLAB:plot:noFigure",
-                    &format!("Figure {id} does not exist."),
-                ));
-            }
+            rustlab_plot::with_plot_state(|reg| {
+                if !reg.set_current(id) {
+                    let fig = Figure::new(id);
+                    reg.current_id = Some(id);
+                    reg.figures.insert(id, fig);
+                }
+            });
             id
         }
         _ => {
@@ -82,6 +82,40 @@ pub fn plot_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError>
             "",
             x.as_slice().to_vec(),
             y.as_slice().to_vec(),
+        )));
+        Ok::<(), EvalError>(())
+    })?;
+    Ok(vec![])
+}
+
+/// `plot3(x, y, z)` — add a 3D line series to the current axes.
+pub fn plot3_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError> {
+    if args.len() != 3 {
+        return Err(user_err(
+            "RUSTLAB:plot:badArgs",
+            "plot3 requires exactly 3 inputs (x, y, z).",
+        ));
+    }
+    let x = extract_f64_array(&args[0])?;
+    let y = extract_f64_array(&args[1])?;
+    let z = extract_f64_array(&args[2])?;
+    if x.as_slice().len() != y.as_slice().len() || x.as_slice().len() != z.as_slice().len() {
+        return Err(user_err(
+            "RUSTLAB:plot:emptyData",
+            "X, Y, and Z vectors must have the same length.",
+        ));
+    }
+    rustlab_plot::with_plot_state(|reg| {
+        let fig = reg.current_figure_mut().ok_or(user_err(
+            "RUSTLAB:plot:noFigure",
+            "No current figure. Call figure first.",
+        ))?;
+        let ax = ensure_current_axes(fig)?;
+        ax.push_series(Series::Line3D(Line3D::new(
+            "",
+            x.as_slice().to_vec(),
+            y.as_slice().to_vec(),
+            z.as_slice().to_vec(),
         )));
         Ok::<(), EvalError>(())
     })?;
@@ -1116,5 +1150,19 @@ mod tests {
         let fig = rustlab_plot::with_plot_state_ref(|reg| reg.current_figure().unwrap().clone());
         let ax = fig.current_axes().unwrap();
         assert!(ax.colorbar.is_some());
+    }
+
+    #[test]
+    fn plot3_stores_line3d_series() {
+        rustlab_plot::plot_state_reset();
+        figure_fn(&[], 1).unwrap();
+        let x = Value::Double(DenseArray::from_vec(vec![1, 3], vec![1.0, 2.0, 3.0]).unwrap());
+        let y = Value::Double(DenseArray::from_vec(vec![1, 3], vec![4.0, 5.0, 6.0]).unwrap());
+        let z = Value::Double(DenseArray::from_vec(vec![1, 3], vec![7.0, 8.0, 9.0]).unwrap());
+        plot3_fn(&[x, y, z], 0).unwrap();
+        let fig = rustlab_plot::with_plot_state_ref(|reg| reg.current_figure().unwrap().clone());
+        let ax = fig.current_axes().unwrap();
+        assert_eq!(ax.series.len(), 1);
+        assert!(matches!(ax.series[0], rustlab_plot::Series::Line3D(_)));
     }
 }

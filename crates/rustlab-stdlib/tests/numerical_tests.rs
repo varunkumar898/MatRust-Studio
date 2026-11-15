@@ -313,3 +313,317 @@ fn test_interp1_linear_and_nearest() {
         _ => panic!("Expected double vector"),
     }
 }
+
+#[test]
+fn test_2d_gradient_and_del2() {
+    let mut interp = rustlab_stdlib::new_interpreter();
+    // Z = [1 2 3; 4 5 6; 7 8 9]
+    // dZ/dx along columns is 1.0 everywhere
+    // dZ/dy along rows is 3.0 everywhere
+    let script = "[Fx, Fy] = gradient([1, 2, 3; 4, 5, 6; 7, 8, 9]);";
+    interp.eval_script(script).unwrap();
+    let fx = interp.env.get("Fx").unwrap();
+    let fy = interp.env.get("Fy").unwrap();
+
+    match (fx, fy) {
+        (Value::Double(fx_arr), Value::Double(fy_arr)) => {
+            assert_eq!(fx_arr.shape(), &[3, 3]);
+            assert_eq!(fy_arr.shape(), &[3, 3]);
+            for &v in fx_arr.as_slice() {
+                assert!(
+                    (v - 1.0).abs() < 1e-12,
+                    "Expected Fx = 1.0 everywhere, got {v}"
+                );
+            }
+            for &v in fy_arr.as_slice() {
+                assert!(
+                    (v - 3.0).abs() < 1e-12,
+                    "Expected Fy = 3.0 everywhere, got {v}"
+                );
+            }
+        }
+        _ => panic!("Expected Double matrices for gradient outputs"),
+    }
+
+    // del2 of a plane is 0 everywhere
+    let script_del2 = "L = del2([1, 2, 3; 4, 5, 6; 7, 8, 9]);";
+    interp.eval_script(script_del2).unwrap();
+    let l_val = interp.env.get("L").unwrap();
+    match l_val {
+        Value::Double(l_arr) => {
+            for &v in l_arr.as_slice() {
+                assert!(
+                    v.abs() < 1e-12,
+                    "Expected del2 of linear surface = 0.0, got {v}"
+                );
+            }
+        }
+        _ => panic!("Expected Double matrix for del2 output"),
+    }
+}
+
+#[test]
+fn test_ind2sub_and_sub2ind() {
+    let mut interp = rustlab_stdlib::new_interpreter();
+    let script = "[r, c] = ind2sub([3, 3], [1, 5, 9]); idx = sub2ind([3, 3], r, c);";
+    interp.eval_script(script).unwrap();
+
+    let r_val = interp.env.get("r").unwrap();
+    let c_val = interp.env.get("c").unwrap();
+    let idx_val = interp.env.get("idx").unwrap();
+
+    match (r_val, c_val, idx_val) {
+        (Value::Double(r), Value::Double(c), Value::Double(idx)) => {
+            assert_eq!(r.as_slice(), &[1.0, 2.0, 3.0]);
+            assert_eq!(c.as_slice(), &[1.0, 2.0, 3.0]);
+            assert_eq!(idx.as_slice(), &[1.0, 5.0, 9.0]);
+        }
+        _ => panic!("Expected double vectors"),
+    }
+}
+
+#[test]
+fn test_mldivide_rectangular_least_squares_and_linsolve() {
+    let mut interp = rustlab_stdlib::new_interpreter();
+    // Overdetermined system:
+    // A = [1 1; 1 2; 1 3]
+    // b = [2; 3; 4]
+    // Exact line y = 1 + 1*x => x = [1; 1]
+    let script =
+        "x = [1, 1; 1, 2; 1, 3] \\ [2; 3; 4]; x_lin = linsolve([1, 1; 1, 2; 1, 3], [2; 3; 4]);";
+    interp.eval_script(script).unwrap();
+
+    let x_val = interp.env.get("x").unwrap();
+    let x_lin = interp.env.get("x_lin").unwrap();
+
+    match (x_val, x_lin) {
+        (Value::Double(x), Value::Double(x_l)) => {
+            assert_eq!(x.shape(), &[2, 1]);
+            assert!((x.as_slice()[0] - 1.0).abs() < 1e-10);
+            assert!((x.as_slice()[1] - 1.0).abs() < 1e-10);
+
+            assert_eq!(x_l.shape(), &[2, 1]);
+            assert!((x_l.as_slice()[0] - 1.0).abs() < 1e-10);
+            assert!((x_l.as_slice()[1] - 1.0).abs() < 1e-10);
+        }
+        _ => panic!("Expected double vectors"),
+    }
+}
+
+#[test]
+fn test_ode45_and_ode23_exponential_decay() {
+    let mut interp = rustlab_stdlib::new_interpreter();
+    // dy/dt = -2*y, y(0) = 5. Exact solution at t=1: 5*exp(-2) ~ 0.6766764
+    let script = "[t, y] = ode45(@(t, y) -2*y, [0, 1], 5);";
+    interp.eval_script(script).unwrap();
+
+    let t_val = interp.env.get("t").unwrap();
+    let y_val = interp.env.get("y").unwrap();
+
+    match (t_val, y_val) {
+        (Value::Double(t), Value::Double(y)) => {
+            let t_slice = t.as_slice();
+            let y_slice = y.as_slice();
+            assert!(t_slice.len() > 2);
+            let final_t = *t_slice.last().unwrap();
+            let final_y = *y_slice.last().unwrap();
+            assert!((final_t - 1.0).abs() < 1e-10);
+            let expected = 5.0 * (-2.0_f64).exp();
+            assert!(
+                (final_y - expected).abs() < 1e-3,
+                "ode45 final error: got {final_y}, expected {expected}"
+            );
+        }
+        _ => panic!("Expected double outputs from ode45"),
+    }
+
+    // Test ode23
+    let script23 = "[t23, y23] = ode23(@(t, y) -2*y, [0, 1], 5);";
+    interp.eval_script(script23).unwrap();
+    let y23_val = interp.env.get("y23").unwrap();
+    match y23_val {
+        Value::Double(y) => {
+            let final_y = *y.as_slice().last().unwrap();
+            let expected = 5.0 * (-2.0_f64).exp();
+            assert!(
+                (final_y - expected).abs() < 1e-2,
+                "ode23 final error: got {final_y}, expected {expected}"
+            );
+        }
+        _ => panic!("Expected double outputs from ode23"),
+    }
+}
+
+#[test]
+fn test_fzero_and_fminsearch() {
+    let mut interp = rustlab_stdlib::new_interpreter();
+    // fzero: cos(x) - x = 0 -> Dottie number ~ 0.7390851332
+    let script_fz = "x_root = fzero(@(x) cos(x) - x, 0.5);";
+    interp.eval_script(script_fz).unwrap();
+    let x_root = interp.env.get("x_root").unwrap();
+    match x_root {
+        Value::Double(d) => {
+            let r = d.as_slice()[0];
+            assert!((r - 0.7390851332).abs() < 1e-6, "fzero root error: got {r}");
+        }
+        _ => panic!("Expected double scalar from fzero"),
+    }
+
+    // fminsearch: parabola f(x) = (x(1) - 3)^2 + (x(2) - 4)^2 -> min at [3; 4]
+    let script_fmin = "x_min = fminsearch(@(x) (x(1) - 3)^2 + (x(2) - 4)^2, [0; 0]);";
+    interp.eval_script(script_fmin).unwrap();
+    let x_min = interp.env.get("x_min").unwrap();
+    match x_min {
+        Value::Double(d) => {
+            let s = d.as_slice();
+            assert!(
+                (s[0] - 3.0).abs() < 1e-3,
+                "fminsearch x1 error: got {}",
+                s[0]
+            );
+            assert!(
+                (s[1] - 4.0).abs() < 1e-3,
+                "fminsearch x2 error: got {}",
+                s[1]
+            );
+        }
+        _ => panic!("Expected double vector from fminsearch"),
+    }
+}
+
+#[test]
+fn test_integral_quadrature() {
+    let mut interp = rustlab_stdlib::new_interpreter();
+    // integral of sin(x) from 0 to pi is 2.0
+    let script = "q = integral(@(x) sin(x), 0, 3.141592653589793);";
+    interp.eval_script(script).unwrap();
+    let q_val = interp.env.get("q").unwrap();
+    match q_val {
+        Value::Double(d) => {
+            let q = d.as_slice()[0];
+            assert!((q - 2.0).abs() < 1e-6, "integral error: got {q}");
+        }
+        _ => panic!("Expected double scalar from integral"),
+    }
+}
+
+#[test]
+fn test_divergence_and_curl_2d() {
+    let mut interp = rustlab_stdlib::new_interpreter();
+    let script = r#"
+        [x, y] = meshgrid(1:3, 1:3);
+        div = divergence(x, y, x, y);
+        [cav, vor] = curl(x, y, -y, x);
+    "#;
+    interp.eval_script(script).unwrap();
+
+    let div_val = interp.env.get("div").unwrap();
+    match div_val {
+        Value::Double(d) => {
+            assert_eq!(d.shape(), &[3, 3]);
+            for &v in d.as_slice() {
+                assert!(
+                    (v - 2.0).abs() < 1e-12,
+                    "Expected divergence = 2.0, got {v}"
+                );
+            }
+        }
+        _ => panic!("Expected double matrix for divergence"),
+    }
+
+    let cav_val = interp.env.get("cav").unwrap();
+    match cav_val {
+        Value::Double(d) => {
+            assert_eq!(d.shape(), &[3, 3]);
+            for &v in d.as_slice() {
+                assert!((v - 1.0).abs() < 1e-12, "Expected cav = 1.0, got {v}");
+            }
+        }
+        _ => panic!("Expected double matrix for cav"),
+    }
+
+    let vor_val = interp.env.get("vor").unwrap();
+    match vor_val {
+        Value::Double(d) => {
+            assert_eq!(d.shape(), &[3, 3]);
+            for &v in d.as_slice() {
+                assert!((v - 2.0).abs() < 1e-12, "Expected vor = 2.0, got {v}");
+            }
+        }
+        _ => panic!("Expected double matrix for vor"),
+    }
+}
+
+#[test]
+fn test_del2_quadratic_surfaces_and_vectors() {
+    let mut interp = rustlab_stdlib::new_interpreter();
+    // 2D: z = x^2 + y^2 => nabla^2 z = 4 => del2 = 4/4 = 1.0
+    let script2d = r#"
+        [x, y] = meshgrid(-2:2, -2:2);
+        z = x.^2 + y.^2;
+        L2 = del2(z);
+    "#;
+    interp.eval_script(script2d).unwrap();
+    let l2_val = interp.env.get("L2").unwrap();
+    match l2_val {
+        Value::Double(d) => {
+            assert_eq!(d.shape(), &[5, 5]);
+            for &v in d.as_slice() {
+                assert!(
+                    (v - 1.0).abs() < 1e-12,
+                    "Expected del2(x^2+y^2) = 1.0, got {v}"
+                );
+            }
+        }
+        _ => panic!("Expected double matrix for del2"),
+    }
+
+    // 1D: u = x^2 => d^2u/dx^2 = 2 => del2 = 2/2 = 1.0
+    let script1d = r#"
+        x = -2:2;
+        u = x.^2;
+        L1 = del2(u);
+    "#;
+    interp.eval_script(script1d).unwrap();
+    let l1_val = interp.env.get("L1").unwrap();
+    match l1_val {
+        Value::Double(d) => {
+            assert_eq!(d.shape(), &[1, 5]);
+            for &v in d.as_slice() {
+                assert!(
+                    (v - 1.0).abs() < 1e-12,
+                    "Expected 1D del2(x^2) = 1.0, got {v}"
+                );
+            }
+        }
+        _ => panic!("Expected double vector for 1D del2"),
+    }
+}
+
+#[test]
+fn test_quad_simpson_quadrature() {
+    let mut interp = rustlab_stdlib::new_interpreter();
+    let script = r#"
+        q_poly = quad(@(x) x.^2, 0, 1);
+        q_trig = quad(@(x) sin(x), 0, 3.141592653589793);
+    "#;
+    interp.eval_script(script).unwrap();
+
+    let q_poly = interp.env.get("q_poly").unwrap();
+    match q_poly {
+        Value::Double(d) => {
+            let q = d.as_slice()[0];
+            assert!((q - 1.0 / 3.0).abs() < 1e-8, "Expected 1/3, got {q}");
+        }
+        _ => panic!("Expected double scalar from quad"),
+    }
+
+    let q_trig = interp.env.get("q_trig").unwrap();
+    match q_trig {
+        Value::Double(d) => {
+            let q = d.as_slice()[0];
+            assert!((q - 2.0).abs() < 1e-8, "Expected 2.0, got {q}");
+        }
+        _ => panic!("Expected double scalar from quad"),
+    }
+}

@@ -11,7 +11,7 @@ ans =
 Actual stderr:
 
 Exit code: 0
-Duration: 29ms
+Duration: 117ms
 Status: EXISTS-WORKS
 Oracle / tolerance: Step response of first-order plant 1/(s+1)
 Notes: Executed successfully and produced expected output

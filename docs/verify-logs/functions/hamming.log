@@ -14,7 +14,7 @@ ans =
 Actual stderr:
 
 Exit code: 0
-Duration: 31ms
+Duration: 72ms
 Status: EXISTS-WORKS
 Oracle / tolerance: Hamming window vector of length 4
 Notes: Executed successfully and produced expected output

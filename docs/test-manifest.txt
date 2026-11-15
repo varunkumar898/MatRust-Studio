@@ -82,6 +82,7 @@ ops::tests::test_matmul_2d: test
 parse_error_keeps_location_and_caret: test
 plot_builtins::tests::figure_create_and_switch: test
 plot_builtins::tests::hold_toggles: test
+plot_builtins::tests::plot3_stores_line3d_series: test
 plot_builtins::tests::plot_stores_series: test
 plot_builtins::tests::surf_adds_colorbar: test
 plot_builtins::tests::surf_stores_surface_series: test
@@ -120,6 +121,7 @@ statusbar::tests::open_untitled_tab_never_says_no_active_file: test
 statusbar::tests::status_bar_labels_are_ascii: test
 svg::tests::colorbar_renders: test
 svg::tests::fmt2_is_stable: test
+svg::tests::line3d_renders_deterministically: test
 svg::tests::project3d_is_deterministic: test
 svg::tests::rustlab_colormap_is_in_range: test
 svg::tests::surface_renders_deterministically: test
@@ -129,6 +131,8 @@ syntax::tests::invalid_source_reports_position_and_run_message: test
 syntax::tests::valid_source_has_no_diagnostics: test
 syntax::tests::worker_returns_after_quiet_period: test
 test_1_based_indexing_column_major: test
+test_2d_gradient_and_del2: test
+test_3d_lorenz_attractor_ode45_and_plot3: test
 test_a2_2d_transforms_fft2_ifft2: test
 test_a2_both_native_and_faer_eig_paths_match: test
 test_a2_edge_cases_empty_1x1_singular_nan_nonsquare: test
@@ -158,7 +162,6 @@ test_a3_find_variants_and_short_circuit: test
 test_a3_integer_types_and_saturating_arithmetic: test
 test_a3_logical_mask_assignment_errors: test
 test_a3_mixed_type_rules_and_errors: test
-test_a3_mixed_type_rules_and_errors: test
 test_a3_nd_deletion_3d_and_growth: test
 test_a3_nd_operations_cat_permute_meshgrid_reshape: test
 test_a3_nd_reductions_and_integer_preservation: test
@@ -183,7 +186,6 @@ test_anonymous_function: test
 test_app_host_session_lifecycle: test
 test_app_runtime_lifecycle_and_mutations: test
 test_array_generators: test
-test_array_growth_on_assignment: test
 test_array_growth_on_assignment: test
 test_autotest_headless_e2e_with_plot_and_label_mutation: test
 test_autotest_script_json_deserialization: test
@@ -253,6 +255,7 @@ test_chatter_policy_a_to_a_is_convergence_not_chatter: test
 test_chatter_policy_limit_cycle_emits_w_chatter_and_continues: test
 test_chatter_policy_persistent_chatter_escalates_to_e_chatter: test
 test_check_compat_deterministic_snapshot: test
+test_clc_and_clear_command_syntax: test
 test_clear_scopes_have_exactly_one_registered_action: test
 test_cli_check_command_clean_and_json: test
 test_cli_check_command_error_and_warning: test
@@ -293,6 +296,8 @@ test_current_sensor_series_circuit: test
 test_cursor_readout_matches_data_value: test
 test_dc_current_source_parallel_resistor: test
 test_decompressed_bytes_limit_with_forged_header: test
+test_del2_1d_and_2d: test
+test_del2_quadratic_surfaces_and_vectors: test
 test_desktop_block_diagram_delete_and_duplicate: test
 test_desktop_block_diagram_json_save_load: test
 test_desktop_block_diagram_multi_port_sum_and_wire_retention: test
@@ -306,6 +311,7 @@ test_diode_voltage_clipper_circuit: test
 test_direct_algebraic_loop_triggers_w_delay: test
 test_disconnected_subgraphs_run: test
 test_distorted_current_power_measurement: test
+test_divergence_and_curl_2d: test
 test_dock_tree_help_addons_block_diagram_panels: test
 test_dock_tree_move_panel_and_tab_operations: test
 test_dock_tree_presets_and_json_persistence: test
@@ -334,6 +340,9 @@ test_editor_ids_are_unique_per_file_and_panel: test
 test_editor_mouse_wheel_scrolls_a_long_document: test
 test_editor_section_extraction_and_syntax_analysis: test
 test_editor_toolbar_has_exactly_one_run_control_set: test
+test_electrical_dc_nodal_analysis: test
+test_electrical_rlc_transient_ode45: test
+test_electronics_diode_operating_point_fzero: test
 test_elementwise_elementary_math: test
 test_empty_subplot_no_bleeding_or_collapsing: test
 test_end_to_end_callback_with_advanced_matlab_features: test
@@ -346,6 +355,7 @@ test_example_non_inverting_opamp: test
 test_example_rectifiers: test
 test_example_rlc_transient: test
 test_example_voice_coil_actuator: test
+test_expm_and_interp1_integration: test
 test_extract_aggregate_decompressed_bytes_limit: test
 test_extract_code_from_xml: test
 test_extract_security_backslash_traversal: test
@@ -365,6 +375,7 @@ test_full_shell_controls_fit_at_target_sizes_and_scales: test
 test_full_wave_bridge_rectifier_oracle: test
 test_function_def: test
 test_function_handles_and_lexical_closures: test
+test_fzero_and_fminsearch: test
 test_g01_core_omitnan_sum_mean_min_max: test
 test_g01_display_extreme_range_1e_16_1_golden_unverified: test
 test_g01_display_scale_factor_0_001_1000_golden_unverified: test
@@ -392,13 +403,16 @@ test_ieee754_nan_inf_semantics: test
 test_if_elseif_else: test
 test_image_processing_rgb2gray_and_filters: test
 test_incomplete_input_detection: test
+test_ind2sub_and_sub2ind: test
 test_independent_axes_properties_different_limits_and_scale: test
 test_indexing_and_end: test
 test_indexing_with_end: test
 test_inspect_mlapp_structure: test
 test_inspect_mlappinstall_manifest: test
+test_integral_quadrature: test
 test_integrator_sin_analytical_parity: test
 test_interp1_linear_and_nearest: test
+test_interpolation_spline_and_pchip: test
 test_island_semantics_shared_ground_and_partitioning: test
 test_knife_edge_diode_exact_vf_boundary_stable: test
 test_linear_algebra_and_system_solve: test
@@ -439,9 +453,11 @@ test_matmul_zero_dimensions_and_mismatch: test
 test_matrix_creation_and_multiplication: test
 test_matrix_literals_and_whitespace: test
 test_matrix_multiplication: test
+test_mechanical_mass_spring_damper_ode45: test
 test_migration_v1_v2_handwritten_json_identical_simulation: test
 test_minimum_2d_and_singleton_stripping: test
 test_mlapp_ffi_alias_header_exists_and_includes_mlapp_h: test
+test_mldivide_rectangular_least_squares_and_linsolve: test
 test_mock_session_eval_and_call: test
 test_multi_assignment: test
 test_multi_wire_terminal_and_reversed_line_invariance: test
@@ -469,6 +485,11 @@ test_octave_protocol_serialization_roundtrip: test
 test_octave_safety_allowlist_enforcement: test
 test_octave_session_lifecycle_and_shutdown: test
 test_octave_value_roundtrip_all_types: test
+test_ode15s_stiff_system: test
+test_ode15s_vanderpol_oscillator: test
+test_ode45_and_ode23_exponential_decay: test
+test_ode45_and_ode23_with_options: test
+test_odeset_options_struct: test
 test_op_amp_inverting_amplifier_closed_loop_gain: test
 test_operator_precedence: test
 test_opt_in_real_apps_validation: test
@@ -490,6 +511,9 @@ test_power_right_associativity: test
 test_protocol_error_response_handling: test
 test_protocol_serialization_roundtrip: test
 test_pure_sine_wave_rms_mean_dc: test
+test_quad_simpson_quadrature: test
+test_quadrature_1d_integral_quad_quadgk: test
+test_quadrature_2d_and_3d: test
 test_r2018b_release_format: test
 test_r2023b_release_format: test
 test_rc_circuit_step_response_analytical_oracle: test
@@ -541,7 +565,9 @@ test_session_plotting_builtins_and_state: test
 test_shape_and_inspection: test
 test_shared_axes_synchronization_and_unlinking: test
 test_signal_and_fft: test
+test_signal_deconv_and_freqz: test
 test_signal_filters_windows_and_xcorr: test
+test_signal_residue: test
 test_simulate_diagram_with_electrical_blocks_gives_e_unsupported: test
 test_simulation_first_order_step_response: test
 test_simulation_gain_parameter_change: test
@@ -556,6 +582,7 @@ test_slx_inspect_and_parser: test
 test_slx_safety_foreign_resistor_stays_unknown: test
 test_solver_config_serde_backward_compat: test
 test_spec_parameter_validation_rules: test
+test_spectral_pwelch_and_spectrogram: test
 test_spectrum_fft_and_dft_and_window_functions: test
 test_sprintf_format_recycling_golden: test
 test_sprintf_fprintf_edge_cases: test
@@ -573,6 +600,9 @@ test_switch_sampling_zoh_one_step_latency: test
 test_switch_threshold_exact_boundary_comparison: test
 test_terminal_count_and_port_kinds_per_block_type: test
 test_thd_pure_sine_and_distorted: test
+test_thermal_2d_steady_state_heat_del2: test
+test_three_phase_power_calculations: test
+test_tilde_ignore_multi_assign: test
 test_top_level_figure_geometry_exact_values: test
 test_topological_order_is_stable_across_runs: test
 test_transpose_vs_char_vector: test

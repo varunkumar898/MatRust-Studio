@@ -12,7 +12,7 @@ ans =
 Actual stderr:
 
 Exit code: 0
-Duration: 27ms
+Duration: 114ms
 Status: EXISTS-WORKS
 Oracle / tolerance: Matrix exponential of zero matrix is identity
 Notes: Executed successfully and produced expected output

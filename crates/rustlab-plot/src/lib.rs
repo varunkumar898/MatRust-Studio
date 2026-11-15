@@ -44,6 +44,31 @@ pub enum Series {
     Bar(Bar),
     Histogram(Histogram),
     Surface(Surface),
+    Line3D(Line3D),
+}
+
+/// A 3D line plot (plot3).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Line3D {
+    pub name: String,
+    pub x: Vec<f64>,
+    pub y: Vec<f64>,
+    pub z: Vec<f64>,
+    pub color: [f32; 4],
+    pub width: f32,
+}
+
+impl Line3D {
+    pub fn new(name: impl Into<String>, x: Vec<f64>, y: Vec<f64>, z: Vec<f64>) -> Self {
+        Self {
+            name: name.into(),
+            x,
+            y,
+            z,
+            color: [0.0, 0.4470, 0.7410, 1.0], // MATLAB default blue
+            width: 1.5,
+        }
+    }
 }
 
 /// A connected line plot.
@@ -731,6 +756,11 @@ impl Axes {
                     ys.extend(s.y.iter().copied());
                     zs.extend(s.z.iter().copied());
                 }
+                Series::Line3D(l) => {
+                    xs.extend(l.x.iter().copied());
+                    ys.extend(l.y.iter().copied());
+                    zs.extend(l.z.iter().copied());
+                }
             }
         }
         if xs.is_empty() && ys.is_empty() && zs.is_empty() {
@@ -1322,6 +1352,7 @@ mod tests {
             Series::Bar(b) => b.name.clone(),
             Series::Histogram(h) => h.name.clone(),
             Series::Surface(s) => s.name.clone(),
+            Series::Line3D(l) => l.name.clone(),
         }
     }
 }

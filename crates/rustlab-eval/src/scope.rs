@@ -111,6 +111,13 @@ impl Environment {
         self.persistent_declared.clear();
     }
 
+    /// Removes a specific local variable by name.
+    pub fn remove_local(&mut self, name: &str) {
+        self.locals.remove(name);
+        self.global_declared.remove(name);
+        self.persistent_declared.remove(name);
+    }
+
     /// Returns a reference to the local symbol map.
     pub fn locals(&self) -> &HashMap<String, Value> {
         &self.locals

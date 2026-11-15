@@ -11,7 +11,7 @@ ans =
 Actual stderr:
 
 Exit code: 0
-Duration: 34ms
+Duration: 103ms
 Status: EXISTS-WORKS
 Oracle / tolerance: Grid arrangement of multiple subplot axes in single figure
 Notes: Executed successfully; valid SVG rendered (2675 bytes)

@@ -12,7 +12,7 @@ Error: Undefined function or variable 'shading'.
    |                                                                   ^^^^^^^^^^^^^^^
 
 Exit code: 1
-Duration: 30ms
+Duration: 65ms
 Status: MISSING
 Oracle / tolerance: Set color shading properties of surface and patch objects
 Notes: Function undefined or not registered in interpreter runtime

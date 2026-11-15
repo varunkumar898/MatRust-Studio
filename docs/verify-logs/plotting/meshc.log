@@ -12,7 +12,7 @@ Error: Undefined function or variable 'meshc'.
    |                                                           ^^^^^^^^^^^^^^
 
 Exit code: 1
-Duration: 32ms
+Duration: 64ms
 Status: MISSING
 Oracle / tolerance: 3D wireframe mesh with contour plot underneath
 Notes: Function undefined or not registered in interpreter runtime

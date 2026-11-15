@@ -12,7 +12,7 @@ Error: Undefined function or variable 'imagesc'.
    |                             ^^^^^^^^^^
 
 Exit code: 1
-Duration: 59ms
+Duration: 70ms
 Status: MISSING
 Oracle / tolerance: Scaled color image display
 Notes: Function undefined or not registered in interpreter runtime

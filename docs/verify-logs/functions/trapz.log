@@ -11,7 +11,7 @@ ans =
 Actual stderr:
 
 Exit code: 0
-Duration: 33ms
+Duration: 68ms
 Status: EXISTS-WORKS
 Oracle / tolerance: Trapezoidal numerical integration over 5 points
 Notes: Executed successfully and produced expected output

@@ -36,6 +36,7 @@ pub mod shape_inspect;
 pub mod signal;
 pub mod signal_proc;
 pub mod simulation;
+pub mod solvers;
 pub mod sparse_builtins;
 pub mod stats;
 pub mod strings;
@@ -82,6 +83,8 @@ pub fn register_all(interp: &mut Interpreter) {
     interp.register_builtin("meshgrid", nd_ops::meshgrid);
     interp.register_builtin("peaks", nd_ops::peaks);
     interp.register_builtin("ndgrid", nd_ops::ndgrid);
+    interp.register_builtin("ind2sub", shape_inspect::ind2sub);
+    interp.register_builtin("sub2ind", shape_inspect::sub2ind);
 
     // Elementary Math & Predicates (Tier 3)
     interp.register_builtin("abs", math_elem::abs_fn);
@@ -141,6 +144,7 @@ pub fn register_all(interp: &mut Interpreter) {
     interp.register_builtin("orth", linalg::orth_fn);
     interp.register_builtin("expm", linalg::expm_fn);
     interp.register_builtin("kron", linalg::kron_fn);
+    interp.register_builtin("linsolve", linalg::linsolve_fn);
 
     // Numerical Methods & Calculus (Tier 6b)
     interp.register_builtin("roots", numerical::roots_fn);
@@ -149,7 +153,23 @@ pub fn register_all(interp: &mut Interpreter) {
     interp.register_builtin("trapz", numerical::trapz_fn);
     interp.register_builtin("cumtrapz", numerical::cumtrapz_fn);
     interp.register_builtin("gradient", numerical::gradient_fn);
+    interp.register_builtin("del2", numerical::del2_fn);
+    interp.register_builtin("divergence", numerical::divergence_fn);
+    interp.register_builtin("curl", numerical::curl_fn);
     interp.register_builtin("interp1", numerical::interp1_fn);
+    interp.register_builtin("spline", numerical::spline_fn);
+    interp.register_builtin("pchip", numerical::pchip_fn);
+    interp.register_builtin("ode45", solvers::ode45_fn);
+    interp.register_builtin("ode23", solvers::ode23_fn);
+    interp.register_builtin("ode15s", solvers::ode15s_fn);
+    interp.register_builtin("odeset", solvers::odeset_fn);
+    interp.register_builtin("fzero", solvers::fzero_fn);
+    interp.register_builtin("fminsearch", solvers::fminsearch_fn);
+    interp.register_builtin("integral", solvers::integral_fn);
+    interp.register_builtin("integral2", solvers::integral2_fn);
+    interp.register_builtin("integral3", solvers::integral3_fn);
+    interp.register_builtin("quad", solvers::quad_fn);
+    interp.register_builtin("quadgk", solvers::quadgk_fn);
 
     // Transforms & Complex (Tier 7)
     interp.register_builtin("fft", signal::fft_fn);
@@ -203,6 +223,7 @@ pub fn register_all(interp: &mut Interpreter) {
     // Plotting (B2.2)
     interp.register_builtin("figure", plot_builtins::figure_fn);
     interp.register_builtin("plot", plot_builtins::plot_fn);
+    interp.register_builtin("plot3", plot_builtins::plot3_fn);
     interp.register_builtin("scatter", plot_builtins::scatter_fn);
     interp.register_builtin("bar", plot_builtins::bar_fn);
     interp.register_builtin("hist", plot_builtins::hist_fn);
@@ -286,6 +307,11 @@ pub fn register_all(interp: &mut Interpreter) {
     interp.register_builtin("hann", signal_proc::hann_fn);
     interp.register_builtin("blackman", signal_proc::blackman_fn);
     interp.register_builtin("xcorr", signal_proc::xcorr_fn);
+    interp.register_builtin("deconv", signal_proc::deconv_fn);
+    interp.register_builtin("freqz", signal_proc::freqz_fn);
+    interp.register_builtin("residue", signal_proc::residue_fn);
+    interp.register_builtin("pwelch", signal_proc::pwelch_fn);
+    interp.register_builtin("spectrogram", signal_proc::spectrogram_fn);
     interp.register_builtin("rgb2gray", image_proc::rgb2gray_fn);
     interp.register_builtin("imresize", image_proc::imresize_fn);
     interp.register_builtin("imfilter", image_proc::imfilter_fn);

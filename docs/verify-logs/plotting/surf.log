@@ -11,7 +11,7 @@ ans =
 Actual stderr:
 
 Exit code: 0
-Duration: 31ms
+Duration: 59ms
 Status: EXISTS-WORKS
 Oracle / tolerance: 3D shaded surface plot
 Notes: Executed successfully without errors

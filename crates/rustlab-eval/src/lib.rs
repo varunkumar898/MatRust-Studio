@@ -21,7 +21,7 @@ pub mod eval;
 pub mod scope;
 
 pub use error::EvalError;
-pub use eval::{BuiltinFn, Flow, IndexingContext, Interpreter};
+pub use eval::{call_active_handle, BuiltinFn, Flow, IndexingContext, Interpreter};
 pub use scope::Environment;
 
 use rustlab_math::Value;

@@ -11,7 +11,7 @@ ans =
 Actual stderr:
 
 Exit code: 0
-Duration: 33ms
+Duration: 70ms
 Status: EXISTS-WORKS
 Oracle / tolerance: Save figure to disk in specified format (SVG)
 Notes: Executed successfully without errors

@@ -12,7 +12,7 @@ ans =
 Actual stderr:
 
 Exit code: 0
-Duration: 35ms
+Duration: 63ms
 Status: EXISTS-WORKS
 Oracle / tolerance: Solve 2x2 linear system via matrix left division
 Notes: Executed successfully and produced expected output

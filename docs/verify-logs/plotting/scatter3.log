@@ -12,7 +12,7 @@ Error: Undefined function or variable 'scatter3'.
    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Exit code: 1
-Duration: 31ms
+Duration: 62ms
 Status: MISSING
 Oracle / tolerance: 3D scatter plot
 Notes: Function undefined or not registered in interpreter runtime

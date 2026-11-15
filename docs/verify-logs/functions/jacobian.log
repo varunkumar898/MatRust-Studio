@@ -12,7 +12,7 @@ Error: Undefined function or variable 'jacobian'.
    |                                          ^^^^^^^^^^^^^^^^^^^
 
 Exit code: 1
-Duration: 34ms
+Duration: 122ms
 Status: MISSING
 Oracle / tolerance: Jacobian matrix of vector function evaluated at [1; 2]
 Notes: Function undefined or not registered in interpreter runtime

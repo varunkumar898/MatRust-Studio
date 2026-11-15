@@ -14,7 +14,7 @@ ans =
 Actual stderr:
 
 Exit code: 0
-Duration: 32ms
+Duration: 65ms
 Status: EXISTS-WORKS
 Oracle / tolerance: Hann (Hanning) window vector of length 4
 Notes: Executed successfully and produced expected output

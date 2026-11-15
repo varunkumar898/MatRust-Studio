@@ -12,7 +12,7 @@ Error: Undefined function or variable 'schur'.
    |                            ^^^^^^^^
 
 Exit code: 1
-Duration: 26ms
+Duration: 72ms
 Status: MISSING
 Oracle / tolerance: Schur decomposition reconstruction residual U*T*U' - A == 0
 Notes: Function undefined or not registered in interpreter runtime

@@ -12,7 +12,7 @@ Error: Undefined function or variable 'axis'.
    |                                 ^^^^^^^^^^^^^^^^^^^
 
 Exit code: 1
-Duration: 28ms
+Duration: 113ms
 Status: MISSING
 Oracle / tolerance: Set axis limits and scaling properties
 Notes: Function undefined or not registered in interpreter runtime

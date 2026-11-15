@@ -12,7 +12,7 @@ Error: Undefined function or variable 'fminunc'.
    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Exit code: 1
-Duration: 30ms
+Duration: 61ms
 Status: MISSING
 Oracle / tolerance: Quasi-Newton BFGS unconstrained minimization
 Notes: Function undefined or not registered in interpreter runtime

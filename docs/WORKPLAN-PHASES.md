@@ -33,7 +33,7 @@ This document defines the detailed execution roadmap for MatRust Studio developm
 | **R1** | `v0.3` | Waves 0–2 + **F1** (Block Editor) + **F2** (Block Library) | **G1**, **G4** | Closed-loop DC motor velocity control diagram |
 | **R2** | `v0.4` | **F3** (Hierarchy) + **F4** (Advanced Solvers) | **G3**, **G5** | Hierarchical switched buck converter with stiff bisection |
 | **R3** | `v0.5` | **F5** (Multidomain basics) + **F7** (Data Inspector) + **F8** (Control) | **G2**, **G6**, **G7** | Thermal-electromechanical actuator with Bode/margin analysis |
-| **R4** | `v0.6` | **F6** (State Machines) + **F9** (Optimization) + **F10** (Verification) | **G8** | Automated test suite with parameter sweep & statechart supervisory logic |
+| **R4** | `v0.6` | **F6** (State Machines) + **F9** (Optimization) + **F10** (Verification) + **F17** (Math Gallery) | **G8** | Automated test suite with parameter sweep, statecharts, & 24-example math gallery |
 | **R5** | `v0.7` | **F11** (Embedded Codegen) + **F12** (Integration) + **F13** (Performance) | **G9**, **G10** | High-throughput multi-rate model with ISO C99 target generation & SIL |
 
 ### 2.2 Acceptance Goal Gates (G1..G10)
@@ -525,6 +525,29 @@ This document defines the detailed execution roadmap for MatRust Studio developm
 
 ---
 
+## Phase F17: Math Gallery (11 Items)
+
+- **Goal**: Deliver a comprehensive runnable computational math gallery across six core areas (Calculus, ODE, Linear Algebra, Signal Processing, Optimization, Fractals & Chaos), backed by verified built-ins, 2D/3D plotting, and automated closed-form Rust tests.
+- **Entry Criteria**: `PLAN-MG` and `MG0` are approved; engine probe results recorded in `docs/audit/math-probe.md`.
+- **Exit Criteria**: All 24 examples run in under 2 seconds; each verified against known analytical answers or reference tables; UI menu and gallery panel operational; zero GPL code copied.
+- **Notes**: Tasks `MG0` to `MG10` cover the inventory, missing built-in suites, 2D/3D graphics expansions, UI integration, and verified example sets. All algorithms adhere to clean-room textbook derivations.
+
+| ID | Title | Status | Depends-On | Size | Evidence Test | Notes |
+| :--- | :--- | :---: | :---: | :---: | :--- | :--- |
+| **F17.00** | MG0: Probe and inventory | `EXISTS-VERIFIED` | - | S | `docs/audit/math-probe.md` | Probed 99 names; 47 EXISTS-WORKS, 52 MISSING |
+| **F17.01** | MG1: Calculus builtins | `TODO` | F17.00 | M | - | del2, divergence, curl, integral, integral2, quad |
+| **F17.02** | MG2: ODE solver suite | `TODO` | F17.00 | L | - | ode45, ode23, ode15s, odeset, adaptive step-size |
+| **F17.03** | MG3: Signal processing builtins | `TODO` | F17.00 | L | - | deconv, freqz, residue, polyfit, spline, pchip, pwelch, spectrogram |
+| **F17.04** | MG4: Optimization suite | `TODO` | F17.00 | L | - | fzero, fminbnd, fminsearch, fminunc, fsolve, lsqcurvefit, linprog |
+| **F17.05** | MG5: Plotting 2D/3D graphics | `TODO` | F17.00 | L | - | plot3, stem, scatter3, mesh, contour, quiver, semilogx, polar, imagesc |
+| **F17.06** | MG6: Gallery UI & Catalog | `TODO` | F17.05 | M | - | Top menu "Math Gallery", dock panel, code copy to editor, run button |
+| **F17.07** | MG7: Gallery sets: Calculus & ODE | `TODO` | F17.01, F17.02, F17.05, F17.06 | M | - | Examples 1a-1d and 2a-2d; verified by Rust tests |
+| **F17.08** | MG8: Gallery sets: Linalg & Signal | `TODO` | F17.03, F17.05, F17.06 | M | - | Examples 3a-3d and 4a-4d; verified by Rust tests |
+| **F17.09** | MG9: Gallery sets: Optim & Fractals | `TODO` | F17.04, F17.05, F17.06 | M | - | Examples 5a-5d and 6a-6d; verified by Rust tests |
+| **F17.10** | MG10: End-to-end audit & manual pass | `TODO` | F17.07, F17.08, F17.09 | S | - | Run all 24 scripts; compare against Octave oracle; performance and memory audit |
+
+---
+
 ## 4. Phase Accounting & Audit Summary
 
 ### 4.1 Item counts per phase
@@ -544,17 +567,18 @@ This document defines the detailed execution roadmap for MatRust Studio developm
 | F11 | 20 | 14 | 0 | 0 | 6 | 0 |
 | F12 | 13 | 10 | 0 | 1 | 2 | 0 |
 | F13 | 13 | 9 | 1 | 3 | 0 | 0 |
-| **Total** | **249** | **211** | **17** | **13** | **8** | **0** |
+| **Total (F1-F13)** | **249** | **211** | **17** | **13** | **8** | **0** |
 
-Phases F1 through F13 contain **248 items**; `F2.00` is the additional prerequisite row, so the catalog has 249 rows. Phase F14 is listed as 13 domain groups and is not counted as items until `PLAN-F14` expands it. The A3 addendum adds Phase F15 (14 rows) and Phase F16 (5 rows), both entirely `TODO`:
+Phases F1 through F13 contain **248 items**; `F2.00` is the additional prerequisite row, so the catalog has 249 rows. Phase F14 is listed as 13 domain groups and is not counted as items until `PLAN-F14` expands it. Phases F15 (14 rows), F16 (5 rows), and F17 (11 rows) expand the operational roadmap:
 
 | Phase | Rows | TODO | EXISTS-VERIFIED | EXISTS-UNVERIFIED | NEEDS-HUMAN-HARDWARE | Status source |
 | :--- | ---: | ---: | ---: | ---: | ---: | :--- |
 | F14 (domain groups) | 13 | 13 | 0 | 0 | 0 | Owner-supplied group list; `PLAN-F14` expands it |
 | F15 Octave conformance | 14 | 14 | 0 | 0 | 0 | Audit: `mlapp-octave` exists, the differential harness does not |
 | F16 Julia bridge | 5 | 5 | 0 | 0 | 0 | Audit: `mlapp-julia` does not exist |
+| F17 Math Gallery | 11 | 10 | 1 | 0 | 0 | Audit: `PLAN-MG`, `MG0` inventory complete |
 
-The full catalog therefore has **281 rows** (249 + 13 + 14 + 5). The F1-F13 status totals above are unchanged by A3.
+The full catalog therefore has **292 rows** (249 + 13 + 14 + 5 + 11). The F1-F13 status totals above are unchanged.
 
 ### 4.2 Audit step 1e - expected existing capabilities
 

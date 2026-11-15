@@ -103,6 +103,7 @@ Before implementation work begins on any phase, a formal planning task **PLAN-F<
 - **PLAN-F14**: Planning for Phase F14 (MATLAB Ecosystem Expansion)
 - **PLAN-F15**: Planning for Phase F15 (Octave Conformance) - Emits one task per batch of at most 15 functions after F15.01
 - **PLAN-F16**: Planning for Phase F16 (Julia Bridge and Export)
+- **PLAN-MG**: Planning for Phase F17 (Math Gallery) - Comprehensive runnable computational showcase across six core domains, verified built-ins, and interactive gallery UI
 
 ---
 

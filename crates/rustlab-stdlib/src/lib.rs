@@ -254,6 +254,25 @@ pub fn register_all(interp: &mut Interpreter) {
     interp.register_builtin("close", plot_builtins::close_fn);
     interp.register_builtin("saveas", plot_builtins::saveas_fn);
     interp.register_builtin("surf", plot_builtins::surf_fn);
+    interp.register_builtin("mesh", plot_builtins::mesh_fn);
+    interp.register_builtin("stem", plot_builtins::stem_fn);
+    interp.register_builtin("semilogx", plot_builtins::semilogx_fn);
+    interp.register_builtin("semilogy", plot_builtins::semilogy_fn);
+    interp.register_builtin("loglog", plot_builtins::loglog_fn);
+    interp.register_builtin("polar", plot_builtins::polar_fn);
+    interp.register_builtin("polarplot", plot_builtins::polarplot_fn);
+    interp.register_builtin("quiver", plot_builtins::quiver_fn);
+    interp.register_builtin("contour", plot_builtins::contour_fn);
+    interp.register_builtin("contourf", plot_builtins::contourf_fn);
+    interp.register_builtin("imagesc", plot_builtins::imagesc_fn);
+    interp.register_builtin("area", plot_builtins::area_fn);
+    interp.register_builtin("fill", plot_builtins::fill_fn);
+    interp.register_builtin("comet", plot_builtins::comet_fn);
+    interp.register_builtin("colorbar", plot_builtins::colorbar_fn);
+    interp.register_builtin("colormap", plot_builtins::colormap_fn);
+    interp.register_builtin("shading", plot_builtins::shading_fn);
+    interp.register_builtin("view", plot_builtins::view_fn);
+    interp.register_builtin("axis", plot_builtins::axis_fn);
 
     // Diagnostics & Assertions
     interp.register_builtin("error", diagnostics::error_fn);

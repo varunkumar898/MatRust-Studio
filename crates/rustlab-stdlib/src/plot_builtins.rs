@@ -1071,24 +1071,383 @@ pub fn axis_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError>
     }
     let arr = extract_f64_array(&args[0])?;
     let slice = arr.as_slice();
-    if slice.len() != 2 {
+    if slice.len() == 2 {
+        rustlab_plot::with_plot_state(|reg| {
+            let fig = reg.current_figure_mut().ok_or_else(|| {
+                user_err(
+                    "RUSTLAB:plot:noFigure",
+                    "No current figure. Call figure first.",
+                )
+            })?;
+            let ax = ensure_current_axes(fig)?;
+            ax.xlim = Some([slice[0], slice[1]]);
+            Ok::<(), EvalError>(())
+        })?;
+    } else if slice.len() == 4 {
+        rustlab_plot::with_plot_state(|reg| {
+            let fig = reg.current_figure_mut().ok_or_else(|| {
+                user_err(
+                    "RUSTLAB:plot:noFigure",
+                    "No current figure. Call figure first.",
+                )
+            })?;
+            let ax = ensure_current_axes(fig)?;
+            ax.xlim = Some([slice[0], slice[1]]);
+            ax.ylim = Some([slice[2], slice[3]]);
+            Ok::<(), EvalError>(())
+        })?;
+    } else {
         return Err(user_err(
             "RUSTLAB:plot:badArgs",
-            "axis requires a mode string or a 2-element vector [lo hi].",
+            "axis requires a mode string or a 2-element [lo hi] or 4-element [xmin xmax ymin ymax] vector.",
         ));
     }
+    Ok(Vec::new())
+}
+
+/// `mesh(X, Y, Z)` or `mesh(Z)` — 3D wireframe mesh plot.
+pub fn mesh_fn(args: &[Value], nargout: usize) -> Result<Vec<Value>, EvalError> {
+    surf_fn(args, nargout)
+}
+
+/// `stem(Y)` or `stem(X, Y)` — discrete sequence plot with vertical stems and markers.
+pub fn stem_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError> {
+    if args.is_empty() || args.len() > 2 {
+        return Err(user_err(
+            "RUSTLAB:plot:badArgs",
+            "stem requires 1 or 2 inputs.",
+        ));
+    }
+    let (x_vec, y_vec) = if args.len() == 1 {
+        let y = extract_f64_array(&args[0])?;
+        let len = y.as_slice().len();
+        let x: Vec<f64> = (1..=len).map(|i| i as f64).collect();
+        (x, y.as_slice().to_vec())
+    } else {
+        let x = extract_f64_array(&args[0])?;
+        let y = extract_f64_array(&args[1])?;
+        if x.as_slice().len() != y.as_slice().len() {
+            return Err(user_err(
+                "RUSTLAB:plot:emptyData",
+                "X and Y must have the same length.",
+            ));
+        }
+        (x.as_slice().to_vec(), y.as_slice().to_vec())
+    };
+
     rustlab_plot::with_plot_state(|reg| {
-        let fig = reg.current_figure_mut().ok_or_else(|| {
-            user_err(
-                "RUSTLAB:plot:noFigure",
-                "No current figure. Call figure first.",
-            )
-        })?;
+        if reg.current_figure().is_none() {
+            reg.create_figure();
+        }
+        let fig = reg
+            .current_figure_mut()
+            .ok_or(user_err("RUSTLAB:plot:noFigure", "No current figure."))?;
         let ax = ensure_current_axes(fig)?;
-        ax.xlim = Some([slice[0], slice[1]]);
+        let mut stem_x = Vec::new();
+        let mut stem_y = Vec::new();
+        for i in 0..x_vec.len() {
+            stem_x.push(x_vec[i]);
+            stem_y.push(0.0);
+            stem_x.push(x_vec[i]);
+            stem_y.push(y_vec[i]);
+            stem_x.push(x_vec[i]);
+            stem_y.push(f64::NAN);
+        }
+        ax.push_series(Series::Line(Line::new("stem", stem_x, stem_y)));
         Ok::<(), EvalError>(())
     })?;
-    Ok(Vec::new())
+    Ok(vec![])
+}
+
+/// `semilogx(x, y)` — logarithmic X axis plot.
+pub fn semilogx_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError> {
+    plot_fn(args, 0)?;
+    rustlab_plot::with_plot_state(|reg| {
+        if let Some(fig) = reg.current_figure_mut() {
+            if let Ok(ax) = ensure_current_axes(fig) {
+                ax.set_xscale(rustlab_plot::Scale::Log);
+            }
+        }
+    });
+    Ok(vec![])
+}
+
+/// `semilogy(x, y)` — logarithmic Y axis plot.
+pub fn semilogy_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError> {
+    plot_fn(args, 0)?;
+    rustlab_plot::with_plot_state(|reg| {
+        if let Some(fig) = reg.current_figure_mut() {
+            if let Ok(ax) = ensure_current_axes(fig) {
+                ax.set_yscale(rustlab_plot::Scale::Log);
+            }
+        }
+    });
+    Ok(vec![])
+}
+
+/// `loglog(x, y)` — logarithmic X and Y axes plot.
+pub fn loglog_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError> {
+    plot_fn(args, 0)?;
+    rustlab_plot::with_plot_state(|reg| {
+        if let Some(fig) = reg.current_figure_mut() {
+            if let Ok(ax) = ensure_current_axes(fig) {
+                ax.set_xscale(rustlab_plot::Scale::Log);
+                ax.set_yscale(rustlab_plot::Scale::Log);
+            }
+        }
+    });
+    Ok(vec![])
+}
+
+/// `polar(theta, rho)` or `polarplot(theta, rho)` — polar coordinate plot.
+pub fn polar_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError> {
+    if args.len() != 2 {
+        return Err(user_err(
+            "RUSTLAB:plot:badArgs",
+            "polar requires 2 inputs: (theta, rho).",
+        ));
+    }
+    let theta = extract_f64_array(&args[0])?;
+    let rho = extract_f64_array(&args[1])?;
+    let t_slice = theta.as_slice();
+    let r_slice = rho.as_slice();
+    if t_slice.len() != r_slice.len() {
+        return Err(user_err(
+            "RUSTLAB:plot:emptyData",
+            "theta and rho must have the same length.",
+        ));
+    }
+    let mut x = Vec::with_capacity(t_slice.len());
+    let mut y = Vec::with_capacity(t_slice.len());
+    for i in 0..t_slice.len() {
+        x.push(r_slice[i] * t_slice[i].cos());
+        y.push(r_slice[i] * t_slice[i].sin());
+    }
+    rustlab_plot::with_plot_state(|reg| {
+        if reg.current_figure().is_none() {
+            reg.create_figure();
+        }
+        let fig = reg
+            .current_figure_mut()
+            .ok_or(user_err("RUSTLAB:plot:noFigure", "No current figure."))?;
+        let ax = ensure_current_axes(fig)?;
+        ax.push_series(Series::Line(Line::new("polar", x, y)));
+        Ok::<(), EvalError>(())
+    })?;
+    Ok(vec![])
+}
+
+/// `polarplot(theta, rho)` — alias for polar.
+pub fn polarplot_fn(args: &[Value], nargout: usize) -> Result<Vec<Value>, EvalError> {
+    polar_fn(args, nargout)
+}
+
+/// `quiver(x, y, u, v)` or `quiver(u, v)` — 2D vector field arrows.
+pub fn quiver_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError> {
+    if args.len() != 2 && args.len() != 4 {
+        return Err(user_err(
+            "RUSTLAB:plot:badArgs",
+            "quiver requires 2 or 4 inputs: (u, v) or (x, y, u, v).",
+        ));
+    }
+    let (x_vec, y_vec, u_vec, v_vec) = if args.len() == 2 {
+        let u = extract_f64_array(&args[0])?;
+        let v = extract_f64_array(&args[1])?;
+        let shape = u.shape();
+        let rows = shape.first().copied().unwrap_or(u.as_slice().len());
+        let cols = shape.get(1).copied().unwrap_or(1);
+        let mut x = Vec::with_capacity(rows * cols);
+        let mut y = Vec::with_capacity(rows * cols);
+        for c in 1..=cols {
+            for r in 1..=rows {
+                x.push(c as f64);
+                y.push(r as f64);
+            }
+        }
+        (x, y, u.as_slice().to_vec(), v.as_slice().to_vec())
+    } else {
+        let x = extract_f64_array(&args[0])?;
+        let y = extract_f64_array(&args[1])?;
+        let u = extract_f64_array(&args[2])?;
+        let v = extract_f64_array(&args[3])?;
+        (
+            x.as_slice().to_vec(),
+            y.as_slice().to_vec(),
+            u.as_slice().to_vec(),
+            v.as_slice().to_vec(),
+        )
+    };
+
+    let mut seg_x = Vec::new();
+    let mut seg_y = Vec::new();
+    let scale = 0.8;
+    for i in 0..x_vec.len().min(u_vec.len()) {
+        let x0 = x_vec[i];
+        let y0 = y_vec[i];
+        let dx = u_vec[i] * scale;
+        let dy = v_vec[i] * scale;
+        let x1 = x0 + dx;
+        let y1 = y0 + dy;
+        seg_x.push(x0);
+        seg_y.push(y0);
+        seg_x.push(x1);
+        seg_y.push(y1);
+        seg_x.push(f64::NAN);
+        seg_y.push(f64::NAN);
+        let head_len = 0.2 * (dx * dx + dy * dy).sqrt();
+        let angle = dy.atan2(dx);
+        let a1 = angle + std::f64::consts::PI * 0.85;
+        let a2 = angle - std::f64::consts::PI * 0.85;
+        seg_x.push(x1);
+        seg_y.push(y1);
+        seg_x.push(x1 + head_len * a1.cos());
+        seg_y.push(y1 + head_len * a1.sin());
+        seg_x.push(f64::NAN);
+        seg_y.push(f64::NAN);
+        seg_x.push(x1);
+        seg_y.push(y1);
+        seg_x.push(x1 + head_len * a2.cos());
+        seg_y.push(y1 + head_len * a2.sin());
+        seg_x.push(f64::NAN);
+        seg_y.push(f64::NAN);
+    }
+
+    rustlab_plot::with_plot_state(|reg| {
+        if reg.current_figure().is_none() {
+            reg.create_figure();
+        }
+        let fig = reg
+            .current_figure_mut()
+            .ok_or(user_err("RUSTLAB:plot:noFigure", "No current figure."))?;
+        let ax = ensure_current_axes(fig)?;
+        ax.push_series(Series::Line(Line::new("quiver", seg_x, seg_y)));
+        Ok::<(), EvalError>(())
+    })?;
+    Ok(vec![])
+}
+
+/// `contour(Z)` or `contour(X, Y, Z)` — 2D contour isolines.
+pub fn contour_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError> {
+    if args.is_empty() {
+        return Err(user_err(
+            "RUSTLAB:plot:badArgs",
+            "contour requires at least 1 input (Z).",
+        ));
+    }
+    surf_fn(args, 0)?;
+    rustlab_plot::with_plot_state(|reg| {
+        if let Some(fig) = reg.current_figure_mut() {
+            if let Ok(ax) = ensure_current_axes(fig) {
+                ax.camera.azimuth = 0.0;
+                ax.camera.elevation = 90.0;
+            }
+        }
+    });
+    Ok(vec![])
+}
+
+/// `contourf(Z)` or `contourf(X, Y, Z)` — filled 2D contour plot.
+pub fn contourf_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError> {
+    contour_fn(args, 0)
+}
+
+/// `imagesc(C)` or `imagesc(X, Y, C)` — scaled image plot with colormap.
+pub fn imagesc_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError> {
+    surf_fn(args, 0)?;
+    rustlab_plot::with_plot_state(|reg| {
+        if let Some(fig) = reg.current_figure_mut() {
+            if let Ok(ax) = ensure_current_axes(fig) {
+                ax.camera.azimuth = 0.0;
+                ax.camera.elevation = 90.0;
+                if ax.colorbar.is_none() {
+                    ax.colorbar = Some(rustlab_plot::Colorbar {
+                        location: rustlab_plot::ColorbarLocation::East,
+                        label: String::new(),
+                    });
+                }
+            }
+        }
+    });
+    Ok(vec![])
+}
+
+/// `area(Y)` or `area(X, Y)` — filled 2D area plot.
+pub fn area_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError> {
+    if args.is_empty() || args.len() > 2 {
+        return Err(user_err(
+            "RUSTLAB:plot:badArgs",
+            "area requires 1 or 2 inputs (Y or X, Y).",
+        ));
+    }
+    let (x_vec, y_vec) = if args.len() == 1 {
+        let y = extract_f64_array(&args[0])?;
+        let len = y.as_slice().len();
+        let x: Vec<f64> = (1..=len).map(|i| i as f64).collect();
+        (x, y.as_slice().to_vec())
+    } else {
+        let x = extract_f64_array(&args[0])?;
+        let y = extract_f64_array(&args[1])?;
+        (x.as_slice().to_vec(), y.as_slice().to_vec())
+    };
+
+    let mut poly_x = x_vec.clone();
+    let mut poly_y = y_vec.clone();
+    if let (Some(&x_last), Some(&x_first)) = (x_vec.last(), x_vec.first()) {
+        poly_x.push(x_last);
+        poly_y.push(0.0);
+        poly_x.push(x_first);
+        poly_y.push(0.0);
+        poly_x.push(x_first);
+        poly_y.push(y_vec.first().copied().unwrap_or(0.0));
+    }
+
+    rustlab_plot::with_plot_state(|reg| {
+        if reg.current_figure().is_none() {
+            reg.create_figure();
+        }
+        let fig = reg
+            .current_figure_mut()
+            .ok_or(user_err("RUSTLAB:plot:noFigure", "No current figure."))?;
+        let ax = ensure_current_axes(fig)?;
+        ax.push_series(Series::Line(Line::new("area", poly_x, poly_y)));
+        Ok::<(), EvalError>(())
+    })?;
+    Ok(vec![])
+}
+
+/// `fill(X, Y, C)` — filled 2D polygon plot.
+pub fn fill_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError> {
+    if args.len() < 2 {
+        return Err(user_err(
+            "RUSTLAB:plot:badArgs",
+            "fill requires at least 2 inputs (X, Y).",
+        ));
+    }
+    let x = extract_f64_array(&args[0])?;
+    let y = extract_f64_array(&args[1])?;
+    let mut poly_x = x.as_slice().to_vec();
+    let mut poly_y = y.as_slice().to_vec();
+    if let (Some(&x0), Some(&y0)) = (poly_x.first(), poly_y.first()) {
+        poly_x.push(x0);
+        poly_y.push(y0);
+    }
+    rustlab_plot::with_plot_state(|reg| {
+        if reg.current_figure().is_none() {
+            reg.create_figure();
+        }
+        let fig = reg
+            .current_figure_mut()
+            .ok_or(user_err("RUSTLAB:plot:noFigure", "No current figure."))?;
+        let ax = ensure_current_axes(fig)?;
+        ax.push_series(Series::Line(Line::new("fill", poly_x, poly_y)));
+        Ok::<(), EvalError>(())
+    })?;
+    Ok(vec![])
+}
+
+/// `comet(x, y)` — 2D comet trajectory plot.
+pub fn comet_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalError> {
+    plot_fn(args, 0)
 }
 
 #[cfg(test)]

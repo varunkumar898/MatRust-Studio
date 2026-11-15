@@ -4,11 +4,13 @@ addpath
 all
 angle
 any
+area
 arrayfun
 asin
 assert
 atan
 atan2
+axis
 bar
 bitand
 bitor
@@ -27,10 +29,15 @@ cla
 class
 clf
 close
+colorbar
+colormap
+comet
 cond
 confusionmat
 conj
 contains
+contour
+contourf
 conv
 corrcoef
 cos
@@ -63,6 +70,7 @@ fft2
 fftshift
 fieldnames
 figure
+fill
 filter
 filtfilt
 find
@@ -98,6 +106,7 @@ ifft
 ifft2
 ikine_2link
 imag
+imagesc
 imfilter
 imresize
 ind2sub
@@ -140,6 +149,7 @@ log
 log10
 log2
 logical
+loglog
 logspace
 lower
 lsqcurvefit
@@ -150,6 +160,7 @@ mat2str
 max
 mean
 median
+mesh
 meshgrid
 min
 mldivide
@@ -179,6 +190,8 @@ permute
 pinv
 plot
 plot3
+polar
+polarplot
 polyfit
 polyval
 prctile
@@ -189,6 +202,7 @@ qr
 quad
 quadgk
 quantile
+quiver
 rand
 randn
 rank
@@ -214,6 +228,9 @@ round
 save
 saveas
 scatter
+semilogx
+semilogy
+shading
 sign
 sin
 single
@@ -230,6 +247,7 @@ sqrt
 squeeze
 startsWith
 std
+stem
 step
 strcmp
 strcmpi
@@ -267,6 +285,7 @@ unique
 upper
 var
 vertcat
+view
 warning
 which
 writematrix

@@ -510,6 +510,14 @@ test_parser_nesting_depth_limit: test
 test_path_which_exist_and_scripts: test
 test_perform_action_clears_the_named_scope_only: test
 test_pin_geometry_and_rotation_invariance: test
+test_plot_types_area_and_fill: test
+test_plot_types_contour_and_imagesc: test
+test_plot_types_log_scales: test
+test_plot_types_mesh: test
+test_plot_types_polar: test
+test_plot_types_quiver: test
+test_plot_types_stem: test
+test_plot_types_view_and_axis: test
 test_pointer_hit_test_maps_click_to_correct_axes: test
 test_polyfit_linear_and_quadratic: test
 test_polyval_scalar_and_vector: test

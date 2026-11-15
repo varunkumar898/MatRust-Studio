@@ -1435,6 +1435,25 @@ pub fn get_help_text(name: &str) -> Option<&'static str> {
                surf(X, Y, Z) plots a surface from grid matrices X, Y, Z.\n               surf(Z) uses implicit X = 1:cols(Z), Y = 1:rows(Z).\n               A colorbar is added showing the Z scale.\n"
         ),
         "ishhold" => Some("ishhold"),
+        "mesh" => Some("MESH  3-D wireframe mesh surface plot.\n\nSyntax:\n  mesh(X, Y, Z)\n  mesh(Z)\n"),
+        "stem" => Some("STEM  Plot discrete sequence data.\n\nSyntax:\n  stem(Y)\n  stem(X, Y)\n"),
+        "semilogx" => Some("SEMILOGX  Semilogarithmic line plot (logarithmic x-axis).\n\nSyntax:\n  semilogx(X, Y)\n"),
+        "semilogy" => Some("SEMILOGY  Semilogarithmic line plot (logarithmic y-axis).\n\nSyntax:\n  semilogy(X, Y)\n"),
+        "loglog" => Some("LOGLOG  Log-log scale line plot.\n\nSyntax:\n  loglog(X, Y)\n"),
+        "polar" => Some("POLAR  Polar coordinate plot.\n\nSyntax:\n  polar(theta, rho)\n"),
+        "polarplot" => Some("POLARPLOT  Plot lines in polar coordinates.\n\nSyntax:\n  polarplot(theta, rho)\n"),
+        "quiver" => Some("QUIVER  Quiver plot of 2-D velocity vectors.\n\nSyntax:\n  quiver(u, v)\n  quiver(x, y, u, v)\n"),
+        "contour" => Some("CONTOUR  2-D contour plot of matrix.\n\nSyntax:\n  contour(Z)\n  contour(X, Y, Z)\n"),
+        "contourf" => Some("CONTOURF  Filled 2-D contour plot.\n\nSyntax:\n  contourf(Z)\n  contourf(X, Y, Z)\n"),
+        "imagesc" => Some("IMAGESC  Display image with scaled colors.\n\nSyntax:\n  imagesc(C)\n  imagesc(x, y, C)\n"),
+        "area" => Some("AREA  Filled area 2-D plot.\n\nSyntax:\n  area(Y)\n  area(X, Y)\n"),
+        "fill" => Some("FILL  Filled 2-D polygonal region.\n\nSyntax:\n  fill(X, Y, C)\n"),
+        "comet" => Some("COMET  Comet trajectory plot.\n\nSyntax:\n  comet(x, y)\n"),
+        "colorbar" => Some("COLORBAR  Display colorbar indicating colormap scaling.\n\nSyntax:\n  colorbar\n"),
+        "colormap" => Some("COLORMAP  Set or query current axes colormap.\n\nSyntax:\n  colormap(map)\n"),
+        "shading" => Some("SHADING  Set color shading mode for surface mesh.\n\nSyntax:\n  shading flat\n  shading interp\n"),
+        "view" => Some("VIEW  Set 3-D graph camera viewpoint.\n\nSyntax:\n  view(az, el)\n"),
+        "axis" => Some("AXIS  Set axis limits and aspect ratio.\n\nSyntax:\n  axis auto\n  axis tight\n  axis equal\n  axis([xmin xmax ymin ymax])\n"),
         "gcf" => Some(
             "GCF  Get current figure handle.\n\n\
              Syntax:\

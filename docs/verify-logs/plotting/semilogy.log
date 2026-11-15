@@ -1,0 +1,18 @@
+﻿Function: semilogy
+Category: Plotting & Visualization
+Test expression: figure(); semilogy([1, 2, 3], [1, 10, 100]); disp('semilogy_ok')
+Expected result: semilogy_ok
+Actual stdout:
+
+Actual stderr:
+Error: Undefined function or variable 'semilogy'.
+  --> Line 1, Column 11:
+   |
+  1 | figure(); semilogy([1, 2, 3], [1, 10, 100]); disp('semilogy_ok')
+   |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Exit code: 1
+Duration: 29ms
+Status: MISSING
+Oracle / tolerance: Semi-logarithmic line plot with log y-axis
+Notes: Function undefined or not registered in interpreter runtime

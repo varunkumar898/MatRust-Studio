@@ -1,0 +1,17 @@
+﻿Function: bar
+Category: Plotting & Visualization
+Test expression: figure(); bar([1, 2, 3], [10, 20, 15]); saveas(1, 'docs/verify-logs/plotting/bar_test.svg'); disp('bar_ok')
+Expected result: bar_ok and SVG output file created
+Actual stdout:
+bar_ok
+ans =
+
+   []
+
+Actual stderr:
+
+Exit code: 0
+Duration: 33ms
+Status: EXISTS-WORKS
+Oracle / tolerance: Vertical bar graph
+Notes: Executed successfully; valid SVG rendered (2243 bytes)

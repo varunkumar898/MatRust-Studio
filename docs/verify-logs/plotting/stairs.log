@@ -1,0 +1,18 @@
+﻿Function: stairs
+Category: Plotting & Visualization
+Test expression: figure(); stairs([1, 2, 3], [4, 5, 6]); disp('stairs_ok')
+Expected result: stairs_ok
+Actual stdout:
+
+Actual stderr:
+Error: Undefined function or variable 'stairs'.
+  --> Line 1, Column 11:
+   |
+  1 | figure(); stairs([1, 2, 3], [4, 5, 6]); disp('stairs_ok')
+   |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Exit code: 1
+Duration: 30ms
+Status: MISSING
+Oracle / tolerance: Stairstep plot
+Notes: Function undefined or not registered in interpreter runtime

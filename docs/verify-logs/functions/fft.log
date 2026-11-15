@@ -1,0 +1,17 @@
+﻿Function: fft
+Category: Signal Processing
+Test expression: x = [1, 1, 1, 1]; X = fft(x); disp(X)
+Expected result: [4, 0, 0, 0]
+Actual stdout:
+    4 + 0i  0 + 0i  0 + 0i  0 + 0i
+ans =
+
+   []
+
+Actual stderr:
+
+Exit code: 0
+Duration: 36ms
+Status: EXISTS-WORKS
+Oracle / tolerance: 1D FFT of constant sequence [1, 1, 1, 1]
+Notes: Executed successfully and produced expected output

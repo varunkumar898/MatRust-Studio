@@ -1,0 +1,18 @@
+﻿Function: ode45
+Category: ODE & Simulation
+Test expression: [t, y] = ode45(@(t,y) -y, [0, 1], 1); disp(abs(y(end) - exp(-1)) < 1e-3)
+Expected result: 1
+Actual stdout:
+
+Actual stderr:
+Error: Undefined function or variable 'ode45'.
+  --> Line 1, Column 10:
+   |
+  1 | [t, y] = ode45(@(t,y) -y, [0, 1], 1); disp(abs(y(end) - exp(-1)) < 1e-3)
+   |          ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Exit code: 1
+Duration: 30ms
+Status: MISSING
+Oracle / tolerance: Dormand-Prince 5(4) solver y' = -y, y(0)=1 => y(1)=exp(-1)
+Notes: Function undefined or not registered in interpreter runtime

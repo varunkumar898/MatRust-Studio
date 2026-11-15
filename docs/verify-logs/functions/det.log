@@ -1,0 +1,17 @@
+﻿Function: det
+Category: Linear Algebra
+Test expression: A = [4, 7; 2, 6]; d = det(A); disp(d)
+Expected result: 10
+Actual stdout:
+    10
+ans =
+
+   []
+
+Actual stderr:
+
+Exit code: 0
+Duration: 29ms
+Status: EXISTS-WORKS
+Oracle / tolerance: det([4,7; 2,6]) = 4*6 - 7*2 = 10
+Notes: Executed successfully and produced expected output

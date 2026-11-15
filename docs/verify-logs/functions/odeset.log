@@ -1,0 +1,18 @@
+﻿Function: odeset
+Category: ODE & Simulation
+Test expression: opts = odeset('RelTol', 1e-4, 'AbsTol', 1e-7); disp(opts)
+Expected result: Struct with RelTol and AbsTol fields
+Actual stdout:
+
+Actual stderr:
+Error: Undefined function or variable 'odeset'.
+  --> Line 1, Column 8:
+   |
+  1 | opts = odeset('RelTol', 1e-4, 'AbsTol', 1e-7); disp(opts)
+   |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Exit code: 1
+Duration: 31ms
+Status: MISSING
+Oracle / tolerance: Create/alter ODE options structure
+Notes: Function undefined or not registered in interpreter runtime

@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640.00" height="480.00" viewBox="0 0 640.00 480.00" class="rustlab-plot"><defs><style>
+.rustlab-plot { background:#ffffff; font-family: sans-serif; font-size: 11px; }
+.axes-bg { fill:#ffffff; stroke:#cccccc; stroke-width:1; }
+.grid-line { stroke:#eaeaea; stroke-width:1; }
+.axis-line { stroke:#333333; stroke-width:1; }
+.fig-title { fill:#111111; font-weight: bold; font-size: 14px; }
+.axes-label { fill:#333333; font-size: 11px; text-anchor: middle; }
+.series-line { fill:none; stroke-width:2; }
+.series-scatter { fill:#0072BD; }
+.series-bar { fill:#0072BD; }
+.series-surface { stroke:#333333; stroke-width:0.5; }
+.colorbar { stroke:#333333; stroke-width:1; }
+.colorbar-label { font-size: 10px; fill:#222222; text-anchor: middle; }
+.colorbar-tick { font-size: 9px; fill:#222222; text-anchor: end; }
+.legend { fill:#ffffff; stroke:#999999; stroke-width:1; }
+.legend-text { font-size: 10px; fill:#222222; }
+</style></defs><text x="320.00" y="28" class="fig-title" text-anchor="middle">Figure 1</text><g id="axes-1"><rect x="50.00" y="60.00" width="540.00" height="380.00" class="axes-bg"/><line class="grid-line" x1="-48.18" y1="60.00" x2="-48.18" y2="440.00" /><line class="grid-line" x1="74.55" y1="60.00" x2="74.55" y2="440.00" /><line class="grid-line" x1="197.27" y1="60.00" x2="197.27" y2="440.00" /><line class="grid-line" x1="320.00" y1="60.00" x2="320.00" y2="440.00" /><line class="grid-line" x1="442.73" y1="60.00" x2="442.73" y2="440.00" /><line class="grid-line" x1="565.45" y1="60.00" x2="565.45" y2="440.00" /><line class="grid-line" x1="50.00" y1="595.45" x2="590.00" y2="595.45" /><line class="grid-line" x1="50.00" y1="422.73" x2="590.00" y2="422.73" /><line class="grid-line" x1="50.00" y1="250.00" x2="590.00" y2="250.00" /><line class="grid-line" x1="50.00" y1="77.27" x2="590.00" y2="77.27" /><rect x="50.00" y="60.00" width="540.00" height="380.00" class="axis-line" fill="none" /><rect class="series-bar" fill="#0072bd" x="77.00" y="422.73" width="126.00" height="17.27" /><rect class="series-bar" fill="#0072bd" x="257.00" y="77.27" width="126.00" height="362.73" /><rect class="series-bar" fill="#0072bd" x="437.00" y="250.00" width="126.00" height="190.00" /></g>
+</svg>

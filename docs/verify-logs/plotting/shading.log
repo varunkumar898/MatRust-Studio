@@ -1,0 +1,18 @@
+﻿Function: shading
+Category: Plotting & Visualization
+Test expression: figure(); [X, Y] = meshgrid(-1:1, -1:1); surf(X, Y, X.^2 + Y.^2); shading('flat'); disp('shading_ok')
+Expected result: shading_ok
+Actual stdout:
+
+Actual stderr:
+Error: Undefined function or variable 'shading'.
+  --> Line 1, Column 67:
+   |
+  1 | figure(); [X, Y] = meshgrid(-1:1, -1:1); surf(X, Y, X.^2 + Y.^2); shading('flat'); disp('shading_ok')
+   |                                                                   ^^^^^^^^^^^^^^^
+
+Exit code: 1
+Duration: 30ms
+Status: MISSING
+Oracle / tolerance: Set color shading properties of surface and patch objects
+Notes: Function undefined or not registered in interpreter runtime

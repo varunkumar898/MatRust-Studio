@@ -1,0 +1,17 @@
+﻿Function: conv
+Category: Signal Processing
+Test expression: u = [1, 2]; v = [3, 4]; c = conv(u, v); disp(c)
+Expected result: [3, 10, 8]
+Actual stdout:
+       3    10     8
+ans =
+
+   []
+
+Actual stderr:
+
+Exit code: 0
+Duration: 31ms
+Status: EXISTS-WORKS
+Oracle / tolerance: 1D discrete polynomial / signal convolution
+Notes: Executed successfully and produced expected output

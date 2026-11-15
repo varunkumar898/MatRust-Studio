@@ -1,0 +1,18 @@
+﻿Function: freqz
+Category: Signal Processing
+Test expression: b = [1]; a = [1, -0.5]; [h, w] = freqz(b, a, 4); disp(size(h))
+Expected result: [4, 1]
+Actual stdout:
+
+Actual stderr:
+Error: Undefined function or variable 'freqz'.
+  --> Line 1, Column 34:
+   |
+  1 | b = [1]; a = [1, -0.5]; [h, w] = freqz(b, a, 4); disp(size(h))
+   |                                  ^^^^^^^^^^^^^^
+
+Exit code: 1
+Duration: 32ms
+Status: MISSING
+Oracle / tolerance: Frequency response of digital filter
+Notes: Function undefined or not registered in interpreter runtime

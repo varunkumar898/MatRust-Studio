@@ -1,0 +1,18 @@
+﻿Function: fsolve
+Category: Interpolation & Optimization
+Test expression: F = @(x) [x(1)^2 + x(2)^2 - 1; x(1) - x(2)]; x = fsolve(F, [0.5; 0.5]); disp(norm(F(x)) < 1e-4)
+Expected result: 1
+Actual stdout:
+
+Actual stderr:
+Error: Undefined function or variable 'fsolve'.
+  --> Line 1, Column 50:
+   |
+  1 | F = @(x) [x(1)^2 + x(2)^2 - 1; x(1) - x(2)]; x = fsolve(F, [0.5; 0.5]); disp(norm(F(x)) < 1e-4)
+   |                                                  ^^^^^^^^^^^^^^^^^^^^^
+
+Exit code: 1
+Duration: 31ms
+Status: MISSING
+Oracle / tolerance: System of nonlinear equations solver
+Notes: Function undefined or not registered in interpreter runtime

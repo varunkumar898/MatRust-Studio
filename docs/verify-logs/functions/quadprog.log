@@ -1,0 +1,18 @@
+﻿Function: quadprog
+Category: Interpolation & Optimization
+Test expression: H = [2, 0; 0, 2]; f = [-2; -4]; x = quadprog(H, f); disp(x)
+Expected result: [1; 2]
+Actual stdout:
+
+Actual stderr:
+Error: Undefined function or variable 'quadprog'.
+  --> Line 1, Column 37:
+   |
+  1 | H = [2, 0; 0, 2]; f = [-2; -4]; x = quadprog(H, f); disp(x)
+   |                                     ^^^^^^^^^^^^^^
+
+Exit code: 1
+Duration: 28ms
+Status: MISSING
+Oracle / tolerance: Quadratic programming solver
+Notes: Function undefined or not registered in interpreter runtime

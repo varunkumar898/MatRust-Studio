@@ -1,0 +1,18 @@
+﻿Function: contour
+Category: Plotting & Visualization
+Test expression: [X, Y] = meshgrid(-2:2, -2:2); Z = X.^2 + Y.^2; figure(); contour(Z); disp('contour_ok')
+Expected result: contour_ok
+Actual stdout:
+
+Actual stderr:
+Error: Undefined function or variable 'contour'.
+  --> Line 1, Column 59:
+   |
+  1 | [X, Y] = meshgrid(-2:2, -2:2); Z = X.^2 + Y.^2; figure(); contour(Z); disp('contour_ok')
+   |                                                           ^^^^^^^^^^
+
+Exit code: 1
+Duration: 31ms
+Status: MISSING
+Oracle / tolerance: 2D contour isolines plot
+Notes: Function undefined or not registered in interpreter runtime

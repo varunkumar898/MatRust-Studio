@@ -1,0 +1,17 @@
+﻿Function: fftshift
+Category: Signal Processing
+Test expression: x = [1, 2, 3, 4]; y = fftshift(x); disp(y)
+Expected result: [3, 4, 1, 2]
+Actual stdout:
+       3     4     1     2
+ans =
+
+   []
+
+Actual stderr:
+
+Exit code: 0
+Duration: 29ms
+Status: EXISTS-WORKS
+Oracle / tolerance: Shift zero-frequency component to center of spectrum
+Notes: Executed successfully and produced expected output

@@ -1,0 +1,17 @@
+﻿Function: scatter
+Category: Plotting & Visualization
+Test expression: figure(); scatter([1, 2, 3], [4, 5, 6]); saveas(1, 'docs/verify-logs/plotting/scatter_test.svg'); disp('scatter_ok')
+Expected result: scatter_ok and SVG output file created
+Actual stdout:
+scatter_ok
+ans =
+
+   []
+
+Actual stderr:
+
+Exit code: 0
+Duration: 30ms
+Status: EXISTS-WORKS
+Oracle / tolerance: 2D scatter plot with circular markers
+Notes: Executed successfully; valid SVG rendered (2205 bytes)

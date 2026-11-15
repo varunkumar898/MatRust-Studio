@@ -1,0 +1,20 @@
+﻿Function: hamming
+Category: Signal Processing
+Test expression: w = hamming(4); disp(w)
+Expected result: [0.0800; 0.7700; 0.7700; 0.0800]
+Actual stdout:
+    0.0800
+    0.7700
+    0.7700
+    0.0800
+ans =
+
+   []
+
+Actual stderr:
+
+Exit code: 0
+Duration: 31ms
+Status: EXISTS-WORKS
+Oracle / tolerance: Hamming window vector of length 4
+Notes: Executed successfully and produced expected output

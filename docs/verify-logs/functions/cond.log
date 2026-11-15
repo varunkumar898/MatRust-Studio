@@ -1,0 +1,17 @@
+﻿Function: cond
+Category: Linear Algebra
+Test expression: A = [10, 0; 0, 2]; c = cond(A); disp(c)
+Expected result: 5
+Actual stdout:
+    5
+ans =
+
+   []
+
+Actual stderr:
+
+Exit code: 0
+Duration: 30ms
+Status: EXISTS-WORKS
+Oracle / tolerance: 2-norm condition number 10 / 2 = 5
+Notes: Executed successfully and produced expected output

@@ -1,0 +1,18 @@
+﻿Function: jacobian
+Category: Calculus
+Test expression: F = @(x) [x(1)^2 + x(2); x(1)*x(2)]; J = jacobian(F, [1; 2]); disp(J)
+Expected result: [2, 1; 2, 1]
+Actual stdout:
+
+Actual stderr:
+Error: Undefined function or variable 'jacobian'.
+  --> Line 1, Column 42:
+   |
+  1 | F = @(x) [x(1)^2 + x(2); x(1)*x(2)]; J = jacobian(F, [1; 2]); disp(J)
+   |                                          ^^^^^^^^^^^^^^^^^^^
+
+Exit code: 1
+Duration: 34ms
+Status: MISSING
+Oracle / tolerance: Jacobian matrix of vector function evaluated at [1; 2]
+Notes: Function undefined or not registered in interpreter runtime

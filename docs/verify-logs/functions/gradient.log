@@ -1,0 +1,17 @@
+﻿Function: gradient
+Category: Calculus
+Test expression: x = [1, 2, 4, 7]; g = gradient(x); disp(g)
+Expected result: 1.0000 1.5000 2.5000 3.0000
+Actual stdout:
+    1.0000  1.5000  2.5000  3.0000
+ans =
+
+   []
+
+Actual stderr:
+
+Exit code: 0
+Duration: 45ms
+Status: EXISTS-WORKS
+Oracle / tolerance: 1D central differences with one-sided endpoints
+Notes: Executed successfully and produced expected output

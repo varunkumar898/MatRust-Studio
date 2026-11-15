@@ -1,0 +1,17 @@
+﻿Function: rank
+Category: Linear Algebra
+Test expression: A = [1, 2; 2, 4]; r = rank(A); disp(r)
+Expected result: 1
+Actual stdout:
+    1
+ans =
+
+   []
+
+Actual stderr:
+
+Exit code: 0
+Duration: 29ms
+Status: EXISTS-WORKS
+Oracle / tolerance: Matrix rank of rank-deficient 2x2 matrix
+Notes: Executed successfully and produced expected output

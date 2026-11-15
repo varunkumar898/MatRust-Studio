@@ -1,0 +1,17 @@
+﻿Function: subplot
+Category: Plotting & Visualization
+Test expression: figure(); subplot(2, 1, 1); plot([1, 2], [3, 4]); subplot(2, 1, 2); plot([1, 2], [5, 6]); saveas(1, 'docs/verify-logs/plotting/subplot_test.svg'); disp('subplot_ok')
+Expected result: subplot_ok and SVG output file created
+Actual stdout:
+subplot_ok
+ans =
+
+   []
+
+Actual stderr:
+
+Exit code: 0
+Duration: 34ms
+Status: EXISTS-WORKS
+Oracle / tolerance: Grid arrangement of multiple subplot axes in single figure
+Notes: Executed successfully; valid SVG rendered (2675 bytes)

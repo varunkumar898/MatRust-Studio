@@ -1,0 +1,18 @@
+﻿Function: polarplot
+Category: Plotting & Visualization
+Test expression: figure(); polarplot([0, 1.57, 3.14], [1, 2, 1]); disp('polarplot_ok')
+Expected result: polarplot_ok
+Actual stdout:
+
+Actual stderr:
+Error: Undefined function or variable 'polarplot'.
+  --> Line 1, Column 11:
+   |
+  1 | figure(); polarplot([0, 1.57, 3.14], [1, 2, 1]); disp('polarplot_ok')
+   |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Exit code: 1
+Duration: 33ms
+Status: MISSING
+Oracle / tolerance: Polar coordinate line plot
+Notes: Function undefined or not registered in interpreter runtime

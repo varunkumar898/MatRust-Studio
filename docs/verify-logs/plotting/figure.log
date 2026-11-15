@@ -1,0 +1,17 @@
+﻿Function: figure
+Category: Plotting & Visualization
+Test expression: f = figure(); disp(f)
+Expected result: Figure handle 1
+Actual stdout:
+    1
+ans =
+
+   []
+
+Actual stderr:
+
+Exit code: 0
+Duration: 33ms
+Status: EXISTS-WORKS
+Oracle / tolerance: Create new or activate existing figure window
+Notes: Executed successfully without errors

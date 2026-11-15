@@ -1,0 +1,20 @@
+﻿Function: hann
+Category: Signal Processing
+Test expression: w = hann(4); disp(w)
+Expected result: [0; 0.7500; 0.7500; 0]
+Actual stdout:
+         0
+    0.7500
+    0.7500
+         0
+ans =
+
+   []
+
+Actual stderr:
+
+Exit code: 0
+Duration: 32ms
+Status: EXISTS-WORKS
+Oracle / tolerance: Hann (Hanning) window vector of length 4
+Notes: Executed successfully and produced expected output

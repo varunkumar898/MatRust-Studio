@@ -1,0 +1,18 @@
+﻿Function: fmincon
+Category: Interpolation & Optimization
+Test expression: x = fmincon(@(x) x(1)^2 + x(2)^2, [1; 1], [], [], [], [], [0.5; 0.5], []); disp(x)
+Expected result: [0.5; 0.5]
+Actual stdout:
+
+Actual stderr:
+Error: Undefined function or variable 'fmincon'.
+  --> Line 1, Column 5:
+   |
+  1 | x = fmincon(@(x) x(1)^2 + x(2)^2, [1; 1], [], [], [], [], [0.5; 0.5], []); disp(x)
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Exit code: 1
+Duration: 31ms
+Status: MISSING
+Oracle / tolerance: Constrained nonlinear multivariable optimization
+Notes: Function undefined or not registered in interpreter runtime

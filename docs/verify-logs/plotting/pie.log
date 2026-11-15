@@ -1,0 +1,18 @@
+﻿Function: pie
+Category: Plotting & Visualization
+Test expression: figure(); pie([10, 20, 30]); disp('pie_ok')
+Expected result: pie_ok
+Actual stdout:
+
+Actual stderr:
+Error: Undefined function or variable 'pie'.
+  --> Line 1, Column 11:
+   |
+  1 | figure(); pie([10, 20, 30]); disp('pie_ok')
+   |           ^^^^^^^^^^^^^^^^^
+
+Exit code: 1
+Duration: 32ms
+Status: MISSING
+Oracle / tolerance: Pie chart
+Notes: Function undefined or not registered in interpreter runtime

@@ -1,0 +1,18 @@
+﻿Function: colorbar
+Category: Plotting & Visualization
+Test expression: figure(); [X, Y] = meshgrid(-1:1, -1:1); surf(X, Y, X.^2 + Y.^2); colorbar(); disp('colorbar_ok')
+Expected result: colorbar_ok
+Actual stdout:
+
+Actual stderr:
+Error: Undefined function or variable 'colorbar'.
+  --> Line 1, Column 67:
+   |
+  1 | figure(); [X, Y] = meshgrid(-1:1, -1:1); surf(X, Y, X.^2 + Y.^2); colorbar(); disp('colorbar_ok')
+   |                                                                   ^^^^^^^^^^
+
+Exit code: 1
+Duration: 36ms
+Status: MISSING
+Oracle / tolerance: Display colorbar indicating color scale mapping
+Notes: Function undefined or not registered in interpreter runtime

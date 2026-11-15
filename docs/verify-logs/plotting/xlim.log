@@ -1,0 +1,17 @@
+﻿Function: xlim
+Category: Plotting & Visualization
+Test expression: figure(); plot([1, 2], [3, 4]); xlim([0, 5]); disp('xlim_ok')
+Expected result: xlim_ok
+Actual stdout:
+xlim_ok
+ans =
+
+   []
+
+Actual stderr:
+
+Exit code: 0
+Duration: 33ms
+Status: EXISTS-WORKS
+Oracle / tolerance: Set x-axis limits
+Notes: Executed successfully without errors

@@ -1,0 +1,18 @@
+﻿Function: semilogx
+Category: Plotting & Visualization
+Test expression: figure(); semilogx([1, 10, 100], [1, 2, 3]); disp('semilogx_ok')
+Expected result: semilogx_ok
+Actual stdout:
+
+Actual stderr:
+Error: Undefined function or variable 'semilogx'.
+  --> Line 1, Column 11:
+   |
+  1 | figure(); semilogx([1, 10, 100], [1, 2, 3]); disp('semilogx_ok')
+   |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Exit code: 1
+Duration: 31ms
+Status: MISSING
+Oracle / tolerance: Semi-logarithmic line plot with log x-axis
+Notes: Function undefined or not registered in interpreter runtime

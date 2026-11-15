@@ -1,0 +1,17 @@
+﻿Function: filter
+Category: Signal Processing
+Test expression: b = [0.5, 0.5]; a = [1]; x = [1, 2, 3]; y = filter(b, a, x); disp(y)
+Expected result: [0.5, 1.5, 2.5]
+Actual stdout:
+    0.5000  1.5000  2.5000
+ans =
+
+   []
+
+Actual stderr:
+
+Exit code: 0
+Duration: 30ms
+Status: EXISTS-WORKS
+Oracle / tolerance: 1D direct-form II transposed digital filter
+Notes: Executed successfully and produced expected output

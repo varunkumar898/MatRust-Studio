@@ -1,0 +1,18 @@
+﻿Function: svd
+Category: Linear Algebra
+Test expression: A = [3, 0; 0, -4]; s = svd(A); disp(s)
+Expected result: [4; 3]
+Actual stdout:
+       4
+       3
+ans =
+
+   []
+
+Actual stderr:
+
+Exit code: 0
+Duration: 32ms
+Status: EXISTS-WORKS
+Oracle / tolerance: Singular values in descending order [4; 3]
+Notes: Executed successfully and produced expected output

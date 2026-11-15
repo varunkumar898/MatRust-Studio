@@ -1,0 +1,17 @@
+﻿Function: hist
+Category: Plotting & Visualization
+Test expression: figure(); hist([1, 1, 2, 3, 3, 3, 4], 4); saveas(1, 'docs/verify-logs/plotting/hist_test.svg'); disp('hist_ok')
+Expected result: hist_ok and SVG output file created
+Actual stdout:
+hist_ok
+ans =
+
+   []
+
+Actual stderr:
+
+Exit code: 0
+Duration: 31ms
+Status: EXISTS-WORKS
+Oracle / tolerance: Histogram plot
+Notes: Executed successfully; valid SVG rendered (2079 bytes)

@@ -1,0 +1,18 @@
+﻿Function: plot3
+Category: Plotting & Visualization
+Test expression: figure(); plot3([1, 2, 3], [4, 5, 6], [7, 8, 9]); saveas(1, 'docs/verify-logs/plotting/plot3_test.svg'); disp('plot3_ok')
+Expected result: plot3_ok and SVG output file created
+Actual stdout:
+
+Actual stderr:
+Error: Undefined function or variable 'plot3'.
+  --> Line 1, Column 11:
+   |
+  1 | figure(); plot3([1, 2, 3], [4, 5, 6], [7, 8, 9]); saveas(1, 'docs/verify-logs/plotting/plot3_test.svg'); disp('plot3_ok')
+   |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Exit code: 1
+Duration: 31ms
+Status: MISSING
+Oracle / tolerance: 3D line plot with camera projection and depth sorting
+Notes: Function undefined or not registered in interpreter runtime

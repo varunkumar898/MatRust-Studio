@@ -1,0 +1,17 @@
+﻿Function: ylim
+Category: Plotting & Visualization
+Test expression: figure(); plot([1, 2], [3, 4]); ylim([0, 10]); disp('ylim_ok')
+Expected result: ylim_ok
+Actual stdout:
+ylim_ok
+ans =
+
+   []
+
+Actual stderr:
+
+Exit code: 0
+Duration: 32ms
+Status: EXISTS-WORKS
+Oracle / tolerance: Set y-axis limits
+Notes: Executed successfully without errors

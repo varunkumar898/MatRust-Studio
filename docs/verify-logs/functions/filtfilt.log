@@ -1,0 +1,17 @@
+﻿Function: filtfilt
+Category: Signal Processing
+Test expression: b = [0.5, 0.5]; a = [1]; x = [1, 2, 3, 4]; y = filtfilt(b, a, x); disp(size(y))
+Expected result: [1, 4] with zero-phase distortion
+Actual stdout:
+       1     4
+ans =
+
+   []
+
+Actual stderr:
+
+Exit code: 0
+Duration: 31ms
+Status: EXISTS-WORKS
+Oracle / tolerance: Zero-phase forward and reverse digital filtering
+Notes: Executed successfully and produced expected output

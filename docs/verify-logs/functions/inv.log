@@ -1,0 +1,18 @@
+﻿Function: inv
+Category: Linear Algebra
+Test expression: A = [4, 7; 2, 6]; B = inv(A); disp(A * B)
+Expected result: [1, 0; 0, 1]
+Actual stdout:
+     1.0000e+00  -1.1102e-16
+     1.1102e-16   1.0000e+00
+ans =
+
+   []
+
+Actual stderr:
+
+Exit code: 0
+Duration: 31ms
+Status: EXISTS-WORKS
+Oracle / tolerance: A * inv(A) equals 2x2 identity matrix within 1e-12
+Notes: Executed successfully and produced expected output

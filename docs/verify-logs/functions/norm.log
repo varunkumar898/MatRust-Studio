@@ -1,0 +1,17 @@
+﻿Function: norm
+Category: Linear Algebra
+Test expression: v = [3, 4]; n = norm(v); disp(n)
+Expected result: 5
+Actual stdout:
+    5
+ans =
+
+   []
+
+Actual stderr:
+
+Exit code: 0
+Duration: 34ms
+Status: EXISTS-WORKS
+Oracle / tolerance: Euclidean 2-norm of [3, 4] is 5
+Notes: Executed successfully and produced expected output

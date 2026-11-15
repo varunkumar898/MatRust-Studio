@@ -1,0 +1,21 @@
+﻿Function: tf
+Category: ODE & Simulation
+Test expression: sys = tf([1], [1, 1]); disp(sys)
+Expected result: Transfer function sys with num=[1], den=[1, 1]
+Actual stdout:
+  struct with fields:
+
+    num:     1
+    den:        1     1
+    type: "TransferFunction"
+ans =
+
+   []
+
+Actual stderr:
+
+Exit code: 0
+Duration: 28ms
+Status: EXISTS-WORKS
+Oracle / tolerance: Create continuous linear time-invariant transfer function
+Notes: Executed successfully and produced expected output

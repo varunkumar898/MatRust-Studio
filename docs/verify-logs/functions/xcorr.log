@@ -1,0 +1,17 @@
+﻿Function: xcorr
+Category: Signal Processing
+Test expression: x = [1, 2]; c = xcorr(x); disp(c)
+Expected result: [2, 5, 2]
+Actual stdout:
+       2     5     2
+ans =
+
+   []
+
+Actual stderr:
+
+Exit code: 0
+Duration: 32ms
+Status: EXISTS-WORKS
+Oracle / tolerance: Cross-correlation / autocorrelation of vector [1, 2]
+Notes: Executed successfully and produced expected output

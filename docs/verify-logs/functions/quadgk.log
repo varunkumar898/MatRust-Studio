@@ -1,0 +1,18 @@
+﻿Function: quadgk
+Category: Calculus
+Test expression: q = quadgk(@(x) x.^2, 0, 1); disp(q)
+Expected result: 0.3333333333
+Actual stdout:
+
+Actual stderr:
+Error: Undefined function or variable 'quadgk'.
+  --> Line 1, Column 5:
+   |
+  1 | q = quadgk(@(x) x.^2, 0, 1); disp(q)
+   |     ^^^^^^^^^^^^^^^^^^^^^^^
+
+Exit code: 1
+Duration: 29ms
+Status: MISSING
+Oracle / tolerance: Gauss-Kronrod quadrature on [0, 1]
+Notes: Function undefined or not registered in interpreter runtime

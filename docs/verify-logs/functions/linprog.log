@@ -1,0 +1,18 @@
+﻿Function: linprog
+Category: Interpolation & Optimization
+Test expression: f = [-1; -1]; A = [1, 2; 2, 1]; b = [4; 4]; x = linprog(f, A, b); disp(x)
+Expected result: [1.3333; 1.3333]
+Actual stdout:
+
+Actual stderr:
+Error: Undefined function or variable 'linprog'.
+  --> Line 1, Column 49:
+   |
+  1 | f = [-1; -1]; A = [1, 2; 2, 1]; b = [4; 4]; x = linprog(f, A, b); disp(x)
+   |                                                 ^^^^^^^^^^^^^^^^
+
+Exit code: 1
+Duration: 27ms
+Status: MISSING
+Oracle / tolerance: Linear programming simplex or interior-point solver
+Notes: Function undefined or not registered in interpreter runtime

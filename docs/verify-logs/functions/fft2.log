@@ -1,0 +1,18 @@
+﻿Function: fft2
+Category: Signal Processing
+Test expression: x = ones(2, 2); X = fft2(x); disp(X)
+Expected result: [4, 0; 0, 0]
+Actual stdout:
+    4 + 0i  0 + 0i
+    0 + 0i  0 + 0i
+ans =
+
+   []
+
+Actual stderr:
+
+Exit code: 0
+Duration: 28ms
+Status: EXISTS-WORKS
+Oracle / tolerance: 2D FFT of 2x2 ones matrix
+Notes: Executed successfully and produced expected output

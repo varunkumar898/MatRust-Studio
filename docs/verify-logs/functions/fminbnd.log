@@ -1,0 +1,18 @@
+﻿Function: fminbnd
+Category: Interpolation & Optimization
+Test expression: x = fminbnd(@(x) (x - 2)^2, 0, 4); disp(abs(x - 2) < 1e-4)
+Expected result: 1
+Actual stdout:
+
+Actual stderr:
+Error: Undefined function or variable 'fminbnd'.
+  --> Line 1, Column 5:
+   |
+  1 | x = fminbnd(@(x) (x - 2)^2, 0, 4); disp(abs(x - 2) < 1e-4)
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Exit code: 1
+Duration: 30ms
+Status: MISSING
+Oracle / tolerance: Golden section search / parabolic interpolation on [0, 4]
+Notes: Function undefined or not registered in interpreter runtime

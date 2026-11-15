@@ -1,0 +1,18 @@
+﻿Function: pinv
+Category: Linear Algebra
+Test expression: A = [2, 0; 0, 4]; p = pinv(A); disp(p)
+Expected result: [0.5, 0; 0, 0.25]
+Actual stdout:
+    0.5000       0
+         0  0.2500
+ans =
+
+   []
+
+Actual stderr:
+
+Exit code: 0
+Duration: 28ms
+Status: EXISTS-WORKS
+Oracle / tolerance: Moore-Penrose pseudoinverse of diagonal matrix
+Notes: Executed successfully and produced expected output

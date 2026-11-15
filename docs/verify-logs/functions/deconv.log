@@ -1,0 +1,18 @@
+﻿Function: deconv
+Category: Signal Processing
+Test expression: c = [3, 10, 8]; v = [3, 4]; [q, r] = deconv(c, v); disp(q)
+Expected result: [1, 2]
+Actual stdout:
+
+Actual stderr:
+Error: Undefined function or variable 'deconv'.
+  --> Line 1, Column 38:
+   |
+  1 | c = [3, 10, 8]; v = [3, 4]; [q, r] = deconv(c, v); disp(q)
+   |                                      ^^^^^^^^^^^^
+
+Exit code: 1
+Duration: 26ms
+Status: MISSING
+Oracle / tolerance: Deconvolution and polynomial division
+Notes: Function undefined or not registered in interpreter runtime

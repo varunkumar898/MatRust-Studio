@@ -1,0 +1,18 @@
+﻿Function: expm
+Category: Linear Algebra
+Test expression: A = [0, 0; 0, 0]; E = expm(A); disp(E)
+Expected result: [1, 0; 0, 1]
+Actual stdout:
+       1     0
+       0     1
+ans =
+
+   []
+
+Actual stderr:
+
+Exit code: 0
+Duration: 27ms
+Status: EXISTS-WORKS
+Oracle / tolerance: Matrix exponential of zero matrix is identity
+Notes: Executed successfully and produced expected output

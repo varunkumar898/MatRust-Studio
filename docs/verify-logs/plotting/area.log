@@ -1,0 +1,18 @@
+﻿Function: area
+Category: Plotting & Visualization
+Test expression: figure(); area([1, 2, 3], [4, 5, 6]); disp('area_ok')
+Expected result: area_ok
+Actual stdout:
+
+Actual stderr:
+Error: Undefined function or variable 'area'.
+  --> Line 1, Column 11:
+   |
+  1 | figure(); area([1, 2, 3], [4, 5, 6]); disp('area_ok')
+   |           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Exit code: 1
+Duration: 45ms
+Status: MISSING
+Oracle / tolerance: Filled area 2D plot
+Notes: Function undefined or not registered in interpreter runtime

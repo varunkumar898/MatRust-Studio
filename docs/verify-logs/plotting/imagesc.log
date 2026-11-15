@@ -1,0 +1,18 @@
+﻿Function: imagesc
+Category: Plotting & Visualization
+Test expression: C = [1, 2; 3, 4]; figure(); imagesc(C); disp('imagesc_ok')
+Expected result: imagesc_ok
+Actual stdout:
+
+Actual stderr:
+Error: Undefined function or variable 'imagesc'.
+  --> Line 1, Column 29:
+   |
+  1 | C = [1, 2; 3, 4]; figure(); imagesc(C); disp('imagesc_ok')
+   |                             ^^^^^^^^^^
+
+Exit code: 1
+Duration: 59ms
+Status: MISSING
+Oracle / tolerance: Scaled color image display
+Notes: Function undefined or not registered in interpreter runtime

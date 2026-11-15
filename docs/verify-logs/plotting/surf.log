@@ -1,0 +1,17 @@
+﻿Function: surf
+Category: Plotting & Visualization
+Test expression: [X, Y] = meshgrid(-1:1, -1:1); Z = X.^2 + Y.^2; figure(); surf(X, Y, Z); disp('surf_ok')
+Expected result: surf_ok
+Actual stdout:
+surf_ok
+ans =
+
+   []
+
+Actual stderr:
+
+Exit code: 0
+Duration: 31ms
+Status: EXISTS-WORKS
+Oracle / tolerance: 3D shaded surface plot
+Notes: Executed successfully without errors

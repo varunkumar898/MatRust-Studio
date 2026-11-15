@@ -1,0 +1,18 @@
+﻿Function: divergence
+Category: Calculus
+Test expression: [x, y] = meshgrid(1:3, 1:3); div = divergence(x, y, x, y); disp(div)
+Expected result: 2 across all grid points
+Actual stdout:
+
+Actual stderr:
+Error: Undefined function or variable 'divergence'.
+  --> Line 1, Column 36:
+   |
+  1 | [x, y] = meshgrid(1:3, 1:3); div = divergence(x, y, x, y); disp(div)
+   |                                    ^^^^^^^^^^^^^^^^^^^^^^
+
+Exit code: 1
+Duration: 43ms
+Status: MISSING
+Oracle / tolerance: div([x,y]) = d/dx(x) + d/dy(y) = 1 + 1 = 2
+Notes: Function undefined or not registered in interpreter runtime

@@ -1,0 +1,17 @@
+﻿Function: legend
+Category: Plotting & Visualization
+Test expression: figure(); plot([1, 2], [3, 4]); legend('northeast'); disp('legend_ok')
+Expected result: legend_ok
+Actual stdout:
+legend_ok
+ans =
+
+   []
+
+Actual stderr:
+
+Exit code: 0
+Duration: 32ms
+Status: EXISTS-WORKS
+Oracle / tolerance: Add legend with valid location ('northeast') to axes
+Notes: Executed successfully without errors

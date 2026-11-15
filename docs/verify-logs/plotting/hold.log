@@ -1,0 +1,17 @@
+﻿Function: hold
+Category: Plotting & Visualization
+Test expression: figure(); plot([1, 2], [3, 4]); hold('on'); plot([1, 2], [5, 6]); hold('off'); disp('hold_ok')
+Expected result: hold_ok
+Actual stdout:
+hold_ok
+ans =
+
+   []
+
+Actual stderr:
+
+Exit code: 0
+Duration: 31ms
+Status: EXISTS-WORKS
+Oracle / tolerance: Retain current plot when adding new plots
+Notes: Executed successfully without errors

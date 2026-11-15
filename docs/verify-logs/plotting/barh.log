@@ -1,0 +1,18 @@
+﻿Function: barh
+Category: Plotting & Visualization
+Test expression: figure(); barh([1, 2, 3], [10, 20, 15]); disp('barh_ok')
+Expected result: barh_ok
+Actual stdout:
+
+Actual stderr:
+Error: Undefined function or variable 'barh'.
+  --> Line 1, Column 11:
+   |
+  1 | figure(); barh([1, 2, 3], [10, 20, 15]); disp('barh_ok')
+   |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Exit code: 1
+Duration: 32ms
+Status: MISSING
+Oracle / tolerance: Horizontal bar graph
+Notes: Function undefined or not registered in interpreter runtime

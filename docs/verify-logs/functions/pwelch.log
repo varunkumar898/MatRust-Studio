@@ -1,0 +1,18 @@
+﻿Function: pwelch
+Category: Signal Processing
+Test expression: x = randn(1, 100); [pxx, f] = pwelch(x); disp(size(pxx))
+Expected result: Power spectral density vector
+Actual stdout:
+
+Actual stderr:
+Error: Undefined function or variable 'pwelch'.
+  --> Line 1, Column 31:
+   |
+  1 | x = randn(1, 100); [pxx, f] = pwelch(x); disp(size(pxx))
+   |                               ^^^^^^^^^
+
+Exit code: 1
+Duration: 29ms
+Status: MISSING
+Oracle / tolerance: Welch's averaged modified periodogram spectral estimate
+Notes: Function undefined or not registered in interpreter runtime

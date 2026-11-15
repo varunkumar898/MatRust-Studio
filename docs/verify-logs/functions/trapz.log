@@ -1,0 +1,17 @@
+﻿Function: trapz
+Category: Calculus
+Test expression: x = linspace(0, 1, 5); y = x.^2; q = trapz(x, y); disp(q)
+Expected result: 0.34375
+Actual stdout:
+    0.3438
+ans =
+
+   []
+
+Actual stderr:
+
+Exit code: 0
+Duration: 33ms
+Status: EXISTS-WORKS
+Oracle / tolerance: Trapezoidal numerical integration over 5 points
+Notes: Executed successfully and produced expected output

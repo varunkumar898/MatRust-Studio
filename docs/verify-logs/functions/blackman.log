@@ -1,0 +1,20 @@
+﻿Function: blackman
+Category: Signal Processing
+Test expression: w = blackman(4); disp(w)
+Expected result: [0; 0.6300; 0.6300; 0]
+Actual stdout:
+    -1.3878e-17
+     6.3000e-01
+     6.3000e-01
+    -1.3878e-17
+ans =
+
+   []
+
+Actual stderr:
+
+Exit code: 0
+Duration: 32ms
+Status: EXISTS-WORKS
+Oracle / tolerance: Blackman window vector of length 4
+Notes: Executed successfully and produced expected output

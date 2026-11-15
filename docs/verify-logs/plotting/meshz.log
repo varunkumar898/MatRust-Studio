@@ -1,0 +1,18 @@
+﻿Function: meshz
+Category: Plotting & Visualization
+Test expression: [X, Y] = meshgrid(-1:1, -1:1); Z = X.^2 + Y.^2; figure(); meshz(X, Y, Z); disp('meshz_ok')
+Expected result: meshz_ok
+Actual stdout:
+
+Actual stderr:
+Error: Undefined function or variable 'meshz'.
+  --> Line 1, Column 59:
+   |
+  1 | [X, Y] = meshgrid(-1:1, -1:1); Z = X.^2 + Y.^2; figure(); meshz(X, Y, Z); disp('meshz_ok')
+   |                                                           ^^^^^^^^^^^^^^
+
+Exit code: 1
+Duration: 28ms
+Status: MISSING
+Oracle / tolerance: 3D wireframe mesh with curtain / reference plane
+Notes: Function undefined or not registered in interpreter runtime

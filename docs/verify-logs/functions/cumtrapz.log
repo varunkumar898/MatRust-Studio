@@ -1,0 +1,17 @@
+﻿Function: cumtrapz
+Category: Calculus
+Test expression: x = [0, 0.5, 1]; y = [0, 0.25, 1]; q = cumtrapz(x, y); disp(q)
+Expected result: [0, 0.0625, 0.375]
+Actual stdout:
+         0  0.0625  0.3750
+ans =
+
+   []
+
+Actual stderr:
+
+Exit code: 0
+Duration: 32ms
+Status: EXISTS-WORKS
+Oracle / tolerance: Cumulative trapezoidal numerical integration
+Notes: Executed successfully and produced expected output

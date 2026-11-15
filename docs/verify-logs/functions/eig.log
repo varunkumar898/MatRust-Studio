@@ -1,0 +1,18 @@
+﻿Function: eig
+Category: Linear Algebra
+Test expression: A = [2, 0; 0, 5]; e = eig(A); disp(sort(e))
+Expected result: [2; 5]
+Actual stdout:
+       2
+       5
+ans =
+
+   []
+
+Actual stderr:
+
+Exit code: 0
+Duration: 32ms
+Status: EXISTS-WORKS
+Oracle / tolerance: Eigenvalues of diagonal matrix [2, 0; 0, 5]
+Notes: Executed successfully and produced expected output

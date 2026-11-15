@@ -1,0 +1,18 @@
+﻿Function: axis
+Category: Plotting & Visualization
+Test expression: figure(); plot([1, 2], [3, 4]); axis([0, 5, 0, 10]); disp('axis_ok')
+Expected result: axis_ok
+Actual stdout:
+
+Actual stderr:
+Error: Undefined function or variable 'axis'.
+  --> Line 1, Column 33:
+   |
+  1 | figure(); plot([1, 2], [3, 4]); axis([0, 5, 0, 10]); disp('axis_ok')
+   |                                 ^^^^^^^^^^^^^^^^^^^
+
+Exit code: 1
+Duration: 28ms
+Status: MISSING
+Oracle / tolerance: Set axis limits and scaling properties
+Notes: Function undefined or not registered in interpreter runtime

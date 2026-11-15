@@ -1,0 +1,18 @@
+﻿Function: contourf
+Category: Plotting & Visualization
+Test expression: [X, Y] = meshgrid(-2:2, -2:2); Z = X.^2 + Y.^2; figure(); contourf(Z); disp('contourf_ok')
+Expected result: contourf_ok
+Actual stdout:
+
+Actual stderr:
+Error: Undefined function or variable 'contourf'.
+  --> Line 1, Column 59:
+   |
+  1 | [X, Y] = meshgrid(-2:2, -2:2); Z = X.^2 + Y.^2; figure(); contourf(Z); disp('contourf_ok')
+   |                                                           ^^^^^^^^^^^
+
+Exit code: 1
+Duration: 28ms
+Status: MISSING
+Oracle / tolerance: Filled 2D contour plot
+Notes: Function undefined or not registered in interpreter runtime

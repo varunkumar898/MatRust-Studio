@@ -103,6 +103,12 @@ Before implementation work begins on any phase, a formal planning task **PLAN-F<
 - **PLAN-F14**: Planning for Phase F14 (MATLAB Ecosystem Expansion)
 - **PLAN-F15**: Planning for Phase F15 (Octave Conformance) - Emits one task per batch of at most 15 functions after F15.01
 - **PLAN-F16**: Planning for Phase F16 (Julia Bridge and Export)
+- **PLAN-F17**: Planning for Phase F17 (Math Gallery)
+- **PLAN-F18**: Planning for Phase F18 (Polyglot Workspace)
+- **PLAN-F19**: Planning for Phase F19 (Interpreter Performance)
+- **PLAN-F20**: Planning for Phase F20 (Developer Experience)
+- **PLAN-F21**: Planning for Phase F21 (Packages and Extensions)
+- **PLAN-F22**: Planning for Phase F22 (Proof & Transparency)
 
 ---
 
@@ -110,7 +116,7 @@ Before implementation work begins on any phase, a formal planning task **PLAN-F<
 
 The planned execution sequence across waves and phases is strictly ordered as follows:
 
-$$\text{Wave 0} \longrightarrow \text{Wave 1 (P1..P5)} \longrightarrow \text{Wave 2 (S1..S4)} \longrightarrow \mathbf{F15.00} \longrightarrow \mathbf{F15.01} \longrightarrow \mathbf{F1} \longrightarrow \mathbf{F2} \longrightarrow \mathbf{F3} \longrightarrow \mathbf{F4} \longrightarrow \mathbf{F5} \longrightarrow \mathbf{F7} \longrightarrow \mathbf{F8} \longrightarrow \mathbf{F6} \longrightarrow \mathbf{F9} \longrightarrow \mathbf{F10} \longrightarrow \mathbf{F11} \longrightarrow \mathbf{F12} \longrightarrow \mathbf{F16} \longrightarrow \mathbf{F13} \longrightarrow \mathbf{F14}$$
+$$\text{Wave 0} \longrightarrow \text{Wave 1 (P1..P5)} \longrightarrow \text{Wave 2 (S1..S4)} \longrightarrow \mathbf{F15.00} \longrightarrow \mathbf{F15.01} \longrightarrow \mathbf{F1} \longrightarrow \mathbf{F2} \longrightarrow \mathbf{F3} \longrightarrow \mathbf{F4} \longrightarrow \mathbf{F5} \longrightarrow \mathbf{F7} \longrightarrow \mathbf{F8} \longrightarrow \mathbf{F6} \longrightarrow \mathbf{F9} \longrightarrow \mathbf{F10} \longrightarrow \mathbf{F11} \longrightarrow \mathbf{F12} \longrightarrow \mathbf{F17} \longrightarrow \mathbf{F16.02} / \mathbf{F18} \longrightarrow \mathbf{F22} \longrightarrow \mathbf{F19} \longrightarrow \mathbf{F20} \longrightarrow \mathbf{F21} \longrightarrow \mathbf{F13} \longrightarrow \mathbf{F14}$$
 
 F15.02..F15.12 (the function batches) are interleaved with the sequence by PLAN-F15, using the real category counts from F15.01.
 
@@ -125,5 +131,10 @@ F15.02..F15.12 (the function batches) are interleaved with the sequence by PLAN-
 7. **F6 $\to$ F9, F10**: Optimization design exploration (**F9**) and formal verification harnesses (**F10**) require complete physical plants and supervisory state logic to run automated Monte Carlo sweeps, fault-injection tests, and MC/DC structural coverage analysis.
 8. **F10 $\to$ F11**: Embedded code generation (**F11**) requires the complete, formally verified block and state machine catalog (**F1..F10**) so that embedded target outputs match verified simulation baselines.
 9. **F11 $\to$ F12**: External co-simulation integration (**F12**) (FMI/FMU, ROS, Gazebo) leverages the generated C models and compiled execution plans.
-10. **F12 $\to$ F16**: The Julia bridge reuses the external-process bridge pattern established by the Python bridge in F12.07 and the Octave bridge; F16 stays opt-in and outside the base installer.
-11. **F13 $\to$ F14**: Broad ecosystem and toolbox parity (**F14**) builds upon the mature high-performance simulation engine; the graphics group reuses the Wave 1 plot model.
+10. **F12 $\to$ F17 (Math Gallery)**: In-app math gallery builds upon the Wave 1 plotting foundations and simulation solvers to provide interactive, runnable verified reference demonstrations.
+11. **F17 $\to$ F16.02 / F18 (Polyglot Workspace & Julia Bridge)**: The unified `ExecutionEngine` abstraction and binary column-major variable exchange bus provide the foundational architecture for Julia (`F16.02`), Python, Octave, and native engines.
+12. **F18 $\to$ F22 (Proof & Transparency)**: Cross-language empirical benchmarks and public compatibility dashboard establish the authoritative baseline before optimizing engine internals.
+13. **F22 $\to$ F19 (Interpreter Performance)**: Interpreter speedups (bytecode compiler, VM, zero-alloc scalar loops) are driven strictly by reproducible measurements against the F22 baseline, enforcing bit-exact determinism.
+14. **F19 $\to$ F20 (Developer Experience)**: Interactive debugger, step execution, linter, and notebook cells leverage the compiled bytecode VM and polyglot engine architecture.
+15. **F20 $\to$ F21 (Packages and Extensions)**: Clean-room package distribution, manifest formats, and sandboxed plugins build upon the mature IDE and engine foundation.
+16. **F21 $\to$ F13 $\to$ F14**: Broad ecosystem and toolbox expansion builds upon high-performance scaling, package extensions, and verified multi-engine infrastructure.

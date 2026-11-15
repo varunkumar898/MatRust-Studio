@@ -518,10 +518,127 @@ This document defines the detailed execution roadmap for MatRust Studio developm
 | ID | Title | Status | Depends-On | Size | Evidence Test | Notes |
 | :--- | :--- | :---: | :---: | :---: | :--- | :--- |
 | **F16.01** | ADR: bridge versus embedding | `TODO` | F12.07 | M | - | Default external process; record platform support and size before any promise. |
-| **F16.02** | Crate `mlapp-julia` | `TODO` | F16.01 | L | - | Modelled on `mlapp-octave`: detect, JSON protocol over pipes, session, safety list, timeouts, `forbid(unsafe_code)`, opt-in `--allow-julia`, off by default. |
-| **F16.03** | Export a model to a Julia script | `TODO` | F16.02 | L | - | Continuous parts emitted as an ODE problem. |
+| **F16.02** | Crate `mlapp-julia` | `TODO` | F16.01, F18.01 | L | - | Implements F18 ExecutionEngine trait: binary protocol, session, safety list, timeouts, `forbid(unsafe_code)`, opt-in `--allow-julia`, off by default. |
+| **F16.03** | Export a model to a Julia script | `TODO` | F16.02 | L | - | Continuous parts emitted as an ODE problem for DifferentialEquations.jl. |
 | **F16.04** | Cross-check harness | `TODO` | F16.02 | M | - | Our solvers versus Julia on stiff and non-stiff benchmarks; tolerances recorded; skips when Julia is absent. |
 | **F16.05** | Documentation | `TODO` | F16.02 | S | - | Install, versions, licence note, first-run latency and package precompilation time. |
+
+---
+
+### Phase F17: Math Gallery (11 Items)
+
+- **Goal**: In-app runnable example programs for core mathematical domains (calculus, ODEs, linear algebra, signal processing, optimization, statistics, 3D visualization), verified by automated golden answers.
+- **Entry Criteria**: Plotting Wave 1 (P1..P5) completed; continuous simulation engine active.
+- **Exit Criteria**: All 11 gallery categories verified by automated tests against analytic or textbook oracles; desktop gallery viewer and parameter controls functional.
+- **Notes**: All rows start `TODO`. MG8 is decomposed from XL to L via PLAN-MG.
+
+| ID | Title | Status | Depends-On | Size | Evidence Test | Notes |
+| :--- | :--- | :---: | :---: | :---: | :--- | :--- |
+| **F17.00** | Math Gallery catalog model | `TODO` | - | S | - | In-memory catalog schema, category grouping, metadata, and script runner. |
+| **F17.01** | Calculus gallery examples | `TODO` | F17.00 | M | - | Numerical integration (`integral`, `trapz`), gradient, 2D meshgrid vector calculus. |
+| **F17.02** | ODE & dynamical systems gallery | `TODO` | F17.00 | M | - | Harmonic oscillator, Van der Pol limit cycles, Lorenz strange attractor with phase portraits. |
+| **F17.03** | Linear algebra gallery examples | `TODO` | F17.00 | M | - | Eigenvalue decompositions, SVD image compression, QR/Cholesky system solutions. |
+| **F17.04** | Signal processing gallery examples | `TODO` | F17.00 | M | - | FFT spectral analysis, windowing, filter frequency response (`freqz`), convolution. |
+| **F17.05** | Optimization gallery examples | `TODO` | F17.00 | M | - | Scalar root-finding (`fzero`), bounded minimization (`fminbnd`), Nelder-Mead search (`fminsearch`). |
+| **F17.06** | Probability & statistics gallery | `TODO` | F17.00 | M | - | Random distributions, Monte Carlo approximations, empirical histograms (`histcounts`). |
+| **F17.07** | 3D Visualization gallery | `TODO` | P4, F17.00 | M | - | 3D surfaces (`surf`), wireframe meshes (`mesh`), contour slices, vector quivers. |
+| **F17.08** | Advanced optimization & solvers | `TODO` | F17.05 | L | - | Non-linear least squares (`lsqnonlin`), quadratic programming; decomposed from XL. |
+| **F17.09** | Desktop Math Gallery UI panel | `TODO` | F17.00 | M | - | Two-column browsing panel, runnable code view, interactive parameter sliders. |
+| **F17.10** | Automated verification harness | `TODO` | F17.01..F17.08 | S | - | Regression suite executing every gallery script and asserting exact golden answers. |
+
+---
+
+### Phase F18: Polyglot Workspace (8 Items)
+
+- **Goal**: Unified multi-engine notebook and script execution across native RustLab, Python, Julia, GNU Octave, and MATLAB with zero-copy column-major variable exchange.
+- **Entry Criteria**: `docs/design/polyglot-workspace.md` approved; `crates/mlapp-octave` and `crates/mlapp-py` baseline available.
+- **Exit Criteria**: Universal `ExecutionEngine` trait implemented for all five runtimes; column-major variable round-trips pass with $\le 1$ ULP error; per-cell engine execution functional in desktop UI.
+- **Notes**: All rows start `TODO`. Shared engine abstraction and variable exchange are centralized here to eliminate duplication across F12, F15, and F16.
+
+| ID | Title | Status | Depends-On | Size | Evidence Test | Notes |
+| :--- | :--- | :---: | :---: | :---: | :--- | :--- |
+| **F18.01** | Engine abstraction trait | `TODO` | - | M | - | Headless `ExecutionEngine` trait in `crates/mlapp-engine`: lifecycle, eval, var get/set, interrupts. |
+| **F18.02** | Column-major variable exchange | `TODO` | F18.01 | L | - | Binary wire protocol and shared-memory/mmap buffer exchange for N-D arrays up to 512 MiB cap. |
+| **F18.03** | Notebook cell parser & dispatcher | `TODO` | F18.01 | M | - | Parses `%%` and `# %%` cell blocks with per-cell engine tags (`[engine=...]`) and error line remapping. |
+| **F18.04** | Universal figure capture | `TODO` | F18.01, P1 | M | - | Intercepts plot calls from external engines and routes geometry to `crates/rustlab-plot` figure tabs. |
+| **F18.05** | Polyglot settings & detection | `TODO` | F18.01 | S | - | UI preferences pane for interpreter paths, timeout thresholds, memory limits, and security flags. |
+| **F18.06** | Native engine adapter | `TODO` | F18.01 | M | - | Wraps in-tree `rustlab-eval` / `rustlab-stdlib` under `ExecutionEngine` trait. |
+| **F18.07** | Python bridge adapter | `TODO` | F18.01, F12.07 | M | - | Wraps out-of-process Python subprocess bridge with NumPy Fortran-array variable exchange. |
+| **F18.08** | Octave & MATLAB bridge adapters | `TODO` | F18.01, F15.00 | M | - | Connects `crates/mlapp-octave` and `crates/mlapp-matlab` subprocess sessions to `ExecutionEngine`. |
+
+---
+
+### Phase F19: Interpreter Performance (7 Items)
+
+- **Goal**: Benchmark-driven numerical interpreter speedups maintaining bit-exact determinism across platforms.
+- **Entry Criteria**: Benchmark harness baseline established (F22.02); statistical timing harness active.
+- **Exit Criteria**: Sub-microsecond scalar loop overhead; zero dynamic allocations in inner evaluation loops; 100% bit-identical results on existing test manifest.
+- **Notes**: All rows start `TODO`. Bytecode VM architecture (F19.03/F19.04) decomposed from XL into design ADR and implementation subtasks.
+
+| ID | Title | Status | Depends-On | Size | Evidence Test | Notes |
+| :--- | :--- | :---: | :---: | :---: | :--- | :--- |
+| **F19.01** | AST execution profiler & telemetry | `TODO` | F22.02 | M | - | Sub-microsecond AST node timer profiling evaluation bottlenecks across benchmark suites. |
+| **F19.02** | AST constant folding & dead code | `TODO` | F19.01 | M | - | Ahead-of-time folding of static arithmetic expressions and unreachable branch pruning. |
+| **F19.03** | ADR: Bytecode compiler & VM | `TODO` | F19.01 | M | - | Formal architectural specification for stack-based bytecode instruction set; decomposed from XL. |
+| **F19.04** | Stack-based bytecode virtual machine | `TODO` | F19.03 | L | - | Compact bytecode instruction dispatch loop executing compiled expressions without AST traversal. |
+| **F19.05** | Zero-allocation scalar evaluation | `TODO` | F19.04 | M | - | Pre-allocated scalar evaluation frames eliminating heap thrashing during $10^6$ iteration loops. |
+| **F19.06** | DenseArray memory cache locality | `TODO` | - | M | - | Cache-line aligned strided indexing and SIMD-friendly contiguous memory layout optimizations. |
+| **F19.07** | Deterministic regression validation | `TODO` | F19.04..F19.06 | S | - | Monotonic test suite pass proving bit-exact output equivalence between AST and bytecode engines. |
+
+---
+
+### Phase F20: Developer Experience (8 Items)
+
+- **Goal**: Professional interactive IDE development capabilities: linting, step debugging, profiling, documentation help search, autocomplete, and notebook workflows.
+- **Entry Criteria**: Polyglot workspace active (F18); desktop editor components operational.
+- **Exit Criteria**: Interactive step debugger supporting line breakpoints and variable watches; static linter catching syntax defects; documentation viewer integrated into desktop.
+- **Notes**: All rows start `TODO`.
+
+| ID | Title | Status | Depends-On | Size | Evidence Test | Notes |
+| :--- | :--- | :---: | :---: | :---: | :--- | :--- |
+| **F20.01** | Static script linter & diagnostics | `TODO` | - | M | - | AST linter detecting uninitialized variables, unused assignments, and syntax warnings. |
+| **F20.02** | Interactive step debugger | `TODO` | F18.01 | L | - | Line breakpoints, step-in, step-over, step-out, and pause execution in native script engine. |
+| **F20.03** | Variable inspector & watch window | `TODO` | F20.02 | M | - | Live data grid displaying variable types, dimensions, min/max values, and memory sizes. |
+| **F20.04** | Call stack explorer | `TODO` | F20.02 | S | - | Call stack frame navigation and scope inspection during breakpoint pauses. |
+| **F20.05** | Profiler with flame graph telemetry | `TODO` | F19.01 | L | - | Interactive flame graph visualizing wall-clock time spent in user functions and script lines. |
+| **F20.06** | In-IDE documentation search & help | `TODO` | - | M | - | Fast offline search viewer for builtin functions, syntax examples, and mathematical equations. |
+| **F20.07** | Context-aware code autocompletion | `TODO` | - | M | - | Keyword, builtin function name, and active workspace variable completion popup in editor. |
+| **F20.08** | Notebook cell workflow & keybindings | `TODO` | F18.03 | M | - | Jupyter-style keyboard navigation (Shift+Enter to run cell, Alt+Enter to insert cell). |
+
+---
+
+### Phase F21: Packages and Extensions (6 Items)
+
+- **Goal**: Clean-room package management and sandboxed extension ecosystem without unvetted external dependencies.
+- **Entry Criteria**: `docs/ENGINEERING-CHARTER.md` dependency rules; `crates/mlapp-engine` active.
+- **Exit Criteria**: Package manifest format (.mrpkg) verified; offline bundle installation operational; dynamic block and plot extensions functional without base installer bloat.
+- **Notes**: All rows start `TODO`. Requires an Architecture Decision Record (F21.01) before any packaging format or dependency resolver is approved.
+
+| ID | Title | Status | Depends-On | Size | Evidence Test | Notes |
+| :--- | :--- | :---: | :---: | :---: | :--- | :--- |
+| **F21.01** | ADR: Package manifest specification | `TODO` | - | M | - | Formal specification for `.mrpkg` package format, manifest schema, and dependency policy. |
+| **F21.02** | Package metadata & semver solver | `TODO` | F21.01 | M | - | Manifest parser and pure semantic versioning dependency constraint solver. |
+| **F21.03** | Sandboxed plugin runtime isolation | `TODO` | F21.01 | L | - | Process-isolated plugin execution ensuring third-party extensions cannot breach core security. |
+| **F21.04** | Custom block & plot extension points | `TODO` | F21.01, F1.14 | M | - | Clean extension hooks allowing packages to register new block types and custom plot renderers. |
+| **F21.05** | Offline package bundle installer | `TODO` | F21.02 | M | - | Single-archive `.mrpkg` installer and local air-gapped repository caching mechanism. |
+| **F21.06** | Package cryptographic verification | `TODO` | F21.05 | S | - | SHA-256 manifest hashing and cryptographic signature validation on package installation. |
+
+---
+
+### Phase F22: Proof & Transparency (5 Items)
+
+- **Goal**: Public empirical evidence proving compatibility, performance, and claims integrity.
+- **Entry Criteria**: Conformance harness (F15) and benchmark harness (F13.13) active.
+- **Exit Criteria**: Public compatibility dashboard generated from real differential tests; public benchmark methodology page; automated validation preventing unverified claims in `README.md`.
+- **Notes**: All rows start `TODO`.
+
+| ID | Title | Status | Depends-On | Size | Evidence Test | Notes |
+| :--- | :--- | :---: | :---: | :---: | :--- | :--- |
+| **F22.01** | Public compatibility dashboard | `TODO` | F15.01 | M | - | Automated static site generator publishing function compatibility percentages per category. |
+| **F22.02** | Cross-language benchmark suite | `TODO` | F18.01 | M | - | Headless statistical benchmark runner comparing MatRust, Octave, and Julia on standard tasks. |
+| **F22.03** | Benchmark methodology doc page | `TODO` | F22.02 | S | - | Transparent documentation of benchmark hardware, iteration counts, medians, and spreads. |
+| **F22.04** | Automated claims validation tool | `TODO` | - | S | - | CI gate checking that every claim in `README.md` and docs maps to `docs/CLAIMS.md` and test manifest. |
+| **F22.05** | Continuous conformance tracking | `TODO` | F22.01 | S | - | Regression tracking recording historical compatibility percentages and test counts over time. |
 
 ---
 
@@ -544,17 +661,23 @@ This document defines the detailed execution roadmap for MatRust Studio developm
 | F11 | 20 | 14 | 0 | 0 | 6 | 0 |
 | F12 | 13 | 10 | 0 | 1 | 2 | 0 |
 | F13 | 13 | 9 | 1 | 3 | 0 | 0 |
-| **Total** | **249** | **211** | **17** | **13** | **8** | **0** |
+| **F1-F13 Total** | **249** | **211** | **17** | **13** | **8** | **0** |
 
-Phases F1 through F13 contain **248 items**; `F2.00` is the additional prerequisite row, so the catalog has 249 rows. Phase F14 is listed as 13 domain groups and is not counted as items until `PLAN-F14` expands it. The A3 addendum adds Phase F15 (14 rows) and Phase F16 (5 rows), both entirely `TODO`:
+Phases F1 through F13 contain **248 items**; `F2.00` is the additional prerequisite row, so the catalog has 249 rows. Phase F14 is listed as 13 domain groups and is not counted as items until `PLAN-F14` expands it. Phases F15 through F22 add specific domain milestones, all initialized to `TODO`:
 
 | Phase | Rows | TODO | EXISTS-VERIFIED | EXISTS-UNVERIFIED | NEEDS-HUMAN-HARDWARE | Status source |
 | :--- | ---: | ---: | ---: | ---: | ---: | :--- |
 | F14 (domain groups) | 13 | 13 | 0 | 0 | 0 | Owner-supplied group list; `PLAN-F14` expands it |
 | F15 Octave conformance | 14 | 14 | 0 | 0 | 0 | Audit: `mlapp-octave` exists, the differential harness does not |
 | F16 Julia bridge | 5 | 5 | 0 | 0 | 0 | Audit: `mlapp-julia` does not exist |
+| F17 Math Gallery | 11 | 11 | 0 | 0 | 0 | PLAN-MG design and audit |
+| F18 Polyglot Workspace | 8 | 8 | 0 | 0 | 0 | PLAN-POLY universal engine and variable bus |
+| F19 Interpreter Performance | 7 | 7 | 0 | 0 | 0 | PLAN-POLY bytecode and zero-allocation execution |
+| F20 Developer Experience | 8 | 8 | 0 | 0 | 0 | PLAN-POLY debugger, profiler, and notebook workflows |
+| F21 Packages & Extensions | 6 | 6 | 0 | 0 | 0 | PLAN-POLY sandboxed plugin and package architecture |
+| F22 Proof & Transparency | 5 | 5 | 0 | 0 | 0 | PLAN-POLY public dashboard and benchmark proof |
 
-The full catalog therefore has **281 rows** (249 + 13 + 14 + 5). The F1-F13 status totals above are unchanged by A3.
+The full catalog therefore has **326 rows** (249 + 13 + 14 + 5 + 11 + 8 + 7 + 8 + 6 + 5). The F1-F13 status totals above are preserved.
 
 ### 4.2 Audit step 1e - expected existing capabilities
 

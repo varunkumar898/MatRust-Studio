@@ -289,3 +289,50 @@ This document provides a structured handoff ledger between agent sessions, recor
 1. Await owner review and approval for Task P3 PR.
 2. Following merge of Task P3, proceed to **Wave 1 Task P4: 3D plotting** as governed by `docs/WORKPLAN.md`.
 3. Adhere strictly to Protocol P6 (one task per session).
+
+---
+
+## Session Handoff Entry: TASK PLAN-POLY (Polyglot Workspace Architecture & Julia Bridge Design)
+
+- **Date:** 2026-11-15
+- **Branch:** `docs/plan-polyglot`
+- **Target PR Base:** `main` (commit `8e567c5`, PR #56)
+- **Session Focus:** Planning task PLAN-POLY (docs only: `docs/STRATEGY.md`, `docs/design/polyglot-workspace.md`, `docs/design/julia-bridge.md`, `docs/WORKPLAN-PHASES.md`, `docs/WORKPLAN.md`)
+
+### 1. Completed in This Session
+1. **Strategic Positioning Document (`docs/STRATEGY.md`)**:
+   - Explicit competition dimensions: tiny native binary & sub-100ms startup; `.mlapp` and `.slx` without MATLAB; ahead-of-time model checker with 1-click fixes (`E-ALG`, `E-FLOAT`, `E-VLOOP`, `E-ICUT`); free allocation-free ISO C99 code generation; unified polyglot workspace with zero-copy column-major array transfers; reproducible runs with PRNG determinism; permissive dual MIT/Apache-2.0 license.
+   - Explicit non-goals: no native Julia interpreter; no shallow copy of toolbox breadth; no claim of unqualified MATLAB/Octave replacement; no performance claim without a benchmark.
+   - Public claims policy: 1:1 mapping between public statements and named tests or benchmarks in `docs/CLAIMS.md`.
+2. **Polyglot Workspace Design (`docs/design/polyglot-workspace.md`)**:
+   - Headless `ExecutionEngine` trait in `crates/mlapp-engine` (`start`, `stop`, `eval`, `get_var`, `set_var`, `list_vars`, `interrupt`, `capabilities`, `captured_figures`).
+   - Column-major (Fortran order) preservation across RustLab, MATLAB, Octave, and Julia.
+   - Dual-tier variable exchange: inline binary frames (< 64 KiB) and memory-mapped/shared binary buffers (>= 64 KiB) guarded by 512 MiB transfer and 2 GiB workspace caps.
+   - Subprocess security model: opt-in activation (`--allow-julia`, `--allow-octave`), loopback socket with 256-bit bearer token, 30s timeout, safety call blocking, personal path scrubbing.
+   - Notebook cells (`%%` and `# %%`), per-cell `[engine=...]` tag, line remapping, universal figure capture into `crates/rustlab-plot`.
+3. **Julia Subprocess Bridge Design (`docs/design/julia-bridge.md`)**:
+   - Platform detection, Windows ARM64 status (Tier 3 experimental; runs under Windows 11 Prism x86_64 emulation).
+   - In-tree `server.jl` using ONLY Julia standard library (`Base`, `Sockets`, `Serialization`, `Mmap` - zero external packages, no `JSON.jl`).
+   - Wire framing with 16-byte header and length-prefixed binary frames.
+   - Lightweight `mlapp` plotting API (`mlapp.plot`, `mlapp.title`, `mlapp.xlabel`, `mlapp.figure`, `mlapp.display`) streaming directly to `crates/rustlab-plot`.
+   - Continuous ODE model export to `DifferentialEquations.jl` and cross-check harness.
+   - CI stubbing via pure-Rust mock Julia binary (`julia-stub`).
+4. **Phase Catalog & Workplan Reconciliation (`docs/WORKPLAN-PHASES.md` & `docs/WORKPLAN.md`)**:
+   - Added Phase F17 (Math Gallery, 11 items), Phase F18 (Polyglot Workspace, 8 items), Phase F19 (Interpreter Performance, 7 items), Phase F20 (Developer Experience, 8 items), Phase F21 (Packages and Extensions, 6 items), Phase F22 (Proof & Transparency, 5 items).
+   - Reconciled with F12, F15, F16; catalog accounting updated to 326 total rows.
+   - Added `PLAN-F17`..`PLAN-F22` to `docs/WORKPLAN.md` with execution sequence.
+5. **Local Stash Backup**:
+   - Stash `stash@{0}` (`wip-f2-00-signal-width-adr`) preserved untouched (local only, F2.00 is unapproved).
+   - Exported patch backup to `<temp>\wip-f2-00-signal-width-adr.patch` (22,386 bytes).
+6. **Documentation & Privacy Audits**:
+   - `python scripts/check_docs.py` passed cleanly (0 personal path leaks, all internal links valid).
+
+### 2. Verified Baseline State
+- **Documentation & Privacy Checks:** `python scripts/check_docs.py` passes cleanly.
+- **Git Working Tree:** 6 documentation files created or updated; zero source code modified.
+
+### 3. Immediate Next Steps for Next Session
+1. Run git checkout, add, commit with noreply identity, and push branch `docs/plan-polyglot`.
+2. Await owner review and merge of `docs/plan-polyglot`.
+3. Proceed to implementation tasks as governed by `docs/WORKPLAN.md`.
+

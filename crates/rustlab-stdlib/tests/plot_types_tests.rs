@@ -110,11 +110,16 @@ fn test_plot_types_contour_and_imagesc() {
     assert_eq!(ax.camera.elevation, 90.0);
 
     // imagesc
-    imagesc_fn(&[z], 0).unwrap();
+    imagesc_fn(std::slice::from_ref(&z), 0).unwrap();
     let fig = rustlab_plot::with_plot_state_ref(|reg| reg.current_figure().unwrap().clone());
     let ax = fig.current_axes().unwrap();
     assert!(ax.colorbar.is_some());
     assert_eq!(ax.camera.elevation, 90.0);
+
+    // imagesc with (X, Y, C) regression test
+    let x = Value::Double(DenseArray::from_vec(vec![1, 2], vec![1.0, 2.0]).unwrap());
+    let y = Value::Double(DenseArray::from_vec(vec![1, 2], vec![10.0, 20.0]).unwrap());
+    imagesc_fn(&[x, y, z], 0).unwrap();
 }
 
 #[test]

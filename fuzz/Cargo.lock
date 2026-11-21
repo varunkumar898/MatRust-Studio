@@ -942,6 +942,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "rustlab-plot"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "thiserror 2.0.21",
+]
+
+[[package]]
 name = "rustlab-stdlib"
 version = "0.1.0"
 dependencies = [
@@ -954,6 +962,7 @@ dependencies = [
  "rustlab-math",
  "rustlab-matio",
  "rustlab-parse",
+ "rustlab-plot",
 ]
 
 [[package]]

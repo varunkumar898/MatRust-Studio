@@ -488,20 +488,16 @@ impl DockTree {
             }
         }
         let mut migrated = false;
-        if let Some(help_leaf) = find_help_leaf(&mut self.root) {
-            if let DockNode::Leaf { tabs, .. } = help_leaf {
-                if let Some(pos) = tabs.iter().position(|p| *p == PanelId::MathGallery) {
-                    tabs.remove(pos);
-                    migrated = true;
-                }
+        if let Some(DockNode::Leaf { tabs, .. }) = find_help_leaf(&mut self.root) {
+            if let Some(pos) = tabs.iter().position(|p| *p == PanelId::MathGallery) {
+                tabs.remove(pos);
+                migrated = true;
             }
         }
         if migrated {
-            if let Some(editor_leaf) = find_editor_leaf(&mut self.root) {
-                if let DockNode::Leaf { tabs, active_tab } = editor_leaf {
-                    tabs.push(PanelId::MathGallery);
-                    *active_tab = tabs.len() - 1;
-                }
+            if let Some(DockNode::Leaf { tabs, active_tab }) = find_editor_leaf(&mut self.root) {
+                tabs.push(PanelId::MathGallery);
+                *active_tab = tabs.len() - 1;
             }
         }
         migrated

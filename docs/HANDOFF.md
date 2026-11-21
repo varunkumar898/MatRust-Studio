@@ -289,3 +289,42 @@ This document provides a structured handoff ledger between agent sessions, recor
 1. Await owner review and approval for Task P3 PR.
 2. Following merge of Task P3, proceed to **Wave 1 Task P4: 3D plotting** as governed by `docs/WORKPLAN.md`.
 3. Adhere strictly to Protocol P6 (one task per session).
+
+
+---
+
+## Session Handoff Entry: Task FIX-MAIN-CI & Phase F17 Math Gallery Audit
+
+- **Date:** 2026-11-21
+- **Branch:** `task/fix-main-ci`
+- **Target PR Base:** `main` (commit `a141145`)
+- **Session Focus:** CI failure reproduction, clippy repairs, lockfile drift reconciliation, and Math Gallery status ledger
+
+### 1. Math Gallery Task Status Ledger (MG0..MG10)
+
+> [!IMPORTANT]
+> **Phase F17 Completion Status:** **NOT COMPLETE**.
+> Under project governance rules (Charter & Protocol P6), work must be reviewed and merged via PRs with all CI gates green. All 7 commits since `8e567c5` were pushed directly to `main` without PR numbers, and essential dock/clippy fixes currently reside in local uncommitted state. Phase F17 cannot be marked complete until every row is merged via approved PR.
+
+| Task | Description | Status | Commit / Location | Named Tests / Evidence | Notes |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **MG0** | Probe and inventory | Pushed directly to main | `2549b90` | `docs/audit/math-probe.md` | Probed 99 names (47 works, 52 missing); no PR |
+| **MG1** | Calculus built-ins | Pushed directly to main | `aafebe4` | `test_del2_1d_and_2d`, `test_divergence_and_curl_2d`, `test_quadrature_1d_integral_quad_quadgk`, `test_quadrature_2d_and_3d` | `del2`, `divergence`, `curl`, `integral[2,3]`, `quad[gk]`; no PR |
+| **MG2** | ODE solver suite | Pushed directly to main | `aafebe4` | `test_odeset_options_struct`, `test_ode45_and_ode23_with_options`, `test_ode15s_stiff_system`, `test_ode15s_vanderpol_oscillator`, `test_expm_and_interp1_integration` | `ode45`, `ode23`, `ode15s`, `odeset`, `expm`, `interp1`; no PR |
+| **MG3** | Signal processing suite | Pushed directly to main | `aafebe4` | `test_interpolation_spline_and_pchip`, `test_spectral_pwelch_and_spectrogram`, `test_signal_deconv_and_freqz`, `test_signal_residue` | `deconv`, `freqz`, `residue`, `polyfit`, `spline`, `pchip`, `pwelch`, `spectrogram`; no PR |
+| **MG4** | Optimization suite | Pushed directly to main | `cee478c` | `test_optimset_options_management`, `test_fminbnd_scalar_minimization`, `test_fminunc_multivariable_bfgs`, `test_fsolve_nonlinear_system`, `test_lsqnonlin_and_lsqcurvefit`, `test_linprog_two_phase_simplex` | `fzero`, `fminbnd`, `fminsearch`, `fminunc`, `fsolve`, `lsqnonlin`, `lsqcurvefit`, `linprog`, `optimset`; no PR |
+| **MG5** | Plotting 2D/3D graphics | Pushed directly to main (local clippy fix) | `916492a` / local | `test_plot_types_mesh`, `test_plot_types_stem`, `test_plot_types_log_scales`, `test_plot_types_polar`, `test_plot_types_quiver`, `test_plot_types_contour_and_imagesc`, `test_plot_types_area_and_fill`, `test_plot_types_view_and_axis` | Clippy error in `imagesc_fn` fixed locally; no PR |
+| **MG6** | Math Gallery UI & Catalog | Pushed directly to main (local layout overhaul) | `007314c`, `a141145` / local | `test_math_gallery_dock_placement_and_migration` | Central dock migration, collapsible_match clippy fixes, responsive cards, zero dead space; no PR |
+| **MG7** | Gallery sets: Calculus & ODE | Pushed directly to main | `007314c`, `a141145` | `test_gallery_adaptive_quadrature`, `test_gallery_laplacian_del2`, `test_gallery_helmholtz_gradient`, `test_gallery_damped_pendulum`, `test_gallery_vector_curl`, `test_gallery_van_der_pol` | 6 calculus/ODE scripts; no PR |
+| **MG8** | Gallery sets: Linalg & Signal | Pushed directly to main | `007314c`, `a141145` | `test_gallery_qr_least_squares`, `test_gallery_spline_interpolation`, `test_gallery_svd_image_compression`, `test_gallery_spectral_pwelch`, `test_gallery_matrix_exponential`, `test_gallery_eigen_modes`, `test_gallery_spectrogram_chirp`, `test_gallery_butterworth_filter` | 8 linalg/signal scripts; no PR |
+| **MG9** | Gallery sets: Optim & Fractals | Pushed directly to main | `007314c`, `a141145` | `test_gallery_rosenbrock_fminunc`, `test_gallery_nonlinear_fsolve`, `test_gallery_simplex_linprog`, `test_gallery_curve_fitting_lsq`, `test_gallery_barnsley_fern`, `test_gallery_julia_set`, `test_gallery_mandelbrot_set` | 8 optim/fractal scripts; no PR |
+| **MG10** | End-to-end audit & manual pass | Pushed directly to main | `6423081`, `007314c`, `docs/audit/math-gallery-audit.md` | 24 verified runnable models | Audited and verified across CLI/GUI; no PR |
+
+### 2. Verified Baseline State (Local Gate Reproduction)
+- **Formatting:** `cargo fmt --all -- --check` passes cleanly (code 0).
+- **Clippy (--all-features):** `cargo clippy --workspace --all-targets --all-features -- -D warnings` passes cleanly (code 0).
+- **Clippy (--no-default-features):** `cargo clippy --workspace --all-targets --no-default-features -- -D warnings` passes cleanly (code 0).
+- **Workspace Tests:** `cargo test --workspace` passes all tests (code 0).
+- **Documentation & Privacy Checks:** `python scripts/check_docs.py` passes (code 0).
+- **Layout Gate Checks:** `python scripts/check_layout_gate.py` passes across all 3 resolutions (code 0).
+- **Fuzz Corpus Smoke Suite:** `cargo test --manifest-path fuzz/Cargo.toml --test corpus_smoke` passes all 5 tests (code 0).

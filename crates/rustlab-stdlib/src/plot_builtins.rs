@@ -1372,7 +1372,7 @@ pub fn imagesc_fn(args: &[Value], _nargout: usize) -> Result<Vec<Value>, EvalErr
         ));
     }
     let c = if args.len() >= 3 { &args[2] } else { &args[0] };
-    surf_fn(&[c.clone()], 0)?;
+    surf_fn(std::slice::from_ref(c), 0)?;
     rustlab_plot::with_plot_state(|reg| {
         if let Some(fig) = reg.current_figure_mut() {
             if let Ok(ax) = ensure_current_axes(fig) {

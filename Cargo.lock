@@ -1980,6 +1980,7 @@ dependencies = [
  "rustlab-eval",
  "rustlab-math",
  "rustlab-parse",
+ "rustlab-plot",
  "rustlab-stdlib",
  "serde",
  "serde_json",

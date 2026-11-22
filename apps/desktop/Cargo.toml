@@ -18,6 +18,7 @@ rustlab-parse = { path = "../../crates/rustlab-parse" }
 rustlab-math = { path = "../../crates/rustlab-math" }
 rustlab-eval = { path = "../../crates/rustlab-eval" }
 rustlab-stdlib = { path = "../../crates/rustlab-stdlib", default-features = false }
+rustlab-plot = { path = "../../crates/rustlab-plot" }
 rustlab-cli = { path = "../../crates/rustlab-cli" }
 eframe = { version = "0.31.1", default-features = false, features = ["default_fonts", "glow", "wayland", "x11"] }
 egui = "0.31.1"

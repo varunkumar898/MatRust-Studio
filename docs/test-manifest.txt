@@ -340,6 +340,7 @@ test_editor_ids_are_unique_per_file_and_panel: test
 test_editor_mouse_wheel_scrolls_a_long_document: test
 test_editor_section_extraction_and_syntax_analysis: test
 test_editor_toolbar_has_exactly_one_run_control_set: test
+test_egui_context_headless_smoke_shapes: test
 test_electrical_dc_nodal_analysis: test
 test_electrical_rlc_transient_ode45: test
 test_electronics_diode_operating_point_fzero: test
@@ -395,6 +396,8 @@ test_gallery_butterworth_filter: test
 test_gallery_curve_fitting_lsq: test
 test_gallery_damped_pendulum: test
 test_gallery_eigen_modes: test
+test_gallery_gate_failing_baseline_assertion: test
+test_gallery_headless_execution_produces_figures: test
 test_gallery_helmholtz_gradient: test
 test_gallery_julia_set: test
 test_gallery_laplacian_del2: test

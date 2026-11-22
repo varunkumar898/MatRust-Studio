@@ -471,7 +471,16 @@ impl Session {
                     .map(|f| f.max(1.0) as usize)
                     .unwrap_or_else(|| g.figures.iter().map(|f| f.id).max().unwrap_or(0) + 1);
                 g.get_or_create_figure(id);
-                Ok(vec![Value::Double(DenseArray::empty())])
+                // Synchronize engine plot state so downstream plot builtins (contour, quiver, surf, etc.)
+                // see the active figure in rustlab_plot::PlotRegistry
+                rustlab_plot::with_plot_state(|reg| {
+                    if !reg.set_current(id) {
+                        let fig = rustlab_plot::Figure::new(id);
+                        reg.current_id = Some(id);
+                        reg.figures.insert(id, fig);
+                    }
+                });
+                Ok(vec![Value::scalar(id as f64)])
             },
         );
 

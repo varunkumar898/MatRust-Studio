@@ -25,13 +25,18 @@ The waves and phases below are **planned work**, not completed work. Completed m
 
 ### Wave 1: Plotting and Visualization (P1..P5)
 
+> **Reconciliation Note (PLAN-FIG / ADR-0003):** P3b (interactive mouse zoom/pan/cursor integration with GUI view), P4 (3D plotting: surface, mesh, line3d, imagesc rendering in GUI), and MG6 GUI rendering parity are absorbed and unified by the staged tasks **FIG0 through FIG6** in [docs/tasks/PLAN-FIG.md](tasks/PLAN-FIG.md) under [docs/adr/0003-single-plot-engine.md](adr/0003-single-plot-engine.md). P1-P3a core engine models remain authoritative in `rustlab-plot`. No item is dropped.
+
 - **P1 - Subplot rendering**: render an m-by-n grid of axes with per-cell placement, spanning cells, shared axis support and deterministic output ordering. Every subplot draws into its own rect; no axes may bleed into a neighbour.
   - TEST: 1x1, 2x1, 2x2 and one spanning layout at 1280x800; byte-equal golden output; empty-subplot case; `subplot(2,2,3)` places the axes in the expected cell.
 - **P2 - Independent axes properties**: each subplot owns its limits, scales (linear and log), tick locations, tick labels, grid, title, axis labels and legend. Changing one subplot must not change another.
   - TEST: two subplots with different `xlim`, `ylim` and scale keep independent state; a serialization round-trip preserves each axes; a regression test proves no cross-talk.
 - **P3 - Per-subplot interaction**: select, hover, zoom and pan the subplot under the pointer; a readout shows the cursor value; linked axes are opt-in. Interaction state is per axes, not per figure.
+  - *Core math & engine (P3a)*: `hit_test_axes`, `zoom_subplot`, `pan_subplot` in `rustlab-plot`.
+  - *GUI View Integration (P3b)*: Absorbed by **FIG5** in [docs/tasks/PLAN-FIG.md](tasks/PLAN-FIG.md) (wires pure interaction functions into egui view).
   - TEST: a pointer hit-test maps a click to the correct axes; zooming one subplot leaves the other limits unchanged; a linked pair moves together; the readout matches the data value.
 - **P4 - 3D plotting**: line, surface and scatter plots with view angles, colour maps, depth ordering and labelled axes.
+  - *Status*: Absorbed by **FIG2** in [docs/tasks/PLAN-FIG.md](tasks/PLAN-FIG.md) (unifies projection math between `svg.rs` and desktop painter, rendering Surface and Line3D directly from `rustlab_plot::Figure`).
   - TEST: a known surface (for example z = x^2 + y^2) sampled at fixed grid points; a projection golden; axis labels and colour-map range asserted; an empty-data case.
 - **P5 - Simulation result visualization and time-series analysis**: plot simulation outputs as multi-signal time series, with cursors, min/max/mean/RMS readouts and export.
   - TEST: run a known model and assert the plotted series equals the simulation's time and output vectors; measurement readouts match analytic values; CSV and MAT export round-trip.

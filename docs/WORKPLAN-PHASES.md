@@ -472,7 +472,7 @@ This document defines the detailed execution roadmap for MatRust Studio developm
 | **F14.02** | Numerical computing | `TODO` | F4.02 | XL | - | Stiff ODE solvers, root finding (`fzero`, `fsolve`), adaptive quadrature (`integral`). |
 | **F14.03** | Optimization | `TODO` | F9.07 | XL | - | `fminsearch`, `fminunc`, `lsqnonlin`, simplex `linprog`, quadratic programming `quadprog`. |
 | **F14.04** | Data engineering | `TODO` | - | XL | - | Tables, timetables, XLSX reader, JSON encoder/decoder, relational joins, large files. |
-| **F14.05** | Graphics and visualization | `TODO` | - | XL | - | 3D surfaces, contour plots, vector fields, volumetric slices, animations (overlaps P4; reuse). |
+| **F14.05** | Graphics and visualization | `TODO` | - | XL | - | 3D surfaces, contour plots, vector fields, volumetric slices, animations (overlaps P4; see [PLAN-FIG](tasks/PLAN-FIG.md) / [ADR-0003](adr/0003-single-plot-engine.md); reuse). |
 | **F14.06** | Signal processing | `TODO` | - | XL | - | Butterworth, Chebyshev and elliptic filter design, FIR windowing, `pwelch`, spectrogram, resampling. |
 | **F14.07** | Audio processing | `TODO` | F14.06 | XL | - | Audio file I/O (WAV/FLAC), sound synthesis, acoustic filtering, time-pitch scaling. |
 | **F14.08** | Image processing | `TODO` | - | XL | - | Spatial filtering, edge detection (Sobel, Canny), morphological operations, Otsu thresholding. |
@@ -540,7 +540,7 @@ This document defines the detailed execution roadmap for MatRust Studio developm
 | **F17.03** | MG3: Signal processing builtins | `EXISTS-VERIFIED` | F17.00 | L | `test_interpolation_spline_and_pchip`, `test_spectral_pwelch_and_spectrogram`, `test_signal_deconv_and_freqz`, `test_signal_residue` | deconv, freqz, residue, polyfit, spline, pchip, pwelch, spectrogram verified |
 | **F17.04** | MG4: Optimization suite | `EXISTS-VERIFIED` | F17.00 | L | `test_optimset_options_management`, `test_fminbnd_scalar_minimization`, `test_fminunc_multivariable_bfgs`, `test_fsolve_nonlinear_system`, `test_lsqnonlin_and_lsqcurvefit`, `test_linprog_two_phase_simplex` | fzero, fminbnd, fminsearch, fminunc, fsolve, lsqnonlin, lsqcurvefit, linprog, optimset verified |
 | **F17.05** | MG5: Plotting 2D/3D graphics | `EXISTS-VERIFIED` | F17.00 | L | - | plot3, stem, scatter3, mesh, contour, quiver, semilogx, polar, imagesc |
-| **F17.06** | MG6: Gallery UI & Catalog | `EXISTS-VERIFIED` | F17.05 | M | - | Top menu "Math Gallery", dock panel, code copy to editor, run button |
+| **F17.06** | MG6: Gallery UI & Catalog | `EXISTS-VERIFIED` | F17.05 | M | - | Top menu "Math Gallery", dock panel, code copy to editor, run button (desktop rendering unified via [PLAN-FIG](tasks/PLAN-FIG.md)) |
 | **F17.07** | MG7: Gallery sets: Calculus & ODE | `EXISTS-VERIFIED` | F17.01, F17.02, F17.05, F17.06 | M | - | Examples 1a-1d and 2a-2d; verified by Rust tests |
 | **F17.08** | MG8: Gallery sets: Linalg & Signal | `EXISTS-VERIFIED` | F17.03, F17.05, F17.06 | M | - | Examples 3a-3d and 4a-4d; verified by Rust tests |
 | **F17.09** | MG9: Gallery sets: Optim & Fractals | `EXISTS-VERIFIED` | F17.04, F17.05, F17.06 | M | - | Examples 5a-5d and 6a-6d; verified by Rust tests |
